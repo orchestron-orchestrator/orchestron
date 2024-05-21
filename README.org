@@ -1,0 +1,10 @@
+* YANG YANG YANG
+The schema.act module, which implements the core of the YANG schema in, is
+generated from the YANG RFC 7950 by rfcgen.act. The output is concatenated with
+a manually written top half, in schema-manual.act
+
+** Compile
+
+#+BEGIN_SRC shell
+make
+#+END_SRC

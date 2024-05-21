@@ -1,0 +1,386 @@
+import re
+
+import rfc
+
+child_stmts = {
+    "action",
+    "anydata",
+    "anyxml",
+    "choice",
+    "container",
+    "identity",
+    "leaf",
+    "leaf-list",
+    "list",
+    "rpc",
+    "notification",
+    "typedef",
+}
+
+class Stmt(object):
+    name: str
+    section: str
+    argument_name: ?str
+    substmts: dict[str, SubStmt]
+    def __init__(self, name: str, section: str, argument_name: ?str):
+        self.name = name
+        self.section = section
+        self.argument_name = argument_name
+        self.substmts = {}
+
+class SubStmt(object):
+    name: str
+    section: str
+    cardinality: str
+
+    def __init__(self, name: str, argument_name: ?str, section: str, cardinality: str):
+        self.name = name
+        self.argument_name = argument_name
+        self.section = section
+        self.cardinality = cardinality
+
+reserved_names = {
+    "Container",
+    "Identity",
+}
+
+def parse_stmts(rfc_text: str) -> dict[str, Stmt]:
+    """
+    """
+    arg_names = parse_arg_names(rfc_text)
+    section = ""
+    stmt_name = ""
+    tables = {}
+    in_table = False
+    skip_lines = 1000
+    nr = 0
+    for line in rfc_text.splitlines():
+        nr += 1
+        if skip_lines > 0:
+            skip_lines -= 1
+            continue
+        #        +--------------+---------+-------------+
+        if in_table:
+            m = re.match(r"\+--------------+\+---------\+-------------\+", line)
+            if m is not None:
+                in_table = False
+            else:
+                m = re.match(r"\| (\S+) +\| (\S+) +\| (\S+) +\|", line)
+                if m is not None:
+                    t = SubStmt(name=m.group[1], section=m.group[2], cardinality=m.group[3])
+                    tables[stmt_name].substmts[t.name] = t
+
+        # Match statement chapters to find the start of a statement definition.
+        # They look like:
+        # 7.1.1.  The module's Substatements
+        # 7.1.6.  The "include" Statement
+        m = re.match(r"(\d+(\.\d+)+)\.\s+The \"?([a-z-]+)(\"|'s) (Subs|S)tatement", line)
+        if m is not None:
+            #print("Found statement:", m.group[2], line)
+            section = m.group[1]
+            stmt_name = m.group[3]
+        # Find the table of substatements, header looks like:
+        #        +--------------+---------+-------------+
+        #        | substatement | section | cardinality |
+        #        +--------------+---------+-------------+
+        m = re.match(r"\| substatement +\| section \| cardinality \|", line)
+        if m is not None:
+            #print("Found substatement table for", stmt_name)
+            in_table = True
+            skip_lines = 1
+            if stmt_name not in tables:
+                arg_name = None
+                if stmt_name in arg_names:
+                    arg_name = arg_names[stmt_name]
+                s = Stmt(name=stmt_name, section=section, argument_name=arg_name)
+                if arg_name is not None:
+                    s.substmts[arg_name] = SubStmt(name=arg_name, section="", cardinality="1")
+                tables[stmt_name] = s
+            else:
+                print("Warning: duplicate table for", stmt_name, "at line", nr)
+
+    return tables
+
+def parse_arg_names(rfc_text: str) -> dict[str, str]:
+    """Parse argument names from RFC
+    """
+    in_yin = False
+    skip_lines = 0
+    res = {}
+    for line in rfc_text.splitlines():
+        if skip_lines > 0:
+            skip_lines -= 1
+            continue
+
+        if in_yin:
+            # Check for end of table
+            # +------------------+---------------+-------------+
+            m = re.match(r"\+------------------\+---------------\+-------------\+", line)
+            if m is not None:
+                in_yin = False
+                break
+            else:
+                # Grab table from YIN section that contains the argument name
+                # | action           | name          | false       |
+                m = re.match(r"\| (\S+) +\| (\S+) +\| (\S+) +\|", line)
+                if m is not None:
+                    name = m.group[1]
+                    arg = m.group[2]
+                    res[name] = arg
+
+        # Grab table from YIN section that contains the argument name
+        # Match table header
+        #             | keyword          | argument name | yin-element |
+        m = re.match(r"\| keyword +\| argument name +\| yin-element +\|", line)
+        if m is not None:
+            in_yin = True
+            skip_lines = 1
+    return res
+
+
+def _class_name(name: str):
+    res = ""
+    i = 0
+    while True:
+        if i == 0:
+            res += name[i].upper()
+        elif name[i] == "-":
+            i += 1
+            res += name[i].upper()
+        else:
+            res += name[i]
+        i += 1
+        if i == len(name):
+            break
+    if res in reserved_names:
+        res = res + "_"
+    return res
+
+def _attr_name(name: str):
+    res = ""
+    i = 0
+    while True:
+        if name[i] == "-":
+            res += "_"
+        else:
+            res += name[i]
+        i += 1
+        if i == len(name):
+            break
+    if res in {"extension", "import", "type"}:
+        res = res + "_"
+
+    return res
+
+def _attr_type(name, stmt, stmts) -> str:
+    t = "str"
+    # If the name is the argument name, it's always a string
+    if name == stmt.argument_name:
+        return "str"
+    cardinality = stmt.substmts[name].cardinality
+    if name in stmts:
+        t = _class_name(name)
+
+    if cardinality in {"0..1", "1"}:
+        return "?" + t
+    elif cardinality == "0..n":
+        return "list[%s]" % t
+    return "?str"
+
+def _attr_taker_name(name: str):
+    res = ""
+    i = 0
+    while True:
+        if name[i] == "-":
+            res += "_"
+        else:
+            res += name[i]
+        i += 1
+        if i == len(name):
+            break
+
+    return res
+
+def _attr_taker(name, stmt, stmts) -> str:
+    cardinality = stmt.substmts[name].cardinality
+    t = "str"
+    if name in stmts:
+        t = _attr_taker_name(name)
+
+    if cardinality in {"0..1", "1"}:
+        if name in stmts:
+            return "take_%s(ss)" % t
+        return "take_%s(ss, \"%s\")" % (t, name)
+    elif cardinality == "0..n":
+        if name in stmts:
+            return "take_%ss(ss)" % t
+        return "take_strlist(ss, \"%s\")" % t
+    else:
+        raise ValueError("Unknown cardinality: %s" % cardinality)
+
+def _attr_defval(name, stmt, stms) -> str:
+    if name == stmt.argument_name:
+        return ""
+    cardinality = stmt.substmts[name].cardinality
+    if cardinality in {"0..1", "1"}:
+        return "=None"
+    elif cardinality == "0..n":
+        return "=[]"
+    raise ValueError("Unknown cardinality: %s" % cardinality)
+
+header = """
+def _prsrc_attrs(attrs):
+    res = []
+    for attr in attrs:
+        name, value = attr
+        if isinstance(value, list):
+            if len(value) > 0:
+                res.append(name + "=[" + ", ".join(value) + "]")
+        else:
+            if value is not None:
+                res.append(name + "=" + repr(value))
+    return res
+
+def _ind(indent):
+    return "    " * indent
+
+class SchemaNode(object):
+    def prsrc(self, indent=0) -> list[str]:
+        raise NotImplementedError()
+
+"""
+
+def gen(stmts: dict[str, Stmt]) -> list[str]:
+    res = ["", ""]
+##    for line in header.splitlines():
+##        res.append(line)
+
+    need_takers = []
+
+    for stmt_name in sorted(stmts):
+        stmt = stmts[stmt_name]
+        arg_name = stmt.argument_name
+        have_children = False
+        cattrs = []
+        for substmt in stmt.substmts.values():
+            if substmt.name in child_stmts:
+                have_children = True
+            else:
+                cattrs.append(substmt.name)
+        kwattrs = cattrs if arg_name is None else cattrs[1:]
+
+        res.append("class %s(SchemaNode):" % (_class_name(stmt_name)))
+        res.append("    \"\"\"YANG %s" % stmt_name)
+        res.append("")
+        res.append("    https://tools.ietf.org/html/rfc7950#section-%s" % stmt.section)
+        res.append("    \"\"\"")
+        res.append("    parent: ?SchemaNode")
+
+        for attr in cattrs:
+            res.append("    %s: %s" % (_attr_name(attr), _attr_type(attr, stmt, stmts)))
+
+
+        if have_children:
+            res.append("    children: list[SchemaNode]")
+
+        res.append("")
+        init_attrs = ["self"]
+        if arg_name is not None:
+            init_attrs += [_attr_name(arg_name)]
+        init_attrs += list(map(lambda x: _attr_name(x) + _attr_defval(x, stmt, stmts), kwattrs))
+        if have_children:
+            init_attrs.append("children=[]")
+        res.append("    def __init__(" + ", ".join(init_attrs) + "):")
+        res.append("        self.parent = None")
+#        res.append("        self.cname = \"%s\"" % _class_name(stmt_name))
+#        res.append("        self.yname = \"%s\"" % stmt_name)
+        for attr in cattrs:
+            res.append("        self.%s = %s" % (_attr_name(attr), _attr_name(attr)))
+        if have_children:
+            res.append("        self.children = children")
+        res.append("")
+        res.append("    def prsrc(self, indent=0):")
+        res.append("        res = []")
+
+        args = []
+        res.append("        attrs = [")
+        for attr in kwattrs:
+            res.append("            (\"%s\", self.%s)," % (attr, _attr_name(attr)))
+        res.append("        ]")
+        if arg_name is not None:
+            res.append("        res.append(_ind(indent) + \"%s('\" + str(self.%s) + \"'\" + _prsrc_attrs(indent, %s) + \")\")" % (_class_name(stmt_name), _attr_name(arg_name), "attrs"))
+        else:
+            res.append("        res.append(_ind(indent) + \"%s(\" + _prsrc_attrs(indent, %s) + \")\")" % (_class_name(stmt_name), "attrs"))
+        if have_children:
+            res.append("        for child in self.children:")
+            res.append("            res.append(child.prsrc(indent+1))")
+        res.append("        return \"\\n\".join(res)")
+        res.append("")
+
+    for stmt_name in sorted(stmts):
+        res.append("def take_%s(stmts: list[Statement]) -> ?%s:" % (_attr_taker_name(stmt_name), _class_name(stmt_name)))
+        res.append("    for node in take_nodes(stmts, [\"%s\"]):" % stmt_name)
+        res.append("        if isinstance(node, %s):" % _class_name(stmt_name))
+        res.append("            return node")
+        res.append("")
+        res.append("def take_%ss(stmts: list[Statement]) -> list[%s]:" % (_attr_taker_name(stmt_name), _class_name(stmt_name)))
+        res.append("    res = []")
+        res.append("    for node in take_nodes(stmts, [\"%s\"]):" % stmt_name)
+        res.append("        if isinstance(node, %s):" % _class_name(stmt_name))
+        res.append("            res.append(node)")
+        res.append("    return res")
+        res.append("")
+
+    res.append("def stmt_to_snode(stmt: Statement) -> SchemaNode:")
+    res.append("    arg = stmt.arg")
+    res.append("    ss = stmt.substatements.copy()")
+    for stmt_name in sorted(stmts):
+        stmt = stmts[stmt_name]
+        arg_name = stmt.argument_name
+        have_children = False
+        cattrs = []
+        valid_children = []
+        for substmt in stmt.substmts.values():
+            if substmt.name in child_stmts:
+                have_children = True
+                valid_children.append(substmt.name)
+            else:
+                cattrs.append(substmt.name)
+        kwattrs = cattrs if arg_name is None else cattrs[1:]
+
+        res.append("    if stmt.kw == \"%s\":" % stmt_name)
+
+        if arg_name is not None:
+            res.append("        if arg is not None:")
+        else:
+            res.append("        if arg is None:")
+
+        # take attributes
+        attrs_takers = []
+        if arg_name is not None:
+            attrs_takers.append("arg")
+        for attr in kwattrs:
+            attr_take = ""
+            if attr != arg_name:
+                attr_take = _attr_name(attr) + "=" + _attr_taker(attr, stmt, stmts)
+            attrs_takers.append(attr_take)
+
+        if have_children:
+            valid_children_list = ", ".join(map(lambda x: "\"%s\"" % x, valid_children))
+            attrs_takers.append("children=take_nodes(ss, [%s])" % valid_children_list)
+        indent = " " * (17+len(stmt_name))
+        joiner = ",\n" + indent
+        res.append("            n = %s(%s\n" % (_class_name(stmt_name), joiner.join(attrs_takers)) + indent + ")")
+
+        res.append("            if len(ss) > 0:")
+        res.append("                raise ValueError(\"Invalid statment under %s:\" + ss[0].kw)" % stmt_name)
+        res.append("            return n")
+    res.append("    raise ValueError(\"Unknown statement:\" + stmt.kw)")
+
+    return res
+
+
+actor main(env):
+    y = gen(parse_stmts(rfc.rfc7950))
+    print("\n".join(y))
+    env.exit(0)
