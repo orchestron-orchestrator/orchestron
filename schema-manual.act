@@ -205,20 +205,45 @@ def take_nodes(stmts: list[Statement], kw: list[str]) -> list[SchemaNode]:
         del stmts[i]
     return res
 
+def _attr_name(name: str):
+    res = ""
+    i = 0
+    while True:
+        if name[i] == "-":
+            res += "_"
+        else:
+            res += name[i]
+        i += 1
+        if i == len(name):
+            break
+    if res in {"extension", "import", "type"}:
+        res = res + "_"
+
+    return res
+
 def _prsrc_attrs(indent, attrs):
+    """Print source code for a list of SchemaNode attributes"""
     res = []
     for attr in attrs:
-        name, value = attr
+        raw_name, value = attr
+        name = _attr_name(raw_name)
         if value is not None:
             if isinstance(value, list):
                 if len(value) == 0:
                     continue
                 else:
                     list_val = []
+                    content_is_snode = False
                     for e in value:
                         if isinstance(e, SchemaNode):
-                            list_val.append(e.prsrc(indent+1))
-                    list_val_str = "[" + ",\n".join(list_val) + "\n" + _ind(indent) + "]"
+                            list_val.append(e.prsrc(indent+2))
+                        else:
+                            list_val.append(repr(e))
+                    list_val_str = "[]"
+                    if len(list_val) == 1 and list_val[0][0] != " " and len(list_val[0]) < 20:
+                        list_val_str = "[" + list_val[0] + "]"
+                    else:
+                        list_val_str = "[\n" + ",\n".join(list_val) + "\n" + _ind(indent + 1) + "]"
                     res.append(name + "=" + list_val_str)
             elif isinstance(value, SchemaNode):
                 res.append(name + "=" + value.prsrc(0))
@@ -226,4 +251,4 @@ def _prsrc_attrs(indent, attrs):
                 res.append(name + "=" + repr(value))
     return ", ".join(res)
 
-# --
+# -- end of manually defined schema functions, automatically generated code follows

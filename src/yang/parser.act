@@ -88,7 +88,7 @@ class YangTokenizer(object):
             self.set_buf(m.end_pos)
             is_line_end = (last_line == self.pos.line)
             # look for a multiline comment
-            if cmt[:2] == '/*' and cmt[-2:] != '*/':
+            if cmt is not None and cmt[:2] == '/*' and cmt[-2:] != '*/':
                 i = self.buf.find('*/')
                 is_multi_line = True
                 while i == -1:
@@ -122,13 +122,14 @@ class YangTokenizer(object):
             else:
                 raise ValueError("expected separator, got: " + self.buf[:6] + '...')
 
-            return (identifier=m.group[3], prefix=m.group[2])
-#            g2 = m.group[2]
-#            g3 = m.group[3]
-#            if g2 is None and g3 is not None: # no prefix
-#                return (g3, g2)
-#            else:
-#                return [m.group[2], m.group[3]]
+            gident = m.group[3]
+            gprefix = m.group[2]
+            prefix = ""
+            if gprefix is not None:
+                prefix = gprefix
+            if gident is not None:
+                return (identifier=gident, prefix=prefix)
+            raise ValueError("identifier or prefix is None")
         else:
             raise ValueError("illegal keyword: " + self.buf)
 

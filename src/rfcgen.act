@@ -2,6 +2,16 @@ import re
 
 import rfc
 
+"""This module generates the source code for the Acton YANG module that in turn
+can be used to parse YANG modules and represent YANG schemas as Acton classes
+and objects.
+
+This is pretty meta (like meta-meta-meta), since the YANG module can print
+source code of itself and the code that prints source code is in turn generated
+by the code in this module. Have a decent amount of coffee before attempting to
+work on this.
+"""
+
 child_stmts = {
     "action",
     "anydata",
@@ -12,8 +22,8 @@ child_stmts = {
     "leaf",
     "leaf-list",
     "list",
-    "rpc",
     "notification",
+    "rpc",
     "typedef",
 }
 
@@ -28,6 +38,13 @@ class Stmt(object):
         self.argument_name = argument_name
         self.substmts = {}
 
+    def __str__(self):
+        argname = "None"
+        argument_name = self.argument_name
+        if argument_name is not None:
+            argname = argument_name
+        return "<Stmt name: %s  section: %s  argument_name: %s  substmts: %s>" % (self.name, self.section, argname, str(self.substmts))
+
 class SubStmt(object):
     name: str
     section: str
@@ -38,6 +55,14 @@ class SubStmt(object):
         self.argument_name = argument_name
         self.section = section
         self.cardinality = cardinality
+
+    def __str__(self):
+        argname = "None"
+        return "<SubStmt name: %s  section: %s  argument_name: %s  cardinality: %s>" % (self.name, self.section, argname, self.cardinality)
+
+    def __repr__(self):
+        argname = "None"
+        return "<SubStmt name: %s  section: %s  argument_name: %s  cardinality: %s>" % (self.name, self.section, argname, self.cardinality)
 
 reserved_names = {
     "Container",
@@ -67,8 +92,12 @@ def parse_stmts(rfc_text: str) -> dict[str, Stmt]:
             else:
                 m = re.match(r"\| (\S+) +\| (\S+) +\| (\S+) +\|", line)
                 if m is not None:
-                    t = SubStmt(name=m.group[1], section=m.group[2], cardinality=m.group[3])
-                    tables[stmt_name].substmts[t.name] = t
+                    gname = m.group[1]
+                    gsection = m.group[2]
+                    gcardinality = m.group[3]
+                    if gname is not None and gsection is not None and gcardinality is not None:
+                        t = SubStmt(name=gname, section=gsection, cardinality=gcardinality)
+                        tables[stmt_name].substmts[t.name] = t
 
         # Match statement chapters to find the start of a statement definition.
         # They look like:
@@ -77,8 +106,11 @@ def parse_stmts(rfc_text: str) -> dict[str, Stmt]:
         m = re.match(r"(\d+(\.\d+)+)\.\s+The \"?([a-z-]+)(\"|'s) (Subs|S)tatement", line)
         if m is not None:
             #print("Found statement:", m.group[2], line)
-            section = m.group[1]
-            stmt_name = m.group[3]
+            gsection = m.group[1]
+            gstmt_name = m.group[3]
+            if gsection is not None and gstmt_name is not None:
+                section = gsection
+                stmt_name = gstmt_name
         # Find the table of substatements, header looks like:
         #        +--------------+---------+-------------+
         #        | substatement | section | cardinality |
@@ -126,7 +158,8 @@ def parse_arg_names(rfc_text: str) -> dict[str, str]:
                 if m is not None:
                     name = m.group[1]
                     arg = m.group[2]
-                    res[name] = arg
+                    if name is not None and arg is not None:
+                        res[name] = arg
 
         # Grab table from YIN section that contains the argument name
         # Match table header
@@ -156,7 +189,7 @@ def _class_name(name: str):
         res = res + "_"
     return res
 
-def _attr_name(name: str):
+def _attr_name(name: str) -> str:
     res = ""
     i = 0
     while True:
@@ -180,6 +213,11 @@ def _attr_type(name, stmt, stmts) -> str:
     cardinality = stmt.substmts[name].cardinality
     if name in stmts:
         t = _class_name(name)
+    elif name in {"config", "mandatory", "require-instance"}:
+        t = "bool"
+    elif name in {"fraction-digits", "length", "position"}:
+        t = "int"
+
 
     if cardinality in {"0..1", "1"}:
         return "?" + t
@@ -204,8 +242,13 @@ def _attr_taker_name(name: str):
 def _attr_taker(name, stmt, stmts) -> str:
     cardinality = stmt.substmts[name].cardinality
     t = "str"
+    #if name in stmt.substmts:
     if name in stmts:
         t = _attr_taker_name(name)
+    elif name in {"config", "mandatory", "require-instance"}:
+        t = "bool"
+    elif name in {"fraction-digits", "length", "position"}:
+        t = "int"
 
     if cardinality in {"0..1", "1"}:
         if name in stmts:
@@ -214,7 +257,7 @@ def _attr_taker(name, stmt, stmts) -> str:
     elif cardinality == "0..n":
         if name in stmts:
             return "take_%ss(ss)" % t
-        return "take_strlist(ss, \"%s\")" % t
+        return "take_strlist(ss, \"%s\")" % name
     else:
         raise ValueError("Unknown cardinality: %s" % cardinality)
 
@@ -299,24 +342,48 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         if have_children:
             res.append("        self.children = children")
         res.append("")
+
+        # -- prsrc
         res.append("    def prsrc(self, indent=0):")
+        res.append('        """Print Acton source of this node"""')
         res.append("        res = []")
 
         args = []
-        res.append("        attrs = [")
+        res.append("        attrs: list[(str, ?value)] = [")
         for attr in kwattrs:
             res.append("            (\"%s\", self.%s)," % (attr, _attr_name(attr)))
         res.append("        ]")
+
         if arg_name is not None:
-            res.append("        res.append(_ind(indent) + \"%s('\" + str(self.%s) + \"'\" + _prsrc_attrs(indent, %s) + \")\")" % (_class_name(stmt_name), _attr_name(arg_name), "attrs"))
+            res.append("        args = [\"'\" + str(self.%s) + \"'\"]" % _attr_name(arg_name))
         else:
-            res.append("        res.append(_ind(indent) + \"%s(\" + _prsrc_attrs(indent, %s) + \")\")" % (_class_name(stmt_name), "attrs"))
+            res.append("        args = []")
+        res.append("        attrs_text = _prsrc_attrs(indent, attrs)")
+        res.append("        if len(attrs_text) > 0:")
+        res.append("            args.append(_prsrc_attrs(indent, attrs))")
         if have_children:
-            res.append("        for child in self.children:")
-            res.append("            res.append(child.prsrc(indent+1))")
+            res.append("        if len(self.children) > 0:")
+            res.append("            args.append(\"children=[\")")
+        res.append("        args_text = \", \".join(args)")
+        text_prscr_attrs = "        text_line = _ind(indent) + \"%s(\" + args_text" % (_class_name(stmt_name))
+        if not have_children:
+            text_prscr_attrs += " + \")\""
+        res.append(text_prscr_attrs)
+        if have_children:
+            res.append("        if len(self.children) == 0:")
+            res.append("            text_line += ')'")
+        res.append("        res.append(text_line)")
+        if have_children:
+            res.append("        if len(self.children) > 0:")
+            res.append("            child_res = []")
+            res.append("            for child in self.children:")
+            res.append("                child_res.append(child.prsrc(indent+1))")
+            res.append("            res.append(\",\\n\".join(child_res))")
+            res.append("            res.append(_ind(indent) + \"])\")")
         res.append("        return \"\\n\".join(res)")
         res.append("")
 
+    # Generate takers, both singular and plural (i.e. a list)
     for stmt_name in sorted(stmts):
         res.append("def take_%s(stmts: list[Statement]) -> ?%s:" % (_attr_taker_name(stmt_name), _class_name(stmt_name)))
         res.append("    for node in take_nodes(stmts, [\"%s\"]):" % stmt_name)
@@ -335,6 +402,7 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
     res.append("    arg = stmt.arg")
     res.append("    ss = stmt.substatements.copy()")
     for stmt_name in sorted(stmts):
+        res.append("# KLL")
         stmt = stmts[stmt_name]
         arg_name = stmt.argument_name
         have_children = False
@@ -359,6 +427,7 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         attrs_takers = []
         if arg_name is not None:
             attrs_takers.append("arg")
+        res.append("# KLL kwattrs:" + str(kwattrs))
         for attr in kwattrs:
             attr_take = ""
             if attr != arg_name:
@@ -373,14 +442,34 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         res.append("            n = %s(%s\n" % (_class_name(stmt_name), joiner.join(attrs_takers)) + indent + ")")
 
         res.append("            if len(ss) > 0:")
-        res.append("                raise ValueError(\"Invalid statment under %s:\" + ss[0].kw)" % stmt_name)
+        res.append("                raise ValueError(\"Invalid statement under %s: \" + ss[0].kw)" % stmt_name)
         res.append("            return n")
     res.append("    raise ValueError(\"Unknown statement:\" + stmt.kw)")
 
     return res
 
 
+# LOL, RFC7950 is missing a table definitions for the substatements of refine,
+# so here's our very own bis! =)
+rfc7950bis = """
+7.13.999.  The refine's Substatements
+                 +--------------+---------+-------------+
+                 | substatement | section | cardinality |
+                 +--------------+---------+-------------+
+                 | config       | 7.21.1  | 0..1        |
+                 | default      | 7.6.4   | 0..1        |
+                 | description  | 7.21.3  | 0..1        |
+                 | if-feature   | 7.20.2  | 0..n        |
+                 | mandatory    | 7.6.5   | 0..1        |
+                 | max-elements | 7.7.6   | 0..1        |
+                 | min-elements | 7.7.5   | 0..1        |
+                 | must         | 7.5.3   | 0..n        |
+                 | presence     | 7.5.5   | 0..1        |
+                 | reference    | 7.21.4  | 0..1        |
+                 +--------------+---------+-------------+
+"""
+
 actor main(env):
-    y = gen(parse_stmts(rfc.rfc7950))
+    y = gen(parse_stmts(rfc.rfc7950 + rfc7950bis))
     print("\n".join(y))
     env.exit(0)
