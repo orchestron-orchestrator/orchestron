@@ -1,0 +1,692 @@
+import testing
+
+"""YANG data
+
+This module defines classes for YANG data nodes. It can represent a YANG data
+tree, and can be used to serialize and deserialize YANG data.
+"""
+
+# kinds of things?
+# - container
+# - list
+# - list element
+# - leaf
+# - leaf-list
+#
+# TODO: for ordered-by user lists, we need to expose a way to influence the order of elements
+
+# Can we simply use the order of elements in the input list to control the order in the output?
+#
+# ACL1 which allows SSH and rejects everything else
+# <acls>
+#   <acl>
+#     <aces>
+#       <ace>
+#         <name>SSH</name>
+#         <action>permit</action>
+#         <matches>
+#           <ipv4>
+#             <source-ipv4-network>192.0.2.0/24</source-ipv4-network>
+#           </ipv4>
+#           <protocol>tcp</protocol>
+#           <tcp>
+#             <destination-port>
+#               <operator>eq</operator>
+#               <port>22</port>
+#             </destionation-port>
+#           </tcp>
+#         </matches>
+#       </ace>
+#       <ace>
+#         <name>DROP</name>
+#         <action>drop</action>
+#       </ace>
+#     </aces>
+#   </acl>
+# </acls>
+#
+# ACL2 which allows BGP and rejects everything else
+# <acls>
+#   <acl>
+#     <aces>
+#       <ace>
+#         <name>BGP-PASSIVE</name>
+#         <action>permit</action>
+#         <src-port>179</src-port>
+#         <matches>
+#           <protocol>tcp</protocol>
+#           <tcp>
+#             <destination-port>
+#               <operator>eq</operator>
+#               <port>179</port>
+#             </destionation-port>
+#           </tcp>
+#         </matches>
+#       </ace>
+#       <ace>
+#         <name>DROP</name>
+#       </ace>
+#     </aces>
+#   </acl>
+# </acls>
+#
+# And the merged result should be:
+#
+# <acls>
+#   <acl>
+#     <aces>
+#       <ace>
+#         <name>SSH</name>
+#         <action>permit</action>
+#         <matches>
+#           <ipv4>
+#             <source-ipv4-network>192.0.2.0/24</source-ipv4-network>
+#           </ipv4>
+#           <protocol>tcp</protocol>
+#           <tcp>
+#             <destination-port>
+#               <operator>eq</operator>
+#               <port>22</port>
+#             </destionation-port>
+#           </tcp>
+#         </matches>
+#       </ace>
+#       <ace>
+#         <name>BGP-PASSIVE</name>
+#         <action>permit</action>
+#         <src-port>179</src-port>
+#         <matches>
+#           <protocol>tcp</protocol>
+#           <tcp>
+#             <destination-port>
+#               <operator>eq</operator>
+#               <port>179</port>
+#             </destionation-port>
+#           </tcp>
+#         </matches>
+#       </ace>
+#       <ace>
+#         <name>DROP</name>
+#         <action>drop</action>
+#       </ace>
+#     </aces>
+#   </acl>
+# </acls>
+#
+
+#
+#
+# ACL1 which allows SSH and rejects everything else
+#   <acl>
+#       <ace>
+#         <name>SSH</name>
+#         <action>permit</action>
+#         <matches>...</matches>
+#       </ace>
+#       <ace>
+#         <name>DROP</name>
+#         <action>drop</action>
+#       </ace>
+#   </acl>
+#
+# ACL2 which allows BGP and rejects everything else
+#   <acl>
+#       <ace>
+#         <name>BGP-PASSIVE</name>
+#         <action>permit</action>
+#         <matches>...</matches>
+#       </ace>
+#       <ace>
+#         <name>DROP</name>
+#       </ace>
+#   </acl>
+#
+# And the merged result should be:
+#
+#   <acl>
+#       <ace>
+#         <name>SSH</name>
+#         <action>permit</action>
+#         <matches>...</matches>
+#       </ace>
+#       <ace>
+#         <name>BGP-PASSIVE</name>
+#         <action>permit</action>
+#         <matches>... </matches>
+#       </ace>
+#       <ace>
+#         <name>DROP</name>
+#         <action>drop</action>
+#       </ace>
+#   </acl>
+#
+# In the merge, we cannot know if SSH should come before or after BGP-PASSIVE,
+# but it dosen't matter. The only important thing is that both are before the
+# DROP rule. We make sure of this by stating in both input ACLs that DROP should
+# be last. Note how in ACL2 the DROP ace is not complete, it just contains the
+# name and nothing else. This is fine because the merge function will take the
+# complete ACE from ACL1 and merge it with the incomplete ACE from ACL2 to
+# produce a complete output.
+
+class Node(object):
+    pass
+
+    def prsrc(self) -> str:
+        if isinstance(self, Container_):
+            return "Container_(" + self.name + ", " + str(self.children) + ")"
+        if isinstance(self, List):
+            return "List(" + self.name + ", " + str(self.keys) + ", " + str(self.elements) + ")"
+        if isinstance(self, ListElement):
+            return "ListElement(" + str(self.key_vals) + ", " + str(self.children) + ")"
+        if isinstance(self, Leaf):
+            return "Leaf(" + self.name + ", " + str(self.val) + ")"
+        return "Node()"
+
+    def to_xmlstr(self, indent=0) -> str:
+        def _indent():
+            return "  " * indent
+        if isinstance(self, Container_):
+            xml = _indent() + "<" + self.name + ">\n"
+            for child in self.children.values():
+                xml += child.to_xmlstr(indent + 1)
+            xml += _indent() + "</" + self.name + ">\n"
+            return xml
+        if isinstance(self, List):
+            xml = ""
+            for elem in self.elements:
+                xml += _indent() + "<" + self.name + ">\n"
+                for key_idx, key_name in enumerate(self.keys):
+                    xml += _indent() + "  <" + key_name + ">" + str(elem.key_vals[key_idx]) + "</" + key_name + ">\n"
+                for child in elem.children.values():
+                    xml += child.to_xmlstr(indent + 1)
+                xml += _indent() + "</" + self.name + ">\n"
+            return xml
+        if isinstance(self, ListElement): # printing of ListElement is folded into List
+            raise ValueError("ListElement should not be printed directly")
+        if isinstance(self, Leaf):
+            return _indent() + "<" + self.name + ">" + str(self.val) + "</" + self.name + ">\n"
+        if isinstance(self, LeafList):
+            xml = ""
+            for val in self.vals:
+                xml += _indent() + "<" + self.name + ">" + str(val) + "</" + self.name + ">\n"
+            return xml
+        raise ValueError("Unsupported node type in to_xml: " + type(self))
+
+extension Node(Eq):
+    def __eq__(self, other: Node) -> bool:
+        if isinstance(self, Container_) and isinstance(other, Container_):
+            if self.name != other.name:
+                return False
+            if set(self.children.keys()) != set(other.children.keys()):
+                return False
+            for key in self.children.keys():
+                if self.children[key] != other.children[key]:
+                    return False
+            return True
+
+        if isinstance(self, Leaf) and isinstance(other, Leaf):
+            selfval = self.val
+            otherval = other.val
+            if isinstance(selfval, int) and isinstance(otherval, int):
+                return self.name == other.name and selfval == otherval
+            if isinstance(selfval, str) and isinstance(otherval, str):
+                return self.name == other.name and selfval == otherval
+            if isinstance(selfval, bool) and isinstance(otherval, bool):
+                return self.name == other.name and selfval == otherval
+            if isinstance(selfval, float) and isinstance(otherval, float):
+                return self.name == other.name and selfval == otherval
+            # YANG uint8 is stored as u16 since we don't have u8.
+            if isinstance(selfval, u16) and isinstance(otherval, u16):
+                return self.name == other.name and selfval == otherval
+            if isinstance(selfval, u32) and isinstance(otherval, u32):
+                return self.name == other.name and selfval == otherval
+            if isinstance(selfval, u64) and isinstance(otherval, u64):
+                return self.name == other.name and selfval == otherval
+            # YANG int8 is stored as i16 since we don't have i8.
+            if isinstance(selfval, i16) and isinstance(otherval, i16):
+                return self.name == other.name and selfval == otherval
+            if isinstance(selfval, i32) and isinstance(otherval, i32):
+                return self.name == other.name and selfval == otherval
+            if isinstance(selfval, i64) and isinstance(otherval, i64):
+                return self.name == other.name and selfval == otherval
+            if type(selfval) != type(otherval):
+                raise ValueError("Cannot compare Leaf nodes with different value types")
+            raise ValueError("Unsupported value type in Leaf node comparison: " + type(selfval) + " == " + type(otherval))
+
+        if isinstance(self, LeafList) and isinstance(other, LeafList):
+            if self.name != other.name:
+                return False
+            if len(self.vals) != len(other.vals):
+                return False
+            for i in range(len(self.vals)):
+                selfval = self.vals[i]
+                otherval = other.vals[i]
+                if isinstance(selfval, int) and isinstance(otherval, int):
+                    return selfval == otherval
+                if isinstance(selfval, str) and isinstance(otherval, str):
+                    return selfval == otherval
+                if isinstance(selfval, bool) and isinstance(otherval, bool):
+                    return selfval == otherval
+                if isinstance(selfval, float) and isinstance(otherval, float):
+                    return selfval == otherval
+                # YANG uint8 is stored as u16 since we don't have u8.
+                if isinstance(selfval, u16) and isinstance(otherval, u16):
+                    return selfval == otherval
+                if isinstance(selfval, u32) and isinstance(otherval, u32):
+                    return selfval == otherval
+                if isinstance(selfval, u64) and isinstance(otherval, u64):
+                    return selfval == otherval
+                # YANG int8 is stored as i16 since we don't have i8.
+                if isinstance(selfval, i16) and isinstance(otherval, i16):
+                    return selfval == otherval
+                if isinstance(selfval, i32) and isinstance(otherval, i32):
+                    return selfval == otherval
+                if isinstance(selfval, i64) and isinstance(otherval, i64):
+                    return selfval == otherval
+                if type(selfval) != type(otherval):
+                    raise ValueError("Cannot compare Leaf nodes with different value types")
+                raise ValueError("Unsupported value type in Leaf node comparison: " + type(selfval) + " == " + type(otherval))
+            return True
+
+        if isinstance(self, List) and isinstance(other, List):
+            if self.name != other.name:
+                return False
+            if self.keys != other.keys:
+                return False
+            if len(self.elements) != len(other.elements):
+                return False
+            for i in range(len(self.elements)):
+                e1: ListElement = self.elements[i]
+                e2: ListElement = other.elements[i]
+                # TODO: unnecessary? self / other.elements should be ListElement which is a Node, always
+                if isinstance(e1, Node) and isinstance(e2, Node):
+                    return e1 == e2
+                raise ValueError("unreachable at List.__eq__")
+            return True
+
+        if isinstance(self, ListElement) and isinstance(other, ListElement):
+            if self.key_vals != other.key_vals:
+                return False
+            if set(self.children.keys()) != set(other.children.keys()):
+                return False
+            for key in self.children.keys():
+                if self.children[key] != other.children[key]:
+                    return False
+            return True
+
+        raise ValueError("Cannot compare nodes of different types" + str(self) + " " + str(other))
+
+
+class Container_(Node):
+    name: str
+    children: dict[str, Node]
+
+    def __init__(self, name: str, children: dict[str, Node]={}):
+        self.name = name
+        self.children = children
+
+class List(Node):
+    name: str
+    keys: list[str] # name of the key leafs
+    elements: list[ListElement]
+    user_order: bool
+
+    def __init__(self, name: str, keys: list[str], elements: list[ListElement], user_order=False):
+        self.name = name
+        self.keys = keys
+        self.elements = elements
+        self.user_order = user_order
+
+class ListElement(Node):
+    key_vals: list[str] # values of the key leafs
+    children: dict[str, Node]
+
+    def __init__(self, key_vals: list[str], children: dict[str, Node]={}):
+        self.key_vals = key_vals
+        self.children = children
+
+class Leaf(Node):
+    name: str
+    val: atom
+
+    def __init__(self, name: str, val: atom):
+        self.name = name
+        self.val = val
+
+class LeafList(Node):
+    name: str
+    vals: list[atom]
+
+    def __init__(self, name: str, vals: list[atom]=[]):
+        self.name = name
+        self.vals = vals
+
+
+def merge(a: Node, b: Node) -> Node:
+    if isinstance(a, Container_) and isinstance(b, Container_):
+        # Find overlapping children, which might need merging on their own
+        overlapping = set(a.children.keys()) & set(b.children.keys())
+        # Avoid comprehensions
+        new_children: dict[str, Node] = {}
+        for key in overlapping:
+            new_children[key] = merge(a.children[key], b.children[key])
+        # Add children that are not in the other node
+        for key in set(a.children.keys()) - set(b.children.keys()):
+            new_children[key] = a.children[key]
+        for key in set(b.children.keys()) - set(a.children.keys()):
+            new_children[key] = b.children[key]
+        return Container_(a.name, children=new_children)
+    elif isinstance(a, Leaf) and isinstance(b, Leaf):
+        if a.name != b.name:
+            raise ValueError("Cannot merge leaves with different names")
+        aval = a.val
+        bval = b.val
+        if isinstance(aval, int) and isinstance(bval, int):
+            if aval == bval:
+                return a
+            raise ValueError("Cannot merge leaves with different values, " + str(aval) + " != " + str(bval))
+        if isinstance(aval, str) and isinstance(bval, str):
+            if aval == bval:
+                return a
+            raise ValueError("Cannot merge leaves with different values, " + str(aval) + " != " + str(bval))
+        if isinstance(aval, bool) and isinstance(bval, bool):
+            if aval == bval:
+                return a
+            raise ValueError("Cannot merge leaves with different values, " + str(aval) + " != " + str(bval))
+        if isinstance(aval, float) and isinstance(bval, float):
+            if aval == bval:
+                return a
+            raise ValueError("Cannot merge leaves with different values, " + str(aval) + " != " + str(bval))
+        # YANG uint8 is stored as u16 since we don't have u8.
+        if isinstance(aval, u16) and isinstance(bval, u16):
+            if aval == bval:
+                return a
+            raise ValueError("Cannot merge leaves with different values, " + str(aval) + " != " + str(bval))
+        if isinstance(aval, u32) and isinstance(bval, u32):
+            if aval == bval:
+                return a
+            raise ValueError("Cannot merge leaves with different values, " + str(aval) + " != " + str(bval))
+        if isinstance(aval, u64) and isinstance(bval, u64):
+            if aval == bval:
+                return a
+            raise ValueError("Cannot merge leaves with different values, " + str(aval) + " != " + str(bval))
+        # YANG int8 is stored as i16 since we don't have i8.
+        if isinstance(aval, i16) and isinstance(bval, i16):
+            if aval == bval:
+                return a
+            raise ValueError("Cannot merge leaves with different values, " + str(aval) + " != " + str(bval))
+        if isinstance(aval, i32) and isinstance(bval, i32):
+            if aval == bval:
+                return a
+            raise ValueError("Cannot merge leaves with different values, " + str(aval) + " != " + str(bval))
+        if isinstance(aval, i64) and isinstance(bval, i64):
+            if aval == bval:
+                return a
+            raise ValueError("Cannot merge leaves with different values, " + str(aval) + " != " + str(bval))
+        raise ValueError("Unsupported value type in Leaf node comparison: " + type(aval) + " != " + type(bval))
+    elif isinstance(a, List) and isinstance(b, List):
+        if a.name != b.name:
+            raise ValueError("Cannot merge lists with different names")
+        if a.keys != b.keys:
+            raise ValueError("Cannot merge lists with different keys")
+        if a.user_order != b.user_order:
+            raise ValueError("Cannot merge lists with different user_order")
+
+        new_elements: list[ListElement] = []
+
+        if a.user_order:
+            # Create a new list with elements from a, also merging elements that are
+            # present in both lists
+            for a_elem in a.elements:
+                found = False
+                for b_elem in b.elements:
+                    if a_elem.key_vals == b_elem.key_vals:
+                        new_element = merge(a_elem, b_elem)
+                        if isinstance(new_element, ListElement):
+                            new_elements.append(new_element)
+                        found = True
+                        break
+                if not found:
+                    new_elements.append(a_elem)
+            # Add elements from b that are not in a
+            insertion_index = 0
+            for b_elem in b.elements:
+                # Check if the element is already in the list. If it is, we should
+                # insert the next element after it, so grab the index.
+                found = False
+                for idx, a_elem in enumerate(new_elements[insertion_index:]):
+                    if a_elem.key_vals == b_elem.key_vals:
+                        found = True
+                        insertion_index = idx + 1
+                        break
+                if found:
+                    continue
+                new_elements.insert(insertion_index, b_elem)
+        else:
+            all_elements: dict[str, list[ListElement]] = {}
+
+            def escape_keys(key_val):
+                return key_val.replace(",", "\\,")
+            for elem in a.elements:
+                escaped_keys = map(escape_keys, elem.key_vals)
+                key_str = ",".join(elem.key_vals)
+                if key_str not in all_elements:
+                    all_elements[key_str] = []
+                all_elements[key_str].append(elem)
+            for elem in b.elements:
+                escaped_keys = map(escape_keys, elem.key_vals)
+                key_str = ",".join(elem.key_vals)
+                if key_str not in all_elements:
+                    all_elements[key_str] = []
+                all_elements[key_str].append(elem)
+
+            for key_str in sorted(all_elements.keys()):
+                # merge all elements with the same key values
+                elems: list[ListElement] = all_elements[key_str]
+                new_elem = elems[0]
+                if len(elems) > 1:
+                    for elem in elems[1:]:
+                        new_elem = merge(new_elem, elem)
+                if isinstance(new_elem, ListElement):
+                    new_elements.append(new_elem)
+                else:
+                    raise ValueError("unreachable, new_elem should always be a ListElement")
+
+        return List(a.name, a.keys, new_elements)
+
+    elif isinstance(a, List) and isinstance(b, List):
+        if a.name != b.name:
+            raise ValueError("Cannot merge lists with different names")
+        if a.keys != b.keys:
+            raise ValueError("Cannot merge lists with different keys")
+        new_elements: list[ListElement] = []
+        for a_elem in a.elements:
+            found = False
+            for b_elem in b.elements:
+                if a_elem.key_vals == b_elem.key_vals:
+                    new_element = merge(a_elem, b_elem)
+                    if isinstance(new_element, ListElement):
+                        new_elements.append(new_element)
+                    found = True
+                    break
+            if not found:
+                new_elements.append(a_elem)
+        for b_elem in b.elements:
+            found = False
+            for a_elem in a.elements:
+                if a_elem.key_vals == b_elem.key_vals:
+                    found = True
+                    break
+            if not found:
+                new_elements.append(b_elem)
+        return List(a.name, a.keys, new_elements)
+
+    elif isinstance(a, ListElement) and isinstance(b, ListElement):
+        if a.key_vals != b.key_vals:
+            raise ValueError("Cannot merge list elements with different keys")
+        # Find overlapping children, which might need merging on their own
+        overlapping = set(a.children.keys()) & set(b.children.keys())
+        # Avoid comprehensions
+        new_children: dict[str, Node] = {}
+        for key in overlapping:
+            new_children[key] = merge(a.children[key], b.children[key])
+        # Add children that are not in the other node
+        for key in set(a.children.keys()) - set(b.children.keys()):
+            new_children[key] = a.children[key]
+        for key in set(b.children.keys()) - set(a.children.keys()):
+            new_children[key] = b.children[key]
+        return ListElement(a.key_vals, children=new_children)
+    else:
+        raise ValueError("Cannot merge nodes of different types")
+
+def _test_merge1():
+    y1 = Container_("foo", {
+        "a": Leaf("a", 1),
+        "l1": List("l1", ["name"], [
+            ListElement(["k1"], {
+                "n1": Leaf("n1", 1),
+                "n2": Leaf("n2", 2)
+            }),
+            ListElement(["k4"], {
+                "n4": Leaf("n4", 4),
+            }),
+        ])
+    })
+
+    y2 = Container_("foo", {
+        "b": Leaf("b", 2),
+        "c": Leaf("c", 3),
+        "l1": List("l1", ["name"], [
+            ListElement(["k2"], {
+                "n1": Leaf("n1", 1),
+                "n3": Leaf("n3", 3)
+            }),
+        ]),
+        "d": LeafList("d", [1, 2, 3])
+    })
+
+    print(y1.to_xmlstr())
+    print(y2.to_xmlstr())
+    res = merge(y1, y2)
+    print(res.to_xmlstr())
+
+    exp = Container_("foo", {
+        "l1": List("l1", ["name"], [
+            ListElement(["k1"], {
+                "n1": Leaf("n1", 1),
+                "n2": Leaf("n2", 2)
+            }),
+            ListElement(["k2"], {
+                "n1": Leaf("n1", 1),
+                "n3": Leaf("n3", 3)
+            }),
+            ListElement(["k4"], {
+                "n4": Leaf("n4", 4),
+            }),
+        ]),
+        "a": Leaf("a", 1),
+        "b": Leaf("b", 2),
+        "c": Leaf("c", 3),
+        "d": LeafList("d", [1, 2, 3])
+    })
+    print(exp.to_xmlstr())
+    testing.assertEqual(merge(y1, y2), exp)
+
+def _test_merge_list1():
+    y1 = List("l1", ["name"], [
+        ListElement(["first"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["breaker"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["fourth"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["common"], {
+            "n2": Leaf("n2", 2)
+        }),
+        ListElement(["last"], {
+            "n1": Leaf("n1", 1)
+        }),
+    ], user_order=True)
+
+    y2 = List("l1", ["name"], [
+        ListElement(["breaker"]),
+        ListElement(["second"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["third"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["common"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["last"])
+    ], user_order=True)
+    exp = List("l1", ["name"], [
+        ListElement(["first"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["breaker"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["third"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["second"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["fourth"], {
+            "n1": Leaf("n1", 1)
+        }),
+        ListElement(["common"], {
+            "n2": Leaf("n2", 2)
+        }),
+        ListElement(["last"], {
+            "n1": Leaf("n1", 1)
+        }),
+    ])
+    print(merge(y1, y2).to_xmlstr())
+    testing.assertEqual(exp, merge(y1, y2))
+
+def _test_yang_data():
+#    y = YContainer("root", {
+#        "a": YContainer("a", {
+#            "b": YList("b", ["k"], {
+#                "k": YContainer("k", {
+#                    "c": YContainer("c", {
+#                        "d": YContainer("d", {})
+#                    })
+#                })
+#            })
+#        })
+#    })
+
+#    print(y)
+#
+#    y2 = YContainer("root", {
+#        "a": YContainer("a", {
+#            "b": YList("b", ["k"], {
+#                "k": YContainer("k", {
+#                    "c": YContainer("c", {
+#                        "d": YContainer("d", {})
+#                    })
+#                })
+#            })
+#        })
+#    })
+#
+#    print(y2)
+
+#    testing.assertEqual(y, y2)
+    pass
+
+
+actor main(env):
+    try:
+        _test_merge_list1()
+    except Exception as e:
+        print(e)
+        env.exit(1)
+    env.exit(0)
