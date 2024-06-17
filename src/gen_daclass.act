@@ -1,0 +1,55 @@
+import file
+
+import yang.parser
+import yang.schema
+
+test_yang = """module testy {
+  yang-version "1.1";
+  namespace "http://example.com/test_yang";
+  prefix "test_yang";
+  description "test yang module";
+  revision 2019-01-01 {
+    description "test revision";
+    reference "ref1";
+  }
+  import ietf-inet-types {
+    prefix "inet";
+    revision-date 2013-07-15;
+  }
+
+  container c1 {
+    description "container 1";
+    leaf l1 {
+      type string;
+      description "leaf 1";
+    }
+    leaf l2 {
+      type string;
+      description "leaf 2";
+    }
+    container c2 {
+      leaf l3 {
+        type string;
+        description "leaf 2";
+      }
+      leaf l4 {
+        type string;
+        description "leaf 3";
+      }
+    }
+  }
+}
+"""
+
+actor main(env):
+    y = yang.parser.parse(test_yang)
+    n = yang.schema.stmt_to_snode(y)
+    act_module = n.prdaclass()
+
+    fc = file.FileCap(env.cap)
+    wfc = file.WriteFileCap(fc)
+    wf = file.WriteFile(wfc, "src/y_testy.act")
+    content = "import yang.adata\nimport yang.data\n\n# This file is generated\n\n" + act_module
+    await async wf.write(content.encode())
+    await async wf.close()
+    env.exit(0)

@@ -1,0 +1,38 @@
+
+import yang.data
+import y_testy
+
+def service1():
+    mod = y_testy.y_testy()
+    c1 = mod.create_c1()
+    c1.l1 = "a leaf written by service1"
+    c2 = c1.create_c2()
+    c2.l3 = "also set by service1"
+    return mod.to_gdata()
+
+def service2():
+    mod = y_testy.y_testy()
+    c1 = mod.create_c1()
+    c1.l2 = "set by service2"
+    c2 = c1.create_c2()
+    c2.l4 = "set by service2"
+    return mod.to_gdata()
+
+#def service2():
+#    mod = y_testy.y_testy(
+#        c1 = y_testy.y_testy_c1(
+#            l2 = "set by service2",
+#            c2 = y_testy.y_testy_c1_c2(
+#                l4 = "set by service2"
+#            )
+#        )
+#    )
+#    return mod.to_gdata()
+
+
+actor main(env):
+    data1 = service1()
+    data2 = service2()
+    merged_config = yang.data.merge(data1, data2)
+    print(merged_config.to_xmlstr())
+    env.exit(0)

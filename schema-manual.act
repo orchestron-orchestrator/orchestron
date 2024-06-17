@@ -142,16 +142,98 @@ class Statement(object):
 
 
 class SchemaNode(object):
+    parent: ?SchemaNode
+
+    def _get_argname(self) -> ?str:
+        raise NotImplementedError('SchemaNode')
+
+    def _get_arg(self) -> ?str:
+        raise NotImplementedError('SchemaNode')
+
+    def _get_data_name(self) -> str:
+        raise NotImplementedError('SchemaNode')
 
     def prsrc(self, indent=0) -> str:
         """Print Acton source code for this schema node and its subnodes
         """
         raise NotImplementedError('SchemaNode')
 
-    def print_data_classes(self):
+    def prdaclass(self) -> str:
         """Print the data class for this schema node
         """
         raise NotImplementedError('SchemaNode pdc')
+
+class SchemaNodeInner(SchemaNode):
+    children: list[SchemaNode]
+
+    def prdaclass(self) -> str:
+        """Print the data class for this schema node
+        """
+        stmt_arg = self._get_arg()
+        res = []
+        for child in self.children:
+            if isinstance(child, SchemaNodeInner):
+                res.append(child.prdaclass())
+
+        attrs: list[(name: str, inner: bool, type: str, constructor: str, data_class: str)] = []
+        for child in self.children:
+            if isinstance(child, Container_):
+                attrs.append((child.name, True, "?" + _get_full_name(child), _get_full_name(child), "Container_"))
+            elif isinstance(child, Leaf):
+                attrs.append((child.name, False, "?" + yang_type_to_acton_type(child.type_), "", "Leaf"))
+            else:
+                raise ValueError("unreachable child type" + str(type(child)))
+
+        res.append("class %s(yang.adata.ADataNode):" % _get_full_name(self))
+        for attr in attrs:
+            res.append("    %s: %s" % (attr.name, attr.type))
+        res.append("")
+        init_args = ["self"]
+        for attr in attrs:
+            init_args.append("%s: %s=None" % (attr.name, attr.type))
+        init_args.append("children=[]")
+        init_args_str = ", ".join(init_args)
+        res.append("    def __init__(%s):" % init_args_str)
+        if stmt_arg is not None:
+            res.append("        self.name = " + repr(stmt_arg))
+        else:
+            if isinstance(self, Input):
+                res.append("        self.name = 'input'")
+            elif isinstance(self, Output):
+                res.append("        self.name = 'output'")
+            else:
+                raise ValueError("unreachable")
+        for attr in attrs:
+            res.append("        self.%s = %s" % (attr.name, attr.name))
+        res.append("")
+        res.append("    def to_gdata(self):")
+        if stmt_arg is not None:
+            res.append("        res = yang.data.%s('%s')" % (snode_type_name(self), stmt_arg))
+        else:
+            res.append("        res = yang.data.%s()" % snode_type_name(self))
+        for attr in attrs:
+            res.append("        _%s = self.%s" % (attr.name, attr.name))
+        for attr in attrs:
+            res.append("        if _%s is not None:" % attr.name)
+            if attr.inner:
+                res.append("            res.children['%s'] = _%s.to_gdata()" % (attr.name, attr.name))
+            else:
+                res.append("            res.children['%s'] = yang.data.%s('%s', _%s)" % (attr.name, attr.data_class, attr.name, attr.name))
+        res.append("        return res")
+        res.append("")
+        for attr in attrs:
+            if attr.inner:
+                res.append("    def create_%s(self):" % (attr.name))
+                res.append("        _%s = %s()" % (attr.name, attr.constructor))
+                res.append("        self.%s = _%s" % (attr.name, attr.name))
+                res.append("        return _%s" % (attr.name))
+                res.append("")
+        res.append("")
+        return "\n".join(res)
+
+class SchemaNodeOuter(SchemaNode):
+    pass
+
 
 def take_bool(stmts: list[Statement], kw: str) -> ?bool:
     v = take_str(stmts, kw)
@@ -250,5 +332,88 @@ def _prsrc_attrs(indent, attrs):
             else:
                 res.append(name + "=" + repr(value))
     return ", ".join(res)
+
+def yang_type_to_acton_type(t: ?Type) -> str:
+    # +---------------------+-------------------------------------+
+    # | Name                | Description                         |
+    # +---------------------+-------------------------------------+
+    # | binary              | Any binary data                     |
+    # | bits                | A set of bits or flags              |
+    # | boolean             | "true" or "false"                   |
+    # | decimal64           | 64-bit signed decimal number        |
+    # | empty               | A leaf that does not have any value |
+    # | enumeration         | One of an enumerated set of strings |
+    # | identityref         | A reference to an abstract identity |
+    # | instance-identifier | A reference to a data tree node     |
+    # | int8                | 8-bit signed integer                |
+    # | int16               | 16-bit signed integer               |
+    # | int32               | 32-bit signed integer               |
+    # | int64               | 64-bit signed integer               |
+    # | leafref             | A reference to a leaf instance      |
+    # | string              | A character string                  |
+    # | uint8               | 8-bit unsigned integer              |
+    # | uint16              | 16-bit unsigned integer             |
+    # | uint32              | 32-bit unsigned integer             |
+    # | uint64              | 64-bit unsigned integer             |
+    # | union               | Choice of member types              |
+    # +---------------------+-------------------------------------+
+    if t is not None:
+        if t.name == "binary":
+            return "bytes"
+        elif t.name == "bits":
+            raise NotImplementedError('bits not supported')
+        elif t.name == "boolean":
+            return "bool"
+        elif t.name == "decimal64":
+            # TODO: do something better
+            return "float"
+        elif t.name == "empty":
+            # TODO: is this right?
+            return "bool"
+        elif t.name == "enumeration":
+            raise NotImplementedError('enumeration not supported')
+        elif t.name == "identityref":
+            raise NotImplementedError('identityref not supported')
+        elif t.name == "instance-identifier":
+            raise NotImplementedError('instance-identifier not supported')
+        elif t.name == "int8":
+            return "i8"
+        elif t.name == "int16":
+            return "i16"
+        elif t.name == "int32":
+            return "i32"
+        elif t.name == "int64":
+            return "i64"
+        elif t.name == "leafref":
+            return "str"
+        elif t.name == "string":
+            return "str"
+        elif t.name == "uint8":
+            return "u8"
+        elif t.name == "uint16":
+            return "u16"
+        elif t.name == "uint32":
+            return "u32"
+        elif t.name == "uint64":
+            return "u64"
+        elif t.name == "union":
+            # TODO: blargh, implement once we have unions in Acton
+            raise NotImplementedError('union not supported')
+        else:
+            # TODO: resolve type -> typedefs -> basetype
+            raise ValueError("Unknown YANG type: " + t.name)
+    raise ValueError("type not defined")
+
+
+def _get_full_name(snode: SchemaNode) -> str:
+    path = []
+    while True:
+        path.append(snode_name(snode))
+        parent = snode.parent
+        if parent is not None:
+            snode = parent
+        else:
+            break
+    return "y_" + "_".join(reversed(path))
 
 # -- end of manually defined schema functions, automatically generated code follows

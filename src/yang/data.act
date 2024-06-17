@@ -169,7 +169,8 @@ tree, and can be used to serialize and deserialize YANG data.
 # produce a complete output.
 
 class Node(object):
-    pass
+    ns: ?str
+    prefix: ?str
 
     def prsrc(self) -> str:
         if isinstance(self, Container_):
@@ -191,7 +192,13 @@ class Node(object):
                 xml += child.to_xmlstr(indent + 1)
             xml += _indent() + "</" + self.name + ">\n"
             return xml
-        if isinstance(self, List):
+        elif isinstance(self, Module):
+            xml = _indent() + "<" + self.name + ">\n"
+            for child in self.children.values():
+                xml += child.to_xmlstr(indent + 1)
+            xml += _indent() + "</" + self.name + ">\n"
+            return xml
+        elif isinstance(self, List):
             xml = ""
             for elem in self.elements:
                 xml += _indent() + "<" + self.name + ">\n"
@@ -201,11 +208,11 @@ class Node(object):
                     xml += child.to_xmlstr(indent + 1)
                 xml += _indent() + "</" + self.name + ">\n"
             return xml
-        if isinstance(self, ListElement): # printing of ListElement is folded into List
+        elif isinstance(self, ListElement): # printing of ListElement is folded into List
             raise ValueError("ListElement should not be printed directly")
-        if isinstance(self, Leaf):
+        elif isinstance(self, Leaf):
             return _indent() + "<" + self.name + ">" + str(self.val) + "</" + self.name + ">\n"
-        if isinstance(self, LeafList):
+        elif isinstance(self, LeafList):
             xml = ""
             for val in self.vals:
                 xml += _indent() + "<" + self.name + ">" + str(val) + "</" + self.name + ">\n"
@@ -316,14 +323,26 @@ extension Node(Eq):
 
         raise ValueError("Cannot compare nodes of different types" + str(self) + " " + str(other))
 
+class Module(Node):
+    name: str
+    children: dict[str, Node]
+
+    def __init__(self, name: str, children: dict[str, Node]={}, ns=None, prefix=None):
+        self.name = name
+        self.children = children
+        self.ns = ns
+        self.prefix = prefix
+
 
 class Container_(Node):
     name: str
     children: dict[str, Node]
 
-    def __init__(self, name: str, children: dict[str, Node]={}):
+    def __init__(self, name: str, children: dict[str, Node]={}, ns=None, prefix=None):
         self.name = name
         self.children = children
+        self.ns = ns
+        self.prefix = prefix
 
 class List(Node):
     name: str
@@ -331,11 +350,13 @@ class List(Node):
     elements: list[ListElement]
     user_order: bool
 
-    def __init__(self, name: str, keys: list[str], elements: list[ListElement], user_order=False):
+    def __init__(self, name: str, keys: list[str], elements: list[ListElement], user_order=False, ns=None, prefix=None):
         self.name = name
         self.keys = keys
         self.elements = elements
         self.user_order = user_order
+        self.ns = ns
+        self.prefix = prefix
 
 class ListElement(Node):
     key_vals: list[str] # values of the key leafs
@@ -349,17 +370,21 @@ class Leaf(Node):
     name: str
     val: atom
 
-    def __init__(self, name: str, val: atom):
+    def __init__(self, name: str, val: atom, ns=None, prefix=None):
         self.name = name
         self.val = val
+        self.ns = ns
+        self.prefix = prefix
 
 class LeafList(Node):
     name: str
     vals: list[atom]
 
-    def __init__(self, name: str, vals: list[atom]=[]):
+    def __init__(self, name: str, vals: list[atom]=[], ns=None, prefix=None):
         self.name = name
         self.vals = vals
+        self.ns = ns
+        self.prefix = prefix
 
 
 def merge(a: Node, b: Node) -> Node:
@@ -376,6 +401,19 @@ def merge(a: Node, b: Node) -> Node:
         for key in set(b.children.keys()) - set(a.children.keys()):
             new_children[key] = b.children[key]
         return Container_(a.name, children=new_children)
+    elif isinstance(a, Module) and isinstance(b, Module):
+        # Find overlapping children, which might need merging on their own
+        overlapping = set(a.children.keys()) & set(b.children.keys())
+        # Avoid comprehensions
+        new_children: dict[str, Node] = {}
+        for key in overlapping:
+            new_children[key] = merge(a.children[key], b.children[key])
+        # Add children that are not in the other node
+        for key in set(a.children.keys()) - set(b.children.keys()):
+            new_children[key] = a.children[key]
+        for key in set(b.children.keys()) - set(a.children.keys()):
+            new_children[key] = b.children[key]
+        return Module(a.name, children=new_children)
     elif isinstance(a, Leaf) and isinstance(b, Leaf):
         if a.name != b.name:
             raise ValueError("Cannot merge leaves with different names")
@@ -462,6 +500,7 @@ def merge(a: Node, b: Node) -> Node:
                 if found:
                     continue
                 new_elements.insert(insertion_index, b_elem)
+                insertion_index += 1
         else:
             all_elements: dict[str, list[ListElement]] = {}
 
@@ -536,8 +575,10 @@ def merge(a: Node, b: Node) -> Node:
         for key in set(b.children.keys()) - set(a.children.keys()):
             new_children[key] = b.children[key]
         return ListElement(a.key_vals, children=new_children)
-    else:
+    elif type(a) != type(b):
         raise ValueError("Cannot merge nodes of different types")
+    else:
+        raise ValueError("Unsupported node type in merge: " + type(a))
 
 def _test_merge1():
     y1 = Container_("foo", {
@@ -624,6 +665,7 @@ def _test_merge_list1():
         }),
         ListElement(["last"])
     ], user_order=True)
+
     exp = List("l1", ["name"], [
         ListElement(["first"], {
             "n1": Leaf("n1", 1)

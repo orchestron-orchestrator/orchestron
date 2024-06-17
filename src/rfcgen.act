@@ -25,6 +25,7 @@ child_stmts = {
     "notification",
     "rpc",
     "typedef",
+    "uses",
 }
 
 class Stmt(object):
@@ -300,6 +301,28 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
 
     need_takers = []
 
+    res.append("def snode_name(sn: SchemaNode) -> str:")
+    for stmt_name in sorted(stmts):
+        stmt = stmts[stmt_name]
+        arg_name = stmt.argument_name
+        if arg_name is not None:
+            res.append("    if isinstance(sn, %s):" % _class_name(stmt_name))
+            res.append("        return sn.%s" % _attr_name(arg_name))
+    res.append("    raise ValueError(\"Unknown SchemaNode type\")")
+    res.append("")
+    res.append("")
+
+    res.append("def snode_type_name(sn: SchemaNode) -> str:")
+    for stmt_name in sorted(stmts):
+        stmt = stmts[stmt_name]
+        arg_name = stmt.argument_name
+        if arg_name is not None:
+            res.append("    if isinstance(sn, %s):" % _class_name(stmt_name))
+            res.append("        return \"%s\"" % _class_name(stmt_name))
+    res.append("    raise ValueError(\"Unknown SchemaNode type\")")
+    res.append("")
+    res.append("")
+
     for stmt_name in sorted(stmts):
         stmt = stmts[stmt_name]
         arg_name = stmt.argument_name
@@ -312,19 +335,16 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
                 cattrs.append(substmt.name)
         kwattrs = cattrs if arg_name is None else cattrs[1:]
 
-        res.append("class %s(SchemaNode):" % (_class_name(stmt_name)))
+        parent_class = "SchemaNodeInner" if have_children else "SchemaNodeOuter"
+        res.append("class %s(%s):" % (_class_name(stmt_name), parent_class))
         res.append("    \"\"\"YANG %s" % stmt_name)
         res.append("")
         res.append("    https://tools.ietf.org/html/rfc7950#section-%s" % stmt.section)
         res.append("    \"\"\"")
-        res.append("    parent: ?SchemaNode")
 
         for attr in cattrs:
             res.append("    %s: %s" % (_attr_name(attr), _attr_type(attr, stmt, stmts)))
 
-
-        if have_children:
-            res.append("    children: list[SchemaNode]")
 
         res.append("")
         init_attrs = ["self"]
@@ -341,6 +361,8 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             res.append("        self.%s = %s" % (_attr_name(attr), _attr_name(attr)))
         if have_children:
             res.append("        self.children = children")
+            res.append("        for child in self.children:")
+            res.append("            child.parent = self")
         res.append("")
 
         # -- prsrc
@@ -383,6 +405,28 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         res.append("        return \"\\n\".join(res)")
         res.append("")
 
+
+        res.append("    def _get_argname(self) -> ?str:")
+        if arg_name is not None:
+            res.append("        return '%s'" % _attr_name(arg_name))
+        else:
+            res.append("        return None")
+        res.append("")
+
+        res.append("    def _get_arg(self) -> ?str:")
+        if arg_name is not None:
+            res.append("        return self.%s" % _attr_name(arg_name))
+        else:
+            res.append("        return None")
+        res.append("")
+
+        res.append("    def _get_data_name(self) -> str:")
+        if arg_name is not None:
+            res.append("        return self.%s" % _attr_name(arg_name))
+        else:
+            res.append("        return '%s'" % stmt_name)
+        res.append("")
+
     # Generate takers, both singular and plural (i.e. a list)
     for stmt_name in sorted(stmts):
         res.append("def take_%s(stmts: list[Statement]) -> ?%s:" % (_attr_taker_name(stmt_name), _class_name(stmt_name)))
@@ -402,7 +446,6 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
     res.append("    arg = stmt.arg")
     res.append("    ss = stmt.substatements.copy()")
     for stmt_name in sorted(stmts):
-        res.append("# KLL")
         stmt = stmts[stmt_name]
         arg_name = stmt.argument_name
         have_children = False
@@ -427,7 +470,6 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         attrs_takers = []
         if arg_name is not None:
             attrs_takers.append("arg")
-        res.append("# KLL kwattrs:" + str(kwattrs))
         for attr in kwattrs:
             attr_take = ""
             if attr != arg_name:

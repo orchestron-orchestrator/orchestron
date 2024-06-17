@@ -1,0 +1,604 @@
+import testing
+import yang.parser
+import yang.schema
+
+test_yang = """module test_yang {
+  yang-version "1.1";
+  namespace "http://example.com/test_yang";
+  prefix "test_yang";
+  description "test yang module";
+  revision 2019-01-01 {
+    description "test revision";
+    reference "ref1";
+  }
+  import ietf-inet-types {
+    prefix "inet";
+    revision-date 2013-07-15;
+  }
+  include example-types;
+  feature fe1 {
+    description "feature 1";
+  }
+  feature fe2 {
+    description "feature 2";
+  }
+  typedef t1 {
+    type string;
+  }
+  identity i1 {
+    description "identity 1";
+  }
+  identity i1c {
+    description "identity 1";
+    base i1;
+  }
+  extension ext1 {
+    description "extension 1";
+    argument "arg1";
+  }
+  grouping g1 {
+    description "grouping 1";
+    leaf gl1 {
+      type string;
+      description "grouping leaf 1";
+    }
+  }
+  grouping g2 {
+    description "grouping 2";
+    container gc1 {
+      description "empty container";
+    }
+  }
+  container c1 {
+    description "container 1";
+    leaf l1 {
+      type string;
+      description "leaf 1";
+      if-feature "fe1 or fe2";
+    }
+    container c2 {
+      description "container 2";
+      config false;
+      leaf l2 {
+        type string;
+        description "leaf 2";
+      }
+      uses g1;
+      uses g2 {
+        augment "gl2" {
+          leaf al1 {
+            type string;
+          }
+        }
+        refine "gl2" {
+          if-feature "foo";
+          description "refined description for gl2";
+        }
+      }
+    }
+  }
+  container c3 {
+    action a1 {
+      description "action 1";
+    }
+    list li1 {
+      description "list 1";
+    }
+    leaf-list lli1 {
+      description "leaf-list 1";
+      type int32;
+    }
+    choice ch1 {
+      description "choice 1";
+    }
+  }
+  rpc rpc1 {
+    description "rpc 1";
+    input {
+      leaf rli1 {
+        type string;
+        description "rpc input leaf 1";
+      }
+    }
+    output {
+      leaf rlo1 {
+        type string;
+        description "rpc output leaf 1";
+      }
+    }
+  }
+  notification n1 {
+    description "notification 1";
+    anydata n1ad {
+      description "notification anydata 1";
+    }
+    anyxml n1ax {
+      description "notification anyxml 1";
+    }
+  }
+}
+"""
+
+test_submodule = """submodule test_submodule {
+  belongs-to test_yang {
+    prefix "sub1";
+  }
+}
+"""
+
+test_yang_simple = """module test_yang {
+  yang-version "1.1";
+  namespace "http://example.com/test_yang";
+  prefix "test_yang";
+  description "test yang module";
+  revision 2019-01-01 {
+    description "test revision";
+    reference "ref1";
+  }
+  import ietf-inet-types {
+    prefix "inet";
+    revision-date 2013-07-15;
+  }
+  container c1 {
+    description "container 1";
+    leaf l1 {
+      type string;
+      description "leaf 1";
+      mandatory true;
+    }
+    container c2 {
+      description "container 2";
+      config false;
+      leaf l2 {
+        type string;
+        description "leaf 2";
+        default "foo";
+      }
+      leaf l3 {
+        type uint32;
+        description "leaf 3";
+        default "42";
+      }
+    }
+  }
+}
+"""
+
+def mwrap(s):
+    """Wrap some YANG in a module definition"""
+    header = """module test_yang {
+  yang-version "1.1";
+  namespace "http://example.com/test_yang";
+  prefix "test_yang";
+"""
+    footer = """
+}
+"""
+    return header + s + footer
+
+def _test_yang():
+    original = test_yang
+    y = yang.parser.parse(original)
+    yang_out = y.pryang()
+    testing.assertEqual(original, yang_out, "YANG round trip failed\n" + original + "\n===\n" + yang_out)
+
+def _test_submodule():
+    original = test_submodule
+    y = yang.parser.parse(original)
+    yang_out = y.pryang()
+    testing.assertEqual(original, yang_out, "YANG round trip failed\n" + original + "\n===\n" + yang_out)
+
+def _test_prsrc():
+    y = yang.parser.parse(test_yang)
+    n = yang.schema.stmt_to_snode(y)
+    src_out = n.prsrc()
+
+def _test_schema_node():
+    y = yang.parser.parse(test_yang)
+    n = yang.schema.stmt_to_snode(y)
+
+def _test_schema_node_submodule():
+    y = yang.parser.parse(test_submodule)
+    n = yang.schema.stmt_to_snode(y)
+
+def _test_fail_leaf_invalid():
+    """Invalid statement under leaf"""
+    t = mwrap("""leaf l1 {
+  type string;
+  description "leaf 1";
+  foo "bar";
+}
+""")
+    try:
+        y = yang.parser.parse(t)
+    except ValueError as exc:
+        testing.assertEqual("Invalid statement under leaf", str(exc), "Expected ValueError")
+        return
+
+def _yang_to_act_code(text: str) -> str:
+    y = yang.parser.parse(text)
+    n = yang.schema.stmt_to_snode(y)
+    return n.prsrc()
+
+def _test_prsrc_augment_1():
+    ys = """augment "/if:interfaces/if:interface" {
+  if-feature "iffy";
+  description "aug1";
+  reference "ref1";
+  when 'derived-from-or-self(if:type, "mymod:some-new-iftype")';
+}"""
+    expected = """Augment('/if:interfaces/if:interface', description='aug1', if_feature=['iffy'], reference='ref1', when='derived-from-or-self(if:type, "mymod:some-new-iftype")')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_bit_1():
+    ys = """bit b1 {
+  description "bit1";
+  if-feature "iffy";
+  position 1;
+  reference "ref1";
+  status current;
+}"""
+    expected = """Bit('b1', description='bit1', if_feature=['iffy'], position=1, reference='ref1', status='current')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_case_1():
+    ys = """case case1 {
+  description "choice1";
+  if-feature "iffy";
+  reference "ref1";
+  status current;
+  when 'derived-from-or-self(if:type, "mymod:some-new-iftype")';
+}"""
+    expected = """Case('case1', description='choice1', if_feature=['iffy'], reference='ref1', status='current', when='derived-from-or-self(if:type, "mymod:some-new-iftype")')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_choice_1():
+    ys = """choice c1 {
+  config true;
+  default case1;
+  description "choice1";
+  if-feature "iffy";
+  mandatory true;
+  reference "ref1";
+  status current;
+  when 'derived-from-or-self(if:type, "mymod:some-new-iftype")';
+}"""
+    expected = """Choice('c1', config=True, default='case1', description='choice1', if_feature=['iffy'], mandatory=True, reference='ref1', status='current', when='derived-from-or-self(if:type, "mymod:some-new-iftype")')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_choice_case():
+    ys = """container transfer {
+  choice how {
+    default interval;
+    case interval {
+    }
+    case daily {
+    }
+    case manual {
+    }
+  }
+}"""
+    expected = """Container_('transfer', children=[
+    Choice('how', case=[
+            Case('interval'),
+            Case('daily'),
+            Case('manual')
+        ], default='interval')
+])"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_enum_1():
+    ys = """enum foo {
+    description "bar";
+    if-feature baz;
+    reference "qux";
+    status current;
+    value 42;
+}"""
+    expected = """Enum('foo', description='bar', if_feature=['baz'], reference='qux', status='current', value='42')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_input_1():
+    ys = """input {
+  must 'foo' {
+    description "bar";
+    error-app-tag "baz";
+    error-message "bax";
+    reference "qux";
+  }
+  leaf l1 {
+    type string;
+    description "leaf 1";
+    if-feature baz;
+    reference "ref1";
+    status current;
+  }
+}"""
+    expected = """Input(must=[
+    Must('foo', description='bar', error_app_tag='baz', error_message='bax', reference='qux'),
+], children=[
+    Leaf('l1', description='leaf 1', if_feature=['baz'], reference='ref1', status='current', type='string'),
+])"""
+    #testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_grouping_1():
+    ys = """grouping g1 {
+  description "g1 desc";
+  reference "ref1";
+  status current;
+}"""
+    expected = """Grouping('g1', description='g1 desc', reference='ref1', status='current')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_module_1():
+    ys = """module test_yang {
+  yang-version "1.1";
+  namespace "http://example.com/test_yang";
+  prefix "test_yang";
+  description "test yang module";
+  revision 2019-01-01 {
+    description "test revision";
+    reference "ref1";
+  }
+}"""
+    expected = """Module('test_yang', description='test yang module', namespace='http://example.com/test_yang', prefix='test_yang', revision=[
+        Revision('2019-01-01', description='test revision', reference='ref1')
+    ], yang_version='1.1')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_must_1():
+    ys = """must 'foo' {
+  description "bar";
+  error-app-tag "baz";
+  error-message "bax";
+  reference "qux";
+}"""
+    expected = """Must('foo', description='bar', error_app_tag='baz', error_message='bax', reference='qux')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_notification_1():
+    ys = """notification n1 {
+  description "notification 1";
+  if-feature baz;
+  must 'foo' {
+    description "bar";
+    error-app-tag "baz";
+    error-message "bax";
+    reference "qux";
+  }
+  reference "ref1";
+  status current;
+}"""
+    expected = """Notification('n1', description='notification 1', if_feature=['baz'], must=[
+        Must('foo', description='bar', error_app_tag='baz', error_message='bax', reference='qux')
+    ], reference='ref1', status='current')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_revision_1():
+    ys = """revision 2019-01-01 {
+  description "test revision";
+  reference "ref1";
+}"""
+    expected = """Revision('2019-01-01', description='test revision', reference='ref1')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_leaf_type_bit():
+    ys = """leaf foo {
+  type bits {
+    bit "bar" {
+      description "bar";
+      if-feature baz;
+      position 1;
+      reference "qux";
+      status current;
+    }
+    bit "bax" {
+      description "bax";
+      position 2;
+    }
+  }
+}"""
+    expected = """Leaf('foo', type_=Type('bits', bit=[
+        Bit('bar', description='bar', if_feature=['baz'], position=1, reference='qux', status='current'),
+        Bit('bax', description='bax', position=2)
+    ]))"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_leaf_type_decimal_fract():
+    ys = """leaf foo {
+  type decimal {
+    fraction-digits 3;
+  }
+}"""
+    expected = """Leaf('foo', type_=Type('decimal', fraction_digits=3))"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_leaf_type_enum():
+    ys = """leaf foo {
+  type enumeration {
+    enum "bar" {
+      description "bar";
+      if-feature baz;
+      reference "qux";
+      status current;
+      value 42;
+    }
+    enum "bax" {
+      description "bax";
+      value 43;
+    }
+  }
+}"""
+    expected = """Leaf('foo', type_=Type('enumeration', enum=[
+        Enum('bar', description='bar', if_feature=['baz'], reference='qux', status='current', value='42'),
+        Enum('bax', description='bax', value='43')
+    ]))"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_leaf_type_leafref():
+    ys = """leaf foo {
+  type leafref {
+    path "/foo/bar";
+    require-instance false;
+  }
+}"""
+    expected = """Leaf('foo', type_=Type('leafref', path='/foo/bar', require_instance=False))"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_leaf_type_string_length():
+    ys = """leaf foo {
+  type string {
+    length "1..10";
+    pattern "foo.*";
+  }
+}"""
+    expected = """Leaf('foo', type_=Type('string', length=Length('1..10'), pattern=[
+        Pattern('foo.*')
+    ]))"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_leaf_type_uint():
+    ys = """leaf foo {
+  type uint32 {
+    range "1..10";
+  }
+}"""
+    expected = """Leaf('foo', type_=Type('uint32', range=Range('1..10')))"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_rpc_1():
+    ys = """rpc rpc1 {
+  description "rpc 1";
+  input {
+    leaf rli1 {
+      type string;
+      description "rpc input leaf 1";
+    }
+  }
+  output {
+    leaf rlo1 {
+      type string;
+      description "rpc output leaf 1";
+    }
+    leaf rlo2 {
+      type string;
+      description "rpc output leaf 2";
+    }
+  }
+}"""
+    expected = """Rpc('rpc1', description='rpc 1', input=Input(children=[
+    Leaf('rli1', description='rpc input leaf 1', type_=Type('string'))
+]), output=Output(children=[
+    Leaf('rlo1', description='rpc output leaf 1', type_=Type('string')),
+    Leaf('rlo2', description='rpc output leaf 2', type_=Type('string'))
+]))"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_typedef_1():
+    ys = """typedef t1 {
+  default "foo";
+  description "t1 desc";
+  reference "ref1";
+  status current;
+  type string;
+  units "m/s";
+}"""
+    expected = """Typedef('t1', default='foo', description='t1 desc', reference='ref1', status='current', type_=Type('string'), units='m/s')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+def _test_prsrc_uses():
+    ys = """uses g1 {
+  description "uses g1";
+  if-feature baz;
+  reference "ref1";
+  status current;
+  when 'derived-from-or-self(if:type, "mymod:some-new-iftype")';
+  augment "gl2" {
+    leaf al1 {
+      type string;
+    }
+  }
+  refine "gl2" {
+    if-feature "foo";
+    description "refined description for gl2";
+  }
+}"""
+    expected = """Uses('g1', augment=[
+        Augment('gl2', children=[
+            Leaf('al1', type_=Type('string'))
+        ])
+    ], description='uses g1', if_feature=['baz'], reference='ref1', refine=[
+        Refine('gl2', description='refined description for gl2', if_feature=['foo'])
+    ], status='current', when='derived-from-or-self(if:type, "mymod:some-new-iftype")')"""
+    testing.assertEqual(expected, _yang_to_act_code(ys))
+
+myang = """input {
+  must 'foo' {
+    description "bar";
+    error-app-tag "baz";
+    error-message "bax";
+    reference "qux";
+  }
+  leaf l1 {
+    type string;
+    description "leaf 1";
+    if-feature baz;
+    reference "ref1";
+    status current;
+  }
+  leaf l2 {
+    type string;
+    description "leaf 2";
+  }
+}"""
+myang2 = """uses g1 {
+  description "uses g1";
+  if-feature baz;
+  reference "ref1";
+  status current;
+  when 'derived-from-or-self(if:type, "mymod:some-new-iftype")';
+  augment "gl2" {
+    leaf al1 {
+      type string;
+    }
+  }
+  refine "gl2" {
+    if-feature "foo";
+    description "refined description for gl2";
+  }
+}"""
+
+myang3 = """container c1 {
+    description "container 1";
+    leaf l1 {
+      type string;
+      description "leaf 1";
+      if-feature "fe1 or fe2";
+    }
+    leaf l2 {
+      type string;
+      description "leaf 2";
+    }
+}"""
+
+actor main(env):
+    try:
+        print("")
+        print(_yang_to_act_code(myang))
+        print("")
+    except Exception as exc:
+        print("SHITE")
+        print(exc)
+#    _test_prsrc_grouping_1()
+    await async env.exit(0)
+#
+#    y = yang.parser.parse(test_yang)
+#    print("YANG printed from statements:")
+#    print(y.pryang())
+#    n = yang.schema.stmt_to_snode(y)
+#    print("Acton source code for YANG schema node:")
+#    print(n.prsrc())
+#    print("Acton instance data classes for YANG schema:")
+#    print(type(n))
+#    print(n.print_data_classes())
+#    env.exit(0)
