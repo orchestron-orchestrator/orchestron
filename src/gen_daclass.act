@@ -30,11 +30,21 @@ test_yang = """module testy {
     container c2 {
       leaf l3 {
         type string;
-        description "leaf 2";
+        description "leaf 3";
       }
       leaf l4 {
         type string;
-        description "leaf 3";
+        description "leaf 4";
+      }
+    }
+    list list1 {
+      key kname;
+      leaf kname {
+        type string;
+      }
+      leaf l5 {
+        type string;
+        description "leaf 5";
       }
     }
   }

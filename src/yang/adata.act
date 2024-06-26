@@ -2,17 +2,18 @@
 import yang.schema
 import yang.data
 
-"""Acton classes of YANG-modeled data (AData)
+"""Base classes for YANG-modeled data classes (MData)
 """
 
-class ADataNode(object):
-    schema: ?yang.schema.SchemaNode
-    name: str
-    parent: ?ADataNode
-    def __init__(self, name: str, parent: ?ADataNode=None):
-        self.name = name
-        self.parent = parent
-        self.schema = None
+class MNode(object):
+    _schema: ?yang.schema.SchemaNode
+    _name: str
+    _parent: ?MNode
+
+    def __init__(self, _name: str, _parent: ?MNode=None):
+        self._name = _name
+        self._parent = _parent
+        self._schema = None
 
     mut def to_gdata(self) -> yang.data.Node:
         raise NotImplementedError()

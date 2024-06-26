@@ -202,10 +202,14 @@ class Node(object):
             xml = ""
             for elem in self.elements:
                 xml += _indent() + "<" + self.name + ">\n"
+                # Print key leafs first
                 for key_idx, key_name in enumerate(self.keys):
                     xml += _indent() + "  <" + key_name + ">" + str(elem.key_vals[key_idx]) + "</" + key_name + ">\n"
-                for child in elem.children.values():
-                    xml += child.to_xmlstr(indent + 1)
+                for le_childkey, le_child in elem.children.items():
+                    # Skip key leafs
+                    if le_childkey in self.keys:
+                        continue
+                    xml += le_child.to_xmlstr(indent + 1)
                 xml += _indent() + "</" + self.name + ">\n"
             return xml
         elif isinstance(self, ListElement): # printing of ListElement is folded into List
@@ -350,7 +354,7 @@ class List(Node):
     elements: list[ListElement]
     user_order: bool
 
-    def __init__(self, name: str, keys: list[str], elements: list[ListElement], user_order=False, ns=None, prefix=None):
+    def __init__(self, name: str, keys: list[str], elements: list[ListElement]=[], user_order=False, ns=None, prefix=None):
         self.name = name
         self.keys = keys
         self.elements = elements
@@ -359,6 +363,7 @@ class List(Node):
         self.prefix = prefix
 
 class ListElement(Node):
+    #_list: List
     key_vals: list[str] # values of the key leafs
     children: dict[str, Node]
 

@@ -3,29 +3,37 @@ import yang.data
 import y_testy
 
 def service1():
-    mod = y_testy.y_testy()
-    c1 = mod.create_c1()
-    c1.l1 = "a leaf written by service1"
-    c2 = c1.create_c2()
-    c2.l3 = "also set by service1"
-    return mod.to_gdata()
+    root = y_testy.y_testy()
+    root.c1.l1 = "a leaf written by service1"
+    root.c1.c2.l3 = "also set by service1"
+
+    e1 = root.c1.list1.create("bajs")
+    e1.l5 = "set by service1"
+
+    return root.to_gdata()
 
 def service2():
     mod = y_testy.y_testy()
-    c1 = mod.create_c1()
-    c1.l2 = "set by service2"
-    c2 = c1.create_c2()
-    c2.l4 = "set by service2"
+    mod.c1.l2 = "set by service2"
+    mod.c1.c2.l4 = "set by service2"
+
+    e1 = mod.c1.list1.create("shit")
+    e1.l5 = "set by service2"
+
     return mod.to_gdata()
 
-#def service2():
+#def service3():
 #    mod = y_testy.y_testy(
 #        c1 = y_testy.y_testy_c1(
-#            l2 = "set by service2",
+#            l2 = "set by service3",
 #            c2 = y_testy.y_testy_c1_c2(
-#                l4 = "set by service2"
+#                l4 = "set by service3"
 #            )
-#        )
+#        ),
+#        list1 = [
+#            y_testy.y_testy_list1_element(....)
+#        ]
+#
 #    )
 #    return mod.to_gdata()
 

@@ -175,41 +175,109 @@ class SchemaNodeInner(SchemaNode):
             if isinstance(child, SchemaNodeInner):
                 res.append(child.prdaclass())
 
-        attrs: list[(name: str, inner: bool, type: str, constructor: str, data_class: str)] = []
+        self_list_keys = set() # if we are a list, this is populated
+        if isinstance(self, List):
+            selfkey = self.key
+            if selfkey is not None:
+                for k in selfkey.split(" "):
+                    self_list_keys.add(k)
+
+        attrs: list[(name: str, inner: bool, type: str, optional: bool, constructor: str, data_class: str)] = []
         for child in self.children:
             if isinstance(child, Container_):
-                attrs.append((child.name, True, "?" + _get_full_name(child), _get_full_name(child), "Container_"))
+                childpresence = child.presence
+                if childpresence is not None:
+                    attrs.append((child.name, True, "?" + _get_full_name(child), True, _get_full_name(child), "Container_"))
+                else:
+                    attrs.append((child.name, True, _get_full_name(child), False, _get_full_name(child), "Container_"))
             elif isinstance(child, Leaf):
-                attrs.append((child.name, False, "?" + yang_type_to_acton_type(child.type_), "", "Leaf"))
+                optional = True
+                childmandatory = child.mandatory
+                if childmandatory is not None:
+                    optional = childmandatory
+                if child.name in self_list_keys:
+                    optional = False
+                optional_str = "?" if optional else ""
+                attrs.append((child.name, False, optional_str + yang_type_to_acton_type(child.type_), optional, "", "Leaf"))
+            elif isinstance(child, LeafList):
+                attrs.append((child.name, False, "list[" + yang_type_to_acton_type(child.type_) + "]", False, "", "LeafList"))
+            elif isinstance(child, List):
+                attrs.append((child.name, True, _get_full_name(child), False, _get_full_name(child), "List"))
             else:
-                raise ValueError("unreachable child type" + str(type(child)))
+                raise ValueError("unreachable child type: " + str(type(child)))
 
-        res.append("class %s(yang.adata.ADataNode):" % _get_full_name(self))
+        if isinstance(self, List):
+            # List has special handling as it actually results in two classes:
+            # - the list itself
+            # - the list entry class
+            # Here we create the list entry class, the list itself comes later
+            res.append("class %s_entry(yang.adata.MNode):" % _get_full_name(self))
+        else:
+            res.append("class %s(yang.adata.MNode):" % _get_full_name(self))
         for attr in attrs:
             res.append("    %s: %s" % (attr.name, attr.type))
         res.append("")
         init_args = ["self"]
         for attr in attrs:
-            init_args.append("%s: %s=None" % (attr.name, attr.type))
+            if attr.name in self_list_keys:
+                init_args.append("%s: %s" % (attr.name, attr.type))
+            else:
+                if attr.optional:
+                    init_args.append("%s: %s=None" % (attr.name, attr.type))
+                else:
+                    init_args.append("%s: ?%s" % (attr.name, attr.type))
         init_args.append("children=[]")
         init_args_str = ", ".join(init_args)
         res.append("    def __init__(%s):" % init_args_str)
         if stmt_arg is not None:
-            res.append("        self.name = " + repr(stmt_arg))
+            res.append("        self._name = " + repr(stmt_arg))
         else:
             if isinstance(self, Input):
-                res.append("        self.name = 'input'")
+                res.append("        self._name = 'input'")
             elif isinstance(self, Output):
-                res.append("        self.name = 'output'")
+                res.append("        self._name = 'output'")
             else:
                 raise ValueError("unreachable")
-        for attr in attrs:
-            res.append("        self.%s = %s" % (attr.name, attr.name))
+#        for attr in attrs:
+#            res.append("        self.%s = %s" % (attr.name, attr.name))
+#
+        for child in self.children:
+            if isinstance(child, Container_):
+                res.append("        if %s is not None:" % (child.name))
+                res.append("            self.%s = %s" % (child.name, child.name))
+                res.append("        else:")
+                res.append("            self.%s = %s()" % (child.name, _get_full_name(child)))
+            elif isinstance(child, Leaf):
+                res.append("        self.%s = %s" % (child.name, child.name))
+            elif isinstance(child, List):
+                res.append("        if %s is not None:" % (child.name))
+                res.append("            self.%s = %s" % (child.name, child.name))
+                res.append("        else:")
+                res.append("            self.%s = %s()" % (child.name, _get_full_name(child)))
+#            elif isinstance(child, List):
+#                res.append("        if %s is not None:" % (child.name))
+#                res.append("            self.%s = %s" % (attr.name, attr.name))
+#                res.append("        if %s is not None:" % (attr.name, attr.name))
+#                res.append("            self.%s = %s" % (attr.name, attr.name))
         res.append("")
         res.append("    def to_gdata(self):")
-        if stmt_arg is not None:
-            res.append("        res = yang.data.%s('%s')" % (snode_type_name(self), stmt_arg))
-        else:
+        if stmt_arg is not None: # stmt_arg is the name of the statement
+            if isinstance(self, List):
+                selfkey = self.key
+                if selfkey is not None:
+                    list_keys = selfkey.split(" ")
+                    # keys contains a yang spec of the keys, like "k1 k2"
+                    # which are modeled as attributes of the list entry class and accessed via self.k1, self.k2
+                    list_keys_list = []
+                    for k in list_keys:
+                        list_keys_list.append("self." + k)
+                    list_keys_str = ", ".join(list_keys_list)
+                    res.append("        res = yang.data.ListElement([%s])" % (list_keys_str))
+                else:
+                    raise ValueError("List without key not supported")
+            else:
+                res.append("        res = yang.data.%s('%s')" % (snode_type_name(self), stmt_arg))
+        else: # the only inner schema nodes without stmt_arg are Input and Output
             res.append("        res = yang.data.%s()" % snode_type_name(self))
         for attr in attrs:
             res.append("        _%s = self.%s" % (attr.name, attr.name))
@@ -221,14 +289,73 @@ class SchemaNodeInner(SchemaNode):
                 res.append("            res.children['%s'] = yang.data.%s('%s', _%s)" % (attr.name, attr.data_class, attr.name, attr.name))
         res.append("        return res")
         res.append("")
-        for attr in attrs:
-            if attr.inner:
-                res.append("    def create_%s(self):" % (attr.name))
-                res.append("        _%s = %s()" % (attr.name, attr.constructor))
-                res.append("        self.%s = _%s" % (attr.name, attr.name))
-                res.append("        return _%s" % (attr.name))
-                res.append("")
+        for child in self.children:
+            if isinstance(child, Container_):
+                childpresence = child.presence
+                if childpresence is not None:
+                    res.append("    def create_%s(self):" % (child.name))
+                    res.append("        _%s = %s()" % (child.name, _get_full_name(child)))
+                    res.append("        self.%s = _%s" % (child.name, child.name))
+                    res.append("        return _%s" % (child.name))
+                    res.append("")
+#            elif isinstance(child, List):
+#                childkey = child.key
+#                if childkey is not None:
+#                    list_keys = childkey.split(" ")
+#                    res.append("    def create_%s(self):" % (child.name))
+#                    res.append("        _%s = %s(%s, %s)" % (child.name, _get_full_name(child), child.name, str(list_keys)))
+#                    res.append("        self.%s = _%s" % (child.name, child.name))
+#                    res.append("        return _%s" % (child.name))
+#                    res.append("")
+#                else:
+#                    raise ValueError("List without key not supported")
         res.append("")
+
+        if isinstance(self, List):
+            list_keys = []
+            list_keys_str = ""
+
+            selfkey = self.key
+            if selfkey is not None:
+                list_keys = selfkey.split(" ")
+                # keys contains a yang spec of the keys, like "k1 k2"
+                # which are modeled as attributes of the list entry class and accessed via self.k1, self.k2
+                list_keys_str = repr(selfkey)
+
+            # List has special handling as it actually results in two classes:
+            # - the list itself
+            # - the list entry class
+            # Here we create the list entry class, the list itself comes later
+            res.append("class %s(yang.adata.MNode):" % _get_full_name(self))
+            res.append("    elements: list[%s_entry]" % _get_full_name(self))
+
+            init_args = ["self"]
+            init_args.append("elements=[]")
+            init_args_str: str = ", ".join(init_args)
+            res.append("    def __init__(%s):" % init_args_str)
+            if stmt_arg is not None:
+                res.append("        self._name = " + repr(stmt_arg))
+            res.append("")
+            res.append("        self.elements = []")
+            res.append("")
+
+            list_create_args = ["self"] + list_keys
+            res.append("    def create(%s):" % (", ".join(list_create_args)))
+            res.append("        res = %s_entry(%s)" % (_get_full_name(self), ", ".join(list_keys)))
+            res.append("        self.elements.append(res)")
+            res.append("        return res")
+            res.append("")
+
+            res.append("    def to_gdata(self):" % ())
+            res.append("        res = yang.data.List('%s', [%s])" % (stmt_arg if stmt_arg is not None else "", list_keys_str))
+            res.append("        for e in self.elements:")
+            res.append("            e_gdata = e.to_gdata()")
+            res.append("            if isinstance(e_gdata, yang.data.ListElement):")
+            res.append("                res.elements.append(e_gdata)")
+            res.append("        return res")
+            res.append("")
+        res.append("")
+
         return "\n".join(res)
 
 class SchemaNodeOuter(SchemaNode):
@@ -406,6 +533,8 @@ def yang_type_to_acton_type(t: ?Type) -> str:
 
 
 def _get_full_name(snode: SchemaNode) -> str:
+    """
+    """
     path = []
     while True:
         path.append(snode_name(snode))
@@ -414,6 +543,6 @@ def _get_full_name(snode: SchemaNode) -> str:
             snode = parent
         else:
             break
-    return "y_" + "_".join(reversed(path))
+    return "y_" + "__".join(reversed(path))
 
 # -- end of manually defined schema functions, automatically generated code follows
