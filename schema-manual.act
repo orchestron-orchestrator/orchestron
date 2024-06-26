@@ -177,10 +177,7 @@ class SchemaNodeInner(SchemaNode):
 
         self_list_keys = set() # if we are a list, this is populated
         if isinstance(self, List):
-            selfkey = self.key
-            if selfkey is not None:
-                for k in selfkey.split(" "):
-                    self_list_keys.add(k)
+            self_list_keys = set(self.keys())
 
         attrs: list[(name: str, inner: bool, type: str, optional: bool, constructor: str, data_class: str)] = []
         for child in self.children:
@@ -255,24 +252,17 @@ class SchemaNodeInner(SchemaNode):
                 res.append("            self.%s = %s()" % (child.name, _get_full_name(child)))
         res.append("")
         res.append("    def to_gdata(self):")
-        if stmt_arg is not None: # stmt_arg is the name of the statement
-            if isinstance(self, List):
-                selfkey = self.key
-                if selfkey is not None:
-                    list_keys = selfkey.split(" ")
-                    # keys contains a yang spec of the keys, like "k1 k2"
-                    # which are modeled as attributes of the list entry class and accessed via self.k1, self.k2
-                    list_keys_list = []
-                    for k in list_keys:
-                        list_keys_list.append("self." + k)
-                    list_keys_str = ", ".join(list_keys_list)
-                    res.append("        res = yang.data.ListElement([%s])" % (list_keys_str))
-                else:
-                    raise ValueError("List without key not supported")
-            else:
-                res.append("        res = yang.data.%s('%s')" % (snode_type_name(self), stmt_arg))
+
+        if isinstance(self, List):
+            # keys contains a yang spec of the keys, like "k1 k2"
+            # which are modeled as attributes of the list entry class and accessed via self.k1, self.k2
+            list_keys_str = ", ".join(map(lambda x: "self." + x, self.keys()))
+            res.append("        res = yang.data.ListElement([%s])" % (list_keys_str))
+        elif stmt_arg is not None: # stmt_arg is the name of the statement
+            res.append("        res = yang.data.%s('%s')" % (snode_type_name(self), stmt_arg))
         else: # the only inner schema nodes without stmt_arg are Input and Output
             res.append("        res = yang.data.%s()" % snode_type_name(self))
+
         for attr in attrs:
             res.append("        _%s = self.%s" % (attr.name, attr.name))
         for attr in attrs:
@@ -293,16 +283,6 @@ class SchemaNodeInner(SchemaNode):
         res.append("")
 
         if isinstance(self, List):
-            list_keys = []
-            list_keys_str = ""
-
-            selfkey = self.key
-            if selfkey is not None:
-                list_keys = selfkey.split(" ")
-                # keys contains a yang spec of the keys, like "k1 k2"
-                # which are modeled as attributes of the list entry class and accessed via self.k1, self.k2
-                list_keys_str = repr(selfkey)
-
             # List has special handling as it actually results in two classes:
             # - the list itself
             # - the list entry class
@@ -320,15 +300,15 @@ class SchemaNodeInner(SchemaNode):
             res.append("        self.elements = []")
             res.append("")
 
-            list_create_args = ["self"] + list_keys
+            list_create_args = ["self"] + self.keys()
             res.append("    def create(%s):" % (", ".join(list_create_args)))
-            res.append("        res = %s_entry(%s)" % (_get_full_name(self), ", ".join(list_keys)))
+            res.append("        res = %s_entry(%s)" % (_get_full_name(self), ", ".join(self.keys())))
             res.append("        self.elements.append(res)")
             res.append("        return res")
             res.append("")
 
             res.append("    def to_gdata(self):" % ())
-            res.append("        res = yang.data.List('%s', [%s])" % (stmt_arg if stmt_arg is not None else "", list_keys_str))
+            res.append("        res = yang.data.List('%s', %s)" % (stmt_arg if stmt_arg is not None else "", repr(self.keys())))
             res.append("        for e in self.elements:")
             res.append("            e_gdata = e.to_gdata()")
             res.append("            if isinstance(e_gdata, yang.data.ListElement):")

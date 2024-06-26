@@ -405,7 +405,8 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         res.append("        return \"\\n\".join(res)")
         res.append("")
 
-        if stmt_name is not None and stmt_name == "container":
+        # == Statement specific methods ================================
+        if stmt_name == "container":
             res.append("    def is_presence(self) -> bool:")
             res.append('        """Is P-container or not"""')
             res.append("        selfpresence = self.presence")
@@ -413,6 +414,16 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             res.append("            return True")
             res.append("        return False")
             res.append("")
+
+        if stmt_name == "list":
+            res.append("    def keys(self) -> list[str]:")
+            res.append('        """Get the list keys as a list of strings"""')
+            res.append("        selfkey = self.key")
+            res.append("        if selfkey is not None:")
+            res.append("            return selfkey.split(\" \")")
+            res.append("        return []")
+            res.append("")
+        # ==============================================================
 
 
         res.append("    def _get_argname(self) -> ?str:")
