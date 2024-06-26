@@ -185,8 +185,7 @@ class SchemaNodeInner(SchemaNode):
         attrs: list[(name: str, inner: bool, type: str, optional: bool, constructor: str, data_class: str)] = []
         for child in self.children:
             if isinstance(child, Container_):
-                childpresence = child.presence
-                if childpresence is not None:
+                if child.is_presence():
                     attrs.append((child.name, True, "?" + _get_full_name(child), True, _get_full_name(child), "Container_"))
                 else:
                     attrs.append((child.name, True, _get_full_name(child), False, _get_full_name(child), "Container_"))
@@ -254,11 +253,6 @@ class SchemaNodeInner(SchemaNode):
                 res.append("            self.%s = %s" % (child.name, child.name))
                 res.append("        else:")
                 res.append("            self.%s = %s()" % (child.name, _get_full_name(child)))
-#            elif isinstance(child, List):
-#                res.append("        if %s is not None:" % (child.name))
-#                res.append("            self.%s = %s" % (attr.name, attr.name))
-#                res.append("        if %s is not None:" % (attr.name, attr.name))
-#                res.append("            self.%s = %s" % (attr.name, attr.name))
         res.append("")
         res.append("    def to_gdata(self):")
         if stmt_arg is not None: # stmt_arg is the name of the statement
@@ -290,25 +284,12 @@ class SchemaNodeInner(SchemaNode):
         res.append("        return res")
         res.append("")
         for child in self.children:
-            if isinstance(child, Container_):
-                childpresence = child.presence
-                if childpresence is not None:
-                    res.append("    def create_%s(self):" % (child.name))
-                    res.append("        _%s = %s()" % (child.name, _get_full_name(child)))
-                    res.append("        self.%s = _%s" % (child.name, child.name))
-                    res.append("        return _%s" % (child.name))
-                    res.append("")
-#            elif isinstance(child, List):
-#                childkey = child.key
-#                if childkey is not None:
-#                    list_keys = childkey.split(" ")
-#                    res.append("    def create_%s(self):" % (child.name))
-#                    res.append("        _%s = %s(%s, %s)" % (child.name, _get_full_name(child), child.name, str(list_keys)))
-#                    res.append("        self.%s = _%s" % (child.name, child.name))
-#                    res.append("        return _%s" % (child.name))
-#                    res.append("")
-#                else:
-#                    raise ValueError("List without key not supported")
+            if isinstance(child, Container_) and child.is_presence():
+                res.append("    def create_%s(self):" % (child.name))
+                res.append("        _%s = %s()" % (child.name, _get_full_name(child)))
+                res.append("        self.%s = _%s" % (child.name, child.name))
+                res.append("        return _%s" % (child.name))
+                res.append("")
         res.append("")
 
         if isinstance(self, List):
