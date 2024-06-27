@@ -52,7 +52,7 @@
 #
 #   Module("foo", namespace="http://example.com/foo", prefix="f", children=[
 #     Container("c1", children=[
-#       Leaf("l1", type="string")
+#       Leaf("l1", type_="string")
 #     ])
 #   ])
 #
@@ -141,6 +141,142 @@ class Statement(object):
         return res
 
 
+# Yang schema for data
+#
+# This module provides a concrete YANG schema representation of a data tree.
+# Unlike the yang.schema module, which has a focus on properly representing the
+# YANG schema document itself, including abstract concepts like imports, inherited
+# types, groupings and augments, this module focuses on the statements relevant
+# for representing a YANG modeled data tree. The data nodes in YANG are:
+# - container, list, leaf, leaf-list, anydata, anyxml and the module itself can be
+#   considered a form of container
+# A YANG schema can be expanded into these data nodes, for example by expanding
+# uses statements with the relevant groupings into the actual nodes and by
+# applying augment statements to the relevant nodes.
+#
+# Similarly, concepts like config is represented as a boolean here, since all
+# nodes are either config or not config, whereas in yang.schema, config is a
+# tri-state value, since it can be None, meaning that the value is inherited from
+# the parent node. Things like this makes it easier to work with the data tree
+# from this module.
+#
+# Another concept is DTree which is a special node that acts as the virtual root
+# of the data tree which can contain multiple YANG modules.
+
+class DNode(object):
+    parent: ?DNode
+    name: str
+    config: bool
+    description: ?str
+    reference: ?str
+
+class DNodeInner(DNode):
+    children: list[DNode]
+
+class DNodeLeaf(DNode):
+    pass
+
+class DAnydata(DNodeLeaf):
+    if_feature: list[str]
+    mandatory: ?bool
+    must: list[Must]
+    status: ?str
+    when: ?str
+
+class DAnyxml(DNodeLeaf):
+    if_feature: list[str]
+    mandatory: ?bool
+    must: list[Must]
+    status: ?str
+    when: ?str
+
+class DContainer(DNodeInner):
+    if_feature: list[str]
+    must: list[Must]
+    presence: ?str
+    status: ?str
+    when: ?str
+
+    def __init__(self, name: str, config: bool, description: ?str=None, if_feature=[], must=[], presence=None, reference=None, status=None, when=None, children=[]):
+        self.name = name
+        self.config = config
+        self.description = description
+        self.if_feature = if_feature
+        self.must = must
+        self.presence = presence
+        self.reference = reference
+        self.status = status
+        self.children = []
+
+class DModule(DNodeInner):
+    augment: list[Augment]
+    contact: ?str
+    deviation: list[str]
+    extension_: list[Extension]
+    feature: list[Feature]
+    import_: list[Import]
+    include: list[Include]
+    namespace: ?str
+    organization: ?str
+    prefix: ?str
+    revision: list[Revision]
+    yang_version: ?str
+
+class DList(DNodeInner):
+    if_feature: list[str]
+    key: ?str
+    max_elements: ?str
+    min_elements: ?str
+    must: list[Must]
+    ordered_by: ?str
+    status: ?str
+    unique: list[str]
+    when: ?str
+
+class DLeaf(DNodeLeaf):
+    default: ?str
+    if_feature: list[str]
+    mandatory: bool
+    must: list[Must]
+    status: ?str
+    type_: Type
+    units: ?str
+    when: ?str
+
+    def __init__(self, name: str, config: bool, description: ?str=None, default=None, if_feature=[], mandatory=False, must=[], reference=None, status=None, type_: Type, units=None, when=None):
+        self.name = name
+        self.config = config
+        self.description = description
+        self.default = default
+        self.if_feature = if_feature
+        self.mandatory = mandatory
+        self.must = must
+        self.reference = reference
+        self.status = status
+        self.type_ = type_
+        self.units = units
+        self.when = when
+
+class DLeafList(DNodeLeaf):
+    default: list[str]
+    if_feature: list[str]
+    max_elements: ?str
+    min_elements: ?str
+    must: list[Must]
+    ordered_by: ?str
+    status: ?str
+    type_: ?Type
+    units: ?str
+    when: ?str
+
+class DTree(object):
+    pass
+
+
+# TODO: how to work with input / output for RPCs and actions?
+
+# -------------------------------------------------------------------------------
+
 class SchemaNode(object):
     parent: ?SchemaNode
 
@@ -162,6 +298,89 @@ class SchemaNode(object):
         """Print the data class for this schema node
         """
         raise NotImplementedError('SchemaNode pdc')
+
+    def to_dnode(self) -> DNode:
+        raise NotImplementedError('SchemaNode to_dschema')
+
+    def get_config(self) -> bool:
+        n = self
+        for i in range(10):
+            if (isinstance(n, Anydata)
+                or isinstance(n, Anyxml)
+                or isinstance(n, Container_)
+                or isinstance(n, Module)
+                or isinstance(n, Leaf)
+                or isinstance(n, LeafList)
+                or isinstance(n, List)):
+                found_config = True
+                if isinstance(n, Anydata):
+                    nconfig = n.config
+                    if nconfig is not None:
+                        return nconfig
+                    found_config = False
+                elif isinstance(n, Anyxml):
+                    nconfig = n.config
+                    if nconfig is not None:
+                        return nconfig
+                    found_config = False
+                elif isinstance(n, Container_):
+                    nconfig = n.config
+                    if nconfig is not None:
+                        return nconfig
+                    found_config = False
+                elif isinstance(n, Module):
+                    return True
+                elif isinstance(n, Leaf):
+                    nconfig = n.config
+                    if nconfig is not None:
+                        return nconfig
+                    found_config = False
+                elif isinstance(n, LeafList):
+                    nconfig = n.config
+                    if nconfig is not None:
+                        return nconfig
+                    found_config = False
+                elif isinstance(n, List):
+                    nconfig = n.config
+                    if nconfig is not None:
+                        return nconfig
+                    found_config = False
+
+                if not found_config:
+                    nparent = n.parent
+                    if nparent is not None:
+                        n = nparent
+                        continue
+                    else:
+                        if isinstance(n, Module):
+                            return True
+                        else:
+                            raise ValueError("Reached some top data node ")
+            else:
+                raise ValueError("Non-data node %s does not have config statements" % type(n))
+        raise ValueError("Unable to find config attribute")
+
+
+    def get(self, name: str) -> SchemaNode:
+        if isinstance(self, SchemaNodeInner):
+            for child in self.children:
+                if isinstance(child, Anydata) and child.name == name:
+                    return child
+                elif isinstance(child, Anyxml) and child.name == name:
+                    return child
+                elif isinstance(child, Container_) and child.name == name:
+                    return child
+                elif isinstance(child, Leaf) and child.name == name:
+                    return child
+                elif isinstance(child, LeafList) and child.name == name:
+                    return child
+                elif isinstance(child, List) and child.name == name:
+                    return child
+            raise ValueError("Child not found")
+
+        raise ValueError("Unable to get child from non-inner node")
+
+
 
 class SchemaNodeInner(SchemaNode):
     children: list[SchemaNode]
@@ -251,8 +470,19 @@ class SchemaNodeInner(SchemaNode):
                 res.append("        else:")
                 res.append("            self.%s = %s()" % (child.name, _get_full_name(child)))
         res.append("")
-        res.append("    def to_gdata(self):")
 
+        # == .create_XXX() methods
+        for child in self.children:
+            if isinstance(child, Container_) and child.is_presence():
+                res.append("    def create_%s(self):" % (child.name))
+                res.append("        _%s = %s()" % (child.name, _get_full_name(child)))
+                res.append("        self.%s = _%s" % (child.name, child.name))
+                res.append("        return _%s" % (child.name))
+                res.append("")
+        res.append("")
+
+        # .to_gdata()
+        res.append("    def to_gdata(self):")
         if isinstance(self, List):
             # keys contains a yang spec of the keys, like "k1 k2"
             # which are modeled as attributes of the list entry class and accessed via self.k1, self.k2
@@ -273,13 +503,13 @@ class SchemaNodeInner(SchemaNode):
                 res.append("            res.children['%s'] = yang.data.%s('%s', _%s)" % (attr.name, attr.data_class, attr.name, attr.name))
         res.append("        return res")
         res.append("")
-        for child in self.children:
-            if isinstance(child, Container_) and child.is_presence():
-                res.append("    def create_%s(self):" % (child.name))
-                res.append("        _%s = %s()" % (child.name, _get_full_name(child)))
-                res.append("        self.%s = _%s" % (child.name, child.name))
-                res.append("        return _%s" % (child.name))
-                res.append("")
+
+        # .from_gdata()
+        from_gdata_attrs = []
+        res.append("    def from_gdata(self, data: yang.data.Node) -> %s:" % _get_full_name(self))
+        res.append("        res = %s()" % _get_full_name(self))
+        #res.append("        res = %s(%s)" % (_get_full_name(self), from_gdata_args)
+        res.append("        return res")
         res.append("")
 
         if isinstance(self, List):
@@ -505,5 +735,6 @@ def _get_full_name(snode: SchemaNode) -> str:
         else:
             break
     return "y_" + "__".join(reversed(path))
+
 
 # -- end of manually defined schema functions, automatically generated code follows

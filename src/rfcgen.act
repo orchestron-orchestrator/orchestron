@@ -294,6 +294,50 @@ class SchemaNode(object):
 
 """
 
+snode_methods = {
+    "container": {
+        "to_dnode": """    def to_dnode(self) -> DContainer:
+        return DContainer(
+            name=self.name,
+            config=self.get_config(),
+            description=self.description,
+            if_feature=self.if_feature,
+            must=self.must,
+            presence=self.presence,
+            reference=self.reference,
+            status=self.status,
+            when=self.when,
+            children=map(lambda x: x.to_dnode(), self.children)
+        )
+
+"""
+    },
+    "leaf": {
+        "get_type": """    def get_type(self) -> Type:
+        selftype = self.type_
+        if selftype is not None:
+            return selftype
+        raise ValueError("Leaf %s has no type" % self.name)
+
+""",
+        "to_dnode": """    def to_dnode(self) -> DLeaf:
+        return DLeaf(
+            name=self.name,
+            config=self.get_config(),
+            description=self.description,
+            if_feature=self.if_feature,
+            must=self.must,
+            reference=self.reference,
+            status=self.status,
+            type_=self.get_type(),
+            units=self.units,
+            when=self.when
+        )
+
+"""
+    }
+}
+
 def gen(stmts: dict[str, Stmt]) -> list[str]:
     res = ["", ""]
 ##    for line in header.splitlines():
@@ -423,6 +467,11 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             res.append("            return selfkey.split(\" \")")
             res.append("        return []")
             res.append("")
+
+        for method_name in snode_methods.get(stmt_name, {}):
+            method = snode_methods[stmt_name][method_name]
+            for line in method.splitlines():
+                res.append(line)
         # ==============================================================
 
 

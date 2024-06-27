@@ -532,6 +532,45 @@ def _test_prsrc_uses():
     ], status='current', when='derived-from-or-self(if:type, "mymod:some-new-iftype")')"""
     testing.assertEqual(expected, _yang_to_act_code(ys))
 
+def _test_get_config1():
+    ys = """module foo {
+  container c1 {
+    container c2 {
+      leaf l1 {
+        type string;
+        description "leaf 1";
+      }
+    }
+  }
+}"""
+    y = yang.parser.parse(ys)
+    n = yang.schema.stmt_to_snode(y)
+
+    testing.assertEqual(n.get("c1").get_config(), True)
+    testing.assertEqual(n.get("c1").get("c2").get_config(), True)
+    testing.assertEqual(n.get("c1").get("c2").get("l1").get_config(), True)
+
+def _test_get_config2():
+    ys = """module foo {
+  container c1 {
+    container c2 {
+      config false;
+      leaf l1 {
+        type string;
+        description "leaf 1";
+      }
+    }
+  }
+}"""
+    y = yang.parser.parse(ys)
+    n = yang.schema.stmt_to_snode(y)
+
+    testing.assertEqual(n.get("c1").get_config(), True)
+    testing.assertEqual(n.get("c1").get("c2").get_config(), False)
+    testing.assertEqual(n.get("c1").get("c2").get("l1").get_config(), False)
+
+
+
 myang = """input {
   must 'foo' {
     description "bar";
