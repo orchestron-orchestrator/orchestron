@@ -397,6 +397,7 @@ class SchemaNodeInner(SchemaNode):
         if isinstance(self, List):
             self_list_keys = set(self.keys())
 
+        # TODO: work with self.children directly
         attrs: list[(name: str, inner: bool, type: str, optional: bool, constructor: str, data_class: str)] = []
         for child in self.children:
             if isinstance(child, Container_):
@@ -428,19 +429,30 @@ class SchemaNodeInner(SchemaNode):
             res.append("class %s_entry(yang.adata.MNode):" % _get_full_name(self))
         else:
             res.append("class %s(yang.adata.MNode):" % _get_full_name(self))
+        # TODO: work with self.children directly
         for attr in attrs:
             res.append("    %s: %s" % (attr.name, attr.type))
         res.append("")
         init_args = ["self"]
-        for attr in attrs:
-            if attr.name in self_list_keys:
-                init_args.append("%s: %s" % (attr.name, attr.type))
-            else:
-                if attr.optional:
-                    init_args.append("%s: %s=None" % (attr.name, attr.type))
+#        for attr in attrs:
+#            if attr.name in self_list_keys:
+#                init_args.append("%s: %s" % (attr.name, attr.type))
+#            else:
+#                if attr.optional:
+#                    init_args.append("%s: %s=None" % (attr.name, attr.type))
+#                else:
+#                    init_args.append("%s: ?%s" % (attr.name, attr.type))
+        for child in self.children:
+            if isinstance(child, Container_):
+                if child.is_presence():
+                    init_args.append("%s: ?%s=None" % (child.name, _get_full_name(child)))
                 else:
-                    init_args.append("%s: ?%s" % (attr.name, attr.type))
-        init_args.append("children=[]")
+                    init_args.append("%s: ?%s" % (child.name, _get_full_name(child)))
+            elif isinstance(child, Leaf):
+                init_args.append("%s: %s" % (child.name, yang_leaf_to_acton_type(child, child.name in self_list_keys)))
+            elif isinstance(child, List):
+                init_args.append("%s: list[%s_entry]=[]" % (child.name, _get_full_name(child)))
+
         init_args_str = ", ".join(init_args)
         res.append("    def __init__(%s):" % init_args_str)
         if stmt_arg is not None:
@@ -452,8 +464,6 @@ class SchemaNodeInner(SchemaNode):
                 res.append("        self._name = 'output'")
             else:
                 raise ValueError("unreachable")
-#        for attr in attrs:
-#            res.append("        self.%s = %s" % (attr.name, attr.name))
 #
         for child in self.children:
             if isinstance(child, Container_):
@@ -464,10 +474,7 @@ class SchemaNodeInner(SchemaNode):
             elif isinstance(child, Leaf):
                 res.append("        self.%s = %s" % (child.name, child.name))
             elif isinstance(child, List):
-                res.append("        if %s is not None:" % (child.name))
-                res.append("            self.%s = %s" % (child.name, child.name))
-                res.append("        else:")
-                res.append("            self.%s = %s()" % (child.name, _get_full_name(child)))
+                res.append("        self.%s = %s(elements=%s)" % (child.name, _get_full_name(child), child.name))
         res.append("")
 
         # == .create_XXX() methods
@@ -492,8 +499,10 @@ class SchemaNodeInner(SchemaNode):
         else: # the only inner schema nodes without stmt_arg are Input and Output
             res.append("        res = yang.data.%s()" % snode_type_name(self))
 
+        # TODO: work with self.children directly
         for attr in attrs:
             res.append("        _%s = self.%s" % (attr.name, attr.name))
+        # TODO: work with self.children directly
         for attr in attrs:
             res.append("        if _%s is not None:" % attr.name)
             if attr.inner:
@@ -508,17 +517,19 @@ class SchemaNodeInner(SchemaNode):
         from_gdata_args_list = []
         for child in self.children:
             if isinstance(child, Leaf):
-                from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (child.name, yang_leaf_to_getval(child), child.name))
+                from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (child.name, yang_leaf_to_getval(child, child.name in self_list_keys), child.name))
             elif isinstance(child, Container_):
                 from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+            elif isinstance(child, List):
+                from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
         from_gdata_args = ", ".join(from_gdata_args_list)
         res.append("    @staticmethod")
-        res.append("    def from_gdata(n: yang.data.Node) -> %s:" % _get_full_name(self))
         if isinstance(self, List):
-            res.append("        res = %s()" % _get_full_name(self))
+            res.append("    def from_gdata(n: yang.data.Node) -> %s_entry:" % _get_full_name(self))
+            res.append("        return %s_entry(%s)" % (_get_full_name(self), from_gdata_args))
         else:
-            res.append("        res = %s(%s)" % (_get_full_name(self), from_gdata_args))
-        res.append("        return res")
+            res.append("    def from_gdata(n: yang.data.Node) -> %s:" % _get_full_name(self))
+            res.append("        return %s(%s)" % (_get_full_name(self), from_gdata_args))
         res.append("")
 
         if isinstance(self, List):
@@ -535,8 +546,7 @@ class SchemaNodeInner(SchemaNode):
             res.append("    def __init__(%s):" % init_args_str)
             if stmt_arg is not None:
                 res.append("        self._name = " + repr(stmt_arg))
-            res.append("")
-            res.append("        self.elements = []")
+            res.append("        self.elements = elements")
             res.append("")
 
             list_create_args = ["self"] + self.keys()
@@ -553,6 +563,25 @@ class SchemaNodeInner(SchemaNode):
             res.append("            if isinstance(e_gdata, yang.data.ListElement):")
             res.append("                res.elements.append(e_gdata)")
             res.append("        return res")
+            res.append("")
+
+            # .from_gdata()
+            # TODO: should .from_gdata() not take a specific data node instead, like Container_ instead of yang.data.Node?
+            from_gdata_args_list = []
+            for child in self.children:
+                if isinstance(child, Leaf):
+                    from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (child.name, yang_leaf_to_getval(child), child.name))
+                elif isinstance(child, Container_):
+                    from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+                elif isinstance(child, List):
+                    from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+#                elif isinstance(child, ListElement):
+#                    from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+            from_gdata_args = ", ".join(from_gdata_args_list)
+            res.append("    @staticmethod")
+            # TODO: should accept List, right??
+            res.append("    def from_gdata(n: yang.data.List) -> list[%s_entry]:" % _get_full_name(self))
+            res.append("        return list(map(lambda x: %s_entry.from_gdata(x), n.elements))" % _get_full_name(self))
             res.append("")
         res.append("")
 
@@ -661,20 +690,24 @@ def _prsrc_attrs(indent, attrs):
     return ", ".join(res)
 
 
-def yang_leaf_to_acton_type(leaf: Leaf) -> str:
+def yang_leaf_to_acton_type(leaf: Leaf, force_mandatory: bool=False) -> str:
     optional = True
     leafmandatory = leaf.mandatory
     if leafmandatory is not None:
         optional = leafmandatory
+    if force_mandatory:
+        optional = False
     optional_str = "?" if optional else ""
     t = yang_type_to_acton_type(leaf.type_)
     return optional_str + t
 
-def yang_leaf_to_getval(leaf: Leaf) -> str:
+def yang_leaf_to_getval(leaf: Leaf, force_mandatory: bool=False) -> str:
     optional = True
     leafmandatory = leaf.mandatory
     if leafmandatory is not None:
         optional = leafmandatory
+    if force_mandatory:
+        optional = False
     optional_str = "opt_" if optional else ""
     t = yang_type_to_acton_type(leaf.type_)
     return optional_str + t

@@ -229,7 +229,7 @@ class Node(object):
                 if isinstance(child, Container_):
                     if child.name == name:
                         return child
-        raise ValueError("Cannot find child with name " + name)
+        raise ValueError("Cannot find container child with name " + name)
 
     def get_opt_container(self, name) -> ?Container_:
         """This is for P-container"""
@@ -238,23 +238,28 @@ class Node(object):
         except ValueError:
             return None
 
+    def get_list(self, name) -> List:
+        if isinstance(self, Inner):
+            for child in self.children.values():
+                if isinstance(child, List):
+                    if child.name == name:
+                        return child
+        raise ValueError("Cannot find list child with name " + name)
+
     def get_str(self, name) -> str:
-        if isinstance(self, Container_):
+        if isinstance(self, Inner):
             for child in self.children.values():
                 if isinstance(child, Leaf) and child.name == name:
                     childval = child.val
                     if isinstance(childval, str):
                         return childval
-        raise ValueError("Cannot find child with name " + name)
+        raise ValueError("Cannot find leaf child with name " + name)
 
     def get_opt_str(self, name) -> ?str:
-        if isinstance(self, Container_):
-            for child in self.children.values():
-                if isinstance(child, Leaf) and child.name == name:
-                    childval = child.val
-                    if isinstance(childval, str):
-                        return childval
-        return None
+        try:
+            return self.get_str(name)
+        except ValueError:
+            return None
 
 extension Node(Eq):
     def __eq__(self, other: Node) -> bool:
