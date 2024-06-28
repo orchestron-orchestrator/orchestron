@@ -570,6 +570,12 @@ def _test_get_config2():
     testing.assertEqual(n.get("c1").get("c2").get("l1").get_config(), False)
 
 
+def _test_tofrom_gdata():
+    # TODO: hmm, how to test this? I guess we need to first generate some data
+    # classes from a yang schema... so first generate support in compiler?
+    pass
+
+
 
 myang = """input {
   must 'foo' {

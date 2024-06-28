@@ -381,7 +381,6 @@ class SchemaNode(object):
         raise ValueError("Unable to get child from non-inner node")
 
 
-
 class SchemaNodeInner(SchemaNode):
     children: list[SchemaNode]
 
@@ -482,7 +481,7 @@ class SchemaNodeInner(SchemaNode):
         res.append("")
 
         # .to_gdata()
-        res.append("    def to_gdata(self):")
+        res.append("    def to_gdata(self) -> yang.data.Node:")
         if isinstance(self, List):
             # keys contains a yang spec of the keys, like "k1 k2"
             # which are modeled as attributes of the list entry class and accessed via self.k1, self.k2
@@ -505,10 +504,20 @@ class SchemaNodeInner(SchemaNode):
         res.append("")
 
         # .from_gdata()
-        from_gdata_attrs = []
-        res.append("    def from_gdata(self, data: yang.data.Node) -> %s:" % _get_full_name(self))
-        res.append("        res = %s()" % _get_full_name(self))
-        #res.append("        res = %s(%s)" % (_get_full_name(self), from_gdata_args)
+        # TODO: should .from_gdata() not take a specific data node instead, like Container_ instead of yang.data.Node?
+        from_gdata_args_list = []
+        for child in self.children:
+            if isinstance(child, Leaf):
+                from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (child.name, yang_leaf_to_getval(child), child.name))
+            elif isinstance(child, Container_):
+                from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+        from_gdata_args = ", ".join(from_gdata_args_list)
+        res.append("    @staticmethod")
+        res.append("    def from_gdata(n: yang.data.Node) -> %s:" % _get_full_name(self))
+        if isinstance(self, List):
+            res.append("        res = %s()" % _get_full_name(self))
+        else:
+            res.append("        res = %s(%s)" % (_get_full_name(self), from_gdata_args))
         res.append("        return res")
         res.append("")
 
@@ -651,6 +660,25 @@ def _prsrc_attrs(indent, attrs):
                 res.append(name + "=" + repr(value))
     return ", ".join(res)
 
+
+def yang_leaf_to_acton_type(leaf: Leaf) -> str:
+    optional = True
+    leafmandatory = leaf.mandatory
+    if leafmandatory is not None:
+        optional = leafmandatory
+    optional_str = "?" if optional else ""
+    t = yang_type_to_acton_type(leaf.type_)
+    return optional_str + t
+
+def yang_leaf_to_getval(leaf: Leaf) -> str:
+    optional = True
+    leafmandatory = leaf.mandatory
+    if leafmandatory is not None:
+        optional = leafmandatory
+    optional_str = "opt_" if optional else ""
+    t = yang_type_to_acton_type(leaf.type_)
+    return optional_str + t
+
 def yang_type_to_acton_type(t: ?Type) -> str:
     # +---------------------+-------------------------------------+
     # | Name                | Description                         |
@@ -695,7 +723,7 @@ def yang_type_to_acton_type(t: ?Type) -> str:
         elif t.name == "instance-identifier":
             raise NotImplementedError('instance-identifier not supported')
         elif t.name == "int8":
-            return "i8"
+            return "i8" # TODO: we don't have i8, right?
         elif t.name == "int16":
             return "i16"
         elif t.name == "int32":
@@ -707,7 +735,7 @@ def yang_type_to_acton_type(t: ?Type) -> str:
         elif t.name == "string":
             return "str"
         elif t.name == "uint8":
-            return "u8"
+            return "u8" # TODO: we don't have u8, right?
         elif t.name == "uint16":
             return "u16"
         elif t.name == "uint32":

@@ -223,6 +223,39 @@ class Node(object):
             return xml
         raise ValueError("Unsupported node type in to_xml: " + type(self))
 
+    def get_container(self, name) -> Container_:
+        if isinstance(self, Inner):
+            for child in self.children.values():
+                if isinstance(child, Container_):
+                    if child.name == name:
+                        return child
+        raise ValueError("Cannot find child with name " + name)
+
+    def get_opt_container(self, name) -> ?Container_:
+        """This is for P-container"""
+        try:
+            return self.get_container(name)
+        except ValueError:
+            return None
+
+    def get_str(self, name) -> str:
+        if isinstance(self, Container_):
+            for child in self.children.values():
+                if isinstance(child, Leaf) and child.name == name:
+                    childval = child.val
+                    if isinstance(childval, str):
+                        return childval
+        raise ValueError("Cannot find child with name " + name)
+
+    def get_opt_str(self, name) -> ?str:
+        if isinstance(self, Container_):
+            for child in self.children.values():
+                if isinstance(child, Leaf) and child.name == name:
+                    childval = child.val
+                    if isinstance(childval, str):
+                        return childval
+        return None
+
 extension Node(Eq):
     def __eq__(self, other: Node) -> bool:
         if isinstance(self, Container_) and isinstance(other, Container_):
@@ -327,9 +360,11 @@ extension Node(Eq):
 
         raise ValueError("Cannot compare nodes of different types" + str(self) + " " + str(other))
 
-class Module(Node):
-    name: str
+class Inner(Node):
     children: dict[str, Node]
+
+class Module(Inner):
+    name: str
 
     def __init__(self, name: str, children: dict[str, Node]={}, ns=None, prefix=None):
         self.name = name
@@ -338,9 +373,8 @@ class Module(Node):
         self.prefix = prefix
 
 
-class Container_(Node):
+class Container_(Inner):
     name: str
-    children: dict[str, Node]
 
     def __init__(self, name: str, children: dict[str, Node]={}, ns=None, prefix=None):
         self.name = name
@@ -362,10 +396,9 @@ class List(Node):
         self.ns = ns
         self.prefix = prefix
 
-class ListElement(Node):
+class ListElement(Inner):
     #_list: List
     key_vals: list[str] # values of the key leafs
-    children: dict[str, Node]
 
     def __init__(self, key_vals: list[str], children: dict[str, Node]={}):
         self.key_vals = key_vals
