@@ -1,4 +1,5 @@
 import testing
+import xml
 
 """YANG data
 
@@ -622,6 +623,48 @@ def merge(a: Node, b: Node) -> Node:
         raise ValueError("Cannot merge nodes of different types")
     else:
         raise ValueError("Unsupported node type in merge: " + type(a))
+
+
+def get_xml_child(n: xml.Node, name: str) -> xml.Node:
+    for child in n.children:
+        if child.tag == name:
+            return child
+    raise ValueError("Cannot find xml child with name " + name)
+
+def get_xml_children(n: xml.Node, name: str) -> list[xml.Node]:
+    res = []
+    for child in n.children:
+        if child.tag == name:
+            res.append(child)
+    return res
+
+def from_xml_opt_int(n: xml.Node, name: str) -> ?int:
+    try:
+        text = get_xml_child(n, name).text
+        if text is not None:
+            return int(text)
+    except ValueError:
+        return None
+
+def from_xml_int(n: xml.Node, name: str) -> int:
+    r = from_xml_opt_int(n, name)
+    if r is not None:
+        return r
+    raise ValueError("Cannot find xml child with name " + name)
+
+def from_xml_opt_str(n: xml.Node, name: str) -> ?str:
+    try:
+        return get_xml_child(n, name).text
+    except ValueError:
+        return None
+
+def from_xml_str(n: xml.Node, name: str) -> str:
+    r = from_xml_opt_str(n, name)
+    if r is not None:
+        return r
+    raise ValueError("Cannot find xml child with name " + name)
+
+
 
 def _test_merge1():
     y1 = Container_("foo", {

@@ -1,4 +1,5 @@
 
+import xml
 import yang.data
 from y_testy import *
 
@@ -52,7 +53,15 @@ def foo():
     print(a.c1.l1)
     print(a.c1.c2.l3)
 
-    print(a.to_gdata().to_xmlstr())
+    x = a.to_gdata().to_xmlstr()
+    print("XML str output:")
+    print(x)
+    xml_node = xml.decode(x)
+    print("decoded XML:")
+    print(xml_node)
+    xin = y_testy.from_xml(xml_node)
+    print("another roundtrip:")
+    print(xin.to_gdata().to_xmlstr())
 
 
 

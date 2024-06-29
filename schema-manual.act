@@ -389,6 +389,15 @@ class SchemaNodeInner(SchemaNode):
         """
         stmt_arg = self._get_arg()
         res = []
+        # TODO: blargh, should be done differently
+        if isinstance(self, Module):
+            res.append("import xml")
+            res.append("import yang.adata")
+            res.append("import yang.data")
+            res.append("")
+            res.append("# == This file is generated ==")
+            res.append("")
+            res.append("")
         for child in self.children:
             if isinstance(child, SchemaNodeInner):
                 res.append(child.prdaclass())
@@ -515,14 +524,19 @@ class SchemaNodeInner(SchemaNode):
         # .from_gdata()
         # TODO: should .from_gdata() not take a specific data node instead, like Container_ instead of yang.data.Node?
         from_gdata_args_list = []
+        from_xml_args_list = []
         for child in self.children:
             if isinstance(child, Leaf):
                 from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (child.name, yang_leaf_to_getval(child, child.name in self_list_keys), child.name))
+                from_xml_args_list.append("%s=yang.data.from_xml_%s(n, \"%s\")" % (child.name, yang_leaf_to_getval(child, child.name in self_list_keys), child.name))
             elif isinstance(child, Container_):
                 from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+                from_xml_args_list.append("%s=%s.from_xml(yang.data.get_xml_child(n, \"%s\"))" % (child.name, _get_full_name(child), child.name))
             elif isinstance(child, List):
                 from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+                from_xml_args_list.append("%s=%s.from_xml(yang.data.get_xml_children(n, \"%s\"))" % (child.name, _get_full_name(child), child.name))
         from_gdata_args = ", ".join(from_gdata_args_list)
+        from_xml_args = ", ".join(from_xml_args_list)
         res.append("    @staticmethod")
         if isinstance(self, List):
             res.append("    def from_gdata(n: yang.data.Node) -> %s_entry:" % _get_full_name(self))
@@ -530,6 +544,15 @@ class SchemaNodeInner(SchemaNode):
         else:
             res.append("    def from_gdata(n: yang.data.Node) -> %s:" % _get_full_name(self))
             res.append("        return %s(%s)" % (_get_full_name(self), from_gdata_args))
+        res.append("")
+
+        res.append("    @staticmethod")
+        if isinstance(self, List):
+            res.append("    def from_xml(n: xml.Node) -> %s_entry:" % _get_full_name(self))
+            res.append("        return %s_entry(%s)" % (_get_full_name(self), from_xml_args))
+        else:
+            res.append("    def from_xml(n: xml.Node) -> %s:" % _get_full_name(self))
+            res.append("        return %s(%s)" % (_get_full_name(self), from_xml_args))
         res.append("")
 
         if isinstance(self, List):
@@ -579,9 +602,12 @@ class SchemaNodeInner(SchemaNode):
 #                    from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
             from_gdata_args = ", ".join(from_gdata_args_list)
             res.append("    @staticmethod")
-            # TODO: should accept List, right??
             res.append("    def from_gdata(n: yang.data.List) -> list[%s_entry]:" % _get_full_name(self))
             res.append("        return list(map(lambda x: %s_entry.from_gdata(x), n.elements))" % _get_full_name(self))
+            res.append("")
+            res.append("    @staticmethod")
+            res.append("    def from_xml(nodes: list[xml.Node]) -> list[%s_entry]:" % _get_full_name(self))
+            res.append("        return list(map(lambda x: %s_entry.from_xml(x), nodes))" % _get_full_name(self))
             res.append("")
         res.append("")
 
