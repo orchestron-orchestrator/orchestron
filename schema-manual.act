@@ -821,7 +821,7 @@ def _get_full_name(snode: SchemaNode) -> str:
             snode = parent
         else:
             break
-    return "y_" + "__".join(reversed(path))
+    return "__".join(reversed(path))
 
 
 # -- end of manually defined schema functions, automatically generated code follows

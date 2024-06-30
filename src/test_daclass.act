@@ -4,7 +4,7 @@ import yang.data
 from y_testy import *
 
 def service1():
-    root = y_testy()
+    root = testy()
     root.c1.l1 = "a leaf written by service1"
     root.c1.c2.l3 = "also set by service1"
 
@@ -14,7 +14,7 @@ def service1():
     return root.to_gdata()
 
 def service2():
-    mod = y_testy()
+    mod = testy()
     mod.c1.l2 = "set by service2"
     mod.c1.c2.l4 = "set by service2"
 
@@ -39,7 +39,7 @@ def service2():
 #    return mod.to_gdata()
 
 def foo():
-    root = y_testy()
+    root = testy()
     root.c1.l1 = "a leaf written by service1"
     root.c1.c2.l3 = "also set by service1"
     e_foo = root.c1.list1.create("foo")
@@ -49,7 +49,7 @@ def foo():
 
     gd = root.to_gdata()
     print(gd)
-    a = y_testy.from_gdata(gd)
+    a = testy.from_gdata(gd)
     print(a.c1.l1)
     print(a.c1.c2.l3)
 
@@ -59,7 +59,7 @@ def foo():
     xml_node = xml.decode(x)
     print("decoded XML:")
     print(xml_node)
-    xin = y_testy.from_xml(xml_node)
+    xin = testy.from_xml(xml_node)
     print("another roundtrip:")
     print(xin.to_gdata().to_xmlstr())
 
