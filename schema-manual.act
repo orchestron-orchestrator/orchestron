@@ -281,20 +281,20 @@ class SchemaNode(object):
     parent: ?SchemaNode
 
     def _get_argname(self) -> ?str:
-        raise NotImplementedError('SchemaNode')
+        raise NotImplementedError('SchemaNode _get_argname')
 
     def _get_arg(self) -> ?str:
-        raise NotImplementedError('SchemaNode')
+        raise NotImplementedError('SchemaNode _get_arg')
 
     def _get_data_name(self) -> str:
-        raise NotImplementedError('SchemaNode')
+        raise NotImplementedError('SchemaNode _get_data_name')
 
     def prsrc(self, indent=0) -> str:
         """Print Acton source code for this schema node and its subnodes
         """
-        raise NotImplementedError('SchemaNode')
+        raise NotImplementedError('SchemaNode prsrc')
 
-    def prdaclass(self) -> str:
+    def prdaclass(self, strict=True, top=True) -> str:
         """Print the data class for this schema node
         """
         raise NotImplementedError('SchemaNode pdc')
@@ -384,13 +384,13 @@ class SchemaNode(object):
 class SchemaNodeInner(SchemaNode):
     children: list[SchemaNode]
 
-    def prdaclass(self) -> str:
+    def prdaclass(self, strict=True, top=True) -> str:
         """Print the data class for this schema node
         """
         stmt_arg = self._get_arg()
         res = []
         # TODO: blargh, should be done differently
-        if isinstance(self, Module):
+        if top:
             res.append("import xml")
             res.append("import yang.adata")
             res.append("import yang.data")
@@ -400,7 +400,7 @@ class SchemaNodeInner(SchemaNode):
             res.append("")
         for child in self.children:
             if isinstance(child, SchemaNodeInner):
-                res.append(child.prdaclass())
+                res.append(child.prdaclass(strict=strict, top=False))
 
         self_list_keys = set() # if we are a list, this is populated
         if isinstance(self, List):
@@ -471,6 +471,8 @@ class SchemaNodeInner(SchemaNode):
                 res.append("        self._name = 'input'")
             elif isinstance(self, Output):
                 res.append("        self._name = 'output'")
+            elif isinstance(self, Root):
+                res.append("        self._name = 'root'")
             else:
                 raise ValueError("unreachable")
 #
@@ -530,7 +532,9 @@ class SchemaNodeInner(SchemaNode):
                 from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (child.name, yang_leaf_to_getval(child, child.name in self_list_keys), child.name))
                 from_xml_args_list.append("%s=yang.data.from_xml_%s(n, \"%s\")" % (child.name, yang_leaf_to_getval(child, child.name in self_list_keys), child.name))
             elif isinstance(child, Container_):
+                # TODO: handle presence containers
                 from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+                # TODO: handle presence containers
                 from_xml_args_list.append("%s=%s.from_xml(yang.data.get_xml_child(n, \"%s\"))" % (child.name, _get_full_name(child), child.name))
             elif isinstance(child, List):
                 from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
@@ -615,6 +619,19 @@ class SchemaNodeInner(SchemaNode):
 
 class SchemaNodeOuter(SchemaNode):
     pass
+
+class Root(SchemaNodeInner):
+    def __init__(self, modules: list[SchemaNode]=[]):
+        self.children=[]
+        for module in modules:
+            if isinstance(module, Module):
+                for child in module.children:
+                    self.children.append(child)
+            else:
+                raise ValueError("Root can only contain Module")
+
+    def _get_arg(self) -> ?str:
+        return None
 
 
 def take_bool(stmts: list[Statement], kw: str) -> ?bool:
@@ -720,7 +737,7 @@ def yang_leaf_to_acton_type(leaf: Leaf, force_mandatory: bool=False) -> str:
     optional = True
     leafmandatory = leaf.mandatory
     if leafmandatory is not None:
-        optional = leafmandatory
+        optional = not leafmandatory
     if force_mandatory:
         optional = False
     optional_str = "?" if optional else ""
@@ -731,7 +748,7 @@ def yang_leaf_to_getval(leaf: Leaf, force_mandatory: bool=False) -> str:
     optional = True
     leafmandatory = leaf.mandatory
     if leafmandatory is not None:
-        optional = leafmandatory
+        optional = not leafmandatory
     if force_mandatory:
         optional = False
     optional_str = "opt_" if optional else ""

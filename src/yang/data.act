@@ -194,10 +194,14 @@ class Node(object):
             xml += _indent() + "</" + self.name + ">\n"
             return xml
         elif isinstance(self, Module):
-            xml = _indent() + "<" + self.name + ">\n"
+            xml = ""
             for child in self.children.values():
-                xml += child.to_xmlstr(indent + 1)
-            xml += _indent() + "</" + self.name + ">\n"
+                xml += child.to_xmlstr(indent)
+            return xml
+        elif isinstance(self, Root):
+            xml = ""
+            for child in self.children.values():
+                xml += child.to_xmlstr(indent)
             return xml
         elif isinstance(self, List):
             xml = ""
@@ -246,6 +250,13 @@ class Node(object):
                     if child.name == name:
                         return child
         raise ValueError("Cannot find list child with name " + name)
+
+    def get_leaf(self, name) -> Leaf:
+        if isinstance(self, Inner):
+            for child in self.children.values():
+                if isinstance(child, Leaf) and child.name == name:
+                    return child
+        raise ValueError("Cannot find leaf child with name " + name)
 
     def get_str(self, name) -> str:
         if isinstance(self, Inner):
@@ -368,6 +379,15 @@ extension Node(Eq):
 
 class Inner(Node):
     children: dict[str, Node]
+
+class Root(Inner):
+    name: str
+
+    def __init__(self, children: dict[str, Node]={}, ns=None, prefix=None):
+        self.name = ""
+        self.children = children
+        self.ns = ns
+        self.prefix = prefix
 
 class Module(Inner):
     name: str
@@ -619,6 +639,19 @@ def merge(a: Node, b: Node) -> Node:
         for key in set(b.children.keys()) - set(a.children.keys()):
             new_children[key] = b.children[key]
         return ListElement(a.key_vals, children=new_children)
+    elif isinstance(a, Root) and isinstance(b, Root):
+        # Find overlapping children, which might need merging on their own
+        overlapping = set(a.children.keys()) & set(b.children.keys())
+        # Avoid comprehensions
+        new_children: dict[str, Node] = {}
+        for key in overlapping:
+            new_children[key] = merge(a.children[key], b.children[key])
+        # Add children that are not in the other node
+        for key in set(a.children.keys()) - set(b.children.keys()):
+            new_children[key] = a.children[key]
+        for key in set(b.children.keys()) - set(a.children.keys()):
+            new_children[key] = b.children[key]
+        return Root(children=new_children)
     elif type(a) != type(b):
         raise ValueError("Cannot merge nodes of different types")
     else:
@@ -629,6 +662,20 @@ def get_xml_child(n: xml.Node, name: str) -> xml.Node:
     for child in n.children:
         if child.tag == name:
             return child
+    raise ValueError("Cannot find xml child with name " + name)
+
+#def get_xml_opt_child(n: xml.Node, name: str) -> ?xml.Node:
+#    for child in n.children:
+#        if child.tag == name:
+#            return child
+#    raise None
+
+def get_xml_child_text(n: xml.Node, name: str) -> str:
+    for child in n.children:
+        if child.tag == name:
+            childtext = child.text
+            if childtext is not None:
+                return childtext
     raise ValueError("Cannot find xml child with name " + name)
 
 def get_xml_children(n: xml.Node, name: str) -> list[xml.Node]:
@@ -663,6 +710,15 @@ def from_xml_str(n: xml.Node, name: str) -> str:
     if r is not None:
         return r
     raise ValueError("Cannot find xml child with name " + name)
+
+#def from_xml_opt_u16(n: xml.Node, name: str) -> ?u16:
+#    try:
+#        return u16(get_xml_child_text(n, name))
+#    except ValueError:
+#        return None
+#
+#def from_xml_u16(n: xml.Node, name: str) -> u16:
+#    return u16(get_xml_child_text(n, name))
 
 
 

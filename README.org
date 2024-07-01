@@ -8,3 +8,18 @@ a manually written top half, in schema-manual.act
 #+BEGIN_SRC shell
 make
 #+END_SRC
+
+* Things we should do (TO DO) [2/11]
+- [X] TODO: drop y_ prefix
+- [X] TODO: group multiple YANG modules into a tree so that the generated output has a common root for multiple modules
+- [ ] TODO: use DNode
+- [ ] TODO: support all leaf types
+  - [ ] actually support all leaf types
+  - [ ] write comprehensive tests for input YANG
+- [ ] TODO: populate namespace / prefix in stmt_to_snode
+- [ ] TODO: support schema expansion of uses / groupings
+- [ ] TODO: support expanding of types to the base type
+- [ ] TODO: support YANG parsing of multiple modules, like for imports and augment
+- [ ] TODO: support schema expansion of augments
+- [ ] TODO: rewrite - to _ in names
+- [ ] TODO: detect conflicts between a_b and a-b, and name in some deterministic fashion

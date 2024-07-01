@@ -3,11 +3,11 @@
 
 all: out/bin/test_daclass
 
-out/bin/test_daclass: src/y_testy.act
+out/bin/test_daclass: src/y_cfs.act
 	acton src/test_daclass.act
 
-src/y_testy.act: out/bin/gen_daclass
-	out/bin/gen_daclass
+src/y_cfs.act: out/bin/gen_daclass
+	out/bin/gen_daclass --rts-no-bt
 
 out/bin/gen_daclass: src/gen_daclass.act src/yang/parser.act src/yang/schema.act
 	acton src/gen_daclass.act

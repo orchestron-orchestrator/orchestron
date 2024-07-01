@@ -1,30 +1,68 @@
 
 import xml
 import yang.data
-from y_testy import *
+from y_cfs import root as cfs_root
+from y_cfs import netinfra__netinfra__routers_entry
+from y_rfs import root as rfs_root
 
-def service1():
-    root = testy()
-    root.c1.l1 = "a leaf written by service1"
-    root.c1.c2.l3 = "also set by service1"
+nb_input = """
+<data>
+    <netinfra xmlns="http://example.com/netinfra">
+        <routers>
+            <name>STO-CORE-1</name>
+            <id>4</id>
+        </routers>
+        <routers>
+            <name>AMS-CORE-1</name>
+            <id>8</id>
+        </routers>
+    </netinfra>
+    <l3vpn>
+    </l3vpn>
+</data>
+"""
 
-    e1 = root.c1.list1.create("bajs")
-    e1.l5 = "set by service1"
+def cfs_router_service(service: netinfra__netinfra__routers_entry, otree: rfs_root) -> rfs_root:
+    print("CFS router service running", service.name, service.id)
+    router = otree.nodes.routers.create(service.name)
+    router.id = service.id
+    sid = service.id
+    router.ipv4address = "10.0.1.%s/32" % sid if sid is not None else ""
+    router.ipv6address = "2001:db8:0:1::%s/128" % sid if sid is not None else ""
+    return otree
 
-    return root.to_gdata()
 
-def service2():
-    mod = testy()
-    mod.c1.l2 = "set by service2"
-    mod.c1.c2.l4 = "set by service2"
+def foo():
+    d = cfs_root.from_xml(xml.decode(nb_input))
+    otree = rfs_root()
+    # This should be done magically
+    sos = []
+    for s in d.netinfra.routers.elements:
+        sos.append(cfs_router_service(s, otree))
+    so = sos[0].to_gdata()
+    for s in sos[1:]:
+        so = yang.data.merge(so, s.to_gdata())
+    print(so.to_xmlstr())
 
-    e1 = mod.c1.list1.create("shit")
-    e1.l5 = "set by service2"
 
-    return mod.to_gdata()
+
+#def service1(input: netinfra__netinfra__routers__entry):
+#    root = cfs_root()
+#    r = root.netinfra.routers.create("STO-CORE-1")
+#    r.id = 4
+#
+#    return root.to_gdata()
+
+#def service2():
+#    root = cfs_root()
+#
+#    e1 = root.c1.list1.create("shit")
+#    e1.l5 = "set by service2"
+#
+#    return root.to_gdata()
 
 #def service3():
-#    mod = y_testy.y_testy(
+#    root = y_testy.y_testy(
 #        c1 = y_testy.y_testy_c1(
 #            l2 = "set by service3",
 #            c2 = y_testy.y_testy_c1_c2(
@@ -36,32 +74,32 @@ def service2():
 #        ]
 #
 #    )
-#    return mod.to_gdata()
+#    return root.to_gdata()
 
-def foo():
-    root = testy()
-    root.c1.l1 = "a leaf written by service1"
-    root.c1.c2.l3 = "also set by service1"
-    e_foo = root.c1.list1.create("foo")
-    e_foo.l5 = "hiaho"
-
-    print(root.to_gdata().to_xmlstr())
-
-    gd = root.to_gdata()
-    print(gd)
-    a = testy.from_gdata(gd)
-    print(a.c1.l1)
-    print(a.c1.c2.l3)
-
-    x = a.to_gdata().to_xmlstr()
-    print("XML str output:")
-    print(x)
-    xml_node = xml.decode(x)
-    print("decoded XML:")
-    print(xml_node)
-    xin = testy.from_xml(xml_node)
-    print("another roundtrip:")
-    print(xin.to_gdata().to_xmlstr())
+#def foo():
+#    root = cfs_root()
+#    root.c1.l1 = "a leaf written by service1"
+#    root.c1.c2.l3 = "also set by service1"
+#    e_foo = root.c1.list1.create("foo")
+#    e_foo.l5 = "hiaho"
+#
+#    print(root.to_gdata().to_xmlstr())
+#
+#    gd = root.to_gdata()
+#    print(gd)
+#    a = cfs_root.from_gdata(gd)
+#    print(a.c1.l1)
+#    print(a.c1.c2.l3)
+#
+#    x = "<data>%s</data>" % a.to_gdata().to_xmlstr()
+#    print("XML str output:")
+#    print(x)
+#    xml_node = xml.decode(x)
+#    print("decoded XML:")
+#    print(xml_node)
+#    xin = cfs_root.from_xml(xml_node)
+#    print("another roundtrip:")
+#    print(xin.to_gdata().to_xmlstr())
 
 
 
