@@ -290,27 +290,120 @@ def _ind(indent):
 
 class SchemaNode(object):
     def prsrc(self, indent=0) -> list[str]:
-        raise NotImplementedError()
+        raise NotImplementedError("prsrc")
 
 """
 
 snode_methods = {
     "container": {
+        "is_presence": """    def is_presence(self) -> bool:
+        selfpresence = self.presence
+        if selfpresence is not None:
+            return True
+        return False
+
+""",
         "to_dnode": """    def to_dnode(self) -> DContainer:
-        return DContainer(
+        new_children = []
+        for child in self.children:
+            new_children.append(child.to_dnode())
+        new_dnode = DContainer(
             name=self.name,
-            config=self.get_config(),
+            config=self.is_config(),
             description=self.description,
             if_feature=self.if_feature,
             must=self.must,
-            presence=self.presence,
+            presence=self.is_presence(),
             reference=self.reference,
             status=self.status,
             when=self.when,
-            children=map(lambda x: x.to_dnode(), self.children)
+            children=new_children
         )
+        for child in new_children:
+            child.parent = new_dnode
+        return new_dnode
 
 """
+    },
+    "module": {
+        "get_namespace": """    def get_namespace(self) -> str:
+        selfnamespace = self.namespace
+        if selfnamespace is not None:
+            return selfnamespace
+        raise ValueError("Module %s has no namespace" % self.name)
+
+""",
+        "get_prefix": """    def get_prefix(self) -> str:
+        selfprefix = self.prefix
+        if selfprefix is not None:
+            return selfprefix
+        raise ValueError("Module %s has no prefix" % self.name)
+
+""",
+        "to_dnode": """    def to_dnode(self) -> DModule:
+        new_children = []
+        for child in self.children:
+            new_children.append(child.to_dnode())
+        new_dnode = DModule(
+            name=self.name,
+            namespace=self.get_namespace(),
+            prefix=self.get_prefix(),
+            description=self.description,
+            revision=self.revision,
+            reference=self.reference,
+            children=new_children
+        )
+        for child in new_children:
+            child.parent = new_dnode
+        return new_dnode
+
+"""
+    },
+    "list": {
+        "keys": """    def keys(self) -> list[str]:
+        selfkey = self.key
+        if selfkey is not None:
+            return selfkey.split(" ")
+        return []
+
+""",
+        "get_max_elements": """    def get_max_elements(self) -> ?int:
+        selfmax_elements = self.max_elements
+        if selfmax_elements is not None:
+            return int(selfmax_elements)
+        return None
+
+""",
+        "get_min_elements": """    def get_min_elements(self) -> int:
+        selfmin_elements = self.min_elements
+        if selfmin_elements is not None:
+            return int(selfmin_elements)
+        return 0
+
+""",
+        "to_dnode": """    def to_dnode(self) -> DList:
+        new_children = []
+        for child in self.children:
+            new_children.append(child.to_dnode())
+        new_dnode = DList(
+            name=self.name,
+            key=self.keys(),
+            config=self.is_config(),
+            description=self.description,
+            if_feature=self.if_feature,
+            max_elements=self.get_max_elements(),
+            min_elements=self.get_min_elements(),
+            must=self.must,
+            reference=self.reference,
+            status=self.status,
+            when=self.when,
+            children=new_children
+        )
+        for child in new_children:
+            child.parent = new_dnode
+        return new_dnode
+
+""",
     },
     "leaf": {
         "get_type": """    def get_type(self) -> Type:
@@ -323,7 +416,7 @@ snode_methods = {
         "to_dnode": """    def to_dnode(self) -> DLeaf:
         return DLeaf(
             name=self.name,
-            config=self.get_config(),
+            config=self.is_config(),
             description=self.description,
             if_feature=self.if_feature,
             must=self.must,
@@ -335,7 +428,47 @@ snode_methods = {
         )
 
 """
-    }
+    },
+    "leaf-list": {
+        "get_type": """    def get_type(self) -> Type:
+        selftype = self.type_
+        if selftype is not None:
+            return selftype
+        raise ValueError("Leaf-list %s has no type" % self.name)
+
+""",
+        "get_max_elements": """    def get_max_elements(self) -> ?int:
+        selfmax_elements = self.max_elements
+        if selfmax_elements is not None:
+            return int(selfmax_elements)
+        return None
+
+""",
+        "get_min_elements": """    def get_min_elements(self) -> int:
+        selfmin_elements = self.min_elements
+        if selfmin_elements is not None:
+            return int(selfmin_elements)
+        return 0
+
+""",
+        "to_dnode": """    def to_dnode(self) -> DLeafList:
+        return DLeafList(
+            name=self.name,
+            config=self.is_config(),
+            description=self.description,
+            if_feature=self.if_feature,
+            max_elements=self.get_max_elements(),
+            min_elements=self.get_min_elements(),
+            must=self.must,
+            reference=self.reference,
+            status=self.status,
+            type_=self.get_type(),
+            units=self.units,
+            when=self.when
+        )
+
+"""
+    },
 }
 
 def gen(stmts: dict[str, Stmt]) -> list[str]:
@@ -454,24 +587,6 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         res.append("")
 
         # == Statement specific methods ================================
-        if stmt_name == "container":
-            res.append("    def is_presence(self) -> bool:")
-            res.append('        """Is P-container or not"""')
-            res.append("        selfpresence = self.presence")
-            res.append("        if selfpresence is not None:")
-            res.append("            return True")
-            res.append("        return False")
-            res.append("")
-
-        if stmt_name == "list":
-            res.append("    def keys(self) -> list[str]:")
-            res.append('        """Get the list keys as a list of strings"""')
-            res.append("        selfkey = self.key")
-            res.append("        if selfkey is not None:")
-            res.append("            return selfkey.split(\" \")")
-            res.append("        return []")
-            res.append("")
-
         for method_name in snode_methods.get(stmt_name, {}):
             method = snode_methods[stmt_name][method_name]
             for line in method.splitlines():

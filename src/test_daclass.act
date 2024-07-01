@@ -22,14 +22,39 @@ nb_input = """
 </data>
 """
 
+nb_input2 = """
+<data>
+    <netinfra xmlns="http://example.com/netinfra">
+        <routers>
+            <name>STO-CORE-1</name>
+            <id>4</id>
+        </routers>
+        <routers>
+            <name>AMS-CORE-1</name>
+            <id>8</id>
+        </routers>
+        <routers>
+            <name>FRA-CORE-1</name>
+            <id>2</id>
+        </routers>
+    </netinfra>
+    <l3vpn>
+    </l3vpn>
+</data>
+"""
+
 def cfs_router_service(service: netinfra__netinfra__routers_entry, otree: rfs_root) -> rfs_root:
     print("CFS router service running", service.name, service.id)
     router = otree.nodes.routers.create(service.name)
     router.id = service.id
     sid = service.id
     router.ipv4address = "10.0.1.%s/32" % sid if sid is not None else ""
-    router.ipv6address = "2001:db8:0:1::%s/128" % sid if sid is not None else ""
+    #router.ipv6address = "2001:db8:0:1::%s/128" % sid if sid is not None else ""
     return otree
+
+#def rfs_nodes_router_service(service: nodes__nodes__routers_entry, otree: dev_root) -> dev_root:
+#    print("FFS router service running", service.name, service.id, service.ipv4address, service.ipv6address)
+#    return otree
 
 
 def foo():
@@ -38,11 +63,12 @@ def foo():
     # This should be done magically
     sos = []
     for s in d.netinfra.routers.elements:
-        sos.append(cfs_router_service(s, otree))
+        sos.append(cfs_router_service(s, rfs_root()))
     so = sos[0].to_gdata()
     for s in sos[1:]:
         so = yang.data.merge(so, s.to_gdata())
     print(so.to_xmlstr())
+    #rfs_root = rfs_root_strict.from_gdata(so)
 
 
 

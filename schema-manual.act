@@ -165,40 +165,281 @@ class Statement(object):
 
 class DNode(object):
     parent: ?DNode
+    dname: str
     name: str
     config: bool
     description: ?str
     reference: ?str
 
+    def prdaclass(self, strict=True, top=True) -> str:
+        """Print the data class for this schema node
+        """
+        raise NotImplementedError('SchemaNode pdc')
+
 class DNodeInner(DNode):
     children: list[DNode]
 
+    def prdaclass(self, strict=True, top=True) -> str:
+        """Print the data class for this schema node
+        """
+#        stmt_arg = self._get_arg()
+        res = []
+        # TODO: blargh, should be done differently
+        if top:
+            res.append("import xml")
+            res.append("import yang.adata")
+            res.append("import yang.data")
+            res.append("")
+            res.append("# == This file is generated ==")
+            res.append("")
+            res.append("")
+        for child in self.children:
+            if isinstance(child, DNodeInner):
+                res.append(child.prdaclass(strict=strict, top=False))
+
+#        # TODO: work with self.children directly
+#        attrs: list[(name: str, inner: bool, type: str, optional: bool, constructor: str, data_class: str)] = []
+#        for child in self.children:
+#            if isinstance(child, Container_):
+#                if child.is_presence():
+#                    attrs.append((child.name, True, "?" + _get_full_name(child), True, _get_full_name(child), "Container_"))
+#                else:
+#                    attrs.append((child.name, True, _get_full_name(child), False, _get_full_name(child), "Container_"))
+#            elif isinstance(child, Leaf):
+#                optional = True
+#                childmandatory = child.mandatory
+#                if childmandatory is not None:
+#                    optional = childmandatory
+#                if child.name in self_list_keys:
+#                    optional = False
+#                optional_str = "?" if optional else ""
+#                attrs.append((child.name, False, optional_str + yang_type_to_acton_type(child.type_), optional, "", "Leaf"))
+#            elif isinstance(child, LeafList):
+#                attrs.append((child.name, False, "list[" + yang_type_to_acton_type(child.type_) + "]", False, "", "LeafList"))
+#            elif isinstance(child, List):
+#                attrs.append((child.name, True, _get_full_name(child), False, _get_full_name(child), "List"))
+#            else:
+#                raise ValueError("unreachable child type: " + str(type(child)))
+
+        if isinstance(self, DList):
+            # List has special handling as it actually results in two classes:
+            # - the list itself
+            # - the list entry class
+            # Here we create the list entry class, the list itself comes later
+            res.append("class %s_entry(yang.adata.MNode):" % _get_full_name(self))
+        else:
+            res.append("class %s(yang.adata.MNode):" % _get_full_name(self))
+        for child in self.children:
+            print("child", child)
+            if isinstance(child, DNodeLeaf):
+                print("leaf", child)
+                res.append("    %s: %s" % (child.name, yang_leaf_to_acton_type(child)))
+            elif isinstance(child, DNodeInner):
+                print("inner", child)
+                res.append("    %s: %s" % (child.name, _get_full_name(child)))
+            else:
+                raise ValueError("unreachable, unknown child type: " + str(type(child)))
+        res.append("")
+        init_args = ["self"]
+        for child in self.children:
+            if isinstance(child, DContainer):
+                if child.presence:
+                    init_args.append("%s: ?%s=None" % (child.name, _get_full_name(child)))
+                else:
+                    init_args.append("%s: ?%s" % (child.name, _get_full_name(child)))
+            elif isinstance(child, DLeaf):
+                init_args.append("%s: %s" % (child.name, yang_leaf_to_acton_type(child)))
+            elif isinstance(child, DList):
+                init_args.append("%s: list[%s_entry]=[]" % (child.name, _get_full_name(child)))
+
+        init_args_str = ", ".join(init_args)
+        res.append("    def __init__(%s):" % init_args_str)
+#        if stmt_arg is not None:
+#            res.append("        self._name = " + repr(stmt_arg))
+#        else:
+#            if isinstance(self, Input):
+#                res.append("        self._name = 'input'")
+#            elif isinstance(self, Output):
+#                res.append("        self._name = 'output'")
+#            elif isinstance(self, Root):
+#                res.append("        self._name = 'root'")
+#            else:
+#                raise ValueError("unreachable")
+
+        for child in self.children:
+            if isinstance(child, DContainer):
+                # TODO: presence?
+                res.append("        if %s is not None:" % (child.name))
+                res.append("            self.%s = %s" % (child.name, child.name))
+                res.append("        else:")
+                res.append("            self.%s = %s()" % (child.name, _get_full_name(child)))
+            elif isinstance(child, DLeaf):
+                res.append("        self.%s = %s" % (child.name, child.name))
+            elif isinstance(child, DList):
+                res.append("        self.%s = %s(elements=%s)" % (child.name, _get_full_name(child), child.name))
+        res.append("")
+
+#        # == .create_XXX() methods
+#        for child in self.children:
+#            if isinstance(child, Container_) and child.is_presence():
+#                res.append("    def create_%s(self):" % (child.name))
+#                res.append("        _%s = %s()" % (child.name, _get_full_name(child)))
+#                res.append("        self.%s = _%s" % (child.name, child.name))
+#                res.append("        return _%s" % (child.name))
+#                res.append("")
+#        res.append("")
+
+        # .to_gdata()
+        res.append("    def to_gdata(self) -> yang.data.Node:")
+        if isinstance(self, DList):
+            # keys contains a yang spec of the keys, like "k1 k2"
+            # which are modeled as attributes of the list entry class and accessed via self.k1, self.k2
+            list_keys_str = ", ".join(map(lambda x: "self." + x, self.key))
+            res.append("        res = yang.data.ListElement([%s])" % (list_keys_str))
+        elif isinstance(self, DRoot):
+            res.append("        res = yang.data.%s()" % (self.dname))
+        else:
+            res.append("        res = yang.data.%s('%s')" % (self.dname, self.name))
+
+#        # TODO: work with self.children directly
+#        for attr in attrs:
+#            res.append("        _%s = self.%s" % (attr.name, attr.name))
+#        # TODO: work with self.children directly
+#        for attr in attrs:
+#            res.append("        if _%s is not None:" % attr.name)
+#            if attr.inner:
+#                res.append("            res.children['%s'] = _%s.to_gdata()" % (attr.name, attr.name))
+#            else:
+#                res.append("            res.children['%s'] = yang.data.%s('%s', _%s)" % (attr.name, attr.data_class, attr.name, attr.name))
+        for child in self.children:
+            res.append("        _%s = self.%s" % (child.name, child.name))
+        for child in self.children:
+            res.append("        if _%s is not None:" % child.name)
+            if isinstance(child, DNodeLeaf):
+                res.append("            res.children['%s'] = yang.data.Leaf('%s', _%s)" % (child.name, child.name, child.name))
+            elif isinstance(child, DContainer):
+                res.append("            res.children['%s'] = self.%s.to_gdata()" % (child.name, child.name))
+            elif isinstance(child, DList):
+                res.append("            res.children['%s'] = self.%s.to_gdata()" % (child.name, child.name))
+        res.append("        return res")
+        res.append("")
+#
+        # .from_gdata()
+        # TODO: should .from_gdata() not take a specific data node instead, like Container_ instead of yang.data.Node?
+        from_gdata_args_list = []
+        from_xml_args_list = []
+        for child in self.children:
+            if isinstance(child, DNodeLeaf):
+                from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (child.name, yang_leaf_to_getval(child), child.name))
+                from_xml_args_list.append("%s=yang.data.from_xml_%s(n, \"%s\")" % (child.name, yang_leaf_to_getval(child), child.name))
+            elif isinstance(child, DContainer):
+                # TODO: handle presence containers
+                from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+                # TODO: handle presence containers
+                from_xml_args_list.append("%s=%s.from_xml(yang.data.get_xml_child(n, \"%s\"))" % (child.name, _get_full_name(child), child.name))
+            elif isinstance(child, DList):
+                from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+                from_xml_args_list.append("%s=%s.from_xml(yang.data.get_xml_children(n, \"%s\"))" % (child.name, _get_full_name(child), child.name))
+        from_gdata_args = ", ".join(from_gdata_args_list)
+        from_xml_args = ", ".join(from_xml_args_list)
+        res.append("    @staticmethod")
+        if isinstance(self, DList):
+            res.append("    def from_gdata(n: yang.data.Node) -> %s_entry:" % _get_full_name(self))
+            res.append("        return %s_entry(%s)" % (_get_full_name(self), from_gdata_args))
+        else:
+            res.append("    def from_gdata(n: yang.data.Node) -> %s:" % _get_full_name(self))
+            res.append("        return %s(%s)" % (_get_full_name(self), from_gdata_args))
+        res.append("")
+
+        res.append("    @staticmethod")
+        if isinstance(self, DList):
+            res.append("    def from_xml(n: xml.Node) -> %s_entry:" % _get_full_name(self))
+            res.append("        return %s_entry(%s)" % (_get_full_name(self), from_xml_args))
+        else:
+            res.append("    def from_xml(n: xml.Node) -> %s:" % _get_full_name(self))
+            res.append("        return %s(%s)" % (_get_full_name(self), from_xml_args))
+        res.append("")
+
+        if isinstance(self, DList):
+            # List has special handling as it actually results in two classes:
+            # - the list itself
+            # - the list entry class
+            # Here we create the list entry class, the list itself comes later
+            res.append("class %s(yang.adata.MNode):" % _get_full_name(self))
+            res.append("    elements: list[%s_entry]" % _get_full_name(self))
+
+            init_args = ["self"]
+            init_args.append("elements=[]")
+            init_args_str: str = ", ".join(init_args)
+            res.append("    def __init__(%s):" % init_args_str)
+            res.append("        self._name = " + repr(self.name))
+            res.append("        self.elements = elements")
+            res.append("")
+
+            list_create_args = ["self"] + self.key
+            res.append("    def create(%s):" % (", ".join(list_create_args)))
+            res.append("        res = %s_entry(%s)" % (_get_full_name(self), ", ".join(self.key)))
+            res.append("        self.elements.append(res)")
+            res.append("        return res")
+            res.append("")
+
+            res.append("    def to_gdata(self):" % ())
+            res.append("        res = yang.data.List('%s', %s)" % (self.name, repr(self.key)))
+            res.append("        for e in self.elements:")
+            res.append("            e_gdata = e.to_gdata()")
+            res.append("            if isinstance(e_gdata, yang.data.ListElement):")
+            res.append("                res.elements.append(e_gdata)")
+            res.append("        return res")
+            res.append("")
+
+#            # .from_gdata()
+#            # TODO: should .from_gdata() not take a specific data node instead, like Container_ instead of yang.data.Node?
+            from_gdata_args_list = []
+            for child in self.children:
+                if isinstance(child, DNodeLeaf):
+                    from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (child.name, yang_leaf_to_getval(child), child.name))
+                elif isinstance(child, DContainer):
+                    from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+                elif isinstance(child, DList):
+                    from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+#                elif isinstance(child, ListElement):
+#                    from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
+            from_gdata_args = ", ".join(from_gdata_args_list)
+            res.append("    @staticmethod")
+            res.append("    def from_gdata(n: yang.data.List) -> list[%s_entry]:" % _get_full_name(self))
+            res.append("        return list(map(lambda x: %s_entry.from_gdata(x), n.elements))" % _get_full_name(self))
+            res.append("")
+            res.append("    @staticmethod")
+            res.append("    def from_xml(nodes: list[xml.Node]) -> list[%s_entry]:" % _get_full_name(self))
+            res.append("        return list(map(lambda x: %s_entry.from_xml(x), nodes))" % _get_full_name(self))
+            res.append("")
+        res.append("")
+
+        return "\n".join(res)
+
+
 class DNodeLeaf(DNode):
-    pass
+    if_feature: list[str]
+    mandatory: bool
+    must: list[Must]
+    status: ?str
+    type_: Type
+    when: ?str
 
 class DAnydata(DNodeLeaf):
-    if_feature: list[str]
-    mandatory: ?bool
-    must: list[Must]
-    status: ?str
-    when: ?str
+    pass
 
 class DAnyxml(DNodeLeaf):
-    if_feature: list[str]
-    mandatory: ?bool
-    must: list[Must]
-    status: ?str
-    when: ?str
+    pass
 
 class DContainer(DNodeInner):
     if_feature: list[str]
     must: list[Must]
-    presence: ?str
-    status: ?str
-    when: ?str
+    presence: bool
 
-    def __init__(self, name: str, config: bool, description: ?str=None, if_feature=[], must=[], presence=None, reference=None, status=None, when=None, children=[]):
+    def __init__(self, name: str, config: bool, description: ?str=None, if_feature=[], must=[], presence: bool, reference=None, status=None, when=None, children=[]):
         self.name = name
+        self.dname = "Container_"
         self.config = config
         self.description = description
         self.if_feature = if_feature
@@ -206,7 +447,7 @@ class DContainer(DNodeInner):
         self.presence = presence
         self.reference = reference
         self.status = status
-        self.children = []
+        self.children = children
 
 class DModule(DNodeInner):
     augment: list[Augment]
@@ -216,35 +457,70 @@ class DModule(DNodeInner):
     feature: list[Feature]
     import_: list[Import]
     include: list[Include]
-    namespace: ?str
+    namespace: str
     organization: ?str
-    prefix: ?str
+    prefix: str
     revision: list[Revision]
-    yang_version: ?str
+    yang_version: float
+
+    def __init__(self, name: str, namespace: str, prefix: str, yang_version: ?float, description: ?str=None, contact=None, deviation=[], extension_=[], feature=[], import_=[], include=[], organization=None, reference=None, revision=[], children=[]):
+        self.name = name
+        self.namespace = namespace
+        self.prefix = prefix
+        if yang_version is not None:
+            self.yang_version = yang_version
+        else:
+            self.yang_version = 1.1
+        self.config = True # module is not config in itself, but it is the root
+                           # of the data tree and the default is config=True, so
+                           # we set it here
+        self.description = description
+        self.contact = contact
+        self.deviation = deviation
+        self.extension_ = extension_
+        self.feature = feature
+        self.import_ = import_
+        self.include = include
+        self.organization = organization
+        self.reference = reference
+        self.revision = revision
+        self.children = children
 
 class DList(DNodeInner):
     if_feature: list[str]
-    key: ?str
-    max_elements: ?str
-    min_elements: ?str
+    key: list[str]
+    max_elements: ?int
+    min_elements: int
     must: list[Must]
-    ordered_by: ?str
+    ordered_by: str
     status: ?str
     unique: list[str]
     when: ?str
 
+    def __init__(self, name: str, key: list[str], config: bool, description: ?str=None, if_feature=[], max_elements: ?int=None, min_elements=0, must=[], ordered_by="system", reference=None, status=None, unique=[], when=None, children=[]):
+        self.name = name
+        self.dname = "List"
+        self.key = key
+        self.config = config
+        self.description = description
+        self.if_feature = if_feature
+        self.max_elements = max_elements
+        self.min_elements = min_elements
+        self.must = must
+        self.ordered_by = ordered_by
+        self.reference = reference
+        self.status = status
+        self.unique = unique
+        self.when = when
+        self.children = children
+
 class DLeaf(DNodeLeaf):
     default: ?str
-    if_feature: list[str]
-    mandatory: bool
-    must: list[Must]
-    status: ?str
-    type_: Type
     units: ?str
-    when: ?str
 
     def __init__(self, name: str, config: bool, description: ?str=None, default=None, if_feature=[], mandatory=False, must=[], reference=None, status=None, type_: Type, units=None, when=None):
         self.name = name
+        self.dname = "Leaf"
         self.config = config
         self.description = description
         self.default = default
@@ -259,18 +535,41 @@ class DLeaf(DNodeLeaf):
 
 class DLeafList(DNodeLeaf):
     default: list[str]
-    if_feature: list[str]
-    max_elements: ?str
-    min_elements: ?str
-    must: list[Must]
-    ordered_by: ?str
-    status: ?str
-    type_: ?Type
+    max_elements: ?int
+    min_elements: int
+    ordered_by: str
     units: ?str
-    when: ?str
 
-class DTree(object):
-    pass
+    def __init__(self, name: str, config: bool, description: ?str=None, default=[], if_feature=[], max_elements: ?int=None, min_elements=0, must=[], ordered_by="system", reference=None, status=None, type_: Type, units=None, when=None):
+        self.name = name
+        self.dname = "LeafList"
+        self.config = config
+        self.description = description
+        self.default = default
+        self.if_feature = if_feature
+        self.max_elements = max_elements
+        self.min_elements = min_elements
+        self.must = must
+        self.ordered_by = ordered_by
+        self.reference = reference
+        self.status = status
+        self.type_ = type_
+        self.units = units
+        self.when = when
+
+class DRoot(DNodeInner):
+    def __init__(self, modules: list[DNode]=[]):
+        self.name = "root"
+        self.dname = "Root"
+        self.config = True
+        self.children=[]
+        for module in modules:
+            print("omnomnom", module)
+            if isinstance(module, DModule):
+                for child in module.children:
+                    self.children.append(child)
+            else:
+                raise ValueError("DRoot can only contain DModule")
 
 
 # TODO: how to work with input / output for RPCs and actions?
@@ -299,10 +598,10 @@ class SchemaNode(object):
         """
         raise NotImplementedError('SchemaNode pdc')
 
-    def to_dnode(self) -> DNode:
+    mut def to_dnode(self) -> DNode:
         raise NotImplementedError('SchemaNode to_dschema')
 
-    def get_config(self) -> bool:
+    def is_config(self) -> bool:
         n = self
         for i in range(10):
             if (isinstance(n, Anydata)
@@ -383,239 +682,6 @@ class SchemaNode(object):
 
 class SchemaNodeInner(SchemaNode):
     children: list[SchemaNode]
-
-    def prdaclass(self, strict=True, top=True) -> str:
-        """Print the data class for this schema node
-        """
-        stmt_arg = self._get_arg()
-        res = []
-        # TODO: blargh, should be done differently
-        if top:
-            res.append("import xml")
-            res.append("import yang.adata")
-            res.append("import yang.data")
-            res.append("")
-            res.append("# == This file is generated ==")
-            res.append("")
-            res.append("")
-        for child in self.children:
-            if isinstance(child, SchemaNodeInner):
-                res.append(child.prdaclass(strict=strict, top=False))
-
-        self_list_keys = set() # if we are a list, this is populated
-        if isinstance(self, List):
-            self_list_keys = set(self.keys())
-
-        # TODO: work with self.children directly
-        attrs: list[(name: str, inner: bool, type: str, optional: bool, constructor: str, data_class: str)] = []
-        for child in self.children:
-            if isinstance(child, Container_):
-                if child.is_presence():
-                    attrs.append((child.name, True, "?" + _get_full_name(child), True, _get_full_name(child), "Container_"))
-                else:
-                    attrs.append((child.name, True, _get_full_name(child), False, _get_full_name(child), "Container_"))
-            elif isinstance(child, Leaf):
-                optional = True
-                childmandatory = child.mandatory
-                if childmandatory is not None:
-                    optional = childmandatory
-                if child.name in self_list_keys:
-                    optional = False
-                optional_str = "?" if optional else ""
-                attrs.append((child.name, False, optional_str + yang_type_to_acton_type(child.type_), optional, "", "Leaf"))
-            elif isinstance(child, LeafList):
-                attrs.append((child.name, False, "list[" + yang_type_to_acton_type(child.type_) + "]", False, "", "LeafList"))
-            elif isinstance(child, List):
-                attrs.append((child.name, True, _get_full_name(child), False, _get_full_name(child), "List"))
-            else:
-                raise ValueError("unreachable child type: " + str(type(child)))
-
-        if isinstance(self, List):
-            # List has special handling as it actually results in two classes:
-            # - the list itself
-            # - the list entry class
-            # Here we create the list entry class, the list itself comes later
-            res.append("class %s_entry(yang.adata.MNode):" % _get_full_name(self))
-        else:
-            res.append("class %s(yang.adata.MNode):" % _get_full_name(self))
-        # TODO: work with self.children directly
-        for attr in attrs:
-            res.append("    %s: %s" % (attr.name, attr.type))
-        res.append("")
-        init_args = ["self"]
-#        for attr in attrs:
-#            if attr.name in self_list_keys:
-#                init_args.append("%s: %s" % (attr.name, attr.type))
-#            else:
-#                if attr.optional:
-#                    init_args.append("%s: %s=None" % (attr.name, attr.type))
-#                else:
-#                    init_args.append("%s: ?%s" % (attr.name, attr.type))
-        for child in self.children:
-            if isinstance(child, Container_):
-                if child.is_presence():
-                    init_args.append("%s: ?%s=None" % (child.name, _get_full_name(child)))
-                else:
-                    init_args.append("%s: ?%s" % (child.name, _get_full_name(child)))
-            elif isinstance(child, Leaf):
-                init_args.append("%s: %s" % (child.name, yang_leaf_to_acton_type(child, child.name in self_list_keys)))
-            elif isinstance(child, List):
-                init_args.append("%s: list[%s_entry]=[]" % (child.name, _get_full_name(child)))
-
-        init_args_str = ", ".join(init_args)
-        res.append("    def __init__(%s):" % init_args_str)
-        if stmt_arg is not None:
-            res.append("        self._name = " + repr(stmt_arg))
-        else:
-            if isinstance(self, Input):
-                res.append("        self._name = 'input'")
-            elif isinstance(self, Output):
-                res.append("        self._name = 'output'")
-            elif isinstance(self, Root):
-                res.append("        self._name = 'root'")
-            else:
-                raise ValueError("unreachable")
-#
-        for child in self.children:
-            if isinstance(child, Container_):
-                res.append("        if %s is not None:" % (child.name))
-                res.append("            self.%s = %s" % (child.name, child.name))
-                res.append("        else:")
-                res.append("            self.%s = %s()" % (child.name, _get_full_name(child)))
-            elif isinstance(child, Leaf):
-                res.append("        self.%s = %s" % (child.name, child.name))
-            elif isinstance(child, List):
-                res.append("        self.%s = %s(elements=%s)" % (child.name, _get_full_name(child), child.name))
-        res.append("")
-
-        # == .create_XXX() methods
-        for child in self.children:
-            if isinstance(child, Container_) and child.is_presence():
-                res.append("    def create_%s(self):" % (child.name))
-                res.append("        _%s = %s()" % (child.name, _get_full_name(child)))
-                res.append("        self.%s = _%s" % (child.name, child.name))
-                res.append("        return _%s" % (child.name))
-                res.append("")
-        res.append("")
-
-        # .to_gdata()
-        res.append("    def to_gdata(self) -> yang.data.Node:")
-        if isinstance(self, List):
-            # keys contains a yang spec of the keys, like "k1 k2"
-            # which are modeled as attributes of the list entry class and accessed via self.k1, self.k2
-            list_keys_str = ", ".join(map(lambda x: "self." + x, self.keys()))
-            res.append("        res = yang.data.ListElement([%s])" % (list_keys_str))
-        elif stmt_arg is not None: # stmt_arg is the name of the statement
-            res.append("        res = yang.data.%s('%s')" % (snode_type_name(self), stmt_arg))
-        else: # the only inner schema nodes without stmt_arg are Input and Output
-            res.append("        res = yang.data.%s()" % snode_type_name(self))
-
-        # TODO: work with self.children directly
-        for attr in attrs:
-            res.append("        _%s = self.%s" % (attr.name, attr.name))
-        # TODO: work with self.children directly
-        for attr in attrs:
-            res.append("        if _%s is not None:" % attr.name)
-            if attr.inner:
-                res.append("            res.children['%s'] = _%s.to_gdata()" % (attr.name, attr.name))
-            else:
-                res.append("            res.children['%s'] = yang.data.%s('%s', _%s)" % (attr.name, attr.data_class, attr.name, attr.name))
-        res.append("        return res")
-        res.append("")
-
-        # .from_gdata()
-        # TODO: should .from_gdata() not take a specific data node instead, like Container_ instead of yang.data.Node?
-        from_gdata_args_list = []
-        from_xml_args_list = []
-        for child in self.children:
-            if isinstance(child, Leaf):
-                from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (child.name, yang_leaf_to_getval(child, child.name in self_list_keys), child.name))
-                from_xml_args_list.append("%s=yang.data.from_xml_%s(n, \"%s\")" % (child.name, yang_leaf_to_getval(child, child.name in self_list_keys), child.name))
-            elif isinstance(child, Container_):
-                # TODO: handle presence containers
-                from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (child.name, _get_full_name(child), child.name))
-                # TODO: handle presence containers
-                from_xml_args_list.append("%s=%s.from_xml(yang.data.get_xml_child(n, \"%s\"))" % (child.name, _get_full_name(child), child.name))
-            elif isinstance(child, List):
-                from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
-                from_xml_args_list.append("%s=%s.from_xml(yang.data.get_xml_children(n, \"%s\"))" % (child.name, _get_full_name(child), child.name))
-        from_gdata_args = ", ".join(from_gdata_args_list)
-        from_xml_args = ", ".join(from_xml_args_list)
-        res.append("    @staticmethod")
-        if isinstance(self, List):
-            res.append("    def from_gdata(n: yang.data.Node) -> %s_entry:" % _get_full_name(self))
-            res.append("        return %s_entry(%s)" % (_get_full_name(self), from_gdata_args))
-        else:
-            res.append("    def from_gdata(n: yang.data.Node) -> %s:" % _get_full_name(self))
-            res.append("        return %s(%s)" % (_get_full_name(self), from_gdata_args))
-        res.append("")
-
-        res.append("    @staticmethod")
-        if isinstance(self, List):
-            res.append("    def from_xml(n: xml.Node) -> %s_entry:" % _get_full_name(self))
-            res.append("        return %s_entry(%s)" % (_get_full_name(self), from_xml_args))
-        else:
-            res.append("    def from_xml(n: xml.Node) -> %s:" % _get_full_name(self))
-            res.append("        return %s(%s)" % (_get_full_name(self), from_xml_args))
-        res.append("")
-
-        if isinstance(self, List):
-            # List has special handling as it actually results in two classes:
-            # - the list itself
-            # - the list entry class
-            # Here we create the list entry class, the list itself comes later
-            res.append("class %s(yang.adata.MNode):" % _get_full_name(self))
-            res.append("    elements: list[%s_entry]" % _get_full_name(self))
-
-            init_args = ["self"]
-            init_args.append("elements=[]")
-            init_args_str: str = ", ".join(init_args)
-            res.append("    def __init__(%s):" % init_args_str)
-            if stmt_arg is not None:
-                res.append("        self._name = " + repr(stmt_arg))
-            res.append("        self.elements = elements")
-            res.append("")
-
-            list_create_args = ["self"] + self.keys()
-            res.append("    def create(%s):" % (", ".join(list_create_args)))
-            res.append("        res = %s_entry(%s)" % (_get_full_name(self), ", ".join(self.keys())))
-            res.append("        self.elements.append(res)")
-            res.append("        return res")
-            res.append("")
-
-            res.append("    def to_gdata(self):" % ())
-            res.append("        res = yang.data.List('%s', %s)" % (stmt_arg if stmt_arg is not None else "", repr(self.keys())))
-            res.append("        for e in self.elements:")
-            res.append("            e_gdata = e.to_gdata()")
-            res.append("            if isinstance(e_gdata, yang.data.ListElement):")
-            res.append("                res.elements.append(e_gdata)")
-            res.append("        return res")
-            res.append("")
-
-            # .from_gdata()
-            # TODO: should .from_gdata() not take a specific data node instead, like Container_ instead of yang.data.Node?
-            from_gdata_args_list = []
-            for child in self.children:
-                if isinstance(child, Leaf):
-                    from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (child.name, yang_leaf_to_getval(child), child.name))
-                elif isinstance(child, Container_):
-                    from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (child.name, _get_full_name(child), child.name))
-                elif isinstance(child, List):
-                    from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
-#                elif isinstance(child, ListElement):
-#                    from_gdata_args_list.append("%s=%s.from_gdata(n.get_list(\"%s\"))" % (child.name, _get_full_name(child), child.name))
-            from_gdata_args = ", ".join(from_gdata_args_list)
-            res.append("    @staticmethod")
-            res.append("    def from_gdata(n: yang.data.List) -> list[%s_entry]:" % _get_full_name(self))
-            res.append("        return list(map(lambda x: %s_entry.from_gdata(x), n.elements))" % _get_full_name(self))
-            res.append("")
-            res.append("    @staticmethod")
-            res.append("    def from_xml(nodes: list[xml.Node]) -> list[%s_entry]:" % _get_full_name(self))
-            res.append("        return list(map(lambda x: %s_entry.from_xml(x), nodes))" % _get_full_name(self))
-            res.append("")
-        res.append("")
-
-        return "\n".join(res)
 
 class SchemaNodeOuter(SchemaNode):
     pass
@@ -733,24 +799,28 @@ def _prsrc_attrs(indent, attrs):
     return ", ".join(res)
 
 
-def yang_leaf_to_acton_type(leaf: Leaf, force_mandatory: bool=False) -> str:
+def yang_leaf_to_acton_type(leaf: DNodeLeaf) -> str:
     optional = True
     leafmandatory = leaf.mandatory
     if leafmandatory is not None:
         optional = not leafmandatory
-    if force_mandatory:
-        optional = False
+    parent = leaf.parent
+    if isinstance(parent, DList):
+        if leaf.name in parent.key:
+            optional = False
     optional_str = "?" if optional else ""
     t = yang_type_to_acton_type(leaf.type_)
     return optional_str + t
 
-def yang_leaf_to_getval(leaf: Leaf, force_mandatory: bool=False) -> str:
+def yang_leaf_to_getval(leaf: DNodeLeaf) -> str:
     optional = True
     leafmandatory = leaf.mandatory
     if leafmandatory is not None:
         optional = not leafmandatory
-    if force_mandatory:
-        optional = False
+    parent = leaf.parent
+    if isinstance(parent, DList):
+        if leaf.name in parent.key:
+            optional = False
     optional_str = "opt_" if optional else ""
     t = yang_type_to_acton_type(leaf.type_)
     return optional_str + t
@@ -827,17 +897,19 @@ def yang_type_to_acton_type(t: ?Type) -> str:
     raise ValueError("type not defined")
 
 
-def _get_full_name(snode: SchemaNode) -> str:
+def _get_full_name(dnode: DNode) -> str:
     """
     """
     path = []
     while True:
-        path.append(snode_name(snode))
-        parent = snode.parent
+        path.append(dnode.name)
+        parent = dnode.parent
         if parent is not None:
-            snode = parent
+            dnode = parent
         else:
             break
+    if len(path) == 0:
+        raise ValueError("No path for DNode" + str(dnode))
     return "__".join(reversed(path))
 
 

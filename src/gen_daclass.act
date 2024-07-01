@@ -89,15 +89,15 @@ actor main(env):
     fc = file.FileCap(env.cap)
     wfc = file.WriteFileCap(fc)
 
-    cfs_netinfra = yang.schema.stmt_to_snode(yang.parser.parse(netinfra_yang))
-    cfs_l3vpn = yang.schema.stmt_to_snode(yang.parser.parse(l3vpn_yang))
+    cfs_netinfra = yang.schema.stmt_to_snode(yang.parser.parse(netinfra_yang)).to_dnode()
+    cfs_l3vpn = yang.schema.stmt_to_snode(yang.parser.parse(l3vpn_yang)).to_dnode()
 
-    rfs_netinfra = yang.schema.stmt_to_snode(yang.parser.parse(nodes_yang))
-    if isinstance(cfs_netinfra, yang.schema.Module) and isinstance(cfs_l3vpn, yang.schema.Module) and isinstance(rfs_netinfra, yang.schema.Module):
-        cfs_root = yang.schema.Root([cfs_netinfra, cfs_l3vpn])
+    rfs_netinfra = yang.schema.stmt_to_snode(yang.parser.parse(nodes_yang)).to_dnode()
+    if isinstance(cfs_netinfra, yang.schema.DModule) and isinstance(cfs_l3vpn, yang.schema.DModule) and isinstance(rfs_netinfra, yang.schema.DModule):
+        cfs_root = yang.schema.DRoot([cfs_netinfra, cfs_l3vpn])
         cfs_src = cfs_root.prdaclass()
 
-        rfs_root = yang.schema.Root([rfs_netinfra])
+        rfs_root = yang.schema.DRoot([rfs_netinfra])
         rfs_src = rfs_root.prdaclass()
 
         wf_cfs = file.WriteFile(wfc, "src/y_cfs.act")

@@ -16,4 +16,4 @@ class MNode(object):
         self._schema = None
 
     mut def to_gdata(self) -> yang.data.Node:
-        raise NotImplementedError()
+        raise NotImplementedError("MNode.to_gdata")
