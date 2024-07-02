@@ -485,10 +485,7 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         if arg_name is not None:
             res.append("    if isinstance(sn, %s):" % _class_name(stmt_name))
             res.append("        return sn.%s" % _attr_name(arg_name))
-    res.append("    if isinstance(sn, Root):")
-    res.append("        return 'root'")
     res.append("    raise ValueError(\"Unknown SchemaNode type in snode_name\")")
-    res.append("")
     res.append("")
 
     res.append("def snode_type_name(sn: SchemaNode) -> str:")
@@ -498,10 +495,7 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         if arg_name is not None:
             res.append("    if isinstance(sn, %s):" % _class_name(stmt_name))
             res.append("        return \"%s\"" % _class_name(stmt_name))
-    res.append("    if isinstance(sn, Root):")
-    res.append("        return 'Root'")
     res.append("    raise ValueError(\"Unknown SchemaNode type in snode_type_name\")")
-    res.append("")
     res.append("")
 
     for stmt_name in sorted(stmts):

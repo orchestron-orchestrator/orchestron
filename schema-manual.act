@@ -686,19 +686,6 @@ class SchemaNodeInner(SchemaNode):
 class SchemaNodeOuter(SchemaNode):
     pass
 
-class Root(SchemaNodeInner):
-    def __init__(self, modules: list[SchemaNode]=[]):
-        self.children=[]
-        for module in modules:
-            if isinstance(module, Module):
-                for child in module.children:
-                    self.children.append(child)
-            else:
-                raise ValueError("Root can only contain Module")
-
-    def _get_arg(self) -> ?str:
-        return None
-
 
 def take_bool(stmts: list[Statement], kw: str) -> ?bool:
     v = take_str(stmts, kw)
