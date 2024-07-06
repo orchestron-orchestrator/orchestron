@@ -170,6 +170,7 @@ tree, and can be used to serialize and deserialize YANG data.
 # produce a complete output.
 
 class Node(object):
+    parent: ?Node
     ns: ?str
     prefix: ?str
 
@@ -397,6 +398,8 @@ class Module(Inner):
         self.children = children
         self.ns = ns
         self.prefix = prefix
+        for child in self.children.values():
+            child.parent = self
 
 
 class Container_(Inner):
@@ -407,6 +410,8 @@ class Container_(Inner):
         self.children = children
         self.ns = ns
         self.prefix = prefix
+        for child in self.children.values():
+            child.parent = self
 
 class List(Node):
     name: str
@@ -429,6 +434,8 @@ class ListElement(Inner):
     def __init__(self, key_vals: list[str], children: dict[str, Node]={}):
         self.key_vals = key_vals
         self.children = children
+        for child in self.children.values():
+            child.parent = self
 
 class Leaf(Node):
     name: str

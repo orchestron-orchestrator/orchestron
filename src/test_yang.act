@@ -569,6 +569,27 @@ def _test_is_config2():
     testing.assertEqual(n.get("c1").get("c2").is_config(), False)
     testing.assertEqual(n.get("c1").get("c2").get("l1").is_config(), False)
 
+def _test_expand():
+    ys = """module foo {
+  grouping g1 {
+    container c1 {
+      list li1 {
+        key l1;
+        leaf l1 {
+          type string;
+          description "leaf 1";
+        }
+      }
+    }
+  }
+  uses g1;
+}"""
+    n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
+    ne = n.expand()[0]
+
+    #testing.assertEqual(n1, n2.expand())
+    testing.assertEqual(ne.get("c1").get("li1").get("l1").is_config(), True)
+
 
 def _test_tofrom_gdata():
     # TODO: hmm, how to test this? I guess we need to first generate some data
@@ -627,6 +648,7 @@ myang3 = """container c1 {
 }"""
 
 actor main(env):
+    _test_expand()
     try:
         print("")
         print(_yang_to_act_code(myang))
