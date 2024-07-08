@@ -585,7 +585,7 @@ def _test_expand():
   uses g1;
 }"""
     n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
-    ne = n.expand()[0]
+    ne = n.expand()
 
     #testing.assertEqual(n1, n2.expand())
     testing.assertEqual(ne.get("c1").get("li1").get("l1").is_config(), True)

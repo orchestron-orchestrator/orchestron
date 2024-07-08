@@ -592,13 +592,30 @@ class SchemaNode(object):
         """
         raise NotImplementedError('SchemaNode prsrc')
 
-    def expand(self) -> list[SchemaNode]:
+    def expand(self) -> SchemaNode:
         """Expand abstract nodes into concrete nodes
         - uses / groupings
         - augments
         - resolve types to base types
         """
         raise NotImplementedError('SchemaNode expand')
+
+    def expand_children(self) -> list[SchemaNode]:
+        """Expand abstract children into concrete nodes
+        - uses / groupings
+        - augments
+        - resolve types to base types
+        """
+        if isinstance(self, SchemaNodeInner):
+            res = []
+            for child in self.children:
+                if isinstance(child, Uses):
+                    grouping = child.get_grouping(child.name)
+                    res.extend(grouping.expand_children())
+                else:
+                    res.append(child.expand())
+            return res
+        raise ValueError("expand_children() called on non-inner node %s" % type(self))
 
     def prdaclass(self, strict=True, top=True) -> str:
         """Print the data class for this schema node
@@ -646,7 +663,7 @@ class SchemaNode(object):
 
     def is_config(self) -> bool:
         n = self
-        while True:
+        for i in range(RECURSION_LIMIT+1):
             if (isinstance(n, Anydata)
                 or isinstance(n, Anyxml)
                 or isinstance(n, Container_)

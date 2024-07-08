@@ -295,44 +295,7 @@ class SchemaNode(object):
 """
 
 snode_methods = {
-    "action": {
-        "expand": """    def expand(self):
-        new_children = []
-        for child in self.children:
-            new_children.extend(child.expand())
-        new = Action(
-            name=self.name,
-            description=self.description,
-            if_feature=self.if_feature,
-            input=self.input,
-            output=self.output,
-            reference=self.reference,
-            status=self.status
-        )
-        return [new]
-
-""",
-    },
     "container": {
-        "expand": """    def expand(self):
-        new_children = []
-        for child in self.children:
-            new_children.extend(child.expand())
-        new_container = Container_(
-            name=self.name,
-            config=self.config,
-            description=self.description,
-            if_feature=self.if_feature,
-            must=self.must,
-            presence=self.presence,
-            reference=self.reference,
-            status=self.status,
-            when=self.when,
-            children=new_children
-        )
-        return [new_container]
-
-""",
         "is_presence": """    def is_presence(self) -> bool:
         selfpresence = self.presence
         if selfpresence is not None:
@@ -363,30 +326,6 @@ snode_methods = {
 """
     },
     "module": {
-        "expand": """    def expand(self):
-        new_children = []
-        for child in self.children:
-            new_children.extend(child.expand())
-        new_module = Module(
-            name=self.name,
-            contact=self.contact,
-            description=self.description,
-            deviation=self.deviation,
-            extension_=self.extension_,
-            feature=self.feature,
-            import_=self.import_,
-            include=self.include,
-            namespace=self.namespace,
-            organization=self.organization,
-            prefix=self.prefix,
-            reference=self.reference,
-            revision=self.revision,
-            yang_version=self.yang_version,
-            children=new_children
-        )
-        return [new_module]
-
-""",
         "get_namespace": """    def get_namespace(self) -> str:
         selfnamespace = self.namespace
         if selfnamespace is not None:
@@ -421,27 +360,6 @@ snode_methods = {
 """
     },
     "list": {
-        "expand": """    def expand(self):
-        new_children = []
-        for child in self.children:
-            new_children.extend(child.expand())
-        new_list = List(
-            name=self.name,
-            config=self.config,
-            description=self.description,
-            if_feature=self.if_feature,
-            key=self.key,
-            max_elements=self.max_elements,
-            min_elements=self.min_elements,
-            must=self.must,
-            reference=self.reference,
-            status=self.status,
-            when=self.when,
-            children=new_children
-        )
-        return [new_list]
-
-""",
         "keys": """    def keys(self) -> list[str]:
         selfkey = self.key
         if selfkey is not None:
@@ -487,10 +405,23 @@ snode_methods = {
 
 """,
     },
-    # TODO: resolve leaf type
     "leaf": {
+        # TODO: resolve leaf type
         "expand": """    def expand(self):
-        return [self]
+        new = Leaf(self.name,
+                   config=self.config,
+                   default=self.default,
+                   description=self.description,
+                   if_feature=self.if_feature,
+                   mandatory=self.mandatory,
+                   must=self.must,
+                   reference=self.reference,
+                   status=self.status,
+                   type_=self.type_,
+                   units=self.units,
+                   when=self.when)
+        return new
+
 """,
         "get_type": """    def get_type(self) -> Type:
         selftype = self.type_
@@ -557,8 +488,7 @@ snode_methods = {
     },
     "uses": {
         "expand": """    def expand(self):
-        grouping = self.get_grouping(self.name)
-        return grouping.children
+        raise ValueError("Cannot expand uses")
 
 """,
     },
@@ -674,13 +604,28 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         res.append("        return \"\\n\".join(res)")
         res.append("")
 
+        manual_methods = []
         # == Statement specific methods ================================
         for method_name in snode_methods.get(stmt_name, {}):
             method = snode_methods[stmt_name][method_name]
             for line in method.splitlines():
                 res.append(line)
+            manual_methods.append(method_name)
         # ==============================================================
 
+        # -- expand
+        if "expand" not in manual_methods:
+            res.append("    def expand(self):")
+            new_args = []
+            if arg_name is not None:
+                new_args += ["self." + _attr_name(arg_name)]
+            new_args += list(map(lambda x: "%s=self.%s" % (_attr_name(x), _attr_name(x)), kwattrs))
+            if have_children:
+                new_args.append("children=self.expand_children()")
+
+            res.append("        new = %s(%s)" % (_class_name(stmt_name), (",\n               " + " " * len(_class_name(stmt_name))).join(new_args)))
+            res.append("        return new")
+            res.append("")
 
         res.append("    def _get_argname(self) -> ?str:")
         if arg_name is not None:
