@@ -542,6 +542,8 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         res.append("    \"\"\"")
 
         for attr in cattrs:
+            if attr in {"namespace", "prefix"}:
+                continue
             res.append("    %s: %s" % (_attr_name(attr), _attr_type(attr, stmt, stmts)))
 
 
@@ -552,6 +554,10 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         init_attrs += list(map(lambda x: _attr_name(x) + _attr_defval(x, stmt, stmts), kwattrs))
         if have_children:
             init_attrs.append("children=[]")
+        if "namespace" not in set(cattrs):
+            init_attrs.append("namespace=None")
+        if "prefix" not in set(cattrs):
+            init_attrs.append("prefix=None")
         res.append("    def __init__(" + ", ".join(init_attrs) + "):")
         res.append("        self.parent = None")
 #        res.append("        self.cname = \"%s\"" % _class_name(stmt_name))
@@ -562,6 +568,10 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             res.append("        self.children = children")
             res.append("        for child in self.children:")
             res.append("            child.parent = self")
+        if "namespace" not in set(cattrs):
+            res.append("        self.namespace = namespace")
+        if "prefix" not in set(cattrs):
+            res.append("        self.prefix = prefix")
         res.append("")
 
         # -- prsrc

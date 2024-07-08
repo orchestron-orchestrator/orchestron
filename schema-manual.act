@@ -580,6 +580,8 @@ class DRoot(DNodeInner):
 
 class SchemaNode(object):
     parent: ?SchemaNode
+    namespace: ?str
+    prefix: ?str
 
     def _get_argname(self) -> ?str:
         raise NotImplementedError('SchemaNode _get_argname')
@@ -661,6 +663,34 @@ class SchemaNode(object):
                 raise ValueError("Recursion limit reached")
         raise ValueError("Unable to find grouping '%s'" % name)
 
+    def get_namespace(self) -> str:
+        n = self
+        for i in range(RECURSION_LIMIT+1):
+            nnamespace = n.namespace
+            if nnamespace is not None:
+                return nnamespace
+            nparent = n.parent
+            if nparent is not None:
+                n = nparent
+                continue
+            if i > RECURSION_LIMIT:
+                raise ValueError("Recursion limit reached")
+        raise ValueError("Unable to find namespace")
+
+    def get_prefix(self) -> str:
+        n = self
+        for i in range(RECURSION_LIMIT+1):
+            nprefix = n.prefix
+            if nprefix is not None:
+                return nprefix
+            nparent = n.parent
+            if nparent is not None:
+                n = nparent
+                continue
+            if i > RECURSION_LIMIT:
+                raise ValueError("Recursion limit reached")
+        raise ValueError("Unable to find namespace")
+
     def is_config(self) -> bool:
         n = self
         for i in range(RECURSION_LIMIT+1):
@@ -717,6 +747,8 @@ class SchemaNode(object):
                             raise ValueError("Reached some top data node ")
             else:
                 raise ValueError("Non-data node %s does not have config statements" % type(n))
+            if i > RECURSION_LIMIT:
+                raise ValueError("Recursion limit reached")
         raise ValueError("Unable to find config attribute")
 
 
