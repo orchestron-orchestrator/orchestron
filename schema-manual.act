@@ -232,12 +232,9 @@ class DNodeInner(DNode):
         else:
             res.append("class %s(yang.adata.MNode):" % _get_full_name(self))
         for child in self.children:
-            print("child", child)
             if isinstance(child, DNodeLeaf):
-                print("leaf", child)
                 res.append("    %s: %s" % (child.name, yang_leaf_to_acton_type(child)))
             elif isinstance(child, DNodeInner):
-                print("inner", child)
                 res.append("    %s: %s" % (child.name, _get_full_name(child)))
             else:
                 raise ValueError("unreachable, unknown child type: " + str(type(child)))
@@ -566,7 +563,6 @@ class DRoot(DNodeInner):
         self.config = True
         self.children=[]
         for module in modules:
-            print("omnomnom", module)
             if isinstance(module, DModule):
                 for child in module.children:
                     self.children.append(child)
