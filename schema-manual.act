@@ -594,19 +594,16 @@ class SchemaNode(object):
         """
         raise NotImplementedError('SchemaNode prsrc')
 
-    def expand(self) -> SchemaNode:
-        """Expand abstract nodes into concrete nodes
-        - uses / groupings
-        - augments
+    def compile(self) -> SchemaNode:
+        """Compile an abstract YANG into a concrete one
+        - expand uses / groupings
+        - handle augments
         - resolve types to base types
         """
-        raise NotImplementedError('SchemaNode expand')
+        raise NotImplementedError('SchemaNode compile')
 
     def expand_children(self) -> list[SchemaNode]:
         """Expand abstract children into concrete nodes
-        - uses / groupings
-        - augments
-        - resolve types to base types
         """
         if isinstance(self, SchemaNodeInner):
             res = []
@@ -615,7 +612,7 @@ class SchemaNode(object):
                     grouping = child.get_grouping(child.name)
                     res.extend(grouping.expand_children())
                 else:
-                    res.append(child.expand())
+                    res.append(child.compile())
             return res
         raise ValueError("expand_children() called on non-inner node %s" % type(self))
 
