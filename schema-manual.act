@@ -574,6 +574,39 @@ class DRoot(DNodeInner):
 
 # -------------------------------------------------------------------------------
 
+
+class ModRev(object):
+    modname: str
+    rev: ?str
+
+    def __init__(self, modname: str, rev: ?str):
+        self.modname = modname
+        self.rev = rev
+
+extension ModRev (Hashable):
+    def __eq__(self, other: ModRev) -> bool:
+        return self.modname == other.modname and self.rev == other.rev
+
+    def __hash__(self) -> int:
+        selfrev = self.rev
+        revstr = selfrev if selfrev is not None else ""
+        return self.modname.__hash__() ^ revstr.__hash__()
+
+class Context(object):
+    """Compilation context
+    """
+    modules: dict[ModRev, Module]
+
+    def __init__(self, modules: list[Module]):
+        self.modules = {}
+        for module in modules:
+            # TODO: grab latest revision
+            self.modules[ModRev(module.name, None)] = module
+
+    def get_module(self, modname: str, rev: ?str) -> Module:
+        return self.modules[ModRev(modname, rev)]
+
+
 class SchemaNode(object):
     parent: ?SchemaNode
     namespace: ?str
@@ -590,7 +623,7 @@ class SchemaNode(object):
         """
         raise NotImplementedError('SchemaNode prsrc')
 
-    def compile(self) -> SchemaNode:
+    def compile(self, context: Context) -> SchemaNode:
         """Compile an abstract YANG into a concrete one
         - expand uses / groupings
         - handle augments
@@ -598,17 +631,17 @@ class SchemaNode(object):
         """
         raise NotImplementedError('SchemaNode compile')
 
-    def expand_children(self) -> list[SchemaNode]:
+    def expand_children(self, context: Context) -> list[SchemaNode]:
         """Expand abstract children into concrete nodes
         """
         if isinstance(self, SchemaNodeInner):
             res = []
             for child in self.children:
                 if isinstance(child, Uses):
-                    grouping = child.get_grouping(child.name)
-                    res.extend(grouping.expand_children())
+                    grouping = child.get_grouping(child.name, context)
+                    res.extend(grouping.expand_children(context))
                 else:
-                    res.append(child.compile())
+                    res.append(child.compile(context))
             return res
         raise ValueError("expand_children() called on non-inner node %s" % type(self))
 
@@ -620,7 +653,26 @@ class SchemaNode(object):
     mut def to_dnode(self) -> DNode:
         raise NotImplementedError('SchemaNode to_dschema')
 
-    def get_grouping(self, name: str) -> Grouping:
+    def get_module_by_prefix(self, prefix: str, context: Context) -> Module:
+        local_module = self.get_module()
+        imp = local_module.get_import_by_prefix(prefix)
+        # TODO: fix revision
+        return context.get_module(imp.module, None)
+
+    def split_prefix_name(self, name: str) -> (?str, str):
+        if name.find(":") != -1:
+            parts = name.split(":", 1)
+            return (parts[0], parts[1])
+        return None, name
+
+    def get_grouping(self, name: str, context: Context) -> Grouping:
+        prefix, group_name = self.split_prefix_name(name)
+        if prefix is not None:
+            return self.get_module_by_prefix(prefix, context).get_grouping(group_name, context)
+        else: # local module
+            return self.get_grouping_in_module(group_name)
+
+    def get_grouping_in_module(self, name: str) -> Grouping:
         n = self
         for i in range(RECURSION_LIMIT+1):
             groupings: ?list[Grouping] = None
@@ -655,6 +707,18 @@ class SchemaNode(object):
             if i > RECURSION_LIMIT:
                 raise ValueError("Recursion limit reached")
         raise ValueError("Unable to find grouping '%s'" % name)
+
+    def get_module(self) -> Module:
+        n = self
+        while True:
+            if isinstance(n, Module):
+                return n
+            nparent = n.parent
+            if nparent is not None:
+                n = nparent
+                continue
+            break
+        raise ValueError("Unable to find namespace")
 
     def get_namespace(self) -> str:
         n = self
@@ -737,7 +801,7 @@ class SchemaNode(object):
                         if isinstance(n, Module):
                             return True
                         else:
-                            raise ValueError("Reached some top data node ")
+                            raise ValueError("Reached some top data node of type %s" % type(n))
             else:
                 raise ValueError("Non-data node %s does not have config statements" % type(n))
             if i > RECURSION_LIMIT:

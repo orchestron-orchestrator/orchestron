@@ -326,6 +326,13 @@ snode_methods = {
 """
     },
     "module": {
+        "get_import_by_prefix": """    def get_import_by_prefix(self, prefix: str) -> Import:
+        for imp in self.import_:
+            if imp.prefix == prefix:
+                return imp
+        raise ValueError("No import with prefix %s" % prefix)
+
+""",
         "get_namespace": """    def get_namespace(self) -> str:
         selfnamespace = self.namespace
         if selfnamespace is not None:
@@ -407,7 +414,7 @@ snode_methods = {
     },
     "leaf": {
         # TODO: resolve leaf type
-        "expand": """    def expand(self):
+        "compile": """    def compile(self, context: ?Context=None):
         new = Leaf(self.name,
                    config=self.config,
                    default=self.default,
@@ -487,8 +494,8 @@ snode_methods = {
 """
     },
     "uses": {
-        "expand": """    def expand(self):
-        raise ValueError("Cannot expand uses")
+        "compile": """    def compile(self, context: ?Context=None):
+        raise ValueError("Cannot compile 'uses'")
 
 """,
     },
@@ -566,8 +573,12 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             res.append("        self.%s = %s" % (_attr_name(attr), _attr_name(attr)))
         if have_children:
             res.append("        self.children = children")
-            res.append("        for child in self.children:")
-            res.append("            child.parent = self")
+            res.append("        for n in self.children:")
+            res.append("            n.parent = self")
+        for attr in {"children", "extension_", "feature", "grouping"}:
+            if attr in cattrs:
+                res.append("        for n in self.%s:" % attr)
+                res.append("            n.parent = self")
         if "namespace" not in set(cattrs):
             res.append("        self.namespace = namespace")
         if "prefix" not in set(cattrs):
@@ -623,15 +634,15 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             manual_methods.append(method_name)
         # ==============================================================
 
-        # -- expand
-        if "expand" not in manual_methods:
-            res.append("    def expand(self):")
+        # -- compile
+        if "compile" not in manual_methods:
+            res.append("    def compile(self, context: Context):")
             new_args = []
             if arg_name is not None:
                 new_args += ["self." + _attr_name(arg_name)]
             new_args += list(map(lambda x: "%s=self.%s" % (_attr_name(x), _attr_name(x)), kwattrs))
             if have_children:
-                new_args.append("children=self.expand_children()")
+                new_args.append("children=self.expand_children(context)")
 
             res.append("        new = %s(%s)" % (_class_name(stmt_name), (",\n               " + " " * len(_class_name(stmt_name))).join(new_args)))
             res.append("        return new")

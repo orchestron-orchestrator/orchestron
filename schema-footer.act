@@ -1,0 +1,14 @@
+
+extension Revision (Ord):
+    def __eq__(a, b):
+        return a.date == b.date
+
+    def __lt__(a, b):
+        return a.date < b.date
+
+
+def stmt_to_smodule(stmt):
+    m = stmt_to_snode(stmt)
+    if isinstance(m, Module):
+        return m
+    raise ValueError("Expected a module, got " + type(m))

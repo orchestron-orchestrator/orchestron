@@ -12,8 +12,8 @@ src/y_cfs.act: out/bin/gen_daclass
 out/bin/gen_daclass: src/gen_daclass.act src/yang/parser.act src/yang/schema.act
 	acton src/gen_daclass.act
 
-src/yang/schema.act: schema-manual.act out/bin/rfcgen
-	(tail -n +4 schema-manual.act; out/bin/rfcgen) > src/yang/schema.act
+src/yang/schema.act: schema-manual.act out/bin/rfcgen schema-footer.act
+	(tail -n +4 schema-manual.act; out/bin/rfcgen; cat schema-footer.act) > src/yang/schema.act
 
 out/bin/rfcgen: src/rfcgen.act
 	acton src/rfcgen.act

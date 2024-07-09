@@ -569,7 +569,7 @@ def _test_is_config2():
     testing.assertEqual(n.get("c1").get("c2").is_config(), False)
     testing.assertEqual(n.get("c1").get("c2").get("l1").is_config(), False)
 
-def _test_compile():
+def _test_compile_uses():
     ys = """module foo {
   grouping g1 {
     container c1 {
@@ -582,13 +582,53 @@ def _test_compile():
       }
     }
   }
-  uses g1;
+  grouping g2 {
+    uses g1;
+  }
+  uses g2;
 }"""
     n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
-    ne = n.compile()
+    ctx = yang.schema.Context([])
+    nc = n.compile(ctx)
 
     #testing.assertEqual(n1, n2.compile())
-    testing.assertEqual(ne.get("c1").get("li1").get("l1").is_config(), True)
+    testing.assertEqual(nc.get("c1").get("li1").get("l1").is_config(), True)
+
+
+def _test_compile_imported_grouping():
+    ys_foo = """module foo {
+  grouping g1 {
+    container c1 {
+      list li1 {
+        key l1;
+        leaf l1 {
+          type string;
+          description "leaf 1";
+        }
+      }
+    }
+  }
+  grouping g2 {
+    uses g1;
+  }
+}"""
+    ys_bar = """module bar {
+  import foo {
+    prefix "f";
+  }
+  grouping g1 {
+    uses f:g2;
+  }
+  uses g1;
+}"""
+    y_foo = yang.parser.parse(ys_foo)
+    y_bar = yang.parser.parse(ys_bar)
+    n_foo = yang.schema.stmt_to_smodule(y_foo)
+    n_bar = yang.schema.stmt_to_smodule(y_bar)
+    ctx = yang.schema.Context([n_foo, n_bar])
+    nc_bar = n_bar.compile(ctx)
+
+    testing.assertEqual(nc_bar.get("c1").get("li1").get("l1").is_config(), True)
 
 
 def _test_tofrom_gdata():
@@ -648,7 +688,6 @@ myang3 = """container c1 {
 }"""
 
 actor main(env):
-    _test_compile()
     try:
         print("")
         print(_yang_to_act_code(myang))
