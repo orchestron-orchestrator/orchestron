@@ -881,30 +881,12 @@ class SchemaNode(object):
         n = self
         for i in range(RECURSION_LIMIT+1):
             print("n:", n, type(n), "i:", i)
-            typedefs: ?list[Typedef] = None
-            if isinstance(n, Action):
-                typedefs = n.typedef
-            elif isinstance(n, Container_):
-                typedefs = n.typedef
-            elif isinstance(n, Input):
-                typedefs = n.typedef
-            elif isinstance(n, List):
-                typedefs = n.typedef
-            elif isinstance(n, Module):
-                typedefs = n.typedef
-            elif isinstance(n, Notification):
-                typedefs = n.typedef
-            elif isinstance(n, Output):
-                typedefs = n.typedef
-            elif isinstance(n, Rpc):
-                typedefs = n.typedef
-            elif isinstance(n, Submodule):
-                typedefs = n.typedef
-            if typedefs is not None:
-                for typedef in typedefs:
-                    if typedef.name == name:
-                        print("found typedef:", typedef)
-                        return typedef
+            typedefs: list[Typedef] = []
+            if isinstance(n, SchemaNodeInner):
+                for child in n.children:
+                    if isinstance(child, Typedef) and child.name == name:
+                        print("found typedef:", child)
+                        return child
             nparent = n.parent
             if nparent is not None:
                 n = nparent

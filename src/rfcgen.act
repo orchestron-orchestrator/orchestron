@@ -24,6 +24,7 @@ child_stmts = {
     "list",
     "notification",
     "rpc",
+    "typedef",
     "uses",
 }
 
@@ -67,6 +68,7 @@ class SubStmt(object):
 reserved_names = {
     "Container",
     "Identity",
+    "range",
 }
 
 def parse_stmts(rfc_text: str) -> dict[str, Stmt]:
@@ -200,7 +202,7 @@ def _attr_name(name: str) -> str:
         i += 1
         if i == len(name):
             break
-    if res in {"extension", "import", "type"}:
+    if res in {"extension", "import", "range", "type"}:
         res = res + "_"
 
     return res
@@ -506,10 +508,48 @@ snode_methods = {
         "resolve_typedef": """    def resolve_typedef(self, context: Context) -> Typedef:
         print("Resolving typedef", self.name)
         if self.name in _builtin_types:
+            print("Builtin type: %s" % self.name)
             return Typedef(self.name, type_=self)
-        else:
-            typedef = self.get_typedef(self.name, context)
-            return typedef
+        td = self.get_typedef(self.name, context)
+        for i in range(RECURSION_LIMIT+1):
+            if td.get_type().name in _builtin_types:
+                print("Resolved %s to builtin type: %s" % (self.name, td.get_type().name))
+                return td
+            td = td.get_type().resolve_typedef(context)
+            if i == RECURSION_LIMIT:
+                raise ValueError("Recursion limit reached for typedef %s" % self.name)
+        raise ValueError("Unable to resolve typedef %s" % self.name)
+
+""",
+    },
+    "typedef": {
+        "compile": """    def compile(self, context: Context):
+        print("Compiling typedef", self.name)
+        base_typedef = self.get_type().resolve_typedef(context)
+
+        new_default = self.default
+        if new_default is None:
+            new_default = base_typedef.default
+
+        new_units = self.units
+        if new_units is None:
+            new_units = base_typedef.units
+
+        new = Typedef(self.name,
+                      default=new_default,
+                      description=self.description,
+                      reference=self.reference,
+                      status=self.status,
+                      type_=base_typedef.type_,
+                      units=new_units)
+        return new
+
+""",
+        "get_type": """    def get_type(self) -> Type:
+        selftype = self.type_
+        if selftype is not None:
+            return selftype
+        raise ValueError("Typedef %s has no type" % self.name)
 
 """,
     },
@@ -576,16 +616,12 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
 
         res.append("")
         init_attrs = ["self"]
-#        if arg_name is not None:
-#            init_attrs += [_attr_name(arg_name)]
         for substmt in stmt.substmts.values():
             if substmt.name == stmt.argument_name:
                 init_attrs.append("%s: %s" % (_attr_name(substmt.name), _attr_type(substmt.name, stmt, stmts)))
-                #continue
             else:
                 if substmt.name not in child_stmts:
                     init_attrs.append("%s: %s%s" % (_attr_name(substmt.name), _attr_type(substmt.name, stmt, stmts), _attr_defval(substmt.name, stmt, stmts)))
-        #init_attrs += list(map(lambda x: _attr_name(x) + _attr_defval(x, stmt, stmts), kwattrs))
         if have_children:
             init_attrs.append("children=[]")
         if "namespace" not in set(cattrs):
@@ -690,6 +726,28 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             if arg_name is not None:
                 new_args += ["self." + _attr_name(arg_name)]
             new_args += list(map(lambda x: "%s=self.%s" % (_attr_name(x), _attr_name(x)), kwattrs))
+#            for substmt in stmt.substmts.values():
+#                if substmt.name == stmt.argument_name:
+#                    new_args.append("%s=self.%s" % (_attr_name(substmt.name), _attr_name(substmt.name)))
+#                else:
+#                    if substmt.name not in child_stmts:
+#                        if substmt.name in stmts: # Another statement (not a child)
+#                            if substmt.cardinality == "0..1":
+#                                res.append("        self_%s = self.%s" % (_attr_name(substmt.name), _attr_name(substmt.name)))
+#                                res.append("        new_%s = self_%s.compile(context) if self_%s is not None else None" % (_attr_name(substmt.name), _attr_name(substmt.name), _attr_name(substmt.name)))
+#                            elif substmt.cardinality == "1":
+#                                # TODO: should not be optional
+#                                res.append("        self_%s = self.%s" % (_attr_name(substmt.name), _attr_name(substmt.name)))
+#                                res.append("        new_%s = self_%s.compile(context) if self_%s is not None else None" % (_attr_name(substmt.name), _attr_name(substmt.name), _attr_name(substmt.name)))
+#                            elif substmt.cardinality == "0..n":
+#                                res.append("        new_%s: %s= []" % (_attr_name(substmt.name), _attr_type(substmt.name, stmt, stmts)))
+#                                res.append("        for n in self.%s:" % _attr_name(substmt.name))
+#                                res.append("            new_node = n.compile(context)")
+#                                res.append("            if isinstance(new_node, %s):" % (_class_name(substmt.name)))
+#                                res.append("                new_%s.append(new_node)" % (_attr_name(substmt.name)))
+#                            else:
+#                                raise ValueError("Unknown cardinality: %s" % substmt.cardinality)
+#                            new_args.append("%s=new_%s" % (_attr_name(substmt.name), _attr_name(substmt.name)))
             if have_children:
                 new_args.append("children=self.expand_children(context)")
 

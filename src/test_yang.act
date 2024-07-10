@@ -586,7 +586,6 @@ def _test_compile_type1():
     ctx = yang.schema.Context([])
     nc = n.compile(ctx)
 
-    #testing.assertEqual(n1, n2.compile())
     l1 = nc.get("c1").get("l1")
     if isinstance(l1, yang.schema.Leaf):
         l1_type = l1.type_
@@ -596,6 +595,39 @@ def _test_compile_type1():
             testing.error("Expected Type instance")
     else:
         testing.error("Expected Leaf instance")
+
+def _test_compile_type2():
+    ys = """module foo {
+  typedef td1 {
+    type string {
+      length "1..10";
+    }
+  }
+  typedef td2 {
+    type td1 {
+      length "1..10";
+    }
+  }
+  container c1 {
+    leaf l1 {
+      type td2;
+    }
+  }
+}"""
+    n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
+    ctx = yang.schema.Context([])
+    nc = n.compile(ctx)
+
+    l1 = nc.get("c1").get("l1")
+    if isinstance(l1, yang.schema.Leaf):
+        l1_type = l1.type_
+        if isinstance(l1_type, yang.schema.Type):
+            testing.assertEqual(l1_type.name, "string")
+        else:
+            testing.error("Expected Type instance")
+    else:
+        testing.error("Expected Leaf instance")
+
 
 
 def _test_compile_uses():
@@ -717,6 +749,7 @@ myang3 = """container c1 {
 }"""
 
 actor main(env):
+    _test_compile_type2()
     try:
         print("")
         print(_yang_to_act_code(myang))
