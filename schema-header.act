@@ -222,30 +222,6 @@ class DNodeInner(DNode):
             if isinstance(child, DNodeInner):
                 res.append(child.prdaclass(strict=strict, top=False))
 
-#        # TODO: work with self.children directly
-#        attrs: list[(name: str, inner: bool, type: str, optional: bool, constructor: str, data_class: str)] = []
-#        for child in self.children:
-#            if isinstance(child, Container_):
-#                if child.is_presence():
-#                    attrs.append((child.name, True, "?" + _get_full_name(child), True, _get_full_name(child), "Container_"))
-#                else:
-#                    attrs.append((child.name, True, _get_full_name(child), False, _get_full_name(child), "Container_"))
-#            elif isinstance(child, Leaf):
-#                optional = True
-#                childmandatory = child.mandatory
-#                if childmandatory is not None:
-#                    optional = childmandatory
-#                if child.name in self_list_keys:
-#                    optional = False
-#                optional_str = "?" if optional else ""
-#                attrs.append((child.name, False, optional_str + yang_type_to_acton_type(child.type_), optional, "", "Leaf"))
-#            elif isinstance(child, LeafList):
-#                attrs.append((child.name, False, "list[" + yang_type_to_acton_type(child.type_) + "]", False, "", "LeafList"))
-#            elif isinstance(child, List):
-#                attrs.append((child.name, True, _get_full_name(child), False, _get_full_name(child), "List"))
-#            else:
-#                raise ValueError("unreachable child type: " + str(type(child)))
-
         if isinstance(self, DList):
             # List has special handling as it actually results in two classes:
             # - the list itself
@@ -276,17 +252,6 @@ class DNodeInner(DNode):
 
         init_args_str = ", ".join(init_args)
         res.append("    def __init__(%s):" % init_args_str)
-#        if stmt_arg is not None:
-#            res.append("        self._name = " + repr(stmt_arg))
-#        else:
-#            if isinstance(self, Input):
-#                res.append("        self._name = 'input'")
-#            elif isinstance(self, Output):
-#                res.append("        self._name = 'output'")
-#            elif isinstance(self, Root):
-#                res.append("        self._name = 'root'")
-#            else:
-#                raise ValueError("unreachable")
 
         for child in self.children:
             if isinstance(child, DContainer):
@@ -323,16 +288,6 @@ class DNodeInner(DNode):
         else:
             res.append("        res = yang.data.%s('%s')" % (self.dname, self.name))
 
-#        # TODO: work with self.children directly
-#        for attr in attrs:
-#            res.append("        _%s = self.%s" % (attr.name, attr.name))
-#        # TODO: work with self.children directly
-#        for attr in attrs:
-#            res.append("        if _%s is not None:" % attr.name)
-#            if attr.inner:
-#                res.append("            res.children['%s'] = _%s.to_gdata()" % (attr.name, attr.name))
-#            else:
-#                res.append("            res.children['%s'] = yang.data.%s('%s', _%s)" % (attr.name, attr.data_class, attr.name, attr.name))
         for child in self.children:
             res.append("        _%s = self.%s" % (child.name, child.name))
         for child in self.children:
@@ -630,8 +585,11 @@ class Context(object):
     def __init__(self, modules: list[Module]):
         self.modules = {}
         for module in modules:
-            # TODO: grab latest revision
-            self.modules[ModRev(module.name, None)] = module
+            self.add_module(module)
+
+    def add_module(self, module: Module):
+        # TODO: handle revision
+        self.modules[ModRev(module.name, None)] = module
 
     def get_module(self, modname: str, rev: ?str) -> Module:
         return self.modules[ModRev(modname, rev)]
@@ -1078,7 +1036,6 @@ def yang_type_to_acton_type(t: ?Type) -> str:
             # TODO: blargh, implement once we have unions in Acton
             raise NotImplementedError('union not supported')
         else:
-            # TODO: resolve type -> typedefs -> basetype
             raise ValueError("Unknown YANG type: " + t.name)
     raise ValueError("type not defined")
 
