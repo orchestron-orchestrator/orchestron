@@ -85,6 +85,27 @@ def _yind(n):
 def _ind(n):
     return "    " * n
 
+_builtin_types = {
+    "binary",
+    "bits",
+    "boolean",
+    "decimal64",
+    "empty",
+    "enumeration",
+    "identityref",
+    "instance-identifier",
+    "int8",
+    "int16",
+    "int32",
+    "int64",
+    "leafref",
+    "string",
+    "uint8",
+    "uint16",
+    "uint32",
+    "uint64",
+}
+
 _quoted_arg_keywords = set([
     "argument",
     "augment",
@@ -576,6 +597,13 @@ class DRoot(DNodeInner):
 
 # -------------------------------------------------------------------------------
 
+def split_prefix_name(name: str) -> (?str, str):
+    if name.find(":") != -1:
+        parts = name.split(":", 1)
+        return (parts[0], parts[1])
+    return None, name
+
+# -------------------------------------------------------------------------------
 
 class ModRev(object):
     modname: str
@@ -625,28 +653,6 @@ class SchemaNode(object):
         """
         raise NotImplementedError('SchemaNode prsrc')
 
-    def compile(self, context: Context) -> SchemaNode:
-        """Compile an abstract YANG into a concrete one
-        - expand uses / groupings
-        - handle augments
-        - resolve types to base types
-        """
-        raise NotImplementedError('SchemaNode compile')
-
-    def expand_children(self, context: Context) -> list[SchemaNode]:
-        """Expand abstract children into concrete nodes
-        """
-        if isinstance(self, SchemaNodeInner):
-            res = []
-            for child in self.children:
-                if isinstance(child, Uses):
-                    grouping = child.get_grouping(child.name, context)
-                    res.extend(grouping.expand_children(context))
-                else:
-                    res.append(child.compile(context))
-            return res
-        raise ValueError("expand_children() called on non-inner node %s" % type(self))
-
     def prdaclass(self, strict=True, top=True) -> str:
         """Print the data class for this schema node
         """
@@ -654,73 +660,6 @@ class SchemaNode(object):
 
     mut def to_dnode(self) -> DNode:
         raise NotImplementedError('SchemaNode to_dschema')
-
-    def get_module_by_prefix(self, prefix: str, context: Context) -> Module:
-        local_module = self.get_module()
-        imp = local_module.get_import_by_prefix(prefix)
-        # TODO: fix revision
-        return context.get_module(imp.module, None)
-
-    def split_prefix_name(self, name: str) -> (?str, str):
-        if name.find(":") != -1:
-            parts = name.split(":", 1)
-            return (parts[0], parts[1])
-        return None, name
-
-    def get_grouping(self, name: str, context: Context) -> Grouping:
-        prefix, group_name = self.split_prefix_name(name)
-        if prefix is not None:
-            return self.get_module_by_prefix(prefix, context).get_grouping(group_name, context)
-        else: # local module
-            return self.get_grouping_in_module(group_name)
-
-    def get_grouping_in_module(self, name: str) -> Grouping:
-        n = self
-        for i in range(RECURSION_LIMIT+1):
-            groupings: ?list[Grouping] = None
-            if isinstance(n, Action):
-                groupings = n.grouping
-            elif isinstance(n, Container_):
-                groupings = n.grouping
-            elif isinstance(n, Grouping):
-                groupings = n.grouping
-            elif isinstance(n, Input):
-                groupings = n.grouping
-            elif isinstance(n, List):
-                groupings = n.grouping
-            elif isinstance(n, Module):
-                groupings = n.grouping
-            elif isinstance(n, Notification):
-                groupings = n.grouping
-            elif isinstance(n, Output):
-                groupings = n.grouping
-            elif isinstance(n, Rpc):
-                groupings = n.grouping
-            elif isinstance(n, Submodule):
-                groupings = n.grouping
-            if groupings is not None:
-                for grouping in groupings:
-                    if grouping.name == name:
-                        return grouping
-            nparent = n.parent
-            if nparent is not None:
-                n = nparent
-                continue
-            if i > RECURSION_LIMIT:
-                raise ValueError("Recursion limit reached")
-        raise ValueError("Unable to find grouping '%s'" % name)
-
-    def get_module(self) -> Module:
-        n = self
-        while True:
-            if isinstance(n, Module):
-                return n
-            nparent = n.parent
-            if nparent is not None:
-                n = nparent
-                continue
-            break
-        raise ValueError("Unable to find namespace")
 
     def get_namespace(self) -> str:
         n = self
@@ -810,8 +749,9 @@ class SchemaNode(object):
                 raise ValueError("Recursion limit reached")
         raise ValueError("Unable to find config attribute")
 
-
     def get(self, name: str) -> SchemaNode:
+        """Get child node with name
+        """
         if isinstance(self, SchemaNodeInner):
             for child in self.children:
                 if isinstance(child, Anydata) and child.name == name:
@@ -829,6 +769,151 @@ class SchemaNode(object):
             raise ValueError("Child not found")
 
         raise ValueError("Unable to get child from non-inner node")
+
+    def get_module(self) -> Module:
+        """Get the Module for the local module
+
+        That is, climb up the ladder of parents from the current node until we
+        reach the top Module.
+        """
+        n = self
+        while True:
+            if isinstance(n, Module):
+                return n
+            nparent = n.parent
+            if nparent is not None:
+                n = nparent
+                continue
+            break
+        raise ValueError("Unable to find Module")
+
+    def compile(self, context: Context) -> SchemaNode:
+        """Compile an abstract YANG into a concrete one
+        - expand uses / groupings
+        - handle augments
+        - resolve types to base types
+        """
+        raise NotImplementedError('SchemaNode compile')
+
+    def expand_children(self, context: Context) -> list[SchemaNode]:
+        """Expand abstract children into concrete nodes
+        """
+        if isinstance(self, SchemaNodeInner):
+            res = []
+            for child in self.children:
+                if isinstance(child, Uses):
+                    grouping = child.get_grouping(child.name, context)
+                    res.extend(grouping.expand_children(context))
+                else:
+                    res.append(child.compile(context))
+            return res
+        raise ValueError("expand_children() called on non-inner node %s" % type(self))
+
+    def get_module_by_prefix(self, prefix: str, context: Context) -> Module:
+        """Get a Module from the import prefix in the local module"""
+        local_module = self.get_module()
+        imp = local_module.get_import_by_prefix(prefix)
+        # TODO: fix revision
+        return context.get_module(imp.module, None)
+
+    def get_grouping(self, name: str, context: Context) -> Grouping:
+        """Find a grouping in the local module or an imported module
+        """
+        prefix, group_name = split_prefix_name(name)
+        if prefix is not None:
+            imported_module = self.get_module_by_prefix(prefix, context)
+            return imported_module.get_grouping(group_name, context)
+        else: # local module
+            return self.get_grouping_in_module(group_name)
+
+    def get_grouping_in_module(self, name: str) -> Grouping:
+        """Find a grouping in the current module
+        """
+        n = self
+        for i in range(RECURSION_LIMIT+1):
+            groupings: ?list[Grouping] = None
+            if isinstance(n, Action):
+                groupings = n.grouping
+            elif isinstance(n, Container_):
+                groupings = n.grouping
+            elif isinstance(n, Grouping):
+                groupings = n.grouping
+            elif isinstance(n, Input):
+                groupings = n.grouping
+            elif isinstance(n, List):
+                groupings = n.grouping
+            elif isinstance(n, Module):
+                groupings = n.grouping
+            elif isinstance(n, Notification):
+                groupings = n.grouping
+            elif isinstance(n, Output):
+                groupings = n.grouping
+            elif isinstance(n, Rpc):
+                groupings = n.grouping
+            elif isinstance(n, Submodule):
+                groupings = n.grouping
+            if groupings is not None:
+                for grouping in groupings:
+                    if grouping.name == name:
+                        return grouping
+            nparent = n.parent
+            if nparent is not None:
+                n = nparent
+                continue
+            if i > RECURSION_LIMIT:
+                raise ValueError("Recursion limit reached")
+        raise ValueError("Unable to find grouping '%s'" % name)
+
+    def get_typedef(self, name: str, context: Context) -> Typedef:
+        """Find a typedef in the local module or an imported module
+        """
+        prefix, typedef_name = split_prefix_name(name)
+        if prefix is not None:
+            imported_module = self.get_module_by_prefix(prefix, context)
+            return imported_module.get_typedef(typedef_name, context)
+        else:
+            return self.get_typedef_in_module(typedef_name)
+
+    def get_typedef_in_module(self, name: str) -> Typedef:
+        """Find a typedef in the current module
+        """
+        print("get_typedef_in_module, looking for typedef with name:", name)
+        n = self
+        for i in range(RECURSION_LIMIT+1):
+            print("n:", n, type(n), "i:", i)
+            typedefs: ?list[Typedef] = None
+            if isinstance(n, Action):
+                typedefs = n.typedef
+            elif isinstance(n, Container_):
+                typedefs = n.typedef
+            elif isinstance(n, Input):
+                typedefs = n.typedef
+            elif isinstance(n, List):
+                typedefs = n.typedef
+            elif isinstance(n, Module):
+                typedefs = n.typedef
+            elif isinstance(n, Notification):
+                typedefs = n.typedef
+            elif isinstance(n, Output):
+                typedefs = n.typedef
+            elif isinstance(n, Rpc):
+                typedefs = n.typedef
+            elif isinstance(n, Submodule):
+                typedefs = n.typedef
+            if typedefs is not None:
+                for typedef in typedefs:
+                    if typedef.name == name:
+                        print("found typedef:", typedef)
+                        return typedef
+            nparent = n.parent
+            if nparent is not None:
+                n = nparent
+                continue
+            else:
+                break
+            if i >= RECURSION_LIMIT:
+                raise ValueError("Recursion limit reached")
+        raise ValueError("Unable to find typedef '%s'" % name)
 
 
 class SchemaNodeInner(SchemaNode):

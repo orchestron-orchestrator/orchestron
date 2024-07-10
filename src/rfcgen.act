@@ -24,7 +24,6 @@ child_stmts = {
     "list",
     "notification",
     "rpc",
-    "typedef",
     "uses",
 }
 
@@ -413,19 +412,29 @@ snode_methods = {
 """,
     },
     "leaf": {
-        # TODO: resolve leaf type
-        "compile": """    def compile(self, context: ?Context=None):
+        # TODO: keep track of constraints in the derived type(s) that we resolve
+        "compile": """    def compile(self, context: Context):
+        base_typedef = self.get_type().resolve_typedef(context)
+
+        new_default = self.default
+        if new_default is None:
+            new_default = base_typedef.default
+
+        new_units = self.units
+        if new_units is None:
+            new_units = base_typedef.units
+
         new = Leaf(self.name,
                    config=self.config,
-                   default=self.default,
+                   default=new_default,
                    description=self.description,
                    if_feature=self.if_feature,
                    mandatory=self.mandatory,
                    must=self.must,
                    reference=self.reference,
                    status=self.status,
-                   type_=self.type_,
-                   units=self.units,
+                   type_=base_typedef.type_,
+                   units=new_units,
                    when=self.when)
         return new
 
@@ -493,8 +502,19 @@ snode_methods = {
 
 """
     },
+    "type": {
+        "resolve_typedef": """    def resolve_typedef(self, context: Context) -> Typedef:
+        print("Resolving typedef", self.name)
+        if self.name in _builtin_types:
+            return Typedef(self.name, type_=self)
+        else:
+            typedef = self.get_typedef(self.name, context)
+            return typedef
+
+""",
+    },
     "uses": {
-        "compile": """    def compile(self, context: ?Context=None):
+        "compile": """    def compile(self, context: Context):
         raise ValueError("Cannot compile 'uses'")
 
 """,
@@ -556,9 +576,16 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
 
         res.append("")
         init_attrs = ["self"]
-        if arg_name is not None:
-            init_attrs += [_attr_name(arg_name)]
-        init_attrs += list(map(lambda x: _attr_name(x) + _attr_defval(x, stmt, stmts), kwattrs))
+#        if arg_name is not None:
+#            init_attrs += [_attr_name(arg_name)]
+        for substmt in stmt.substmts.values():
+            if substmt.name == stmt.argument_name:
+                init_attrs.append("%s: %s" % (_attr_name(substmt.name), _attr_type(substmt.name, stmt, stmts)))
+                #continue
+            else:
+                if substmt.name not in child_stmts:
+                    init_attrs.append("%s: %s%s" % (_attr_name(substmt.name), _attr_type(substmt.name, stmt, stmts), _attr_defval(substmt.name, stmt, stmts)))
+        #init_attrs += list(map(lambda x: _attr_name(x) + _attr_defval(x, stmt, stmts), kwattrs))
         if have_children:
             init_attrs.append("children=[]")
         if "namespace" not in set(cattrs):
@@ -569,16 +596,38 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         res.append("        self.parent = None")
 #        res.append("        self.cname = \"%s\"" % _class_name(stmt_name))
 #        res.append("        self.yname = \"%s\"" % stmt_name)
-        for attr in cattrs:
-            res.append("        self.%s = %s" % (_attr_name(attr), _attr_name(attr)))
+
+        for substmt in stmt.substmts.values():
+            if substmt.name == stmt.argument_name:
+                continue
+            elif substmt.name not in child_stmts: # Attribute
+                if substmt.name in stmts: # Another statement (not a child)
+                    # Set parent for substatement objects
+                    if substmt.cardinality == "0..1":
+                        res.append("        if %s is not None:" % _attr_name(substmt.name))
+                        res.append("            %s.parent = self" % _attr_name(substmt.name))
+                    elif substmt.cardinality == "1":
+                        # TODO: should not be optional
+                        #res.append("        %s.parent = self" % _attr_name(substmt.name))
+                        res.append("        if %s is not None:" % _attr_name(substmt.name))
+                        res.append("            %s.parent = self" % _attr_name(substmt.name))
+                    elif substmt.cardinality == "0..n":
+                        res.append("        for n in %s:" % _attr_name(substmt.name))
+                        res.append("            n.parent = self")
+                    else:
+                        raise ValueError("Unknown cardinality: %s" % substmt.cardinality)
+
+        if have_children:
+            res.append("        for n in children:")
+            res.append("            n.parent = self")
+
+        for substmt in stmt.substmts.values():
+            if substmt.name not in child_stmts: # Attribute
+                res.append("        self.%s = %s" % (_attr_name(substmt.name), _attr_name(substmt.name)))
+
         if have_children:
             res.append("        self.children = children")
-            res.append("        for n in self.children:")
-            res.append("            n.parent = self")
-        for attr in {"children", "extension_", "feature", "grouping"}:
-            if attr in cattrs:
-                res.append("        for n in self.%s:" % attr)
-                res.append("            n.parent = self")
+
         if "namespace" not in set(cattrs):
             res.append("        self.namespace = namespace")
         if "prefix" not in set(cattrs):

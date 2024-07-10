@@ -569,6 +569,35 @@ def _test_is_config2():
     testing.assertEqual(n.get("c1").get("c2").is_config(), False)
     testing.assertEqual(n.get("c1").get("c2").get("l1").is_config(), False)
 
+def _test_compile_type1():
+    ys = """module foo {
+  typedef domain-name {
+    type string {
+      length "1..253";
+    }
+  }
+  container c1 {
+    leaf l1 {
+      type domain-name;
+    }
+  }
+}"""
+    n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
+    ctx = yang.schema.Context([])
+    nc = n.compile(ctx)
+
+    #testing.assertEqual(n1, n2.compile())
+    l1 = nc.get("c1").get("l1")
+    if isinstance(l1, yang.schema.Leaf):
+        l1_type = l1.type_
+        if isinstance(l1_type, yang.schema.Type):
+            testing.assertEqual(l1_type.name, "string")
+        else:
+            testing.error("Expected Type instance")
+    else:
+        testing.error("Expected Leaf instance")
+
+
 def _test_compile_uses():
     ys = """module foo {
   grouping g1 {
