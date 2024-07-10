@@ -279,11 +279,11 @@ def _test_prsrc_choice_case():
   }
 }"""
     expected = """Container_('transfer', children=[
-    Choice('how', case=[
-            Case('interval'),
-            Case('daily'),
-            Case('manual')
-        ], default='interval')
+    Choice('how', default='interval', children=[
+        Case('interval'),
+        Case('daily'),
+        Case('manual')
+    ])
 ])"""
     testing.assertEqual(expected, _yang_to_act_code(ys))
 

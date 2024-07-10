@@ -831,36 +831,17 @@ class SchemaNode(object):
         """
         n = self
         for i in range(RECURSION_LIMIT+1):
-            groupings: ?list[Grouping] = None
-            if isinstance(n, Action):
-                groupings = n.grouping
-            elif isinstance(n, Container_):
-                groupings = n.grouping
-            elif isinstance(n, Grouping):
-                groupings = n.grouping
-            elif isinstance(n, Input):
-                groupings = n.grouping
-            elif isinstance(n, List):
-                groupings = n.grouping
-            elif isinstance(n, Module):
-                groupings = n.grouping
-            elif isinstance(n, Notification):
-                groupings = n.grouping
-            elif isinstance(n, Output):
-                groupings = n.grouping
-            elif isinstance(n, Rpc):
-                groupings = n.grouping
-            elif isinstance(n, Submodule):
-                groupings = n.grouping
-            if groupings is not None:
-                for grouping in groupings:
-                    if grouping.name == name:
-                        return grouping
+            if isinstance(n, SchemaNodeInner):
+                for child in n.children:
+                    if isinstance(child, Grouping) and child.name == name:
+                        return child
             nparent = n.parent
             if nparent is not None:
                 n = nparent
                 continue
-            if i > RECURSION_LIMIT:
+            else:
+                break
+            if i == RECURSION_LIMIT:
                 raise ValueError("Recursion limit reached")
         raise ValueError("Unable to find grouping '%s'" % name)
 
@@ -893,7 +874,7 @@ class SchemaNode(object):
                 continue
             else:
                 break
-            if i >= RECURSION_LIMIT:
+            if i == RECURSION_LIMIT:
                 raise ValueError("Recursion limit reached")
         raise ValueError("Unable to find typedef '%s'" % name)
 
