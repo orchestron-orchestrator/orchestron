@@ -574,7 +574,9 @@ extension ModRev (Hashable):
     def __hash__(self) -> int:
         selfrev = self.rev
         revstr = selfrev if selfrev is not None else ""
-        return self.modname.__hash__() ^ revstr.__hash__()
+        # TODO: actually include revision in hash
+        #return self.modname.__hash__() + revstr.__hash__()
+        return self.modname.__hash__()
 
 class Context(object):
     """Compilation context
