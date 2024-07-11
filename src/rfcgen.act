@@ -508,14 +508,11 @@ snode_methods = {
     },
     "type": {
         "resolve_typedef": """    def resolve_typedef(self, context: Context) -> Typedef:
-        print("Resolving typedef", self.name)
         if self.name in _builtin_types:
-            print("Builtin type: %s" % self.name)
             return Typedef(self.name, type_=self)
         td = self.get_typedef(self.name, context)
         for i in range(RECURSION_LIMIT+1):
             if td.get_type().name in _builtin_types:
-                print("Resolved %s to builtin type: %s" % (self.name, td.get_type().name))
                 return td
             td = td.get_type().resolve_typedef(context)
             if i == RECURSION_LIMIT:
@@ -526,7 +523,6 @@ snode_methods = {
     },
     "typedef": {
         "compile": """    def compile(self, context: Context):
-        print("Compiling typedef", self.name)
         base_typedef = self.get_type().resolve_typedef(context)
 
         new_default = self.default

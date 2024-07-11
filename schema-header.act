@@ -209,7 +209,6 @@ class DNodeInner(DNode):
         """
 #        stmt_arg = self._get_arg()
         res = []
-        # TODO: blargh, should be done differently
         if top:
             res.append("import xml")
             res.append("import yang.adata")
@@ -816,15 +815,12 @@ class SchemaNode(object):
     def get_typedef_in_module(self, name: str) -> Typedef:
         """Find a typedef in the current module
         """
-        print("get_typedef_in_module, looking for typedef with name:", name)
         n = self
         for i in range(RECURSION_LIMIT+1):
-            print("n:", n, type(n), "i:", i)
             typedefs: list[Typedef] = []
             if isinstance(n, SchemaNodeInner):
                 for child in n.children:
                     if isinstance(child, Typedef) and child.name == name:
-                        print("found typedef:", child)
                         return child
             nparent = n.parent
             if nparent is not None:
