@@ -104,6 +104,7 @@ _builtin_types = {
     "uint16",
     "uint32",
     "uint64",
+    "union"
 }
 
 _quoted_arg_keywords = set([
@@ -1010,32 +1011,17 @@ def yang_type_to_acton_type(t: ?Type) -> str:
         elif t.name == "enumeration":
             raise NotImplementedError('enumeration not supported')
         elif t.name == "identityref":
-            raise NotImplementedError('identityref not supported')
+            return "str"
         elif t.name == "instance-identifier":
-            raise NotImplementedError('instance-identifier not supported')
-        elif t.name == "int8":
-            return "i8" # TODO: we don't have i8, right?
-        elif t.name == "int16":
-            return "i16"
-        elif t.name == "int32":
-            return "i32"
-        elif t.name == "int64":
-            return "i64"
+            return "str"
+        elif t.name in {"int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64"}:
+            return "int"
         elif t.name == "leafref":
             return "str"
         elif t.name == "string":
             return "str"
-        elif t.name == "uint8":
-            return "u8" # TODO: we don't have u8, right?
-        elif t.name == "uint16":
-            return "u16"
-        elif t.name == "uint32":
-            return "u32"
-        elif t.name == "uint64":
-            return "u64"
         elif t.name == "union":
-            # TODO: blargh, implement once we have unions in Acton
-            raise NotImplementedError('union not supported')
+            return "val"
         else:
             raise ValueError("Unknown YANG type: " + t.name)
     raise ValueError("type not defined")
