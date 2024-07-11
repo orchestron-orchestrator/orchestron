@@ -26,7 +26,7 @@ class YangTokenizer(object):
     strict_quoting: bool
 
     def __init__(self, text: str, pos, errors=[],
-                 strict_quoting = True):
+                 strict_quoting: bool=True):
         self.lines = text.splitlines(True)
         self.pos = pos
         self.buf = ''
@@ -269,13 +269,13 @@ class YangParser(object):
     tokenizer: YangTokenizer
     top: yang.schema.Statement
 
-    def __init__(self, text: str, ref=None):
+    def __init__(self, text: str, ref=None, strict_quoting: bool=True):
         self.ctx = Context()
         self.pos = Position(ref)
         self.last_line = 0
 
         try:
-            self.tokenizer = YangTokenizer(text, self.pos)
+            self.tokenizer = YangTokenizer(text, self.pos, strict_quoting=strict_quoting)
             self.top = self._parse_statement(None)
         except EOF:
             pass
@@ -325,8 +325,8 @@ class YangParser(object):
         self.last_line = self.pos.line
         return stmt
 
-def parse(text: str) -> yang.schema.Statement:
-    parser = YangParser(text)
+def parse(text: str, strict_quoting: bool=True) -> yang.schema.Statement:
+    parser = YangParser(text, strict_quoting=strict_quoting)
     if parser is not None:
         return parser.top
     raise ValueError("Parse error")
