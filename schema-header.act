@@ -581,7 +581,7 @@ class Context(object):
     """
     modules: dict[ModRev, Module]
 
-    def __init__(self, modules: list[Module]):
+    def __init__(self, modules: list[Module]=[]):
         self.modules = {}
         for module in modules:
             self.add_module(module)
