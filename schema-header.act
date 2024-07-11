@@ -590,7 +590,11 @@ class Context(object):
 
     def add_module(self, module: Module):
         # TODO: handle revision
-        self.modules[ModRev(module.name, None)] = module
+        current_revision = None
+        for rev in module.revision:
+            if current_revision is None or (current_revision is not None and rev.date > current_revision):
+                current_revision = rev.date
+        self.modules[ModRev(module.name, current_revision)] = module
 
     def get_module(self, modname: str, rev: ?str) -> Module:
         return self.modules[ModRev(modname, rev)]
@@ -772,8 +776,7 @@ class SchemaNode(object):
         """Get a Module from the import prefix in the local module"""
         local_module = self.get_module()
         imp = local_module.get_import_by_prefix(prefix)
-        # TODO: fix revision
-        return context.get_module(imp.module, None)
+        return context.get_module(imp.module, imp.revision_date)
 
     def get_grouping(self, name: str, context: Context) -> Grouping:
         """Find a grouping in the local module or an imported module
