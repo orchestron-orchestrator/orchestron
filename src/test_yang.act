@@ -772,6 +772,65 @@ def _test_compile_augment_uses():
     testing.assertEqual(nc.get("c1").get("l1").is_config(), True)
     testing.assertEqual(nc.get("c1").get("l2").is_config(), True)
 
+def _test_compile_augment_absolute_path_under_uses():
+    """Augmenting a grouping"""
+    ys = """module foo {
+  grouping g1 {
+    container c1 {
+      leaf l1 {
+        type string;
+        description "leaf 1";
+      }
+    }
+  }
+  uses g1 {
+    augment "/c1" {
+      leaf l2 {
+        type string;
+        description "leaf 2";
+      }
+    }
+  }
+}"""
+    n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
+    ctx = yang.schema.Context([])
+    try:
+        nc = n.compile(ctx)
+    except ValueError as exc:
+        # We expect an error here, because the augment path is absolute which is
+        # not allowed under a uses statement
+        return
+    testing.error("Expected ValueError")
+
+def _test_compile_augment_relative_path_under_module():
+    """Augmenting a grouping"""
+    ys = """module foo {
+  grouping g1 {
+    container c1 {
+      leaf l1 {
+        type string;
+        description "leaf 1";
+      }
+    }
+  }
+  augment "c1" {
+    leaf l2 {
+      type string;
+      description "leaf 2";
+    }
+  }
+}"""
+    n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
+    ctx = yang.schema.Context([])
+    try:
+        nc = n.compile(ctx)
+    except ValueError as exc:
+        # We expect an error here, because the augment path is absolute which is
+        # not allowed under a uses statement
+        return
+    testing.error("Expected ValueError")
+
+
 def _test_tofrom_gdata():
     # TODO: hmm, how to test this? I guess we need to first generate some data
     # classes from a yang schema... so first generate support in compiler?

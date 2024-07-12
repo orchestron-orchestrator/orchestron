@@ -759,10 +759,13 @@ class SchemaNode(object):
         """
         raise NotImplementedError('SchemaNode compile')
 
-    def expand_augments(self, context: Context, target_base: SchemaNode=self):
+    def expand_augments(self, context: Context, target_base: SchemaNode=self, in_uses=False):
         """Expand augment node"""
         def get_target(target_base, target: str) -> SchemaNode:
-            # TODO: how does prefixes work if this is an augment under a uses?
+            if in_uses and target[0] == "/":
+                raise ValueError("Absolute path in augment under uses is not valid")
+            elif not in_uses and target[0] != "/":
+                raise ValueError("Relative path in augment under (sub-)module is not valid")
             parts = target.lstrip("/").split("/")
             current_prefix = None
             current_node = target_base
@@ -809,7 +812,7 @@ class SchemaNode(object):
                     grouping = child.get_grouping(child.name, context)
                     res.extend(grouping.expand_children(context))
                     dummy = Container_(name=grouping.name, children=res)
-                    child.expand_augments(context, dummy)
+                    child.expand_augments(context, dummy, in_uses=True)
                 else:
                     res.append(child.compile(context))
             return res
