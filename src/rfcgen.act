@@ -333,7 +333,7 @@ snode_methods = {
         for imp in self.import_:
             if imp.prefix == prefix:
                 return imp
-        raise ValueError("No import with prefix %s" % prefix)
+        raise ValueError("No import with prefix %s in module %s" % (prefix, self.name))
 
 """,
         "get_namespace": """    def get_namespace(self) -> str:
@@ -750,6 +750,9 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
                 new_args.append("children=self.expand_children(context)")
 
             res.append("        new = %s(%s)" % (_class_name(stmt_name), (",\n               " + " " * len(_class_name(stmt_name))).join(new_args)))
+            for substmt in stmt.substmts.values():
+                if substmt.name == "augment":
+                    res.append("        new.expand_augments(context)")
             res.append("        return new")
             res.append("")
 

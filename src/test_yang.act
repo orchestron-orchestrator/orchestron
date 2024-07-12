@@ -692,6 +692,86 @@ def _test_compile_imported_grouping():
     testing.assertEqual(nc_bar.get("c1").get("li1").get("l1").is_config(), True)
 
 
+def _test_compile_augment():
+    ys = """module foo {
+  container c1 {
+    leaf l1 {
+      type string;
+      description "leaf 1";
+    }
+  }
+  augment "/c1" {
+    leaf l2 {
+      type string;
+      description "leaf 2";
+    }
+  }
+}"""
+    n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
+    ctx = yang.schema.Context([])
+    nc = n.compile(ctx)
+
+    testing.assertEqual(nc.get("c1").get("l1").is_config(), True)
+    testing.assertEqual(nc.get("c1").get("l2").is_config(), True)
+
+def _test_compile_augment_import():
+    ys_foo = """module foo {
+  container c1 {
+    leaf l1 {
+      type string;
+      description "leaf 1";
+    }
+  }
+}"""
+    ys_bar = """module bar {
+  import foo {
+    prefix "f";
+  }
+  augment "/f:c1" {
+    leaf l2 {
+      type string;
+      description "leaf 2";
+    }
+  }
+}"""
+    n_foo = yang.schema.stmt_to_smodule(yang.parser.parse(ys_foo))
+    n_bar = yang.schema.stmt_to_smodule(yang.parser.parse(ys_bar))
+    ctx = yang.schema.Context([])
+    nc_foo = n_foo.compile(ctx)
+    if isinstance(nc_foo, yang.schema.Module):
+        ctx.add_module(nc_foo)
+    nc_bar = n_bar.compile(ctx)
+
+    testing.assertEqual(nc_foo.get("c1").get("l1").is_config(), True)
+    testing.assertEqual(nc_foo.get("c1").get("l2").is_config(), True)
+
+def _test_compile_augment_uses():
+    """Augmenting a grouping"""
+    ys = """module foo {
+  grouping g1 {
+    container c1 {
+      leaf l1 {
+        type string;
+        description "leaf 1";
+      }
+    }
+  }
+  uses g1 {
+    augment "c1" {
+      leaf l2 {
+        type string;
+        description "leaf 2";
+      }
+    }
+  }
+}"""
+    n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
+    ctx = yang.schema.Context([])
+    nc = n.compile(ctx)
+
+    testing.assertEqual(nc.get("c1").get("l1").is_config(), True)
+    testing.assertEqual(nc.get("c1").get("l2").is_config(), True)
+
 def _test_tofrom_gdata():
     # TODO: hmm, how to test this? I guess we need to first generate some data
     # classes from a yang schema... so first generate support in compiler?
@@ -749,7 +829,9 @@ myang3 = """container c1 {
 }"""
 
 actor main(env):
-    _test_compile_type2()
+    _test_compile_augment_import()
+    await async env.exit(0)
+
     try:
         print("")
         print(_yang_to_act_code(myang))
