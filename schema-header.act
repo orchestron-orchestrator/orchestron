@@ -713,6 +713,12 @@ class SchemaNode(object):
                 raise ValueError("Recursion limit reached")
         raise ValueError("Unable to find config attribute")
 
+    def get_parent(self) -> SchemaNode:
+        p = self.parent
+        if p is not None:
+            return p
+        raise ValueError("No parent found")
+
     def get(self, name: str) -> SchemaNode:
         """Get child node with name
         """

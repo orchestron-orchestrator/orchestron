@@ -507,12 +507,27 @@ snode_methods = {
 """
     },
     "type": {
+        "resolve_union_types": """    def resolve_union_types(self, context: Context) -> Type:
+        if self.name == "union":
+            resolved_union_types = []
+            # Resolve union types
+            for ut in self.type_:
+                resolved_ut = ut.resolve_typedef(context).get_type()
+                resolved_union_types.append(resolved_ut)
+            self.type_ = resolved_union_types
+            return self
+        else:
+            return self
+
+""",
         "resolve_typedef": """    def resolve_typedef(self, context: Context) -> Typedef:
         if self.name in _builtin_types:
-            return Typedef(self.name, type_=self)
+            return Typedef(self.name, type_=self.resolve_union_types(context))
         td = self.get_typedef(self.name, context)
         for i in range(RECURSION_LIMIT+1):
             if td.get_type().name in _builtin_types:
+                new_t = td.get_type().resolve_union_types(context)
+                td.type_ = new_t
                 return td
             td = td.get_type().resolve_typedef(context)
             if i == RECURSION_LIMIT:

@@ -628,6 +628,43 @@ def _test_compile_type2():
     else:
         testing.error("Expected Leaf instance")
 
+def _test_compile_type3():
+    ys = """module foo {
+  typedef td1 {
+    type string {
+      length "1..10";
+    }
+  }
+  typedef td2 {
+    type td1 {
+      length "1..9";
+    }
+  }
+  container c1 {
+    leaf l1 {
+      type union {
+        type td2;
+        type string;
+      }
+    }
+  }
+}"""
+    n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
+    ctx = yang.schema.Context([])
+    nc = n.compile(ctx)
+
+    l1 = nc.get("c1").get("l1")
+    if isinstance(l1, yang.schema.Leaf):
+        l1_type = l1.type_
+        if isinstance(l1_type, yang.schema.Type):
+            testing.assertEqual(l1_type.name, "union")
+            testing.assertEqual(len(l1_type.type_), 2)
+            testing.assertEqual(l1_type.type_[0].name, "string")
+            testing.assertEqual(l1_type.type_[1].name, "string")
+        else:
+            testing.error("Expected Type instance")
+    else:
+        testing.error("Expected Leaf instance")
 
 
 def _test_compile_uses():
@@ -888,7 +925,7 @@ myang3 = """container c1 {
 }"""
 
 actor main(env):
-    _test_compile_augment_import()
+    _test_compile_type3()
     await async env.exit(0)
 
     try:
