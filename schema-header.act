@@ -824,7 +824,10 @@ class SchemaNode(object):
             for child in self.children:
                 if isinstance(child, Uses):
                     grouping = child.get_grouping(child.name, context)
-                    res.extend(grouping.expand_children(context))
+                    grouping_children = grouping.expand_children(context)
+                    for new_child in grouping_children:
+                        new_child.parent = self
+                    res.extend(grouping_children)
                     dummy = Container_(name=grouping.name, children=res)
                     child.expand_augments(context, dummy, in_uses=True)
                 else:
