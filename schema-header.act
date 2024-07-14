@@ -1071,7 +1071,8 @@ def yang_type_to_acton_type(t: ?Type) -> str:
             # TODO: is this right?
             return "bool"
         elif t.name == "enumeration":
-            raise NotImplementedError('enumeration not supported')
+            # TODO: use acton unions of fixed strings!?
+            return "str"
         elif t.name == "identityref":
             return "str"
         elif t.name == "instance-identifier":
