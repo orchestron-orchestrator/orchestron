@@ -1084,7 +1084,9 @@ def yang_type_to_acton_type(t: ?Type) -> str:
         elif t.name == "string":
             return "str"
         elif t.name == "union":
-            return "val"
+            # TODO: use atom when union consists of types that we represent with Acton built-in types
+            # TODO: use Acton union
+            return "value"
         else:
             raise ValueError("Unknown YANG type: " + t.name)
     raise ValueError("type not defined")
