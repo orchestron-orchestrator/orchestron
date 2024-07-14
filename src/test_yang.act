@@ -2,6 +2,15 @@ import testing
 import yang.parser
 import yang.schema
 
+def print_snode(n: yang.schema.SchemaNode, indent: int):
+    nparent = n.parent
+    par = nparent if nparent is not None else "NO PARENT"
+    print("  " * indent + str(n) + "    parent: " + str(par))
+    if isinstance(n, yang.schema.SchemaNodeInner):
+        for child in n.children:
+            print_snode(child, indent + 1)
+
+
 test_yang = """module test_yang {
   yang-version "1.1";
   namespace "http://example.com/test_yang";
@@ -901,6 +910,37 @@ def _test_compile_augment_relative_path_under_module():
     testing.error("Expected ValueError")
 
 
+def _test_compile_choice():
+    ys = """module foo {
+  container c1 {
+    choice ch1 {
+      case cs1 {
+        leaf l1 {
+          type string;
+          description "leaf 1";
+        }
+      }
+      case cs2 {
+        leaf l2 {
+          type string;
+          description "leaf 2";
+        }
+      }
+    }
+  }
+}"""
+    n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
+    ctx = yang.schema.Context([])
+    nc = n.compile(ctx)
+
+    c1 = nc.get("c1")
+    l1 = c1.get("l1")
+    l2 = c1.get("l2")
+    testing.assertEqual(c1.parent, nc)
+    testing.assertEqual(l1.parent, c1)
+    testing.assertEqual(l2.parent, c1)
+
+
 def _test_tofrom_gdata():
     # TODO: hmm, how to test this? I guess we need to first generate some data
     # classes from a yang schema... so first generate support in compiler?
@@ -957,8 +997,9 @@ myang3 = """container c1 {
     }
 }"""
 
+
 actor main(env):
-    _test_compile_type1()
+    _test_compile_choice()
     await async env.exit(0)
 
     try:

@@ -828,7 +828,17 @@ class SchemaNode(object):
         if isinstance(self, SchemaNodeInner):
             res = []
             for child in self.children:
-                if isinstance(child, Uses):
+                if isinstance(child, Case):
+                    new_children = child.expand_children(context)
+                    for new_child in new_children:
+                        new_child.parent = self
+                    res.extend(new_children)
+                elif isinstance(child, Choice):
+                    new_children = child.expand_children(context)
+                    for new_child in new_children:
+                        new_child.parent = self
+                    res.extend(new_children)
+                elif isinstance(child, Uses):
                     grouping = child.get_grouping(_safe_name(child.name), context)
                     grouping_children = grouping.expand_children(context)
                     for new_child in grouping_children:
