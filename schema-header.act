@@ -442,6 +442,7 @@ class DModule(DNodeInner):
 
     def __init__(self, name: str, namespace: str, prefix: str, yang_version: ?float, description: ?str=None, contact=None, deviation=[], extension_=[], feature=[], import_=[], include=[], organization=None, reference=None, revision=[], children=[]):
         self.name = name
+        self.dname = "Module"
         self.namespace = namespace
         self.prefix = prefix
         if yang_version is not None:
