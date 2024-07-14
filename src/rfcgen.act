@@ -762,6 +762,11 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             res.append("        return new")
             res.append("")
 
+        res.append("    def __str__(self):")
+        strret = "\"%s \" + self.%s" % (_class_name(stmt_name), _attr_name(arg_name)) if arg_name is not None else "\"%s\"" % (_class_name(stmt_name))
+        res.append("        return " + strret)
+        res.append("")
+
         res.append("    def _get_argname(self) -> ?str:")
         if arg_name is not None:
             res.append("        return '%s'" % _attr_name(arg_name))
