@@ -307,9 +307,6 @@ snode_methods = {
 
 """,
         "to_dnode": """    def to_dnode(self) -> DContainer:
-        new_children = []
-        for child in self.children:
-            new_children.append(child.to_dnode())
         new_dnode = DContainer(
             name=self.name,
             config=self.is_config(),
@@ -320,9 +317,9 @@ snode_methods = {
             reference=self.reference,
             status=self.status,
             when=self.when,
-            children=new_children
+            children=self.get_dnode_children()
         )
-        for child in new_children:
+        for child in new_dnode.children:
             child.parent = new_dnode
         return new_dnode
 
@@ -351,9 +348,6 @@ snode_methods = {
 
 """,
         "to_dnode": """    def to_dnode(self) -> DModule:
-        new_children = []
-        for child in self.children:
-            new_children.append(child.to_dnode())
         new_dnode = DModule(
             name=self.name,
             namespace=self.get_namespace(),
@@ -361,9 +355,9 @@ snode_methods = {
             description=self.description,
             revision=self.revision,
             reference=self.reference,
-            children=new_children
+            children=self.get_dnode_children()
         )
-        for child in new_children:
+        for child in new_dnode.children:
             child.parent = new_dnode
         return new_dnode
 
@@ -392,9 +386,6 @@ snode_methods = {
 
 """,
         "to_dnode": """    def to_dnode(self) -> DList:
-        new_children = []
-        for child in self.children:
-            new_children.append(child.to_dnode())
         new_dnode = DList(
             name=self.name,
             key=self.keys(),
@@ -407,9 +398,9 @@ snode_methods = {
             reference=self.reference,
             status=self.status,
             when=self.when,
-            children=new_children
+            children=self.get_dnode_children()
         )
-        for child in new_children:
+        for child in new_dnode.children:
             child.parent = new_dnode
         return new_dnode
 
