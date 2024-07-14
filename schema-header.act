@@ -789,23 +789,20 @@ class SchemaNode(object):
             for part in parts:
                 prefix, name = split_prefix_name(part)
                 if prefix is not None and prefix != current_prefix:
-                    print("Looking for prefix %s" % prefix)
                     current_prefix = prefix
                     current_node = current_node.get_module_by_prefix(prefix, context)
-                    print("Current node is %s" % str(current_node))
-                print("Looking for name %s" % name)
                 current_node = current_node.get(name)
             return current_node
 
         def expand_augment(augments: list[Augment], target_base, context: Context):
             for aug in augments:
-                print("Expanding augment target %s" % aug.target_node)
                 target = get_target(target_base, aug.target_node)
                 if isinstance(target, SchemaNodeInner):
-                    for child in aug.children:
-                        # Just move the child to the target
-                        target.children.append(child)
-                        child.parent = target
+                    # Just move the child to the target
+                    new_children = aug.expand_children(context)
+                    target.children.extend(new_children)
+                    for new_child in new_children:
+                        new_child.parent = target
                 else:
                     raise ValueError("Augment target is not an inner node")
 
