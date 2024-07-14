@@ -782,7 +782,7 @@ def _test_compile_augment_import():
     testing.assertEqual(nc_foo.get("c1").get("l1").is_config(), True)
     testing.assertEqual(nc_foo.get("c1").get("l2").is_config(), True)
 
-def _test_compile_augment_uses():
+def _test_compile_uses_augment():
     """Augmenting a grouping"""
     ys = """module foo {
   grouping g1 {
@@ -808,6 +808,39 @@ def _test_compile_augment_uses():
 
     testing.assertEqual(nc.get("c1").get("l1").is_config(), True)
     testing.assertEqual(nc.get("c1").get("l2").is_config(), True)
+
+def _test_compile_augment_uses():
+    """Augmenting a grouping"""
+    ys = """module foo {
+  grouping g1 {
+    container c2 {
+      leaf l1 {
+        type string;
+        description "leaf 1";
+      }
+    }
+  }
+  container c1 {
+    description "container 1";
+  }
+  augment "/c1" {
+    uses g1;
+  }
+}"""
+    n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
+    ctx = yang.schema.Context([])
+    nc = n.compile(ctx)
+
+    c1 = nc.get("c1")
+    c2 = c1.get("c2")
+    l1 = c2.get("l1")
+    testing.assertEqual(nc, c1.parent)
+    testing.assertEqual(c1, c2.parent)
+    testing.assertEqual(c2, l1.parent)
+    if isinstance(l1, yang.schema.Leaf):
+        testing.assertEqual(l1.description, "leaf 1")
+    else:
+        testing.error("Expected Leaf instance")
 
 def _test_compile_augment_absolute_path_under_uses():
     """Augmenting a grouping"""
@@ -925,7 +958,7 @@ myang3 = """container c1 {
 }"""
 
 actor main(env):
-    _test_compile_type3()
+    _test_compile_type1()
     await async env.exit(0)
 
     try:

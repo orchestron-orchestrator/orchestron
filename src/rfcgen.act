@@ -573,6 +573,24 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
 
     need_takers = []
 
+    res.append("extension SchemaNode (Eq):")
+    res.append("    def __eq__(self, other: SchemaNode) -> bool:")
+    res.append("        if type(self) != type(other):")
+    res.append("            return False")
+    for stmt_name in sorted(stmts):
+        res.append("        elif isinstance(self, %s) and isinstance(other, %s):" % (_class_name(stmt_name), _class_name(stmt_name)))
+        attributes_to_compare = []
+        for substmt in stmts[stmt_name].substmts.values():
+            if substmt.name not in child_stmts:
+                attributes_to_compare.append(_attr_name(substmt.name))
+        if len(attributes_to_compare) > 0:
+            res.append("            return " + " and ".join(map(lambda x: "self.%s == other.%s" % (x, x), attributes_to_compare)))
+        else:
+            res.append("            return True")
+    res.append("        return False")
+    res.append("")
+
+
     res.append("def snode_name(sn: SchemaNode) -> str:")
     for stmt_name in sorted(stmts):
         stmt = stmts[stmt_name]
@@ -780,6 +798,25 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         else:
             res.append("        return None")
         res.append("")
+
+        attributes_to_compare = []
+        for substmt in stmts[stmt_name].substmts.values():
+            if substmt.name not in child_stmts:
+                attributes_to_compare.append(_attr_name(substmt.name))
+
+        res.append("extension %s (Ord):" % _class_name(stmt_name))
+        res.append("    def __eq__(self, other: %s):" % _class_name(stmt_name))
+        res.append("        return " + " and ".join(map(lambda x: "self.%s == other.%s" % (x, x), attributes_to_compare)))
+        res.append("")
+
+        res.append("    def __lt__(a, b):")
+        if arg_name is not None:
+            res.append("        return a.%s < b.%s" % (_attr_name(arg_name), _attr_name(arg_name)))
+        else:
+            res.append("        return True")
+        res.append("")
+
+
 
     # Generate takers, both singular and plural (i.e. a list)
     for stmt_name in sorted(stmts):
