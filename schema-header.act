@@ -1095,7 +1095,7 @@ def _get_full_name(dnode: DNode) -> str:
     """
     path = []
     while True:
-        path.append(dnode.name)
+        path.append(dnode.name.replace("-", "_"))
         parent = dnode.parent
         if parent is not None:
             dnode = parent
