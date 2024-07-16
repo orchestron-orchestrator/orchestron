@@ -589,6 +589,9 @@ def _test_compile_type1():
     leaf l1 {
       type domain-name;
     }
+    leaf-list ll1 {
+      type domain-name;
+    }
   }
 }"""
     n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
@@ -604,6 +607,16 @@ def _test_compile_type1():
             testing.error("Expected Type instance")
     else:
         testing.error("Expected Leaf instance")
+
+    ll1 = nc.get("c1").get("ll1")
+    if isinstance(ll1, yang.schema.LeafList):
+        ll1_type = ll1.type_
+        if isinstance(ll1_type, yang.schema.Type):
+            testing.assertEqual(ll1_type.name, "string")
+        else:
+            testing.error("Expected Type instance")
+    else:
+        testing.error("Expected LeafList instance")
 
 def _test_compile_type2():
     ys = """module foo {
@@ -621,6 +634,9 @@ def _test_compile_type2():
     leaf l1 {
       type td2;
     }
+    leaf-list ll1 {
+      type td2;
+    }
   }
 }"""
     n = yang.schema.stmt_to_snode(yang.parser.parse(ys))
@@ -636,6 +652,16 @@ def _test_compile_type2():
             testing.error("Expected Type instance")
     else:
         testing.error("Expected Leaf instance")
+
+    ll1 = nc.get("c1").get("ll1")
+    if isinstance(ll1, yang.schema.LeafList):
+        ll1_type = ll1.type_
+        if isinstance(ll1_type, yang.schema.Type):
+            testing.assertEqual(ll1_type.name, "string")
+        else:
+            testing.error("Expected Type instance")
+    else:
+        testing.error("Expected LeafList instance")
 
 def _test_compile_type3():
     ys = """module foo {
@@ -670,6 +696,39 @@ def _test_compile_type3():
             testing.assertEqual(len(l1_type.type_), 2)
             testing.assertEqual(l1_type.type_[0].name, "string")
             testing.assertEqual(l1_type.type_[1].name, "string")
+        else:
+            testing.error("Expected Type instance")
+    else:
+        testing.error("Expected Leaf instance")
+
+def _test_compile_type_in_imported_module():
+    ys_foo = """module foo {
+  typedef td1 {
+    type string {
+      length "1..10";
+    }
+  }
+}"""
+    ys_bar = """module bar {
+  import foo {
+    prefix "f";
+  }
+  container c1 {
+    leaf l1 {
+      type f:td1;
+    }
+  }
+}"""
+    n_foo = yang.schema.stmt_to_smodule(yang.parser.parse(ys_foo))
+    n_bar = yang.schema.stmt_to_smodule(yang.parser.parse(ys_bar))
+    ctx = yang.schema.Context([n_foo, n_bar])
+    nc_bar = n_bar.compile(ctx)
+
+    l1 = nc_bar.get("c1").get("l1")
+    if isinstance(l1, yang.schema.Leaf):
+        l1_type = l1.type_
+        if isinstance(l1_type, yang.schema.Type):
+            testing.assertEqual(l1_type.name, "string")
         else:
             testing.error("Expected Type instance")
     else:

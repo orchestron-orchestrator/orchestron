@@ -458,6 +458,31 @@ snode_methods = {
 """
     },
     "leaf-list": {
+        # TODO: keep track of constraints in the derived type(s) that we resolve
+        "compile": """    def compile(self, context: Context):
+        base_typedef = self.get_type().resolve_typedef(context)
+
+        new_units = self.units
+        if new_units is None:
+            new_units = base_typedef.units
+
+        new = LeafList(self.name,
+                       config=self.config,
+                       default=self.default,
+                       description=self.description,
+                       if_feature=self.if_feature,
+                       max_elements=self.max_elements,
+                       min_elements=self.min_elements,
+                       must=self.must,
+                       ordered_by=self.ordered_by,
+                       reference=self.reference,
+                       status=self.status,
+                       type_=base_typedef.type_,
+                       units=new_units,
+                       when=self.when)
+        return new
+
+""",
         "get_type": """    def get_type(self) -> Type:
         selftype = self.type_
         if selftype is not None:

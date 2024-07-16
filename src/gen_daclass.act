@@ -24,6 +24,10 @@ netinfra_yang = """module netinfra {
         type string;
         description "router id";
       }
+      leaf-list tags {
+        type string;
+        description "router tags";
+      }
     }
   }
 }

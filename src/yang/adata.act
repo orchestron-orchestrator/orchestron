@@ -10,10 +10,3 @@ class MNode(object):
     _name: str
     _parent: ?MNode
 
-    def __init__(self, _name: str, _parent: ?MNode=None):
-        self._name = _name
-        self._parent = _parent
-        self._schema = None
-
-    mut def to_gdata(self) -> yang.data.Node:
-        raise NotImplementedError("MNode.to_gdata")

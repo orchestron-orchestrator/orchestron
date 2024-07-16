@@ -250,7 +250,7 @@ class DNodeInner(DNode):
             elif isinstance(child, DLeaf):
                 init_args.append("%s: %s" % (_safe_name(child.name), yang_leaf_to_acton_type(child)))
             elif isinstance(child, DLeafList):
-                init_args.append("%s: %s" % (_safe_name(child.name), yang_leaflist_to_acton_type(child)))
+                init_args.append("%s: ?%s=None" % (_safe_name(child.name), yang_leaflist_to_acton_type(child)))
             elif isinstance(child, DList):
                 init_args.append("%s: list[%s_entry]=[]" % (_safe_name(child.name), _get_full_name(child)))
 
@@ -266,8 +266,17 @@ class DNodeInner(DNode):
                 res.append("            self.%s = %s()" % (_safe_name(child.name), _get_full_name(child)))
             elif isinstance(child, DLeaf):
                 res.append("        self.%s = %s" % (_safe_name(child.name), _safe_name(child.name)))
+            elif isinstance(child, DLeafList):
+                #res.append("        self.%s = %s" % (_safe_name(child.name), _safe_name(child.name)))
+                res.append("        if %s is not None:" % (_safe_name(child.name)))
+                res.append("            self.%s = %s" % (_safe_name(child.name), _safe_name(child.name)))
+                res.append("        else:")
+                # TODO: this is where we can set the leaf-list to a default value
+                res.append("            self.%s = []" % (_safe_name(child.name)))
             elif isinstance(child, DList):
                 res.append("        self.%s = %s(elements=%s)" % (_safe_name(child.name), _get_full_name(child), _safe_name(child.name)))
+        if len(self.children) == 0:
+            res.append("        pass")
         res.append("")
 
 #        # == .create_XXX() methods
@@ -293,17 +302,19 @@ class DNodeInner(DNode):
             res.append("        res = yang.data.%s('%s')" % (self.dname, self.name))
 
         for child in self.children:
-            res.append("        _%s = self.%s" % (_safe_name(child.name), _safe_name(child.name)))
+            if not isinstance(child, DLeafList):
+                res.append("        _%s = self.%s" % (_safe_name(child.name), _safe_name(child.name)))
         for child in self.children:
-            res.append("        if _%s is not None:" % _safe_name(child.name))
-            if isinstance(child, DLeaf):
-                res.append("            res.children['%s'] = yang.data.Leaf('%s', _%s)" % (child.name, child.name, _safe_name(child.name)))
             if isinstance(child, DLeafList):
-                res.append("            res.children['%s'] = yang.data.LeafList('%s', _%s)" % (child.name, child.name, _safe_name(child.name)))
-            elif isinstance(child, DContainer):
-                res.append("            res.children['%s'] = self.%s.to_gdata()" % (child.name, _safe_name(child.name)))
-            elif isinstance(child, DList):
-                res.append("            res.children['%s'] = self.%s.to_gdata()" % (child.name, _safe_name(child.name)))
+                res.append("        res.children['%s'] = yang.data.LeafList('%s', self.%s)" % (child.name, child.name, _safe_name(child.name)))
+            else:
+                res.append("        if _%s is not None:" % _safe_name(child.name))
+                if isinstance(child, DLeaf):
+                    res.append("            res.children['%s'] = yang.data.Leaf('%s', _%s)" % (child.name, child.name, _safe_name(child.name)))
+                elif isinstance(child, DContainer):
+                    res.append("            res.children['%s'] = self.%s.to_gdata()" % (child.name, _safe_name(child.name)))
+                elif isinstance(child, DList):
+                    res.append("            res.children['%s'] = self.%s.to_gdata()" % (child.name, _safe_name(child.name)))
         res.append("        return res")
         res.append("")
 #
@@ -312,9 +323,12 @@ class DNodeInner(DNode):
         from_gdata_args_list = []
         from_xml_args_list = []
         for child in self.children:
-            if isinstance(child, DNodeLeaf):
+            if isinstance(child, DLeaf):
                 from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (_safe_name(child.name), yang_leaf_to_getval(child), child.name))
                 from_xml_args_list.append("%s=yang.data.from_xml_%s(n, \"%s\")" % (_safe_name(child.name), yang_leaf_to_getval(child), child.name))
+            elif isinstance(child, DLeafList):
+                from_gdata_args_list.append("%s=n.get_%ss(\"%s\")" % (_safe_name(child.name), yang_leaf_to_getval(child), child.name))
+                from_xml_args_list.append("%s=yang.data.from_xml_%ss(n, \"%s\")" % (_safe_name(child.name), yang_leaf_to_getval(child), child.name))
             elif isinstance(child, DContainer):
                 # TODO: handle presence containers
                 from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (_safe_name(child.name), _get_full_name(child), child.name))
@@ -359,9 +373,10 @@ class DNodeInner(DNode):
             res.append("        self.elements = elements")
             res.append("")
 
-            list_create_args = ["self"] + self.key
+            list_key_args = list(map(lambda x: _safe_name(x), self.key))
+            list_create_args = ["self"] + list_key_args
             res.append("    def create(%s):" % (", ".join(list_create_args)))
-            res.append("        res = %s_entry(%s)" % (_get_full_name(self), ", ".join(self.key)))
+            res.append("        res = %s_entry(%s)" % (_get_full_name(self), ", ".join(list_key_args)))
             res.append("        self.elements.append(res)")
             res.append("        return res")
             res.append("")
@@ -379,7 +394,7 @@ class DNodeInner(DNode):
 #            # TODO: should .from_gdata() not take a specific data node instead, like Container_ instead of yang.data.Node?
             from_gdata_args_list = []
             for child in self.children:
-                if isinstance(child, DNodeLeaf):
+                if isinstance(child, DLeaf):
                     from_gdata_args_list.append("%s=n.get_%s(\"%s\")" % (_safe_name(child.name), yang_leaf_to_getval(child), child.name))
                 elif isinstance(child, DContainer):
                     from_gdata_args_list.append("%s=%s.from_gdata(n.get_container(\"%s\"))" % (_safe_name(child.name), _get_full_name(child), child.name))
@@ -390,11 +405,24 @@ class DNodeInner(DNode):
             from_gdata_args = ", ".join(from_gdata_args_list)
             res.append("    @staticmethod")
             res.append("    def from_gdata(n: yang.data.List) -> list[%s_entry]:" % _get_full_name(self))
-            res.append("        return list(map(lambda x: %s_entry.from_gdata(x), n.elements))" % _get_full_name(self))
+            res.append("        res = []")
+            res.append("        for e in n.elements:")
+            res.append("            res.append(%s_entry.from_gdata(e))" % _get_full_name(self))
+            res.append("        return res")
+            #res.append("        return list(map(lambda x: %s_entry.from_gdata(x), n.elements))" % _get_full_name(self))
             res.append("")
             res.append("    @staticmethod")
             res.append("    def from_xml(nodes: list[xml.Node]) -> list[%s_entry]:" % _get_full_name(self))
-            res.append("        return list(map(lambda x: %s_entry.from_xml(x), nodes))" % _get_full_name(self))
+            res.append("        res = []")
+            res.append("        for node in nodes:")
+            res.append("            res.append(%s_entry.from_xml(node))" % _get_full_name(self))
+            res.append("        return res")
+            # TODO: trying to use list(map(lambda)) here results in an error,
+            # why? Above code that iterates over n.elements works fine... Error is:
+            # ERROR: Error when compiling y_cfs module: Type error
+            # mut must be a subclass of pure
+            #
+            #res.append("        return list(map(lambda x: %s_entry.from_xml(x), nodes))" % _get_full_name(self))
             res.append("")
         res.append("")
 
@@ -1114,7 +1142,15 @@ def yang_type_to_acton_type(t: ?Type) -> str:
 
 
 def _safe_name(name: str) -> str:
-    return name.replace("-", "_")
+    new = name.replace("-", "_")
+    if new in {"action",
+               "class",
+               "except",
+               "from",
+               "protocol",
+               }:
+        new += "_"
+    return new
 
 def _get_full_name(dnode: DNode) -> str:
     """
