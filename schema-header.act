@@ -952,26 +952,50 @@ class SchemaNodeOuter(SchemaNode):
     pass
 
 
-def take_bool(stmts: list[Statement], kw: str) -> ?bool:
-    v = take_str(stmts, kw)
+def take_opt_bool(stmts: list[Statement], kw: str) -> ?bool:
+    v = take_opt_str(stmts, kw)
     if v is not None:
         if v == "true":
             return True
         elif v == "false":
             return False
 
-def take_int(stmts: list[Statement], kw: str) -> ?int:
-    v = take_str(stmts, kw)
+def take_bool(stmts: list[Statement], kw: str) -> bool:
+    v = take_opt_str(stmts, kw)
+    if v is not None:
+        if v == "true":
+            return True
+        elif v == "false":
+            return False
+    raise ValueError("No %s in stmts" % kw)
+
+def take_opt_int(stmts: list[Statement], kw: str) -> ?int:
+    v = take_opt_str(stmts, kw)
     if v is not None:
         return int(v)
 
-def take_str(stmts: list[Statement], kw: str) -> ?str:
+def take_int(stmts: list[Statement], kw: str) -> int:
+    v = take_opt_str(stmts, kw)
+    if v is not None:
+        return int(v)
+    raise ValueError("No %s in stmts" % kw)
+
+def take_opt_str(stmts: list[Statement], kw: str) -> ?str:
     for i in range(len(stmts)):
         if stmts[i].kw == kw:
             arg = stmts[i].arg
             if arg is not None:
                 del stmts[i]
                 return arg
+
+def take_str(stmts: list[Statement], kw: str) -> str:
+    for i in range(len(stmts)):
+        if stmts[i].kw == kw:
+            arg = stmts[i].arg
+            if arg is not None:
+                del stmts[i]
+                return arg
+    raise ValueError("No %s in stmts" % kw)
 
 def take_strlist(stmts: list[Statement], kw: str) -> list[str]:
     res = []

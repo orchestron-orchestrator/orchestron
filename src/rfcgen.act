@@ -223,8 +223,10 @@ def _attr_type(name, stmt, stmts) -> str:
         t = "int"
 
 
-    if cardinality in {"0..1", "1"}:
+    if cardinality == "0..1" or name in {"namespace", "prefix"}:
         return "?" + t
+    elif cardinality == "1":
+        return t
     elif cardinality == "0..n":
         return "list[%s]" % t
     return "?str"
@@ -254,10 +256,14 @@ def _attr_taker(name, stmt, stmts) -> str:
     elif name in {"fraction-digits", "length", "position"}:
         t = "int"
 
-    if cardinality in {"0..1", "1"}:
+    if cardinality == "0..1" or name in {"namespace", "prefix"}:
+        if name in stmts:
+            return "take_opt_%s(ss)" % t
+        return "take_opt_%s(ss, \"%s\")" % (t, name)
+    elif cardinality == "1":
         if name in stmts:
             return "take_%s(ss)" % t
-        return "take_%s(ss, \"%s\")" % (t, name)
+        return "take_str(ss, \"%s\")" % name
     elif cardinality == "0..n":
         if name in stmts:
             return "take_%ss(ss)" % t
@@ -269,8 +275,10 @@ def _attr_defval(name, stmt, stms) -> str:
     if name == stmt.argument_name:
         return ""
     cardinality = stmt.substmts[name].cardinality
-    if cardinality in {"0..1", "1"}:
+    if cardinality == "0..1" or name in {"namespace", "prefix"}:
         return "=None"
+    elif cardinality == "1":
+        return ""
     elif cardinality == "0..n":
         return "=[]"
     raise ValueError("Unknown cardinality: %s" % cardinality)
@@ -663,12 +671,21 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
 
         res.append("")
         init_attrs = ["self"]
+        pos_arg_idx = 1
+        if arg_name is not None:
+            pos_arg_idx += 1
         for substmt in stmt.substmts.values():
             if substmt.name == stmt.argument_name:
                 init_attrs.append("%s: %s" % (_attr_name(substmt.name), _attr_type(substmt.name, stmt, stmts)))
             else:
                 if substmt.name not in child_stmts:
-                    init_attrs.append("%s: %s%s" % (_attr_name(substmt.name), _attr_type(substmt.name, stmt, stmts), _attr_defval(substmt.name, stmt, stmts)))
+                    # Place attributes with cardinality 1 first
+                    attr_text = "%s: %s%s" % (_attr_name(substmt.name), _attr_type(substmt.name, stmt, stmts), _attr_defval(substmt.name, stmt, stmts))
+                    if substmt.cardinality == "1":
+                        init_attrs.insert(pos_arg_idx, attr_text)
+                        pos_arg_idx += 1
+                    else:
+                        init_attrs.append(attr_text)
         if have_children:
             init_attrs.append("children=[]")
         if "namespace" not in set(cattrs):
@@ -845,10 +862,16 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
 
     # Generate takers, both singular and plural (i.e. a list)
     for stmt_name in sorted(stmts):
-        res.append("def take_%s(stmts: list[Statement]) -> ?%s:" % (_attr_taker_name(stmt_name), _class_name(stmt_name)))
+        res.append("def take_opt_%s(stmts: list[Statement]) -> ?%s:" % (_attr_taker_name(stmt_name), _class_name(stmt_name)))
         res.append("    for node in take_nodes(stmts, [\"%s\"]):" % stmt_name)
         res.append("        if isinstance(node, %s):" % _class_name(stmt_name))
         res.append("            return node")
+        res.append("")
+        res.append("def take_%s(stmts: list[Statement]) -> %s:" % (_attr_taker_name(stmt_name), _class_name(stmt_name)))
+        res.append("    for node in take_nodes(stmts, [\"%s\"]):" % stmt_name)
+        res.append("        if isinstance(node, %s):" % _class_name(stmt_name))
+        res.append("            return node")
+        res.append("    raise ValueError(\"No %s in stmts\")" % stmt_name)
         res.append("")
         res.append("def take_%ss(stmts: list[Statement]) -> list[%s]:" % (_attr_taker_name(stmt_name), _class_name(stmt_name)))
         res.append("    res = []")

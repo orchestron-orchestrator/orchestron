@@ -949,26 +949,50 @@ class SchemaNodeOuter(SchemaNode):
     pass
 
 
-def take_bool(stmts: list[Statement], kw: str) -> ?bool:
-    v = take_str(stmts, kw)
+def take_opt_bool(stmts: list[Statement], kw: str) -> ?bool:
+    v = take_opt_str(stmts, kw)
     if v is not None:
         if v == "true":
             return True
         elif v == "false":
             return False
 
-def take_int(stmts: list[Statement], kw: str) -> ?int:
-    v = take_str(stmts, kw)
+def take_bool(stmts: list[Statement], kw: str) -> bool:
+    v = take_opt_str(stmts, kw)
+    if v is not None:
+        if v == "true":
+            return True
+        elif v == "false":
+            return False
+    raise ValueError("No %s in stmts" % kw)
+
+def take_opt_int(stmts: list[Statement], kw: str) -> ?int:
+    v = take_opt_str(stmts, kw)
     if v is not None:
         return int(v)
 
-def take_str(stmts: list[Statement], kw: str) -> ?str:
+def take_int(stmts: list[Statement], kw: str) -> int:
+    v = take_opt_str(stmts, kw)
+    if v is not None:
+        return int(v)
+    raise ValueError("No %s in stmts" % kw)
+
+def take_opt_str(stmts: list[Statement], kw: str) -> ?str:
     for i in range(len(stmts)):
         if stmts[i].kw == kw:
             arg = stmts[i].arg
             if arg is not None:
                 del stmts[i]
                 return arg
+
+def take_str(stmts: list[Statement], kw: str) -> str:
+    for i in range(len(stmts)):
+        if stmts[i].kw == kw:
+            arg = stmts[i].arg
+            if arg is not None:
+                del stmts[i]
+                return arg
+    raise ValueError("No %s in stmts" % kw)
 
 def take_strlist(stmts: list[Statement], kw: str) -> list[str]:
     res = []
@@ -2459,7 +2483,7 @@ class Import(SchemaNodeOuter):
     reference: ?str
     revision_date: ?str
 
-    def __init__(self, module: str, description: ?str=None, prefix: ?str=None, reference: ?str=None, revision_date: ?str=None, namespace=None):
+    def __init__(self, module: str, prefix: ?str=None, description: ?str=None, reference: ?str=None, revision_date: ?str=None, namespace=None):
         self.parent = None
         self.module = module
         self.description = description
@@ -2647,11 +2671,11 @@ class Leaf(SchemaNodeOuter):
     must: list[Must]
     reference: ?str
     status: ?str
-    type_: ?Type
+    type_: Type
     units: ?str
     when: ?str
 
-    def __init__(self, name: str, config: ?bool=None, default: ?str=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, must: list[Must]=[], reference: ?str=None, status: ?str=None, type_: ?Type=None, units: ?str=None, when: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, type_: Type, config: ?bool=None, default: ?str=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, must: list[Must]=[], reference: ?str=None, status: ?str=None, units: ?str=None, when: ?str=None, namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
@@ -2774,11 +2798,11 @@ class LeafList(SchemaNodeOuter):
     ordered_by: ?str
     reference: ?str
     status: ?str
-    type_: ?Type
+    type_: Type
     units: ?str
     when: ?str
 
-    def __init__(self, name: str, config: ?bool=None, default: list[str]=[], description: ?str=None, if_feature: list[str]=[], max_elements: ?str=None, min_elements: ?str=None, must: list[Must]=[], ordered_by: ?str=None, reference: ?str=None, status: ?str=None, type_: ?Type=None, units: ?str=None, when: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, type_: Type, config: ?bool=None, default: list[str]=[], description: ?str=None, if_feature: list[str]=[], max_elements: ?str=None, min_elements: ?str=None, must: list[Must]=[], ordered_by: ?str=None, reference: ?str=None, status: ?str=None, units: ?str=None, when: ?str=None, namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
@@ -3129,9 +3153,9 @@ class Module(SchemaNodeInner):
     organization: ?str
     reference: ?str
     revision: list[Revision]
-    yang_version: ?str
+    yang_version: str
 
-    def __init__(self, name: str, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], namespace: ?str=None, organization: ?str=None, prefix: ?str=None, reference: ?str=None, revision: list[Revision]=[], yang_version: ?str=None, children=[]):
+    def __init__(self, name: str, namespace: ?str=None, prefix: ?str=None, yang_version: str, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], children=[]):
         self.parent = None
         for n in augment:
             n.parent = self
@@ -3850,7 +3874,7 @@ class Submodule(SchemaNodeInner):
     """
     name: str
     augment: list[Augment]
-    belongs_to: ?BelongsTo
+    belongs_to: BelongsTo
     contact: ?str
     description: ?str
     deviation: list[str]
@@ -3861,9 +3885,9 @@ class Submodule(SchemaNodeInner):
     organization: ?str
     reference: ?str
     revision: list[Revision]
-    yang_version: ?str
+    yang_version: str
 
-    def __init__(self, name: str, augment: list[Augment]=[], belongs_to: ?BelongsTo=None, contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], yang_version: ?str=None, children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, belongs_to: BelongsTo, yang_version: str, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in augment:
             n.parent = self
@@ -4106,10 +4130,10 @@ class Typedef(SchemaNodeOuter):
     description: ?str
     reference: ?str
     status: ?str
-    type_: ?Type
+    type_: Type
     units: ?str
 
-    def __init__(self, name: str, default: ?str=None, description: ?str=None, reference: ?str=None, status: ?str=None, type_: ?Type=None, units: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, type_: Type, default: ?str=None, description: ?str=None, reference: ?str=None, status: ?str=None, units: ?str=None, namespace=None, prefix=None):
         self.parent = None
         if type_ is not None:
             type_.parent = self
@@ -4256,10 +4280,16 @@ extension Uses (Ord):
     def __lt__(a, b):
         return a.name < b.name
 
-def take_action(stmts: list[Statement]) -> ?Action:
+def take_opt_action(stmts: list[Statement]) -> ?Action:
     for node in take_nodes(stmts, ["action"]):
         if isinstance(node, Action):
             return node
+
+def take_action(stmts: list[Statement]) -> Action:
+    for node in take_nodes(stmts, ["action"]):
+        if isinstance(node, Action):
+            return node
+    raise ValueError("No action in stmts")
 
 def take_actions(stmts: list[Statement]) -> list[Action]:
     res = []
@@ -4268,10 +4298,16 @@ def take_actions(stmts: list[Statement]) -> list[Action]:
             res.append(node)
     return res
 
-def take_anydata(stmts: list[Statement]) -> ?Anydata:
+def take_opt_anydata(stmts: list[Statement]) -> ?Anydata:
     for node in take_nodes(stmts, ["anydata"]):
         if isinstance(node, Anydata):
             return node
+
+def take_anydata(stmts: list[Statement]) -> Anydata:
+    for node in take_nodes(stmts, ["anydata"]):
+        if isinstance(node, Anydata):
+            return node
+    raise ValueError("No anydata in stmts")
 
 def take_anydatas(stmts: list[Statement]) -> list[Anydata]:
     res = []
@@ -4280,10 +4316,16 @@ def take_anydatas(stmts: list[Statement]) -> list[Anydata]:
             res.append(node)
     return res
 
-def take_anyxml(stmts: list[Statement]) -> ?Anyxml:
+def take_opt_anyxml(stmts: list[Statement]) -> ?Anyxml:
     for node in take_nodes(stmts, ["anyxml"]):
         if isinstance(node, Anyxml):
             return node
+
+def take_anyxml(stmts: list[Statement]) -> Anyxml:
+    for node in take_nodes(stmts, ["anyxml"]):
+        if isinstance(node, Anyxml):
+            return node
+    raise ValueError("No anyxml in stmts")
 
 def take_anyxmls(stmts: list[Statement]) -> list[Anyxml]:
     res = []
@@ -4292,10 +4334,16 @@ def take_anyxmls(stmts: list[Statement]) -> list[Anyxml]:
             res.append(node)
     return res
 
-def take_augment(stmts: list[Statement]) -> ?Augment:
+def take_opt_augment(stmts: list[Statement]) -> ?Augment:
     for node in take_nodes(stmts, ["augment"]):
         if isinstance(node, Augment):
             return node
+
+def take_augment(stmts: list[Statement]) -> Augment:
+    for node in take_nodes(stmts, ["augment"]):
+        if isinstance(node, Augment):
+            return node
+    raise ValueError("No augment in stmts")
 
 def take_augments(stmts: list[Statement]) -> list[Augment]:
     res = []
@@ -4304,10 +4352,16 @@ def take_augments(stmts: list[Statement]) -> list[Augment]:
             res.append(node)
     return res
 
-def take_belongs_to(stmts: list[Statement]) -> ?BelongsTo:
+def take_opt_belongs_to(stmts: list[Statement]) -> ?BelongsTo:
     for node in take_nodes(stmts, ["belongs-to"]):
         if isinstance(node, BelongsTo):
             return node
+
+def take_belongs_to(stmts: list[Statement]) -> BelongsTo:
+    for node in take_nodes(stmts, ["belongs-to"]):
+        if isinstance(node, BelongsTo):
+            return node
+    raise ValueError("No belongs-to in stmts")
 
 def take_belongs_tos(stmts: list[Statement]) -> list[BelongsTo]:
     res = []
@@ -4316,10 +4370,16 @@ def take_belongs_tos(stmts: list[Statement]) -> list[BelongsTo]:
             res.append(node)
     return res
 
-def take_bit(stmts: list[Statement]) -> ?Bit:
+def take_opt_bit(stmts: list[Statement]) -> ?Bit:
     for node in take_nodes(stmts, ["bit"]):
         if isinstance(node, Bit):
             return node
+
+def take_bit(stmts: list[Statement]) -> Bit:
+    for node in take_nodes(stmts, ["bit"]):
+        if isinstance(node, Bit):
+            return node
+    raise ValueError("No bit in stmts")
 
 def take_bits(stmts: list[Statement]) -> list[Bit]:
     res = []
@@ -4328,10 +4388,16 @@ def take_bits(stmts: list[Statement]) -> list[Bit]:
             res.append(node)
     return res
 
-def take_case(stmts: list[Statement]) -> ?Case:
+def take_opt_case(stmts: list[Statement]) -> ?Case:
     for node in take_nodes(stmts, ["case"]):
         if isinstance(node, Case):
             return node
+
+def take_case(stmts: list[Statement]) -> Case:
+    for node in take_nodes(stmts, ["case"]):
+        if isinstance(node, Case):
+            return node
+    raise ValueError("No case in stmts")
 
 def take_cases(stmts: list[Statement]) -> list[Case]:
     res = []
@@ -4340,10 +4406,16 @@ def take_cases(stmts: list[Statement]) -> list[Case]:
             res.append(node)
     return res
 
-def take_choice(stmts: list[Statement]) -> ?Choice:
+def take_opt_choice(stmts: list[Statement]) -> ?Choice:
     for node in take_nodes(stmts, ["choice"]):
         if isinstance(node, Choice):
             return node
+
+def take_choice(stmts: list[Statement]) -> Choice:
+    for node in take_nodes(stmts, ["choice"]):
+        if isinstance(node, Choice):
+            return node
+    raise ValueError("No choice in stmts")
 
 def take_choices(stmts: list[Statement]) -> list[Choice]:
     res = []
@@ -4352,10 +4424,16 @@ def take_choices(stmts: list[Statement]) -> list[Choice]:
             res.append(node)
     return res
 
-def take_container(stmts: list[Statement]) -> ?Container_:
+def take_opt_container(stmts: list[Statement]) -> ?Container_:
     for node in take_nodes(stmts, ["container"]):
         if isinstance(node, Container_):
             return node
+
+def take_container(stmts: list[Statement]) -> Container_:
+    for node in take_nodes(stmts, ["container"]):
+        if isinstance(node, Container_):
+            return node
+    raise ValueError("No container in stmts")
 
 def take_containers(stmts: list[Statement]) -> list[Container_]:
     res = []
@@ -4364,10 +4442,16 @@ def take_containers(stmts: list[Statement]) -> list[Container_]:
             res.append(node)
     return res
 
-def take_enum(stmts: list[Statement]) -> ?Enum:
+def take_opt_enum(stmts: list[Statement]) -> ?Enum:
     for node in take_nodes(stmts, ["enum"]):
         if isinstance(node, Enum):
             return node
+
+def take_enum(stmts: list[Statement]) -> Enum:
+    for node in take_nodes(stmts, ["enum"]):
+        if isinstance(node, Enum):
+            return node
+    raise ValueError("No enum in stmts")
 
 def take_enums(stmts: list[Statement]) -> list[Enum]:
     res = []
@@ -4376,10 +4460,16 @@ def take_enums(stmts: list[Statement]) -> list[Enum]:
             res.append(node)
     return res
 
-def take_extension(stmts: list[Statement]) -> ?Extension:
+def take_opt_extension(stmts: list[Statement]) -> ?Extension:
     for node in take_nodes(stmts, ["extension"]):
         if isinstance(node, Extension):
             return node
+
+def take_extension(stmts: list[Statement]) -> Extension:
+    for node in take_nodes(stmts, ["extension"]):
+        if isinstance(node, Extension):
+            return node
+    raise ValueError("No extension in stmts")
 
 def take_extensions(stmts: list[Statement]) -> list[Extension]:
     res = []
@@ -4388,10 +4478,16 @@ def take_extensions(stmts: list[Statement]) -> list[Extension]:
             res.append(node)
     return res
 
-def take_feature(stmts: list[Statement]) -> ?Feature:
+def take_opt_feature(stmts: list[Statement]) -> ?Feature:
     for node in take_nodes(stmts, ["feature"]):
         if isinstance(node, Feature):
             return node
+
+def take_feature(stmts: list[Statement]) -> Feature:
+    for node in take_nodes(stmts, ["feature"]):
+        if isinstance(node, Feature):
+            return node
+    raise ValueError("No feature in stmts")
 
 def take_features(stmts: list[Statement]) -> list[Feature]:
     res = []
@@ -4400,10 +4496,16 @@ def take_features(stmts: list[Statement]) -> list[Feature]:
             res.append(node)
     return res
 
-def take_grouping(stmts: list[Statement]) -> ?Grouping:
+def take_opt_grouping(stmts: list[Statement]) -> ?Grouping:
     for node in take_nodes(stmts, ["grouping"]):
         if isinstance(node, Grouping):
             return node
+
+def take_grouping(stmts: list[Statement]) -> Grouping:
+    for node in take_nodes(stmts, ["grouping"]):
+        if isinstance(node, Grouping):
+            return node
+    raise ValueError("No grouping in stmts")
 
 def take_groupings(stmts: list[Statement]) -> list[Grouping]:
     res = []
@@ -4412,10 +4514,16 @@ def take_groupings(stmts: list[Statement]) -> list[Grouping]:
             res.append(node)
     return res
 
-def take_identity(stmts: list[Statement]) -> ?Identity_:
+def take_opt_identity(stmts: list[Statement]) -> ?Identity_:
     for node in take_nodes(stmts, ["identity"]):
         if isinstance(node, Identity_):
             return node
+
+def take_identity(stmts: list[Statement]) -> Identity_:
+    for node in take_nodes(stmts, ["identity"]):
+        if isinstance(node, Identity_):
+            return node
+    raise ValueError("No identity in stmts")
 
 def take_identitys(stmts: list[Statement]) -> list[Identity_]:
     res = []
@@ -4424,10 +4532,16 @@ def take_identitys(stmts: list[Statement]) -> list[Identity_]:
             res.append(node)
     return res
 
-def take_import(stmts: list[Statement]) -> ?Import:
+def take_opt_import(stmts: list[Statement]) -> ?Import:
     for node in take_nodes(stmts, ["import"]):
         if isinstance(node, Import):
             return node
+
+def take_import(stmts: list[Statement]) -> Import:
+    for node in take_nodes(stmts, ["import"]):
+        if isinstance(node, Import):
+            return node
+    raise ValueError("No import in stmts")
 
 def take_imports(stmts: list[Statement]) -> list[Import]:
     res = []
@@ -4436,10 +4550,16 @@ def take_imports(stmts: list[Statement]) -> list[Import]:
             res.append(node)
     return res
 
-def take_include(stmts: list[Statement]) -> ?Include:
+def take_opt_include(stmts: list[Statement]) -> ?Include:
     for node in take_nodes(stmts, ["include"]):
         if isinstance(node, Include):
             return node
+
+def take_include(stmts: list[Statement]) -> Include:
+    for node in take_nodes(stmts, ["include"]):
+        if isinstance(node, Include):
+            return node
+    raise ValueError("No include in stmts")
 
 def take_includes(stmts: list[Statement]) -> list[Include]:
     res = []
@@ -4448,10 +4568,16 @@ def take_includes(stmts: list[Statement]) -> list[Include]:
             res.append(node)
     return res
 
-def take_input(stmts: list[Statement]) -> ?Input:
+def take_opt_input(stmts: list[Statement]) -> ?Input:
     for node in take_nodes(stmts, ["input"]):
         if isinstance(node, Input):
             return node
+
+def take_input(stmts: list[Statement]) -> Input:
+    for node in take_nodes(stmts, ["input"]):
+        if isinstance(node, Input):
+            return node
+    raise ValueError("No input in stmts")
 
 def take_inputs(stmts: list[Statement]) -> list[Input]:
     res = []
@@ -4460,10 +4586,16 @@ def take_inputs(stmts: list[Statement]) -> list[Input]:
             res.append(node)
     return res
 
-def take_leaf(stmts: list[Statement]) -> ?Leaf:
+def take_opt_leaf(stmts: list[Statement]) -> ?Leaf:
     for node in take_nodes(stmts, ["leaf"]):
         if isinstance(node, Leaf):
             return node
+
+def take_leaf(stmts: list[Statement]) -> Leaf:
+    for node in take_nodes(stmts, ["leaf"]):
+        if isinstance(node, Leaf):
+            return node
+    raise ValueError("No leaf in stmts")
 
 def take_leafs(stmts: list[Statement]) -> list[Leaf]:
     res = []
@@ -4472,10 +4604,16 @@ def take_leafs(stmts: list[Statement]) -> list[Leaf]:
             res.append(node)
     return res
 
-def take_leaf_list(stmts: list[Statement]) -> ?LeafList:
+def take_opt_leaf_list(stmts: list[Statement]) -> ?LeafList:
     for node in take_nodes(stmts, ["leaf-list"]):
         if isinstance(node, LeafList):
             return node
+
+def take_leaf_list(stmts: list[Statement]) -> LeafList:
+    for node in take_nodes(stmts, ["leaf-list"]):
+        if isinstance(node, LeafList):
+            return node
+    raise ValueError("No leaf-list in stmts")
 
 def take_leaf_lists(stmts: list[Statement]) -> list[LeafList]:
     res = []
@@ -4484,10 +4622,16 @@ def take_leaf_lists(stmts: list[Statement]) -> list[LeafList]:
             res.append(node)
     return res
 
-def take_length(stmts: list[Statement]) -> ?Length:
+def take_opt_length(stmts: list[Statement]) -> ?Length:
     for node in take_nodes(stmts, ["length"]):
         if isinstance(node, Length):
             return node
+
+def take_length(stmts: list[Statement]) -> Length:
+    for node in take_nodes(stmts, ["length"]):
+        if isinstance(node, Length):
+            return node
+    raise ValueError("No length in stmts")
 
 def take_lengths(stmts: list[Statement]) -> list[Length]:
     res = []
@@ -4496,10 +4640,16 @@ def take_lengths(stmts: list[Statement]) -> list[Length]:
             res.append(node)
     return res
 
-def take_list(stmts: list[Statement]) -> ?List:
+def take_opt_list(stmts: list[Statement]) -> ?List:
     for node in take_nodes(stmts, ["list"]):
         if isinstance(node, List):
             return node
+
+def take_list(stmts: list[Statement]) -> List:
+    for node in take_nodes(stmts, ["list"]):
+        if isinstance(node, List):
+            return node
+    raise ValueError("No list in stmts")
 
 def take_lists(stmts: list[Statement]) -> list[List]:
     res = []
@@ -4508,10 +4658,16 @@ def take_lists(stmts: list[Statement]) -> list[List]:
             res.append(node)
     return res
 
-def take_module(stmts: list[Statement]) -> ?Module:
+def take_opt_module(stmts: list[Statement]) -> ?Module:
     for node in take_nodes(stmts, ["module"]):
         if isinstance(node, Module):
             return node
+
+def take_module(stmts: list[Statement]) -> Module:
+    for node in take_nodes(stmts, ["module"]):
+        if isinstance(node, Module):
+            return node
+    raise ValueError("No module in stmts")
 
 def take_modules(stmts: list[Statement]) -> list[Module]:
     res = []
@@ -4520,10 +4676,16 @@ def take_modules(stmts: list[Statement]) -> list[Module]:
             res.append(node)
     return res
 
-def take_must(stmts: list[Statement]) -> ?Must:
+def take_opt_must(stmts: list[Statement]) -> ?Must:
     for node in take_nodes(stmts, ["must"]):
         if isinstance(node, Must):
             return node
+
+def take_must(stmts: list[Statement]) -> Must:
+    for node in take_nodes(stmts, ["must"]):
+        if isinstance(node, Must):
+            return node
+    raise ValueError("No must in stmts")
 
 def take_musts(stmts: list[Statement]) -> list[Must]:
     res = []
@@ -4532,10 +4694,16 @@ def take_musts(stmts: list[Statement]) -> list[Must]:
             res.append(node)
     return res
 
-def take_notification(stmts: list[Statement]) -> ?Notification:
+def take_opt_notification(stmts: list[Statement]) -> ?Notification:
     for node in take_nodes(stmts, ["notification"]):
         if isinstance(node, Notification):
             return node
+
+def take_notification(stmts: list[Statement]) -> Notification:
+    for node in take_nodes(stmts, ["notification"]):
+        if isinstance(node, Notification):
+            return node
+    raise ValueError("No notification in stmts")
 
 def take_notifications(stmts: list[Statement]) -> list[Notification]:
     res = []
@@ -4544,10 +4712,16 @@ def take_notifications(stmts: list[Statement]) -> list[Notification]:
             res.append(node)
     return res
 
-def take_output(stmts: list[Statement]) -> ?Output:
+def take_opt_output(stmts: list[Statement]) -> ?Output:
     for node in take_nodes(stmts, ["output"]):
         if isinstance(node, Output):
             return node
+
+def take_output(stmts: list[Statement]) -> Output:
+    for node in take_nodes(stmts, ["output"]):
+        if isinstance(node, Output):
+            return node
+    raise ValueError("No output in stmts")
 
 def take_outputs(stmts: list[Statement]) -> list[Output]:
     res = []
@@ -4556,10 +4730,16 @@ def take_outputs(stmts: list[Statement]) -> list[Output]:
             res.append(node)
     return res
 
-def take_pattern(stmts: list[Statement]) -> ?Pattern:
+def take_opt_pattern(stmts: list[Statement]) -> ?Pattern:
     for node in take_nodes(stmts, ["pattern"]):
         if isinstance(node, Pattern):
             return node
+
+def take_pattern(stmts: list[Statement]) -> Pattern:
+    for node in take_nodes(stmts, ["pattern"]):
+        if isinstance(node, Pattern):
+            return node
+    raise ValueError("No pattern in stmts")
 
 def take_patterns(stmts: list[Statement]) -> list[Pattern]:
     res = []
@@ -4568,10 +4748,16 @@ def take_patterns(stmts: list[Statement]) -> list[Pattern]:
             res.append(node)
     return res
 
-def take_range(stmts: list[Statement]) -> ?Range:
+def take_opt_range(stmts: list[Statement]) -> ?Range:
     for node in take_nodes(stmts, ["range"]):
         if isinstance(node, Range):
             return node
+
+def take_range(stmts: list[Statement]) -> Range:
+    for node in take_nodes(stmts, ["range"]):
+        if isinstance(node, Range):
+            return node
+    raise ValueError("No range in stmts")
 
 def take_ranges(stmts: list[Statement]) -> list[Range]:
     res = []
@@ -4580,10 +4766,16 @@ def take_ranges(stmts: list[Statement]) -> list[Range]:
             res.append(node)
     return res
 
-def take_refine(stmts: list[Statement]) -> ?Refine:
+def take_opt_refine(stmts: list[Statement]) -> ?Refine:
     for node in take_nodes(stmts, ["refine"]):
         if isinstance(node, Refine):
             return node
+
+def take_refine(stmts: list[Statement]) -> Refine:
+    for node in take_nodes(stmts, ["refine"]):
+        if isinstance(node, Refine):
+            return node
+    raise ValueError("No refine in stmts")
 
 def take_refines(stmts: list[Statement]) -> list[Refine]:
     res = []
@@ -4592,10 +4784,16 @@ def take_refines(stmts: list[Statement]) -> list[Refine]:
             res.append(node)
     return res
 
-def take_revision(stmts: list[Statement]) -> ?Revision:
+def take_opt_revision(stmts: list[Statement]) -> ?Revision:
     for node in take_nodes(stmts, ["revision"]):
         if isinstance(node, Revision):
             return node
+
+def take_revision(stmts: list[Statement]) -> Revision:
+    for node in take_nodes(stmts, ["revision"]):
+        if isinstance(node, Revision):
+            return node
+    raise ValueError("No revision in stmts")
 
 def take_revisions(stmts: list[Statement]) -> list[Revision]:
     res = []
@@ -4604,10 +4802,16 @@ def take_revisions(stmts: list[Statement]) -> list[Revision]:
             res.append(node)
     return res
 
-def take_rpc(stmts: list[Statement]) -> ?Rpc:
+def take_opt_rpc(stmts: list[Statement]) -> ?Rpc:
     for node in take_nodes(stmts, ["rpc"]):
         if isinstance(node, Rpc):
             return node
+
+def take_rpc(stmts: list[Statement]) -> Rpc:
+    for node in take_nodes(stmts, ["rpc"]):
+        if isinstance(node, Rpc):
+            return node
+    raise ValueError("No rpc in stmts")
 
 def take_rpcs(stmts: list[Statement]) -> list[Rpc]:
     res = []
@@ -4616,10 +4820,16 @@ def take_rpcs(stmts: list[Statement]) -> list[Rpc]:
             res.append(node)
     return res
 
-def take_submodule(stmts: list[Statement]) -> ?Submodule:
+def take_opt_submodule(stmts: list[Statement]) -> ?Submodule:
     for node in take_nodes(stmts, ["submodule"]):
         if isinstance(node, Submodule):
             return node
+
+def take_submodule(stmts: list[Statement]) -> Submodule:
+    for node in take_nodes(stmts, ["submodule"]):
+        if isinstance(node, Submodule):
+            return node
+    raise ValueError("No submodule in stmts")
 
 def take_submodules(stmts: list[Statement]) -> list[Submodule]:
     res = []
@@ -4628,10 +4838,16 @@ def take_submodules(stmts: list[Statement]) -> list[Submodule]:
             res.append(node)
     return res
 
-def take_type(stmts: list[Statement]) -> ?Type:
+def take_opt_type(stmts: list[Statement]) -> ?Type:
     for node in take_nodes(stmts, ["type"]):
         if isinstance(node, Type):
             return node
+
+def take_type(stmts: list[Statement]) -> Type:
+    for node in take_nodes(stmts, ["type"]):
+        if isinstance(node, Type):
+            return node
+    raise ValueError("No type in stmts")
 
 def take_types(stmts: list[Statement]) -> list[Type]:
     res = []
@@ -4640,10 +4856,16 @@ def take_types(stmts: list[Statement]) -> list[Type]:
             res.append(node)
     return res
 
-def take_typedef(stmts: list[Statement]) -> ?Typedef:
+def take_opt_typedef(stmts: list[Statement]) -> ?Typedef:
     for node in take_nodes(stmts, ["typedef"]):
         if isinstance(node, Typedef):
             return node
+
+def take_typedef(stmts: list[Statement]) -> Typedef:
+    for node in take_nodes(stmts, ["typedef"]):
+        if isinstance(node, Typedef):
+            return node
+    raise ValueError("No typedef in stmts")
 
 def take_typedefs(stmts: list[Statement]) -> list[Typedef]:
     res = []
@@ -4652,10 +4874,16 @@ def take_typedefs(stmts: list[Statement]) -> list[Typedef]:
             res.append(node)
     return res
 
-def take_uses(stmts: list[Statement]) -> ?Uses:
+def take_opt_uses(stmts: list[Statement]) -> ?Uses:
     for node in take_nodes(stmts, ["uses"]):
         if isinstance(node, Uses):
             return node
+
+def take_uses(stmts: list[Statement]) -> Uses:
+    for node in take_nodes(stmts, ["uses"]):
+        if isinstance(node, Uses):
+            return node
+    raise ValueError("No uses in stmts")
 
 def take_usess(stmts: list[Statement]) -> list[Uses]:
     res = []
@@ -4670,12 +4898,12 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "action":
         if arg is not None:
             n = Action(arg,
-                       description=take_str(ss, "description"),
+                       description=take_opt_str(ss, "description"),
                        if_feature=take_strlist(ss, "if-feature"),
-                       input=take_input(ss),
-                       output=take_output(ss),
-                       reference=take_str(ss, "reference"),
-                       status=take_str(ss, "status"),
+                       input=take_opt_input(ss),
+                       output=take_opt_output(ss),
+                       reference=take_opt_str(ss, "reference"),
+                       status=take_opt_str(ss, "status"),
                        children=take_nodes(ss, ["grouping", "typedef"])
                        )
             if len(ss) > 0:
@@ -4684,14 +4912,14 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "anydata":
         if arg is not None:
             n = Anydata(arg,
-                        config=take_bool(ss, "config"),
-                        description=take_str(ss, "description"),
+                        config=take_opt_bool(ss, "config"),
+                        description=take_opt_str(ss, "description"),
                         if_feature=take_strlist(ss, "if-feature"),
-                        mandatory=take_bool(ss, "mandatory"),
+                        mandatory=take_opt_bool(ss, "mandatory"),
                         must=take_musts(ss),
-                        reference=take_str(ss, "reference"),
-                        status=take_str(ss, "status"),
-                        when=take_str(ss, "when")
+                        reference=take_opt_str(ss, "reference"),
+                        status=take_opt_str(ss, "status"),
+                        when=take_opt_str(ss, "when")
                         )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under anydata: " + ss[0].kw)
@@ -4699,14 +4927,14 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "anyxml":
         if arg is not None:
             n = Anyxml(arg,
-                       config=take_bool(ss, "config"),
-                       description=take_str(ss, "description"),
+                       config=take_opt_bool(ss, "config"),
+                       description=take_opt_str(ss, "description"),
                        if_feature=take_strlist(ss, "if-feature"),
-                       mandatory=take_bool(ss, "mandatory"),
+                       mandatory=take_opt_bool(ss, "mandatory"),
                        must=take_musts(ss),
-                       reference=take_str(ss, "reference"),
-                       status=take_str(ss, "status"),
-                       when=take_str(ss, "when")
+                       reference=take_opt_str(ss, "reference"),
+                       status=take_opt_str(ss, "status"),
+                       when=take_opt_str(ss, "when")
                        )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under anyxml: " + ss[0].kw)
@@ -4714,11 +4942,11 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "augment":
         if arg is not None:
             n = Augment(arg,
-                        description=take_str(ss, "description"),
+                        description=take_opt_str(ss, "description"),
                         if_feature=take_strlist(ss, "if-feature"),
-                        reference=take_str(ss, "reference"),
-                        status=take_str(ss, "status"),
-                        when=take_str(ss, "when"),
+                        reference=take_opt_str(ss, "reference"),
+                        status=take_opt_str(ss, "status"),
+                        when=take_opt_str(ss, "when"),
                         children=take_nodes(ss, ["action", "anydata", "anyxml", "case", "choice", "container", "leaf", "leaf-list", "list", "notification", "uses"])
                         )
             if len(ss) > 0:
@@ -4727,7 +4955,7 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "belongs-to":
         if arg is not None:
             n = BelongsTo(arg,
-                           prefix=take_str(ss, "prefix")
+                           prefix=take_opt_str(ss, "prefix")
                            )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under belongs-to: " + ss[0].kw)
@@ -4735,11 +4963,11 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "bit":
         if arg is not None:
             n = Bit(arg,
-                    description=take_str(ss, "description"),
+                    description=take_opt_str(ss, "description"),
                     if_feature=take_strlist(ss, "if-feature"),
-                    position=take_int(ss, "position"),
-                    reference=take_str(ss, "reference"),
-                    status=take_str(ss, "status")
+                    position=take_opt_int(ss, "position"),
+                    reference=take_opt_str(ss, "reference"),
+                    status=take_opt_str(ss, "status")
                     )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under bit: " + ss[0].kw)
@@ -4747,11 +4975,11 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "case":
         if arg is not None:
             n = Case(arg,
-                     description=take_str(ss, "description"),
+                     description=take_opt_str(ss, "description"),
                      if_feature=take_strlist(ss, "if-feature"),
-                     reference=take_str(ss, "reference"),
-                     status=take_str(ss, "status"),
-                     when=take_str(ss, "when"),
+                     reference=take_opt_str(ss, "reference"),
+                     status=take_opt_str(ss, "status"),
+                     when=take_opt_str(ss, "when"),
                      children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "leaf", "leaf-list", "list", "uses"])
                      )
             if len(ss) > 0:
@@ -4760,14 +4988,14 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "choice":
         if arg is not None:
             n = Choice(arg,
-                       config=take_bool(ss, "config"),
-                       default=take_str(ss, "default"),
-                       description=take_str(ss, "description"),
+                       config=take_opt_bool(ss, "config"),
+                       default=take_opt_str(ss, "default"),
+                       description=take_opt_str(ss, "description"),
                        if_feature=take_strlist(ss, "if-feature"),
-                       mandatory=take_bool(ss, "mandatory"),
-                       reference=take_str(ss, "reference"),
-                       status=take_str(ss, "status"),
-                       when=take_str(ss, "when"),
+                       mandatory=take_opt_bool(ss, "mandatory"),
+                       reference=take_opt_str(ss, "reference"),
+                       status=take_opt_str(ss, "status"),
+                       when=take_opt_str(ss, "when"),
                        children=take_nodes(ss, ["anydata", "anyxml", "case", "choice", "container", "leaf", "leaf-list", "list"])
                        )
             if len(ss) > 0:
@@ -4776,14 +5004,14 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "container":
         if arg is not None:
             n = Container_(arg,
-                          config=take_bool(ss, "config"),
-                          description=take_str(ss, "description"),
+                          config=take_opt_bool(ss, "config"),
+                          description=take_opt_str(ss, "description"),
                           if_feature=take_strlist(ss, "if-feature"),
                           must=take_musts(ss),
-                          presence=take_str(ss, "presence"),
-                          reference=take_str(ss, "reference"),
-                          status=take_str(ss, "status"),
-                          when=take_str(ss, "when"),
+                          presence=take_opt_str(ss, "presence"),
+                          reference=take_opt_str(ss, "reference"),
+                          status=take_opt_str(ss, "status"),
+                          when=take_opt_str(ss, "when"),
                           children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"])
                           )
             if len(ss) > 0:
@@ -4792,11 +5020,11 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "enum":
         if arg is not None:
             n = Enum(arg,
-                     description=take_str(ss, "description"),
+                     description=take_opt_str(ss, "description"),
                      if_feature=take_strlist(ss, "if-feature"),
-                     reference=take_str(ss, "reference"),
-                     status=take_str(ss, "status"),
-                     value=take_str(ss, "value")
+                     reference=take_opt_str(ss, "reference"),
+                     status=take_opt_str(ss, "status"),
+                     value=take_opt_str(ss, "value")
                      )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under enum: " + ss[0].kw)
@@ -4804,10 +5032,10 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "extension":
         if arg is not None:
             n = Extension(arg,
-                          argument=take_str(ss, "argument"),
-                          description=take_str(ss, "description"),
-                          reference=take_str(ss, "reference"),
-                          status=take_str(ss, "status")
+                          argument=take_opt_str(ss, "argument"),
+                          description=take_opt_str(ss, "description"),
+                          reference=take_opt_str(ss, "reference"),
+                          status=take_opt_str(ss, "status")
                           )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under extension: " + ss[0].kw)
@@ -4815,10 +5043,10 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "feature":
         if arg is not None:
             n = Feature(arg,
-                        description=take_str(ss, "description"),
+                        description=take_opt_str(ss, "description"),
                         if_feature=take_strlist(ss, "if-feature"),
-                        reference=take_str(ss, "reference"),
-                        status=take_str(ss, "status")
+                        reference=take_opt_str(ss, "reference"),
+                        status=take_opt_str(ss, "status")
                         )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under feature: " + ss[0].kw)
@@ -4826,9 +5054,9 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "grouping":
         if arg is not None:
             n = Grouping(arg,
-                         description=take_str(ss, "description"),
-                         reference=take_str(ss, "reference"),
-                         status=take_str(ss, "status"),
+                         description=take_opt_str(ss, "description"),
+                         reference=take_opt_str(ss, "reference"),
+                         status=take_opt_str(ss, "status"),
                          children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"])
                          )
             if len(ss) > 0:
@@ -4838,10 +5066,10 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
         if arg is not None:
             n = Identity_(arg,
                          base=take_strlist(ss, "base"),
-                         description=take_str(ss, "description"),
+                         description=take_opt_str(ss, "description"),
                          if_feature=take_strlist(ss, "if-feature"),
-                         reference=take_str(ss, "reference"),
-                         status=take_str(ss, "status")
+                         reference=take_opt_str(ss, "reference"),
+                         status=take_opt_str(ss, "status")
                          )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under identity: " + ss[0].kw)
@@ -4849,10 +5077,10 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "import":
         if arg is not None:
             n = Import(arg,
-                       description=take_str(ss, "description"),
-                       prefix=take_str(ss, "prefix"),
-                       reference=take_str(ss, "reference"),
-                       revision_date=take_str(ss, "revision-date")
+                       description=take_opt_str(ss, "description"),
+                       prefix=take_opt_str(ss, "prefix"),
+                       reference=take_opt_str(ss, "reference"),
+                       revision_date=take_opt_str(ss, "revision-date")
                        )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under import: " + ss[0].kw)
@@ -4860,9 +5088,9 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "include":
         if arg is not None:
             n = Include(arg,
-                        description=take_str(ss, "description"),
-                        reference=take_str(ss, "reference"),
-                        revision_date=take_str(ss, "revision-date")
+                        description=take_opt_str(ss, "description"),
+                        reference=take_opt_str(ss, "reference"),
+                        revision_date=take_opt_str(ss, "revision-date")
                         )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under include: " + ss[0].kw)
@@ -4878,17 +5106,17 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "leaf":
         if arg is not None:
             n = Leaf(arg,
-                     config=take_bool(ss, "config"),
-                     default=take_str(ss, "default"),
-                     description=take_str(ss, "description"),
+                     config=take_opt_bool(ss, "config"),
+                     default=take_opt_str(ss, "default"),
+                     description=take_opt_str(ss, "description"),
                      if_feature=take_strlist(ss, "if-feature"),
-                     mandatory=take_bool(ss, "mandatory"),
+                     mandatory=take_opt_bool(ss, "mandatory"),
                      must=take_musts(ss),
-                     reference=take_str(ss, "reference"),
-                     status=take_str(ss, "status"),
+                     reference=take_opt_str(ss, "reference"),
+                     status=take_opt_str(ss, "status"),
                      type_=take_type(ss),
-                     units=take_str(ss, "units"),
-                     when=take_str(ss, "when")
+                     units=take_opt_str(ss, "units"),
+                     when=take_opt_str(ss, "when")
                      )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under leaf: " + ss[0].kw)
@@ -4896,19 +5124,19 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "leaf-list":
         if arg is not None:
             n = LeafList(arg,
-                          config=take_bool(ss, "config"),
+                          config=take_opt_bool(ss, "config"),
                           default=take_strlist(ss, "default"),
-                          description=take_str(ss, "description"),
+                          description=take_opt_str(ss, "description"),
                           if_feature=take_strlist(ss, "if-feature"),
-                          max_elements=take_str(ss, "max-elements"),
-                          min_elements=take_str(ss, "min-elements"),
+                          max_elements=take_opt_str(ss, "max-elements"),
+                          min_elements=take_opt_str(ss, "min-elements"),
                           must=take_musts(ss),
-                          ordered_by=take_str(ss, "ordered-by"),
-                          reference=take_str(ss, "reference"),
-                          status=take_str(ss, "status"),
+                          ordered_by=take_opt_str(ss, "ordered-by"),
+                          reference=take_opt_str(ss, "reference"),
+                          status=take_opt_str(ss, "status"),
                           type_=take_type(ss),
-                          units=take_str(ss, "units"),
-                          when=take_str(ss, "when")
+                          units=take_opt_str(ss, "units"),
+                          when=take_opt_str(ss, "when")
                           )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under leaf-list: " + ss[0].kw)
@@ -4916,10 +5144,10 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "length":
         if arg is not None:
             n = Length(arg,
-                       description=take_str(ss, "description"),
-                       error_app_tag=take_str(ss, "error-app-tag"),
-                       error_message=take_str(ss, "error-message"),
-                       reference=take_str(ss, "reference")
+                       description=take_opt_str(ss, "description"),
+                       error_app_tag=take_opt_str(ss, "error-app-tag"),
+                       error_message=take_opt_str(ss, "error-message"),
+                       reference=take_opt_str(ss, "reference")
                        )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under length: " + ss[0].kw)
@@ -4927,18 +5155,18 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "list":
         if arg is not None:
             n = List(arg,
-                     config=take_bool(ss, "config"),
-                     description=take_str(ss, "description"),
+                     config=take_opt_bool(ss, "config"),
+                     description=take_opt_str(ss, "description"),
                      if_feature=take_strlist(ss, "if-feature"),
-                     key=take_str(ss, "key"),
-                     max_elements=take_str(ss, "max-elements"),
-                     min_elements=take_str(ss, "min-elements"),
+                     key=take_opt_str(ss, "key"),
+                     max_elements=take_opt_str(ss, "max-elements"),
+                     min_elements=take_opt_str(ss, "min-elements"),
                      must=take_musts(ss),
-                     ordered_by=take_str(ss, "ordered-by"),
-                     reference=take_str(ss, "reference"),
-                     status=take_str(ss, "status"),
+                     ordered_by=take_opt_str(ss, "ordered-by"),
+                     reference=take_opt_str(ss, "reference"),
+                     status=take_opt_str(ss, "status"),
                      unique=take_strlist(ss, "unique"),
-                     when=take_str(ss, "when"),
+                     when=take_opt_str(ss, "when"),
                      children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"])
                      )
             if len(ss) > 0:
@@ -4948,17 +5176,17 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
         if arg is not None:
             n = Module(arg,
                        augment=take_augments(ss),
-                       contact=take_str(ss, "contact"),
-                       description=take_str(ss, "description"),
+                       contact=take_opt_str(ss, "contact"),
+                       description=take_opt_str(ss, "description"),
                        deviation=take_strlist(ss, "deviation"),
                        extension_=take_extensions(ss),
                        feature=take_features(ss),
                        import_=take_imports(ss),
                        include=take_includes(ss),
-                       namespace=take_str(ss, "namespace"),
-                       organization=take_str(ss, "organization"),
-                       prefix=take_str(ss, "prefix"),
-                       reference=take_str(ss, "reference"),
+                       namespace=take_opt_str(ss, "namespace"),
+                       organization=take_opt_str(ss, "organization"),
+                       prefix=take_opt_str(ss, "prefix"),
+                       reference=take_opt_str(ss, "reference"),
                        revision=take_revisions(ss),
                        yang_version=take_str(ss, "yang-version"),
                        children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "identity", "leaf", "leaf-list", "list", "notification", "rpc", "typedef", "uses"])
@@ -4969,10 +5197,10 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "must":
         if arg is not None:
             n = Must(arg,
-                     description=take_str(ss, "description"),
-                     error_app_tag=take_str(ss, "error-app-tag"),
-                     error_message=take_str(ss, "error-message"),
-                     reference=take_str(ss, "reference")
+                     description=take_opt_str(ss, "description"),
+                     error_app_tag=take_opt_str(ss, "error-app-tag"),
+                     error_message=take_opt_str(ss, "error-message"),
+                     reference=take_opt_str(ss, "reference")
                      )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under must: " + ss[0].kw)
@@ -4980,11 +5208,11 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "notification":
         if arg is not None:
             n = Notification(arg,
-                             description=take_str(ss, "description"),
+                             description=take_opt_str(ss, "description"),
                              if_feature=take_strlist(ss, "if-feature"),
                              must=take_musts(ss),
-                             reference=take_str(ss, "reference"),
-                             status=take_str(ss, "status"),
+                             reference=take_opt_str(ss, "reference"),
+                             status=take_opt_str(ss, "status"),
                              children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "typedef", "uses"])
                              )
             if len(ss) > 0:
@@ -5001,11 +5229,11 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "pattern":
         if arg is not None:
             n = Pattern(arg,
-                        description=take_str(ss, "description"),
-                        error_app_tag=take_str(ss, "error-app-tag"),
-                        error_message=take_str(ss, "error-message"),
-                        modifier=take_str(ss, "modifier"),
-                        reference=take_str(ss, "reference")
+                        description=take_opt_str(ss, "description"),
+                        error_app_tag=take_opt_str(ss, "error-app-tag"),
+                        error_message=take_opt_str(ss, "error-message"),
+                        modifier=take_opt_str(ss, "modifier"),
+                        reference=take_opt_str(ss, "reference")
                         )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under pattern: " + ss[0].kw)
@@ -5013,10 +5241,10 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "range":
         if arg is not None:
             n = Range(arg,
-                      description=take_str(ss, "description"),
-                      error_app_tag=take_str(ss, "error-app-tag"),
-                      error_message=take_str(ss, "error-message"),
-                      reference=take_str(ss, "reference")
+                      description=take_opt_str(ss, "description"),
+                      error_app_tag=take_opt_str(ss, "error-app-tag"),
+                      error_message=take_opt_str(ss, "error-message"),
+                      reference=take_opt_str(ss, "reference")
                       )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under range: " + ss[0].kw)
@@ -5024,16 +5252,16 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "refine":
         if arg is not None:
             n = Refine(arg,
-                       config=take_bool(ss, "config"),
-                       default=take_str(ss, "default"),
-                       description=take_str(ss, "description"),
+                       config=take_opt_bool(ss, "config"),
+                       default=take_opt_str(ss, "default"),
+                       description=take_opt_str(ss, "description"),
                        if_feature=take_strlist(ss, "if-feature"),
-                       mandatory=take_bool(ss, "mandatory"),
-                       max_elements=take_str(ss, "max-elements"),
-                       min_elements=take_str(ss, "min-elements"),
+                       mandatory=take_opt_bool(ss, "mandatory"),
+                       max_elements=take_opt_str(ss, "max-elements"),
+                       min_elements=take_opt_str(ss, "min-elements"),
                        must=take_musts(ss),
-                       presence=take_str(ss, "presence"),
-                       reference=take_str(ss, "reference")
+                       presence=take_opt_str(ss, "presence"),
+                       reference=take_opt_str(ss, "reference")
                        )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under refine: " + ss[0].kw)
@@ -5041,8 +5269,8 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "revision":
         if arg is not None:
             n = Revision(arg,
-                         description=take_str(ss, "description"),
-                         reference=take_str(ss, "reference")
+                         description=take_opt_str(ss, "description"),
+                         reference=take_opt_str(ss, "reference")
                          )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under revision: " + ss[0].kw)
@@ -5050,12 +5278,12 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "rpc":
         if arg is not None:
             n = Rpc(arg,
-                    description=take_str(ss, "description"),
+                    description=take_opt_str(ss, "description"),
                     if_feature=take_strlist(ss, "if-feature"),
-                    input=take_input(ss),
-                    output=take_output(ss),
-                    reference=take_str(ss, "reference"),
-                    status=take_str(ss, "status"),
+                    input=take_opt_input(ss),
+                    output=take_opt_output(ss),
+                    reference=take_opt_str(ss, "reference"),
+                    status=take_opt_str(ss, "status"),
                     children=take_nodes(ss, ["grouping", "typedef"])
                     )
             if len(ss) > 0:
@@ -5066,15 +5294,15 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
             n = Submodule(arg,
                           augment=take_augments(ss),
                           belongs_to=take_belongs_to(ss),
-                          contact=take_str(ss, "contact"),
-                          description=take_str(ss, "description"),
+                          contact=take_opt_str(ss, "contact"),
+                          description=take_opt_str(ss, "description"),
                           deviation=take_strlist(ss, "deviation"),
                           extension_=take_extensions(ss),
                           feature=take_features(ss),
                           import_=take_imports(ss),
                           include=take_includes(ss),
-                          organization=take_str(ss, "organization"),
-                          reference=take_str(ss, "reference"),
+                          organization=take_opt_str(ss, "organization"),
+                          reference=take_opt_str(ss, "reference"),
                           revision=take_revisions(ss),
                           yang_version=take_str(ss, "yang-version"),
                           children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "identity", "leaf", "leaf-list", "list", "notification", "rpc", "typedef", "uses"])
@@ -5088,12 +5316,12 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      base=take_strlist(ss, "base"),
                      bit=take_bits(ss),
                      enum=take_enums(ss),
-                     fraction_digits=take_int(ss, "fraction-digits"),
-                     length=take_length(ss),
-                     path=take_str(ss, "path"),
+                     fraction_digits=take_opt_int(ss, "fraction-digits"),
+                     length=take_opt_length(ss),
+                     path=take_opt_str(ss, "path"),
                      pattern=take_patterns(ss),
-                     range_=take_range(ss),
-                     require_instance=take_bool(ss, "require-instance"),
+                     range_=take_opt_range(ss),
+                     require_instance=take_opt_bool(ss, "require-instance"),
                      type_=take_types(ss)
                      )
             if len(ss) > 0:
@@ -5102,12 +5330,12 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
     if stmt.kw == "typedef":
         if arg is not None:
             n = Typedef(arg,
-                        default=take_str(ss, "default"),
-                        description=take_str(ss, "description"),
-                        reference=take_str(ss, "reference"),
-                        status=take_str(ss, "status"),
+                        default=take_opt_str(ss, "default"),
+                        description=take_opt_str(ss, "description"),
+                        reference=take_opt_str(ss, "reference"),
+                        status=take_opt_str(ss, "status"),
                         type_=take_type(ss),
-                        units=take_str(ss, "units")
+                        units=take_opt_str(ss, "units")
                         )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under typedef: " + ss[0].kw)
@@ -5116,12 +5344,12 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
         if arg is not None:
             n = Uses(arg,
                      augment=take_augments(ss),
-                     description=take_str(ss, "description"),
+                     description=take_opt_str(ss, "description"),
                      if_feature=take_strlist(ss, "if-feature"),
-                     reference=take_str(ss, "reference"),
+                     reference=take_opt_str(ss, "reference"),
                      refine=take_refines(ss),
-                     status=take_str(ss, "status"),
-                     when=take_str(ss, "when")
+                     status=take_opt_str(ss, "status"),
+                     when=take_opt_str(ss, "when")
                      )
             if len(ss) > 0:
                 raise ValueError("Invalid statement under uses: " + ss[0].kw)
