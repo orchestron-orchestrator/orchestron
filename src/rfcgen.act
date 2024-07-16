@@ -417,7 +417,7 @@ snode_methods = {
     "leaf": {
         # TODO: keep track of constraints in the derived type(s) that we resolve
         "compile": """    def compile(self, context: Context):
-        base_typedef = self.get_type().resolve_typedef(context)
+        base_typedef = self.type_.resolve_typedef(context)
 
         new_default = self.default
         if new_default is None:
@@ -442,13 +442,6 @@ snode_methods = {
         return new
 
 """,
-        "get_type": """    def get_type(self) -> Type:
-        selftype = self.type_
-        if selftype is not None:
-            return selftype
-        raise ValueError("Leaf %s has no type" % self.name)
-
-""",
         "to_dnode": """    def to_dnode(self) -> DLeaf:
         return DLeaf(
             name=self.name,
@@ -458,7 +451,7 @@ snode_methods = {
             must=self.must,
             reference=self.reference,
             status=self.status,
-            type_=self.get_type(),
+            type_=self.type_,
             units=self.units,
             when=self.when
         )
@@ -468,7 +461,7 @@ snode_methods = {
     "leaf-list": {
         # TODO: keep track of constraints in the derived type(s) that we resolve
         "compile": """    def compile(self, context: Context):
-        base_typedef = self.get_type().resolve_typedef(context)
+        base_typedef = self.type_.resolve_typedef(context)
 
         new_units = self.units
         if new_units is None:
@@ -489,13 +482,6 @@ snode_methods = {
                        units=new_units,
                        when=self.when)
         return new
-
-""",
-        "get_type": """    def get_type(self) -> Type:
-        selftype = self.type_
-        if selftype is not None:
-            return selftype
-        raise ValueError("Leaf-list %s has no type" % self.name)
 
 """,
         "get_max_elements": """    def get_max_elements(self) -> ?int:
@@ -523,7 +509,7 @@ snode_methods = {
             must=self.must,
             reference=self.reference,
             status=self.status,
-            type_=self.get_type(),
+            type_=self.type_,
             units=self.units,
             when=self.when
         )
@@ -536,7 +522,7 @@ snode_methods = {
             resolved_union_types = []
             # Resolve union types
             for ut in self.type_:
-                resolved_ut = ut.resolve_typedef(context).get_type()
+                resolved_ut = ut.resolve_typedef(context).type_
                 resolved_union_types.append(resolved_ut)
             self.type_ = resolved_union_types
             return self
@@ -549,11 +535,11 @@ snode_methods = {
             return Typedef(self.name, type_=self.resolve_union_types(context))
         td = self.get_typedef(self.name, context)
         for i in range(RECURSION_LIMIT+1):
-            if td.get_type().name in _builtin_types:
-                new_t = td.get_type().resolve_union_types(context)
+            if td.type_.name in _builtin_types:
+                new_t = td.type_.resolve_union_types(context)
                 td.type_ = new_t
                 return td
-            td = td.get_type().resolve_typedef(context)
+            td = td.type_.resolve_typedef(context)
             if i == RECURSION_LIMIT:
                 raise ValueError("Recursion limit reached for typedef %s" % self.name)
         raise ValueError("Unable to resolve typedef %s" % self.name)
@@ -562,7 +548,7 @@ snode_methods = {
     },
     "typedef": {
         "compile": """    def compile(self, context: Context):
-        base_typedef = self.get_type().resolve_typedef(context)
+        base_typedef = self.type_.resolve_typedef(context)
 
         new_default = self.default
         if new_default is None:
@@ -580,13 +566,6 @@ snode_methods = {
                       type_=base_typedef.type_,
                       units=new_units)
         return new
-
-""",
-        "get_type": """    def get_type(self) -> Type:
-        selftype = self.type_
-        if selftype is not None:
-            return selftype
-        raise ValueError("Typedef %s has no type" % self.name)
 
 """,
     },

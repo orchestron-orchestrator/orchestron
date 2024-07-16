@@ -2722,7 +2722,7 @@ class Leaf(SchemaNodeOuter):
         return "\n".join(res)
 
     def compile(self, context: Context):
-        base_typedef = self.get_type().resolve_typedef(context)
+        base_typedef = self.type_.resolve_typedef(context)
 
         new_default = self.default
         if new_default is None:
@@ -2746,12 +2746,6 @@ class Leaf(SchemaNodeOuter):
                    when=self.when)
         return new
 
-    def get_type(self) -> Type:
-        selftype = self.type_
-        if selftype is not None:
-            return selftype
-        raise ValueError("Leaf %s has no type" % self.name)
-
     def to_dnode(self) -> DLeaf:
         return DLeaf(
             name=self.name,
@@ -2761,7 +2755,7 @@ class Leaf(SchemaNodeOuter):
             must=self.must,
             reference=self.reference,
             status=self.status,
-            type_=self.get_type(),
+            type_=self.type_,
             units=self.units,
             when=self.when
         )
@@ -2853,7 +2847,7 @@ class LeafList(SchemaNodeOuter):
         return "\n".join(res)
 
     def compile(self, context: Context):
-        base_typedef = self.get_type().resolve_typedef(context)
+        base_typedef = self.type_.resolve_typedef(context)
 
         new_units = self.units
         if new_units is None:
@@ -2874,12 +2868,6 @@ class LeafList(SchemaNodeOuter):
                        units=new_units,
                        when=self.when)
         return new
-
-    def get_type(self) -> Type:
-        selftype = self.type_
-        if selftype is not None:
-            return selftype
-        raise ValueError("Leaf-list %s has no type" % self.name)
 
     def get_max_elements(self) -> ?int:
         selfmax_elements = self.max_elements
@@ -2904,7 +2892,7 @@ class LeafList(SchemaNodeOuter):
             must=self.must,
             reference=self.reference,
             status=self.status,
-            type_=self.get_type(),
+            type_=self.type_,
             units=self.units,
             when=self.when
         )
@@ -4069,7 +4057,7 @@ class Type(SchemaNodeOuter):
             resolved_union_types = []
             # Resolve union types
             for ut in self.type_:
-                resolved_ut = ut.resolve_typedef(context).get_type()
+                resolved_ut = ut.resolve_typedef(context).type_
                 resolved_union_types.append(resolved_ut)
             self.type_ = resolved_union_types
             return self
@@ -4081,11 +4069,11 @@ class Type(SchemaNodeOuter):
             return Typedef(self.name, type_=self.resolve_union_types(context))
         td = self.get_typedef(self.name, context)
         for i in range(RECURSION_LIMIT+1):
-            if td.get_type().name in _builtin_types:
-                new_t = td.get_type().resolve_union_types(context)
+            if td.type_.name in _builtin_types:
+                new_t = td.type_.resolve_union_types(context)
                 td.type_ = new_t
                 return td
-            td = td.get_type().resolve_typedef(context)
+            td = td.type_.resolve_typedef(context)
             if i == RECURSION_LIMIT:
                 raise ValueError("Recursion limit reached for typedef %s" % self.name)
         raise ValueError("Unable to resolve typedef %s" % self.name)
@@ -4168,7 +4156,7 @@ class Typedef(SchemaNodeOuter):
         return "\n".join(res)
 
     def compile(self, context: Context):
-        base_typedef = self.get_type().resolve_typedef(context)
+        base_typedef = self.type_.resolve_typedef(context)
 
         new_default = self.default
         if new_default is None:
@@ -4186,12 +4174,6 @@ class Typedef(SchemaNodeOuter):
                       type_=base_typedef.type_,
                       units=new_units)
         return new
-
-    def get_type(self) -> Type:
-        selftype = self.type_
-        if selftype is not None:
-            return selftype
-        raise ValueError("Typedef %s has no type" % self.name)
 
     def __str__(self):
         return "Typedef " + self.name

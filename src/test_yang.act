@@ -129,6 +129,7 @@ test_yang = """module test_yang {
 """
 
 test_submodule = """submodule test_submodule {
+  yang-version "1.1";
   belongs-to test_yang {
     prefix "sub1";
   }
@@ -543,6 +544,7 @@ def _test_prsrc_uses():
 
 def _test_is_config1():
     ys = """module foo {
+  yang-version "1.1";
   container c1 {
     container c2 {
       leaf l1 {
@@ -561,6 +563,7 @@ def _test_is_config1():
 
 def _test_is_config2():
     ys = """module foo {
+  yang-version "1.1";
   container c1 {
     container c2 {
       config false;
@@ -580,6 +583,7 @@ def _test_is_config2():
 
 def _test_compile_type1():
     ys = """module foo {
+  yang-version "1.1";
   typedef domain-name {
     type string {
       length "1..253";
@@ -620,6 +624,7 @@ def _test_compile_type1():
 
 def _test_compile_type2():
     ys = """module foo {
+  yang-version "1.1";
   typedef td1 {
     type string {
       length "1..10";
@@ -665,6 +670,7 @@ def _test_compile_type2():
 
 def _test_compile_type3():
     ys = """module foo {
+  yang-version "1.1";
   typedef td1 {
     type string {
       length "1..10";
@@ -703,6 +709,7 @@ def _test_compile_type3():
 
 def _test_compile_type_in_imported_module():
     ys_foo = """module foo {
+  yang-version "1.1";
   typedef td1 {
     type string {
       length "1..10";
@@ -710,6 +717,7 @@ def _test_compile_type_in_imported_module():
   }
 }"""
     ys_bar = """module bar {
+  yang-version "1.1";
   import foo {
     prefix "f";
   }
@@ -737,6 +745,7 @@ def _test_compile_type_in_imported_module():
 
 def _test_compile_uses():
     ys = """module foo {
+  yang-version "1.1";
   grouping g1 {
     container c1 {
       list li1 {
@@ -763,6 +772,7 @@ def _test_compile_uses():
 
 def _test_compile_imported_grouping():
     ys_foo = """module foo {
+  yang-version "1.1";
   grouping g1 {
     container c1 {
       list li1 {
@@ -779,6 +789,7 @@ def _test_compile_imported_grouping():
   }
 }"""
     ys_bar = """module bar {
+  yang-version "1.1";
   import foo {
     prefix "f";
   }
@@ -799,6 +810,7 @@ def _test_compile_imported_grouping():
 
 def _test_compile_augment():
     ys = """module foo {
+  yang-version "1.1";
   container c1 {
     leaf l1 {
       type string;
@@ -821,6 +833,7 @@ def _test_compile_augment():
 
 def _test_compile_augment_import():
     ys_foo = """module foo {
+  yang-version "1.1";
   container c1 {
     leaf l1 {
       type string;
@@ -829,6 +842,7 @@ def _test_compile_augment_import():
   }
 }"""
     ys_bar = """module bar {
+  yang-version "1.1";
   import foo {
     prefix "f";
   }
@@ -853,6 +867,7 @@ def _test_compile_augment_import():
 def _test_compile_uses_augment():
     """Augmenting a grouping"""
     ys = """module foo {
+  yang-version "1.1";
   grouping g1 {
     container c1 {
       leaf l1 {
@@ -880,6 +895,7 @@ def _test_compile_uses_augment():
 def _test_compile_augment_uses():
     """Augmenting a grouping"""
     ys = """module foo {
+  yang-version "1.1";
   grouping g1 {
     container c2 {
       leaf l1 {
@@ -913,6 +929,7 @@ def _test_compile_augment_uses():
 def _test_compile_augment_absolute_path_under_uses():
     """Augmenting a grouping"""
     ys = """module foo {
+  yang-version "1.1";
   grouping g1 {
     container c1 {
       leaf l1 {
@@ -943,6 +960,7 @@ def _test_compile_augment_absolute_path_under_uses():
 def _test_compile_augment_relative_path_under_module():
     """Augmenting a grouping"""
     ys = """module foo {
+  yang-version "1.1";
   grouping g1 {
     container c1 {
       leaf l1 {
@@ -971,6 +989,7 @@ def _test_compile_augment_relative_path_under_module():
 
 def _test_compile_choice():
     ys = """module foo {
+  yang-version "1.1";
   container c1 {
     choice ch1 {
       case cs1 {
