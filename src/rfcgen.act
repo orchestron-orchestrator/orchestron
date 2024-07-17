@@ -359,6 +359,14 @@ snode_methods = {
         raise ValueError("Module %s has no prefix" % self.name)
 
 """,
+        "get_revision": """    def get_revision(self) -> ?Revision:
+        latest = None
+        for rev in self.revision:
+            if latest is None or (latest is not None and rev.date > latest.date):
+                latest = rev
+        return latest
+
+""",
         "to_dnode": """    def to_dnode(self) -> DModule:
         new_dnode = DModule(
             name=self.name,

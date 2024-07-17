@@ -626,14 +626,36 @@ class Context(object):
 
     def add_module(self, module: Module):
         # TODO: handle revision
-        current_revision = None
-        for rev in module.revision:
-            if current_revision is None or (current_revision is not None and rev.date > current_revision):
-                current_revision = rev.date
-        self.modules[ModRev(module.name, current_revision)] = module
+        latest_revision = module.get_revision()
+        self.modules[ModRev(module.name, latest_revision.date if latest_revision is not None else None)] = module
+        # Now also add the module itself without revision
+        no_rev_mod = ModRev(module.name, None)
+        if no_rev_mod in self.modules:
+            existing_revision = self.modules[no_rev_mod].get_revision()
+            if existing_revision is not None and latest_revision is not None:
+                if latest_revision.date > existing_revision.date:
+                    # Currently added module has a revision that is newer, so it
+                    # should replace the existing module
+                    self.modules[no_rev_mod] = module
+                # Otherwise, the existing module is newer, so we should keep it
+                return
+            elif existing_revision is None and latest_revision is not None:
+                # Currently added module has a revision, but existing module does not
+                # so we presume that we're adding a newer version of the module
+                self.modules[no_rev_mod] = module
+            # Otherwise, both modules have no revision, so we keep the existing one
+            return
+        else: # No module with this name exists yet
+            self.modules[no_rev_mod] = module
 
     def get_module(self, modname: str, rev: ?str) -> Module:
-        return self.modules[ModRev(modname, rev)]
+        for mod in self.modules:
+            modrev = mod.rev
+        try:
+            mod = self.modules[ModRev(modname, rev)]
+            return mod
+        except KeyError:
+            raise ValueError("Module %s rev %s not found in compilation context" % (modname, rev if rev is not None else ""))
 
 
 class SchemaNode(object):
