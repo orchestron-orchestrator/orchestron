@@ -688,6 +688,10 @@ class SchemaNode(object):
             for child in self.children:
                 if isinstance(child, Grouping):
                     continue
+                if isinstance(child, Identity_):
+                    continue
+                if isinstance(child, Typedef):
+                    continue
                 new_children.append(child.to_dnode())
             return new_children
         raise ValueError("get_dnode_children() called on non-inner node %s" % type(self))
