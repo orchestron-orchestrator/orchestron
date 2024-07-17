@@ -908,7 +908,13 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         res.append("            n = %s(%s\n" % (_class_name(stmt_name), joiner.join(attrs_takers)) + indent + ")")
 
         res.append("            if len(ss) > 0:")
-        res.append("                raise ValueError(\"Invalid statement under %s: \" + ss[0].kw)" % stmt_name)
+        res.append("                name = ss[0].kw")
+        res.append("                prefix = ss[0].prefix")
+        res.append("                if prefix is not None:")
+        res.append("                    name = prefix + \":\" + name")
+        res.append("                    print(\"Warning: Ignoring extension %s under %s\" % (name, stmt.kw))")
+        res.append("                else:")
+        res.append("                    raise ValueError(\"Invalid statement under %s: \" + name)" % stmt_name)
         res.append("            return n")
     res.append("    raise ValueError(\"Unknown statement:\" + stmt.kw)")
 

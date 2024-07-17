@@ -4898,7 +4898,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        children=take_nodes(ss, ["grouping", "typedef"])
                        )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under action: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under action: " + name)
             return n
     if stmt.kw == "anydata":
         if arg is not None:
@@ -4913,7 +4919,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         when=take_opt_str(ss, "when")
                         )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under anydata: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under anydata: " + name)
             return n
     if stmt.kw == "anyxml":
         if arg is not None:
@@ -4928,7 +4940,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        when=take_opt_str(ss, "when")
                        )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under anyxml: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under anyxml: " + name)
             return n
     if stmt.kw == "augment":
         if arg is not None:
@@ -4941,7 +4959,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         children=take_nodes(ss, ["action", "anydata", "anyxml", "case", "choice", "container", "leaf", "leaf-list", "list", "notification", "uses"])
                         )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under augment: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under augment: " + name)
             return n
     if stmt.kw == "belongs-to":
         if arg is not None:
@@ -4949,7 +4973,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                            prefix=take_opt_str(ss, "prefix")
                            )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under belongs-to: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under belongs-to: " + name)
             return n
     if stmt.kw == "bit":
         if arg is not None:
@@ -4961,7 +4991,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                     status=take_opt_str(ss, "status")
                     )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under bit: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under bit: " + name)
             return n
     if stmt.kw == "case":
         if arg is not None:
@@ -4974,7 +5010,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "leaf", "leaf-list", "list", "uses"])
                      )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under case: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under case: " + name)
             return n
     if stmt.kw == "choice":
         if arg is not None:
@@ -4990,7 +5032,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        children=take_nodes(ss, ["anydata", "anyxml", "case", "choice", "container", "leaf", "leaf-list", "list"])
                        )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under choice: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under choice: " + name)
             return n
     if stmt.kw == "container":
         if arg is not None:
@@ -5006,7 +5054,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                           children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"])
                           )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under container: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under container: " + name)
             return n
     if stmt.kw == "enum":
         if arg is not None:
@@ -5018,7 +5072,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      value=take_opt_str(ss, "value")
                      )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under enum: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under enum: " + name)
             return n
     if stmt.kw == "extension":
         if arg is not None:
@@ -5029,7 +5089,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                           status=take_opt_str(ss, "status")
                           )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under extension: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under extension: " + name)
             return n
     if stmt.kw == "feature":
         if arg is not None:
@@ -5040,7 +5106,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         status=take_opt_str(ss, "status")
                         )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under feature: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under feature: " + name)
             return n
     if stmt.kw == "grouping":
         if arg is not None:
@@ -5051,7 +5123,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                          children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"])
                          )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under grouping: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under grouping: " + name)
             return n
     if stmt.kw == "identity":
         if arg is not None:
@@ -5063,7 +5141,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                          status=take_opt_str(ss, "status")
                          )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under identity: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under identity: " + name)
             return n
     if stmt.kw == "import":
         if arg is not None:
@@ -5074,7 +5158,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        revision_date=take_opt_str(ss, "revision-date")
                        )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under import: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under import: " + name)
             return n
     if stmt.kw == "include":
         if arg is not None:
@@ -5084,7 +5174,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         revision_date=take_opt_str(ss, "revision-date")
                         )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under include: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under include: " + name)
             return n
     if stmt.kw == "input":
         if arg is None:
@@ -5092,7 +5188,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                       children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "typedef", "uses"])
                       )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under input: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under input: " + name)
             return n
     if stmt.kw == "leaf":
         if arg is not None:
@@ -5110,7 +5212,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      when=take_opt_str(ss, "when")
                      )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under leaf: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under leaf: " + name)
             return n
     if stmt.kw == "leaf-list":
         if arg is not None:
@@ -5130,7 +5238,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                           when=take_opt_str(ss, "when")
                           )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under leaf-list: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under leaf-list: " + name)
             return n
     if stmt.kw == "length":
         if arg is not None:
@@ -5141,7 +5255,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        reference=take_opt_str(ss, "reference")
                        )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under length: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under length: " + name)
             return n
     if stmt.kw == "list":
         if arg is not None:
@@ -5161,7 +5281,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"])
                      )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under list: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under list: " + name)
             return n
     if stmt.kw == "module":
         if arg is not None:
@@ -5183,7 +5309,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "identity", "leaf", "leaf-list", "list", "notification", "rpc", "typedef", "uses"])
                        )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under module: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under module: " + name)
             return n
     if stmt.kw == "must":
         if arg is not None:
@@ -5194,7 +5326,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      reference=take_opt_str(ss, "reference")
                      )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under must: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under must: " + name)
             return n
     if stmt.kw == "notification":
         if arg is not None:
@@ -5207,7 +5345,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                              children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "typedef", "uses"])
                              )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under notification: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under notification: " + name)
             return n
     if stmt.kw == "output":
         if arg is None:
@@ -5215,7 +5359,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "typedef", "uses"])
                        )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under output: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under output: " + name)
             return n
     if stmt.kw == "pattern":
         if arg is not None:
@@ -5227,7 +5377,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         reference=take_opt_str(ss, "reference")
                         )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under pattern: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under pattern: " + name)
             return n
     if stmt.kw == "range":
         if arg is not None:
@@ -5238,7 +5394,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                       reference=take_opt_str(ss, "reference")
                       )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under range: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under range: " + name)
             return n
     if stmt.kw == "refine":
         if arg is not None:
@@ -5255,7 +5417,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        reference=take_opt_str(ss, "reference")
                        )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under refine: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under refine: " + name)
             return n
     if stmt.kw == "revision":
         if arg is not None:
@@ -5264,7 +5432,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                          reference=take_opt_str(ss, "reference")
                          )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under revision: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under revision: " + name)
             return n
     if stmt.kw == "rpc":
         if arg is not None:
@@ -5278,7 +5452,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                     children=take_nodes(ss, ["grouping", "typedef"])
                     )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under rpc: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under rpc: " + name)
             return n
     if stmt.kw == "submodule":
         if arg is not None:
@@ -5299,7 +5479,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                           children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "identity", "leaf", "leaf-list", "list", "notification", "rpc", "typedef", "uses"])
                           )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under submodule: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under submodule: " + name)
             return n
     if stmt.kw == "type":
         if arg is not None:
@@ -5316,7 +5502,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      type_=take_types(ss)
                      )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under type: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under type: " + name)
             return n
     if stmt.kw == "typedef":
         if arg is not None:
@@ -5329,7 +5521,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         units=take_opt_str(ss, "units")
                         )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under typedef: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under typedef: " + name)
             return n
     if stmt.kw == "uses":
         if arg is not None:
@@ -5343,7 +5541,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      when=take_opt_str(ss, "when")
                      )
             if len(ss) > 0:
-                raise ValueError("Invalid statement under uses: " + ss[0].kw)
+                name = ss[0].kw
+                prefix = ss[0].prefix
+                if prefix is not None:
+                    name = prefix + ":" + name
+                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
+                else:
+                    raise ValueError("Invalid statement under uses: " + name)
             return n
     raise ValueError("Unknown statement:" + stmt.kw)
 
