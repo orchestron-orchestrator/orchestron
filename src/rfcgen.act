@@ -221,6 +221,8 @@ def _attr_type(name, stmt, stmts) -> str:
         t = "bool"
     elif name in {"fraction-digits", "length", "position"}:
         t = "int"
+    elif name in {"yang-version"}:
+        t = "float"
 
 
     if cardinality == "0..1" or name in {"namespace", "prefix"}:
@@ -277,6 +279,8 @@ def _attr_defval(name, stmt, stms) -> str:
     cardinality = stmt.substmts[name].cardinality
     if cardinality == "0..1" or name in {"namespace", "prefix"}:
         return "=None"
+    elif name == "yang-version":
+        return "=1.1"
     elif cardinality == "1":
         return ""
     elif cardinality == "0..n":
@@ -890,7 +894,9 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             attrs_takers.append("arg")
         for attr in kwattrs:
             attr_take = ""
-            if attr != arg_name:
+            if attr == "yang-version":
+                attr_take = "yang_version=take_yang_version(ss)"
+            elif attr != arg_name:
                 attr_take = _attr_name(attr) + "=" + _attr_taker(attr, stmt, stmts)
             attrs_takers.append(attr_take)
 

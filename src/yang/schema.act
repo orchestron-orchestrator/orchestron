@@ -994,6 +994,15 @@ def take_str(stmts: list[Statement], kw: str) -> str:
                 return arg
     raise ValueError("No %s in stmts" % kw)
 
+def take_yang_version(stmts: list[Statement]) -> float:
+    v = take_opt_str(stmts, "yang-version")
+    if v is not None:
+        # TODO: this should just be: return float(v)
+        # but a compiler bug prevents that from working
+        f = float(v)
+        return f
+    return 1.0
+
 def take_strlist(stmts: list[Statement], kw: str) -> list[str]:
     res = []
     todel = []
@@ -3141,9 +3150,9 @@ class Module(SchemaNodeInner):
     organization: ?str
     reference: ?str
     revision: list[Revision]
-    yang_version: str
+    yang_version: float
 
-    def __init__(self, name: str, namespace: ?str=None, prefix: ?str=None, yang_version: str, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], children=[]):
+    def __init__(self, name: str, namespace: ?str=None, prefix: ?str=None, yang_version: float=1.1, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], children=[]):
         self.parent = None
         for n in augment:
             n.parent = self
@@ -3873,9 +3882,9 @@ class Submodule(SchemaNodeInner):
     organization: ?str
     reference: ?str
     revision: list[Revision]
-    yang_version: str
+    yang_version: float
 
-    def __init__(self, name: str, belongs_to: BelongsTo, yang_version: str, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, belongs_to: BelongsTo, yang_version: float=1.1, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in augment:
             n.parent = self
@@ -5170,7 +5179,7 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        prefix=take_opt_str(ss, "prefix"),
                        reference=take_opt_str(ss, "reference"),
                        revision=take_revisions(ss),
-                       yang_version=take_str(ss, "yang-version"),
+                       yang_version=take_yang_version(ss),
                        children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "identity", "leaf", "leaf-list", "list", "notification", "rpc", "typedef", "uses"])
                        )
             if len(ss) > 0:
@@ -5286,7 +5295,7 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                           organization=take_opt_str(ss, "organization"),
                           reference=take_opt_str(ss, "reference"),
                           revision=take_revisions(ss),
-                          yang_version=take_str(ss, "yang-version"),
+                          yang_version=take_yang_version(ss),
                           children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "identity", "leaf", "leaf-list", "list", "notification", "rpc", "typedef", "uses"])
                           )
             if len(ss) > 0:

@@ -997,6 +997,15 @@ def take_str(stmts: list[Statement], kw: str) -> str:
                 return arg
     raise ValueError("No %s in stmts" % kw)
 
+def take_yang_version(stmts: list[Statement]) -> float:
+    v = take_opt_str(stmts, "yang-version")
+    if v is not None:
+        # TODO: this should just be: return float(v)
+        # but a compiler bug prevents that from working
+        f = float(v)
+        return f
+    return 1.0
+
 def take_strlist(stmts: list[Statement], kw: str) -> list[str]:
     res = []
     todel = []
