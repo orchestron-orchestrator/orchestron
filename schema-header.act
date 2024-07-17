@@ -218,6 +218,18 @@ class DNodeInner(DNode):
             res.append("# == This file is generated ==")
             res.append("")
             res.append("")
+
+        # Reorder children so that positional arguments, like list keys, come first
+        new_children = []
+        pos_child_idx = 0
+        for child in self.children:
+            if isinstance(child, DLeaf) and child.is_key():
+                new_children.insert(pos_child_idx, child)
+                pos_child_idx += 1
+            else:
+                new_children.append(child)
+        self.children = new_children
+
         for child in self.children:
             if isinstance(child, DNodeInner):
                 res.append(child.prdaclass(strict=strict, top=False))
@@ -544,6 +556,13 @@ class DLeaf(DNodeLeaf):
         self.type_ = type_
         self.units = units
         self.when = when
+
+    def is_key(self) -> bool:
+        parent = self.parent
+        if isinstance(parent, DList):
+            if self.name in parent.key:
+                return True
+        return False
 
 class DLeafList(DNodeLeaf):
     default: list[str]
