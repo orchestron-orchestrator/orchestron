@@ -278,8 +278,9 @@ class Node(object):
         if isinstance(self, Inner):
             for child in self.children.values():
                 if isinstance(child, LeafList) and child.name == name:
-                    if isinstance(child.vals[0], str):
-                        return child.vals
+                    cvals = child.vals
+                    if isinstance(cvals, list) and len(cvals) > 0 and isinstance(cvals[0], str):
+                        return cvals
         raise ValueError("Cannot find leaf-list child with name " + name)
 
     def get_opt_strs(self, name) -> list[str]:
@@ -463,13 +464,16 @@ class Leaf(Node):
 
 class LeafList(Node):
     name: str
-    vals: list[str]
+    vals: list[value]
 
-    def __init__(self, name: str, vals: list[str]=[], ns=None, prefix=None):
+    def __init__(self, name: str, vals: ?value, ns=None, prefix=None):
         self.name = name
-        self.vals = vals
         self.ns = ns
         self.prefix = prefix
+        if isinstance(vals, list) and len(vals) > 0 and isinstance(vals[0], value):
+            self.vals = vals
+        else:
+            self.vals = []
 
 
 def merge(a: Node, b: Node) -> Node:
