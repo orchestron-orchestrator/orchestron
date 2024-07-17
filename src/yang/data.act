@@ -454,9 +454,9 @@ class ListElement(Inner):
 
 class Leaf(Node):
     name: str
-    val: atom
+    val: value
 
-    def __init__(self, name: str, val: atom, ns=None, prefix=None):
+    def __init__(self, name: str, val: value, ns=None, prefix=None):
         self.name = name
         self.val = val
         self.ns = ns
