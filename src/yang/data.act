@@ -229,6 +229,25 @@ class Node(object):
             return xml
         raise ValueError("Unsupported node type in to_xml: " + type(self))
 
+    # --
+    def get_leaf(self, name) -> Leaf:
+        if isinstance(self, Inner):
+            for child in self.children.values():
+                if isinstance(child, Leaf) and child.name == name:
+                    return child
+        raise ValueError("Cannot find leaf child with name " + name)
+
+    def get_leafs(self, name) -> list[Leaf]:
+        if isinstance(self, Inner):
+            res = []
+            for child in self.children.values():
+                if isinstance(child, Leaf) and child.name == name:
+                    res.append(child)
+            return res
+        raise ValueError("Cannot find leaf child with name " + name)
+
+    #--
+
     def get_container(self, name) -> Container_:
         if isinstance(self, Inner):
             for child in self.children.values():
@@ -252,12 +271,35 @@ class Node(object):
                         return child
         raise ValueError("Cannot find list child with name " + name)
 
-    def get_leaf(self, name) -> Leaf:
-        if isinstance(self, Inner):
-            for child in self.children.values():
-                if isinstance(child, Leaf) and child.name == name:
-                    return child
-        raise ValueError("Cannot find leaf child with name " + name)
+    def get_bool(self, name) -> bool:
+        s = self.get_str(name)
+        return bool(s)
+
+    def get_opt_bool(self, name) -> ?bool:
+        try:
+            return self.get_bool(name)
+        except ValueError:
+            return None
+
+    def get_float(self, name) -> float:
+        s = self.get_str(name)
+        return float(s)
+
+    def get_opt_float(self, name) -> ?float:
+        try:
+            return self.get_float(name)
+        except ValueError:
+            return None
+
+    def get_int(self, name) -> int:
+        s = self.get_str(name)
+        return int(s)
+
+    def get_opt_int(self, name) -> ?int:
+        try:
+            return self.get_int(name)
+        except ValueError:
+            return None
 
     def get_str(self, name) -> str:
         if isinstance(self, Inner):
@@ -274,6 +316,18 @@ class Node(object):
         except ValueError:
             return None
 
+    def get_value(self, name) -> value:
+        s = self.get_str(name)
+        if isinstance(s, value):
+            return s
+        raise ValueError("unreachable, all strings are values")
+
+    def get_opt_value(self, name) -> ?value:
+        try:
+            return self.get_value(name)
+        except ValueError:
+            return None
+
     def get_strs(self, name) -> list[str]:
         if isinstance(self, Inner):
             for child in self.children.values():
@@ -283,9 +337,22 @@ class Node(object):
                         return cvals
         raise ValueError("Cannot find leaf-list child with name " + name)
 
+    def get_values(self, name) -> list[value]:
+        res = []
+        for leaf in self.get_leafs(name):
+            res.append(leaf.val)
+        return res
+
+    # plural opts
     def get_opt_strs(self, name) -> list[str]:
         try:
             return self.get_strs(name)
+        except ValueError:
+            return []
+
+    def get_opt_values(self, name) -> list[value]:
+        try:
+            return self.get_values(name)
         except ValueError:
             return []
 
@@ -710,6 +777,31 @@ def get_xml_children(n: xml.Node, name: str) -> list[xml.Node]:
             res.append(child)
     return res
 
+def from_xml_opt_bool(n: xml.Node, name: str) -> ?bool:
+    try:
+        text = get_xml_child(n, name).text
+        if text is not None:
+            return bool(text)
+    except ValueError:
+        return None
+
+def from_xml_float(n: xml.Node, name: str) -> float:
+    text = get_xml_child(n, name).text
+    if text is not None:
+        res = float(text)
+        return res
+    raise ValueError("Cannot find xml child with name " + name)
+    return 13.37
+
+def from_xml_opt_float(n: xml.Node, name: str) -> ?float:
+    try:
+        text = get_xml_child(n, name).text
+        if text is not None:
+            res = float(text)
+            return res
+    except ValueError:
+        return None
+
 def from_xml_opt_int(n: xml.Node, name: str) -> ?int:
     try:
         text = get_xml_child(n, name).text
@@ -736,6 +828,15 @@ def from_xml_str(n: xml.Node, name: str) -> str:
         return r
     raise ValueError("Cannot find xml child with name " + name)
 
+def from_xml_opt_value(n: xml.Node, name: str) -> ?value:
+    try:
+        t = get_xml_child(n, name).text
+        if isinstance(t, value):
+            return t
+    except ValueError:
+        return None
+
+# plural
 def from_xml_opt_strs(n: xml.Node, name: str) -> list[str]:
     res = []
     for child in get_xml_children(n, name):
@@ -744,6 +845,13 @@ def from_xml_opt_strs(n: xml.Node, name: str) -> list[str]:
             res.append(ctext)
     return res
 
+def from_xml_opt_values(n: xml.Node, name: str) -> list[value]:
+    res = []
+    for child in get_xml_children(n, name):
+        ctext = child.text
+        if isinstance(ctext, value):
+            res.append(ctext)
+    return res
 
 #def from_xml_opt_u16(n: xml.Node, name: str) -> ?u16:
 #    try:
