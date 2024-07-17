@@ -882,6 +882,9 @@ class SchemaNode(object):
     def get_module_by_prefix(self, prefix: str, context: Context) -> Module:
         """Get a Module from the import prefix in the local module"""
         local_module = self.get_module()
+        local_module_prefix = local_module.prefix
+        if local_module_prefix is not None and local_module_prefix == prefix:
+            return local_module
         imp = local_module.get_import_by_prefix(prefix)
         return context.get_module(imp.module, imp.revision_date)
 
