@@ -291,7 +291,7 @@ class DNodeInner(DNode):
         if isinstance(self, DList):
             # keys contains a yang spec of the keys, like "k1 k2"
             # which are modeled as attributes of the list entry class and accessed via self.k1, self.k2
-            list_keys_str = ", ".join(map(lambda x: "self." + _safe_name(x), self.key))
+            list_keys_str = ", ".join(map(lambda x: "str(self.%s)" % _safe_name(x), self.key))
             res.append("        res = yang.data.ListElement([%s])" % (list_keys_str))
         elif isinstance(self, DRoot):
             res.append("        res = yang.data.%s()" % (self.dname))
