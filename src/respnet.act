@@ -1,0 +1,170 @@
+
+import xml
+import yang.gdata
+import orchestron.trans as otrans
+from y_cfs import root as cfs_root
+from y_cfs import netinfra__netinfra__routers_entry
+from y_rfs import root as rfs_root
+from y_rfs import nodes__nodes__routers_entry
+import ttt
+
+import testing
+
+nb_input = """
+<data>
+    <netinfra xmlns="http://example.com/netinfra">
+        <routers>
+            <name>NYC-CORE-1</name>
+            <id>1</id>
+            <role>core</role>
+        </routers>
+        <routers>
+            <name>STO-CORE-1</name>
+            <id>4</id>
+            <role>core</role>
+        </routers>
+        <routers>
+            <name>AMS-CORE-1</name>
+            <id>8</id>
+            <role>edge</role>
+        </routers>
+    </netinfra>
+    <l3vpn>
+    </l3vpn>
+</data>
+"""
+
+nb_input2 = """
+<data>
+    <netinfra xmlns="http://example.com/netinfra">
+        <routers>
+            <name>NYC-CORE-1</name>
+            <id>1</id>
+            <role>core</role>
+        </routers>
+        <routers>
+            <name>STO-CORE-1</name>
+            <id>4</id>
+            <role>core</role>
+        </routers>
+        <routers>
+            <name>AMS-CORE-1</name>
+            <id>8</id>
+            <role>core</role>
+        </routers>
+    </netinfra>
+    <l3vpn>
+    </l3vpn>
+</data>
+"""
+
+
+class CfsRouter(ttt.TTTTransform):
+    def __init__(self):
+        pass
+
+    # TODO: this should be generated
+    def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        mi = netinfra__netinfra__routers_entry.from_gdata(i)
+        return cfs_router_transform(mi).to_gdata()
+
+mut def cfs_router_transform(i: netinfra__netinfra__routers_entry) -> rfs_root:
+    o = rfs_root()
+    print("CFS router transform running", i.name, i.id)
+    router = o.nodes.routers.create(i.name)
+    router.id = i.id
+    sid = i.id
+    router.ipv4address = "10.0.1.%s/32" % sid if sid is not None else ""
+    router.ipv6address = "2001:db8:0:1::%s/128" % sid if sid is not None else ""
+    return o
+
+class CfsBBLink(ttt.TTTTransform):
+    def __init__(self):
+        pass
+
+    # TODO: this should be generated
+    def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        mi = netinfra__netinfra__backbonelink_entry.from_gdata(i)
+        return cfs_bblink_transform(mi).to_gdata()
+
+mut def cfs_bblink_transform(i: netinfra__netinfra__backbonelink_entry) -> rfs_root_loose:
+    print("CFS backbonelink transform running %s [%s] <-> %s [%s]" % (i.left_router, i.left_interface, i.right_router, i.right_interface))
+    o = rfs_root_loose()
+
+    left_r = o.nodes.routers.create(i.left_router)
+    li = left_r.backboneinterface.create(i.left_interface)
+    li.remote.device = i.right_router
+    li.remote.interface = i.right_interface
+
+    right_r = o.nodes.routers.create(i.right_router)
+    ri = right_r.backboneinterface.create(i.right_interface)
+    ri.remote.device = i.left_router
+    ri.remote.interface = i.left_interface
+
+    return o
+
+
+
+class RfsRouter(ttt.TTTTransform):
+    def __init__(self):
+        pass
+
+    def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        mi = nodes__nodes__routers_entry.from_gdata(i)
+        return rfs_router_transform(mi).to_gdata()
+
+mut def rfs_router_transform(i: nodes__nodes__routers_entry) -> rfs_root:
+    #sto_dev = y_dev.IosXr24()
+    print("RFS /nodes/routers transform running", i.name, i.id)
+    print("  IPv4 address:", i.ipv4address)
+    print("  IPv6 address:", i.ipv6address)
+    for bbi in i.backboneinterface.elements:
+        print("  Backbone interface: %s [%s] <-> %s [%s]" % (i.name, bbi.name, bbi.remote.device, bbi.remote.interface))
+    o = rfs_root()
+    return o
+#    return {
+#        "configs": {
+#            "STO-CORE-1": sto_dev
+#        }
+#    }
+
+#mut def blarfs_router_transform(i: nodes__nodes__routers_entry) -> dict[str, yang.adata.MNode]
+#    o = rfs_root()
+#    sto_dev = y_dev.Junos24()
+#    print("RFS /nodes/routers transform running", i.name, i.id)
+#    print("  IPv4 address:", i.ipv4address)
+#    print("  IPv6 address:", i.ipv6address)
+#    return {"STO-CORE-1": sto_dev}
+#
+#def transform1():
+#    return dev_tree.junos["STO-CORE-1"]
+#
+#def transform2():
+#    return dev_tree.xr["STO-CORE-1"]
+
+
+
+actor main(env):
+    root = ttt.TTTContainer({
+        "netinfra": ttt.TTTContainer({
+            "routers": ttt.TTTListFactory(CfsRouter),
+            "backbonelink": ttt.TTTListFactory(CfsBBLink),
+        })
+    })
+
+    l2_root = ttt.TTTContainer({
+        "nodes": ttt.TTTContainer({
+            "routers": ttt.TTTListFactory(RfsRouter)
+        })
+    })
+
+    def conf(nb_in):
+        input_config = cfs_root.from_xml(xml.decode(nb_in))
+        config_per_source = {"source1": input_config.to_gdata()}
+        return config_per_source
+
+    l1_output = {}
+    root.configure(conf(nb_input), l1_output)
+    l2_output = {}
+    l2_root.configure(l1_output, l2_output)
+    env.exit(0)
