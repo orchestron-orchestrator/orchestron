@@ -1,0 +1,271 @@
+
+import xml
+import yang.gdata
+import orchestron.trans as otrans
+from y_cfs import root as cfs_root
+from y_cfs import netinfra__netinfra__routers_entry
+from y_rfs import root as rfs_root
+from y_rfs import nodes__nodes__routers_entry
+
+import testing
+
+nb_input = """
+<data>
+    <netinfra xmlns="http://example.com/netinfra">
+        <routers>
+            <name>NYC-CORE-1</name>
+            <id>1</id>
+        </routers>
+        <routers>
+            <name>STO-CORE-1</name>
+            <id>4</id>
+        </routers>
+        <routers>
+            <name>AMS-CORE-1</name>
+            <id>8</id>
+        </routers>
+    </netinfra>
+    <l3vpn>
+    </l3vpn>
+</data>
+"""
+
+nb_input2 = """
+<data>
+    <netinfra xmlns="http://example.com/netinfra">
+        <routers>
+            <name>STO-CORE-1</name>
+            <id>4</id>
+        </routers>
+        <routers>
+            <name>AMS-CORE-1</name>
+            <id>8</id>
+        </routers>
+        <routers>
+            <name>FRA-CORE-1</name>
+            <id>2</id>
+        </routers>
+    </netinfra>
+    <l3vpn>
+    </l3vpn>
+</data>
+"""
+
+def transpose(cfg_per_src: dict[str, yang.gdata.Node]) -> dict[str, dict[str, yang.gdata.Node]]:
+    cfg_per_key = {}
+    for src, conf in cfg_per_src.items():
+        if isinstance(conf, yang.gdata.List):
+            for le in conf.elements:
+                key = le.key_str()
+                if key in cfg_per_key:
+                    #cfg_per_key[key] TODO: figure this out
+                    raise NotImplementedError("Merging of configuration not implemented for List")
+                else:
+                    cfg_per_key[key] = {src: le}
+        elif isinstance(conf, yang.gdata.Inner):
+            for key, subconf in conf.children.items():
+                if key in cfg_per_key:
+                    cfg_per_key[key][src] = subconf
+                else:
+                    cfg_per_key[key] = {src: subconf}
+        else:
+            raise NotImplementedError("Unhandled configuration type" + str(type(conf)))
+
+    return cfg_per_key
+
+def _test_transpose():
+    cfg1 = cfs_root.from_xml(xml.decode(nb_input))
+    cfg2 = cfs_root.from_xml(xml.decode(nb_input2))
+    cfg_per_src = {"source1": cfg1.to_gdata(), "source2": cfg2.to_gdata()}
+    cfg_per_key = transpose(cfg_per_src)
+    print(cfg_per_key)
+    #testing.assertEqual(cfg_per_key["routers"]["STO-CORE-1"].id, 4)
+    #testing.assertEqual(cfg_per_key["routers"]["AMS-CORE-1"].id, 8)
+    #testing.assertEqual(cfg_per_key["routers"]["NYC-CORE-1"].id, 1)
+
+
+# TTT - Transactional Transform Trees
+
+class TTTNode(object):
+    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
+        raise NotImplementedError("TTTNode.configure not implemented")
+
+class TTTContainer(TTTNode):
+    elems: dict[str, TTTNode]
+
+    def __init__(self, elems: dict[str, TTTNode]):
+        print("TContainer.__init__")
+        self.elems = elems
+
+    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
+        print("TContainer.configure", diff)
+        for path, subdiff in transpose(diff).items():
+            if path in self.elems:
+                elem = self.elems[path]
+                print("TContainer.configure calling child .configure for path:", path)
+                elem.configure(subdiff, output_tree)
+
+actor TTTListState(template: () -> TTTNode):
+    print("TTTListState.__init__", template)
+    var elems = {}
+
+    def get_elems(keys: list[str]=[]) -> dict[str, TTTNode]:
+        res = {}
+        for key in keys:
+            res[key] = get_elem(key)
+        return res
+
+    def get_elem(key: str) -> TTTNode:
+        if key in elems:
+            return elems[key]
+        else:
+            print("TTTListState.get_elem creating new element for key:", key)
+            elem = template()
+            print("New thing from template:",elem)
+            elems[key] = elem
+            return elem
+
+class TTTList(TTTNode):
+    """We only support unordered lists
+    """
+    state: TTTListState
+
+    def __init__(self, state: TTTListState):
+        self.state = state
+
+    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
+        transp = transpose(diff)
+        elems: dict[str, TTTNode] = self.state.get_elems(list(transp.keys()))
+        print(elems)
+        for key, subdiff in transp.items():
+            elems[key].configure(subdiff, output_tree)
+
+#actor TTTTransformState(transform):
+#    pass
+
+class TTTTransform(TTTNode):
+    def __init__(self):
+        #self.state = TTTTransformState(self)
+        pass
+
+    def transform(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        raise NotImplementedError("TTTTransform.transform not implemented")
+
+    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
+        print("TTTTransform.configure")
+#        for d in diff.values():
+#            merged_config
+        diffs = list(diff.values())
+        merged_config = diffs[0]
+        for d in diffs[1:]:
+            merged_config = yang.gdata.merge(merged_config, d)
+        output = self.transform(merged_config)
+        output_tree[str(self)] = output
+        print("TTTTransform.configure output\n", output.to_xmlstr())
+
+
+
+class CfsRouter(TTTTransform):
+    def __init__(self):
+        pass
+
+    def transform(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        mi = netinfra__netinfra__routers_entry.from_gdata(i)
+        return cfs_router_transform(mi).to_gdata()
+
+mut def cfs_router_transform(i: netinfra__netinfra__routers_entry) -> rfs_root:
+    o = rfs_root()
+    print("CFS router transform running", i.name, i.id)
+    router = o.nodes.routers.create(i.name)
+    router.id = i.id
+    sid = i.id
+    router.ipv4address = "10.0.1.%s/32" % sid if sid is not None else ""
+    router.ipv6address = "2001:db8:0:1::%s/128" % sid if sid is not None else ""
+    return o
+
+
+mut def cfs_router(i: yang.gdata.Node) -> yang.gdata.Node:
+    mi = netinfra__netinfra__routers_entry.from_gdata(i)
+    return cfs_router_transform(mi).to_gdata()
+
+class RfsRouter(TTTTransform):
+    def __init__(self):
+        pass
+
+    def transform(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        mi = nodes__nodes__routers_entry.from_gdata(i)
+        return rfs_router_transform(mi).to_gdata()
+
+
+mut def rfs_router_transform(i: nodes__nodes__routers_entry) -> rfs_root:
+    o = rfs_root()
+    print("RFS /nodes/routers transform running", i.name, i.id)
+    print("  IPv4 address:", i.ipv4address)
+    print("  IPv6 address:", i.ipv6address)
+    return o
+
+
+# wrapping function that takes a generic tree, decodes it into a model specific
+# object tree and feeds the actual transform function
+#def foo():
+#    print("-- FOO")
+#    d = cfs_root.from_xml(xml.decode(nb_input))
+#    # TODO: This should be done magically based on a configuration
+#    sos = []
+#    for s in d.netinfra.routers.elements:
+#        sos.append(cfs_router_transform(s))
+#    so = sos[0].to_gdata()
+#    for s in sos[1:]:
+#        so = yang.gdata.merge(so, s.to_gdata())
+#    print(so.to_xmlstr())
+#    #rfs_root = rfs_root_strict.from_gdata(so)
+#    print("-- FOO END --")
+
+
+actor main(env):
+    print("-- FOO")
+
+    def TTTListFactory(template):
+        print("TTTListFactory, template:", template)
+        # HAHAHA LOL. I hate Factories but there's a bug somewhere lurking so we
+        # can't initialize an actor from under a class in this hierarchy
+        # https://github.com/actonlang/acton/issues/1921
+        return TTTList(TTTListState(template))
+
+    # TODO: write generator for this, including checking model constraints
+    # - no constraints on nodes above the transforms
+    #   - must
+    #   - when
+    #   - unique
+    # - no P-containers, unless it's a transform
+    root = TTTContainer({
+        "netinfra": TTTContainer({
+            "routers": TTTListFactory(CfsRouter)
+        })
+    })
+
+    l2_root = TTTContainer({
+        "nodes": TTTContainer({
+            "routers": TTTListFactory(RfsRouter)
+        })
+    })
+
+    def conf(nb_in):
+        input_config = cfs_root.from_xml(xml.decode(nb_input2))
+        config_per_source = {"source1": input_config.to_gdata()}
+        return config_per_source
+    print("CONFIGURING -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+    l1_output = {}
+    root.configure(conf(nb_input), l1_output)
+    print("L1 OUTPUT")
+    print(l1_output)
+    for k, v in l1_output.items():
+        print(k, v)
+    print("-----")
+    #print("CONFIGURING -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+    l2_output = {}
+    l2_root.configure(l1_output, l2_output)
+    print("END CONFIGURING -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+    print(l1_output)
+    print("-- FOO END --")
+    env.exit(0)
