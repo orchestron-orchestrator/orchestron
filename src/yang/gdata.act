@@ -519,6 +519,11 @@ class ListElement(Inner):
         for child in self.children.values():
             child.parent = self
 
+    def key_str(self) -> str:
+        def escape_keys(key_val):
+            return key_val.replace(",", "\\,")
+        return ",".join(map(escape_keys, self.key_vals))
+
 class Leaf(Node):
     name: str
     val: value

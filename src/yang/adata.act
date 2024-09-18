@@ -1,6 +1,6 @@
 
 import yang.schema
-import yang.data
+import yang.gdata
 
 """Base classes for YANG-modeled data classes (MData)
 """

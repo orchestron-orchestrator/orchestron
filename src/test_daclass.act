@@ -1,6 +1,6 @@
 
 import xml
-import yang.data
+import yang.gdata
 from y_cfs import root as cfs_root
 from y_cfs import netinfra__netinfra__routers_entry
 from y_rfs import root as rfs_root
@@ -66,7 +66,7 @@ def foo():
         sos.append(cfs_router_service(s, rfs_root()))
     so = sos[0].to_gdata()
     for s in sos[1:]:
-        so = yang.data.merge(so, s.to_gdata())
+        so = yang.gdata.merge(so, s.to_gdata())
     print(so.to_xmlstr())
     #rfs_root = rfs_root_strict.from_gdata(so)
 
