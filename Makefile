@@ -17,3 +17,8 @@ src/yang/schema.act: schema-header.act out/bin/rfcgen schema-footer.act
 
 out/bin/rfcgen: src/rfcgen.act
 	acton src/rfcgen.act
+
+.PHONY: clean
+clean:
+	rm -rf out
+
