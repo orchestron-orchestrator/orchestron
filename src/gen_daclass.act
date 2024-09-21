@@ -2,6 +2,8 @@ import file
 
 import yang.parser
 import yang.schema
+import ttt_gen
+import ttt
 
 netinfra_yang = """module netinfra {
   yang-version "1.1";
@@ -99,15 +101,23 @@ actor main(env):
     rfs_netinfra = yang.schema.stmt_to_snode(yang.parser.parse(nodes_yang)).to_dnode()
     if isinstance(cfs_netinfra, yang.schema.DModule) and isinstance(cfs_l3vpn, yang.schema.DModule) and isinstance(rfs_netinfra, yang.schema.DModule):
         cfs_root = yang.schema.DRoot([cfs_netinfra, cfs_l3vpn])
-        cfs_src = cfs_root.prdaclass()
-
         rfs_root = yang.schema.DRoot([rfs_netinfra])
-        rfs_src = rfs_root.prdaclass()
 
         wf_cfs = file.WriteFile(wfc, "src/y_cfs.act")
-        await async wf_cfs.write(cfs_src.encode())
+        await async wf_cfs.write(cfs_root.prdaclass().encode())
         await async wf_cfs.close()
+
+        wf_rfsl = file.WriteFile(wfc, "src/y_rfs_loose.act")
+        await async wf_rfsl.write(rfs_root.prdaclass(loose=True).encode())
+        await async wf_rfsl.close()
+
         wf_rfs = file.WriteFile(wfc, "src/y_rfs.act")
-        await async wf_rfs.write(rfs_src.encode())
+        await async wf_rfs.write(rfs_root.prdaclass().encode())
         await async wf_rfs.close()
+
+        #wf_appttt = file.WriteFile(wfc, "src/appttt.act")
+        #a = ttt_gen.dschema_to_tttsrc(cfs_root)
+        #await async wf_appttt.write(a.encode())
+        #await async wf_appttt.close()
+
     env.exit(0)

@@ -5,6 +5,7 @@ import orchestron.trans as otrans
 from y_cfs import root as cfs_root
 from y_cfs import netinfra__netinfra__routers_entry
 from y_rfs import root as rfs_root
+from y_rfs_loose import root as rfs_root_loose
 from y_rfs import nodes__nodes__routers_entry
 import ttt
 
@@ -68,8 +69,8 @@ class CfsRouter(ttt.TTTTransform):
         mi = netinfra__netinfra__routers_entry.from_gdata(i)
         return cfs_router_transform(mi).to_gdata()
 
-mut def cfs_router_transform(i: netinfra__netinfra__routers_entry) -> rfs_root:
-    o = rfs_root()
+mut def cfs_router_transform(i: netinfra__netinfra__routers_entry) -> rfs_root_loose:
+    o = rfs_root_loose()
     print("CFS router transform running", i.name, i.id)
     router = o.nodes.routers.create(i.name)
     router.id = i.id

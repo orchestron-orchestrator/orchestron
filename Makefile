@@ -13,7 +13,7 @@ out/bin/gen_daclass: src/gen_daclass.act src/yang/parser.act src/yang/schema.act
 	acton src/gen_daclass.act
 
 src/yang/schema.act: schema-header.act out/bin/rfcgen schema-footer.act
-	(tail -n +4 schema-header.act; out/bin/rfcgen; cat schema-footer.act) > src/yang/schema.act
+	(tail -n +4 schema-header.act && out/bin/rfcgen && cat schema-footer.act) > src/yang/schema.act
 
 out/bin/rfcgen: src/rfcgen.act
 	acton src/rfcgen.act
