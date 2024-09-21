@@ -12,8 +12,7 @@ def transpose(cfg_per_src: dict[str, yang.gdata.Node]) -> dict[str, dict[str, ya
             for le in conf.elements:
                 key = le.key_str()
                 if key in cfg_per_key:
-                    #cfg_per_key[key] TODO: figure this out
-                    raise NotImplementedError("Merging of configuration not implemented for List")
+                    cfg_per_key[key][src] = le
                 else:
                     cfg_per_key[key] = {src: le}
         elif isinstance(conf, yang.gdata.Inner):
