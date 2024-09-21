@@ -189,6 +189,28 @@ class Statement(object):
 # Another concept is DTree which is a special node that acts as the virtual root
 # of the data tree which can contain multiple YANG modules.
 
+def optional_subtree(node: DNodeInner) -> bool:
+    """Checks if a subtree is optional
+
+    Returns True if the subtree is optional or False if any child node (or
+    grandchild etc) is mandatory.
+    """
+    for child in node.children:
+        if isinstance(child, DLeaf):
+            if child.mandatory:
+                return False
+        elif isinstance(child, DLeafList):
+            if child.min_elements > 0:
+                return False
+        elif isinstance(child, DContainer):
+            if not optional_subtree(child):
+                return False
+        elif isinstance(child, DList):
+            if child.min_elements > 0:
+                return False
+    return True
+
+
 class DNode(object):
     parent: ?DNode
     dname: str
@@ -255,10 +277,10 @@ class DNodeInner(DNode):
         init_args = ["self"]
         for child in self.children:
             if isinstance(child, DContainer):
-                if child.presence:
+                if loose or child.presence or optional_subtree(child):
                     init_args.append("%s: ?%s=None" % (_safe_name(child.name), _get_full_name(child)))
                 else:
-                    init_args.append("%s: ?%s" % (_safe_name(child.name), _get_full_name(child)))
+                    init_args.append("%s: %s" % (_safe_name(child.name), _get_full_name(child)))
             elif isinstance(child, DLeaf):
                 init_args.append("%s: %s" % (_safe_name(child.name), yang_leaf_to_acton_type(child, loose)))
             elif isinstance(child, DLeafList):
@@ -272,10 +294,13 @@ class DNodeInner(DNode):
         for child in self.children:
             if isinstance(child, DContainer):
                 # TODO: presence?
-                res.append("        if %s is not None:" % (_safe_name(child.name)))
-                res.append("            self.%s = %s" % (_safe_name(child.name), _safe_name(child.name)))
-                res.append("        else:")
-                res.append("            self.%s = %s()" % (_safe_name(child.name), _get_full_name(child)))
+                if loose or child.presence or optional_subtree(child):
+                    res.append("        if %s is not None:" % (_safe_name(child.name)))
+                    res.append("            self.%s = %s" % (_safe_name(child.name), _safe_name(child.name)))
+                    res.append("        else:")
+                    res.append("            self.%s = %s()" % (_safe_name(child.name), _get_full_name(child)))
+                else:
+                    res.append("        self.%s = %s" % (_safe_name(child.name), _safe_name(child.name)))
             elif isinstance(child, DLeaf):
                 res.append("        self.%s = %s" % (_safe_name(child.name), _safe_name(child.name)))
             elif isinstance(child, DLeafList):
@@ -386,6 +411,12 @@ class DNodeInner(DNode):
             res.append("")
 
             list_key_args = list(map(lambda x: _safe_name(x), self.key))
+            for child in self.children:
+                if isinstance(child, DLeaf):
+                    pass
+                elif isinstance(child, DContainer):
+                    if not (optional_subtree(child)):
+                        list_key_args.append(_safe_name(child.name))
             list_create_args = ["self"] + list_key_args
             res.append("    def create(%s):" % (", ".join(list_create_args)))
             res.append("        res = %s_entry(%s)" % (_get_full_name(self), ", ".join(list_key_args)))
