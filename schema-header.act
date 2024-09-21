@@ -197,7 +197,7 @@ class DNode(object):
     description: ?str
     reference: ?str
 
-    def prdaclass(self, strict=True, top=True) -> str:
+    def prdaclass(self, loose=False, top=True) -> str:
         """Print the data class for this schema node
         """
         raise NotImplementedError('SchemaNode pdc')
@@ -205,7 +205,7 @@ class DNode(object):
 class DNodeInner(DNode):
     children: list[DNode]
 
-    def prdaclass(self, strict=True, top=True) -> str:
+    def prdaclass(self, loose=False, top=True) -> str:
         """Print the data class for this schema node
         """
 #        stmt_arg = self._get_arg()
@@ -232,7 +232,7 @@ class DNodeInner(DNode):
 
         for child in self.children:
             if isinstance(child, DNodeInner):
-                res.append(child.prdaclass(strict=strict, top=False))
+                res.append(child.prdaclass(loose=loose, top=False))
 
         if isinstance(self, DList):
             # List has special handling as it actually results in two classes:
@@ -244,7 +244,7 @@ class DNodeInner(DNode):
             res.append("class %s(yang.adata.MNode):" % _get_full_name(self))
         for child in self.children:
             if isinstance(child, DLeaf):
-                res.append("    %s: %s" % (_safe_name(child.name), yang_leaf_to_acton_type(child)))
+                res.append("    %s: %s" % (_safe_name(child.name), yang_leaf_to_acton_type(child, loose)))
             elif isinstance(child, DLeafList):
                 res.append("    %s: %s" % (_safe_name(child.name), yang_leaflist_to_acton_type(child)))
             elif isinstance(child, DNodeInner):
@@ -260,7 +260,7 @@ class DNodeInner(DNode):
                 else:
                     init_args.append("%s: ?%s" % (_safe_name(child.name), _get_full_name(child)))
             elif isinstance(child, DLeaf):
-                init_args.append("%s: %s" % (_safe_name(child.name), yang_leaf_to_acton_type(child)))
+                init_args.append("%s: %s" % (_safe_name(child.name), yang_leaf_to_acton_type(child, loose)))
             elif isinstance(child, DLeafList):
                 init_args.append("%s: ?%s=None" % (_safe_name(child.name), yang_leaflist_to_acton_type(child)))
             elif isinstance(child, DList):
@@ -693,7 +693,7 @@ class SchemaNode(object):
         """
         raise NotImplementedError('SchemaNode prsrc')
 
-    def prdaclass(self, strict=True, top=True) -> str:
+    def prdaclass(self, loose=False, top=True) -> str:
         """Print the data class for this schema node
         """
         raise NotImplementedError('SchemaNode pdc')
@@ -1132,11 +1132,16 @@ def _prsrc_attrs(indent, attrs):
     return ", ".join(res)
 
 
-def yang_leaf_to_acton_type(leaf: DNodeLeaf) -> str:
+def yang_leaf_to_acton_type(leaf: DNodeLeaf, loose: bool=False) -> str:
     optional = True
+    # Mandatory in YANG model makes it non-optional
     leafmandatory = leaf.mandatory
     if leafmandatory is not None:
         optional = not leafmandatory
+    # But with loose validation, even mandatory YANG leaves are optional
+    if loose:
+        optional = True
+    # Althogh being part of a key always makes it non-optional
     parent = leaf.parent
     if isinstance(parent, DList):
         if leaf.name in parent.key:
@@ -1146,6 +1151,7 @@ def yang_leaf_to_acton_type(leaf: DNodeLeaf) -> str:
     return optional_str + t
 
 def yang_leaf_to_getval(leaf: DNodeLeaf) -> str:
+    # TODO: uh, do we need loose arg?
     optional = True
     leafmandatory = leaf.mandatory
     if leafmandatory is not None:
