@@ -19,6 +19,9 @@ netinfra_yang = """module netinfra {
     description "Network infrastructure";
     list routers {
       key name;
+
+      orchestron:transform respnet.CfsRouter;
+
       leaf name {
         type string;
       }
@@ -26,9 +29,26 @@ netinfra_yang = """module netinfra {
         type string;
         description "router id";
       }
-      leaf-list tags {
+      leaf role {
         type string;
-        description "router tags";
+      }
+    }
+    list backbonelink {
+      key "left-router left-interface right-router right-interface";
+
+      orchestron:transform respnet.CfsBBLink;
+
+      leaf left-router {
+        type string;
+      }
+      leaf left-interface {
+        type string;
+      }
+      leaf right-router {
+        type string;
+      }
+      leaf right-interface {
+        type string;
       }
     }
   }
@@ -84,6 +104,25 @@ nodes_yang = """module nodes {
 
       leaf ipv6address {
         type string;
+      }
+      leaf corefoo {
+        type string;
+      }
+      list backboneinterface {
+        key name;
+        leaf name {
+          type string;
+        }
+        container remote {
+          leaf device {
+            type string;
+            mandatory true;
+          }
+          leaf interface {
+            type string;
+            mandatory true;
+          }
+        }
       }
     }
   }

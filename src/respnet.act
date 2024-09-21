@@ -4,6 +4,7 @@ import yang.gdata
 import orchestron.trans as otrans
 from y_cfs import root as cfs_root
 from y_cfs import netinfra__netinfra__routers_entry
+from y_cfs import netinfra__netinfra__backbonelink_entry
 from y_rfs import root as rfs_root
 from y_rfs_loose import root as rfs_root_loose
 from y_rfs import nodes__nodes__routers_entry
@@ -15,7 +16,7 @@ nb_input = """
 <data>
     <netinfra xmlns="http://example.com/netinfra">
         <routers>
-            <name>NYC-CORE-1</name>
+            <name>FRA-CORE-1</name>
             <id>1</id>
             <role>core</role>
         </routers>
@@ -29,6 +30,24 @@ nb_input = """
             <id>8</id>
             <role>edge</role>
         </routers>
+        <backbonelink>
+            <left-router>AMS-CORE-1</left-router>
+            <left-interface>Bundle-Ether1</left-interface>
+            <right-router>STO-CORE-1</right-router>
+            <right-interface>Bundle-Ether1</right-interface>
+        </backbonelink>
+        <backbonelink>
+            <left-router>FRA-CORE-1</left-router>
+            <left-interface>Bundle-Ether1</left-interface>
+            <right-router>STO-CORE-1</right-router>
+            <right-interface>Bundle-Ether2</right-interface>
+        </backbonelink>
+        <backbonelink>
+            <left-router>AMS-CORE-1</left-router>
+            <left-interface>Bundle-Ether2</left-interface>
+            <right-router>FRA-CORE-1</right-router>
+            <right-interface>Bundle-Ether2</right-interface>
+        </backbonelink>
     </netinfra>
     <l3vpn>
     </l3vpn>
