@@ -219,6 +219,10 @@ class Node(object):
                 xml += _indent() + "</" + self.name + ">\n"
             return xml
         elif isinstance(self, ListElement): # printing of ListElement is folded into List
+            xml = ""
+            for child in self.children.values():
+                xml += child.to_xmlstr(indent)
+            return xml
             raise ValueError("ListElement should not be printed directly")
         elif isinstance(self, Leaf):
             return _indent() + "<" + self.name + ">" + str(self.val) + "</" + self.name + ">\n"
