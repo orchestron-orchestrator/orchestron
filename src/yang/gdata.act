@@ -239,7 +239,7 @@ class Node(object):
             for child in self.children.values():
                 if isinstance(child, Leaf) and child.name == name:
                     return child
-        raise ValueError("Cannot find leaf child with name " + name)
+        raise ValueError("Cannot find leaf child with name: " + name)
 
     def get_leafs(self, name) -> list[Leaf]:
         if isinstance(self, Inner):
@@ -248,7 +248,7 @@ class Node(object):
                 if isinstance(child, Leaf) and child.name == name:
                     res.append(child)
             return res
-        raise ValueError("Cannot find leaf child with name " + name)
+        raise ValueError("Cannot find leaf child with name: " + name)
 
     #--
 
@@ -312,7 +312,7 @@ class Node(object):
                     childval = child.val
                     if isinstance(childval, str):
                         return childval
-        raise ValueError("Cannot find leaf child with name " + name)
+        raise ValueError("Cannot find leaf child with name: " + name)
 
     def get_opt_str(self, name) -> ?str:
         try:

@@ -2847,6 +2847,7 @@ class Leaf(SchemaNodeOuter):
             config=self.is_config(),
             description=self.description,
             if_feature=self.if_feature,
+            mandatory=self.mandatory,
             must=self.must,
             reference=self.reference,
             status=self.status,
