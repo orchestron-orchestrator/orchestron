@@ -678,6 +678,7 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
                         pos_arg_idx += 1
                     else:
                         init_attrs.append(attr_text)
+        init_attrs.append("exts=[]")
         if have_children:
             init_attrs.append("children=[]")
         if "namespace" not in set(cattrs):
@@ -717,6 +718,7 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             if substmt.name not in child_stmts: # Attribute
                 res.append("        self.%s = %s" % (_attr_name(substmt.name), _attr_name(substmt.name)))
 
+        res.append("        self.exts = exts")
         if have_children:
             res.append("        self.children = children")
 
@@ -735,6 +737,7 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         res.append("        attrs: list[(str, ?value)] = [")
         for attr in kwattrs:
             res.append("            (\"%s\", self.%s)," % (attr, _attr_name(attr)))
+        res.append("            (\"exts\", self.exts),")
         res.append("        ]")
 
         if arg_name is not None:
@@ -763,6 +766,7 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
             res.append("                child_res.append(child.prsrc(indent+1))")
             res.append("            res.append(\",\\n\".join(child_res))")
             res.append("            res.append(_ind(indent) + \"])\")")
+
         res.append("        return \"\\n\".join(res)")
         res.append("")
 
@@ -912,6 +916,7 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         if have_children:
             valid_children_list = ", ".join(map(lambda x: "\"%s\"" % x, valid_children))
             attrs_takers.append("children=take_nodes(ss, [%s])" % valid_children_list)
+        attrs_takers.append("exts=take_exts(ss)")
         indent = " " * (17+len(stmt_name))
         joiner = ",\n" + indent
         res.append("            n = %s(%s\n" % (_class_name(stmt_name), joiner.join(attrs_takers)) + indent + ")")
@@ -919,11 +924,7 @@ def gen(stmts: dict[str, Stmt]) -> list[str]:
         res.append("            if len(ss) > 0:")
         res.append("                name = ss[0].kw")
         res.append("                prefix = ss[0].prefix")
-        res.append("                if prefix is not None:")
-        res.append("                    name = prefix + \":\" + name")
-        res.append("                    print(\"Warning: Ignoring extension %s under %s\" % (name, stmt.kw))")
-        res.append("                else:")
-        res.append("                    raise ValueError(\"Invalid statement under %s: \" + name)" % stmt_name)
+        res.append("                raise ValueError(\"Invalid statement under %s: %%s\" %% (name))" % stmt_name)
         res.append("            return n")
     res.append("    raise ValueError(\"Unknown statement:\" + stmt.kw)")
 

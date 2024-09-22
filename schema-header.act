@@ -712,6 +712,7 @@ class SchemaNode(object):
     parent: ?SchemaNode
     namespace: ?str
     prefix: ?str
+    exts: list[Ext]
 
     def _get_argname(self) -> ?str:
         raise NotImplementedError('SchemaNode _get_argname')
@@ -1030,6 +1031,50 @@ class SchemaNodeInner(SchemaNode):
 class SchemaNodeOuter(SchemaNode):
     pass
 
+class Ext(SchemaNode):
+    """An extension statement
+
+    This is not the definition of an extension, e.g. the "extension" keyword,
+    but an instance of an extension, like "foo:bar 'test';"
+    """
+    name: str
+    arg: ?str
+
+    def __init__(self, prefix: str, name: str, arg: ?str=None, exts=[]):
+        self.prefix = prefix
+        self.name = name
+        self.arg = arg
+        self.exts = exts
+
+    @staticmethod
+    def from_fullname(fullname: str, arg: ?str=None, exts=[]) -> Ext:
+        parts = fullname.split(":", 1)
+        if len(parts) != 2:
+            raise ValueError("Invalid extension name %s, extensions must always have a prefix like: foo:bar 'test';" % fullname)
+        return Ext(parts[0], parts[1], None)
+
+    def prsrc(self, indent=0):
+        """Print Acton source of this node"""
+        res = []
+        attrs: list[(str, ?value)] = [
+            ("arg", self.arg),
+            ("exts", self.exts),
+            ]
+        prefix = self.prefix
+        args = []
+        if prefix is not None:
+            args = ["'" + str(prefix) + "', '" + str(self.name) + "'"]
+        else:
+            raise ValueError("No prefix in Ext.prsrc, this should never happen")
+        attrs_text = _prsrc_attrs(indent, attrs)
+        if len(attrs_text) > 0:
+            args.append(attrs_text)
+        args_text = ", ".join(args)
+        text_line = _ind(indent) + "Ext(" + args_text + ")"
+        res.append(text_line)
+        return "\n".join(res)
+
+
 
 def take_opt_bool(stmts: list[Statement], kw: str) -> ?bool:
     v = take_opt_str(stmts, kw)
@@ -1116,6 +1161,29 @@ def take_nodes(stmts: list[Statement], kw: list[str]) -> list[SchemaNode]:
         del stmts[i]
     return res
 
+def take_exts(stmts: list[Statement]) -> list[Ext]:
+    """Take all extension statements from a list of statements
+
+    Extension statements always follow the form:
+
+    prefix:extension arg;
+    """
+    res = []
+    todel = []
+    for i in range(len(stmts)):
+        prefix = stmts[i].prefix
+        name = stmts[i].kw
+        arg = stmts[i].arg
+        # TODO: I think prefix should be None, not "", right? prefix should be
+        # the prefix of the statement and not the prefix of the module, like the
+        # namespace prefix
+        if prefix is not None and len(prefix) > 0:
+            res.append(Ext(prefix, name, arg, exts=take_exts(stmts[i].substatements)))
+            todel.append(i)
+    for i in reversed(todel):
+        del stmts[i]
+    return res
+
 def _attr_name(name: str):
     res = ""
     i = 0
@@ -1165,14 +1233,14 @@ def _prsrc_attrs(indent, attrs):
 
 def yang_leaf_to_acton_type(leaf: DNodeLeaf, loose: bool=False) -> str:
     optional = True
-    # Mandatory in YANG model makes it non-optional
+    # Mandatory leaf in YANG model are non-optional in Acton
     leafmandatory = leaf.mandatory
     if leafmandatory is not None:
         optional = not leafmandatory
-    # But with loose validation, even mandatory YANG leaves are optional
+    # But with loose validation, even mandatory YANG leaves are optional!
     if loose:
         optional = True
-    # Althogh being part of a key always makes it non-optional
+    # ... although being part of a key always makes it non-optional
     parent = leaf.parent
     if isinstance(parent, DList):
         if leaf.name in parent.key:

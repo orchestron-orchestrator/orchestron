@@ -709,6 +709,7 @@ class SchemaNode(object):
     parent: ?SchemaNode
     namespace: ?str
     prefix: ?str
+    exts: list[Ext]
 
     def _get_argname(self) -> ?str:
         raise NotImplementedError('SchemaNode _get_argname')
@@ -1027,6 +1028,50 @@ class SchemaNodeInner(SchemaNode):
 class SchemaNodeOuter(SchemaNode):
     pass
 
+class Ext(SchemaNode):
+    """An extension statement
+
+    This is not the definition of an extension, e.g. the "extension" keyword,
+    but an instance of an extension, like "foo:bar 'test';"
+    """
+    name: str
+    arg: ?str
+
+    def __init__(self, prefix: str, name: str, arg: ?str=None, exts=[]):
+        self.prefix = prefix
+        self.name = name
+        self.arg = arg
+        self.exts = exts
+
+    @staticmethod
+    def from_fullname(fullname: str, arg: ?str=None, exts=[]) -> Ext:
+        parts = fullname.split(":", 1)
+        if len(parts) != 2:
+            raise ValueError("Invalid extension name %s, extensions must always have a prefix like: foo:bar 'test';" % fullname)
+        return Ext(parts[0], parts[1], None)
+
+    def prsrc(self, indent=0):
+        """Print Acton source of this node"""
+        res = []
+        attrs: list[(str, ?value)] = [
+            ("arg", self.arg),
+            ("exts", self.exts),
+            ]
+        prefix = self.prefix
+        args = []
+        if prefix is not None:
+            args = ["'" + str(prefix) + "', '" + str(self.name) + "'"]
+        else:
+            raise ValueError("No prefix in Ext.prsrc, this should never happen")
+        attrs_text = _prsrc_attrs(indent, attrs)
+        if len(attrs_text) > 0:
+            args.append(attrs_text)
+        args_text = ", ".join(args)
+        text_line = _ind(indent) + "Ext(" + args_text + ")"
+        res.append(text_line)
+        return "\n".join(res)
+
+
 
 def take_opt_bool(stmts: list[Statement], kw: str) -> ?bool:
     v = take_opt_str(stmts, kw)
@@ -1108,6 +1153,29 @@ def take_nodes(stmts: list[Statement], kw: list[str]) -> list[SchemaNode]:
     for i in range(len(stmts)):
         if stmts[i].kw in kw:
             res.append(stmt_to_snode(stmts[i]))
+            todel.append(i)
+    for i in reversed(todel):
+        del stmts[i]
+    return res
+
+def take_exts(stmts: list[Statement]) -> list[Ext]:
+    """Take all extension statements from a list of statements
+
+    Extension statements always follow the form:
+
+    prefix:extension arg;
+    """
+    res = []
+    todel = []
+    for i in range(len(stmts)):
+        prefix = stmts[i].prefix
+        name = stmts[i].kw
+        arg = stmts[i].arg
+        # TODO: I think prefix should be None, not "", right? prefix should be
+        # the prefix of the statement and not the prefix of the module, like the
+        # namespace prefix
+        if prefix is not None and len(prefix) > 0:
+            res.append(Ext(prefix, name, arg, exts=take_exts(stmts[i].substatements)))
             todel.append(i)
     for i in reversed(todel):
         del stmts[i]
@@ -1507,7 +1575,7 @@ class Action(SchemaNodeInner):
     reference: ?str
     status: ?str
 
-    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], input: ?Input=None, output: ?Output=None, reference: ?str=None, status: ?str=None, children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], input: ?Input=None, output: ?Output=None, reference: ?str=None, status: ?str=None, exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         if input is not None:
             input.parent = self
@@ -1522,6 +1590,7 @@ class Action(SchemaNodeInner):
         self.output = output
         self.reference = reference
         self.status = status
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -1536,6 +1605,7 @@ class Action(SchemaNodeInner):
             ("output", self.output),
             ("reference", self.reference),
             ("status", self.status),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -1598,7 +1668,7 @@ class Anydata(SchemaNodeOuter):
     status: ?str
     when: ?str
 
-    def __init__(self, name: str, config: ?bool=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, must: list[Must]=[], reference: ?str=None, status: ?str=None, when: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, config: ?bool=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, must: list[Must]=[], reference: ?str=None, status: ?str=None, when: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
@@ -1611,6 +1681,7 @@ class Anydata(SchemaNodeOuter):
         self.reference = reference
         self.status = status
         self.when = when
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -1626,6 +1697,7 @@ class Anydata(SchemaNodeOuter):
             ("reference", self.reference),
             ("status", self.status),
             ("when", self.when),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -1679,7 +1751,7 @@ class Anyxml(SchemaNodeOuter):
     status: ?str
     when: ?str
 
-    def __init__(self, name: str, config: ?bool=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, must: list[Must]=[], reference: ?str=None, status: ?str=None, when: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, config: ?bool=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, must: list[Must]=[], reference: ?str=None, status: ?str=None, when: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
@@ -1692,6 +1764,7 @@ class Anyxml(SchemaNodeOuter):
         self.reference = reference
         self.status = status
         self.when = when
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -1707,6 +1780,7 @@ class Anyxml(SchemaNodeOuter):
             ("reference", self.reference),
             ("status", self.status),
             ("when", self.when),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -1757,7 +1831,7 @@ class Augment(SchemaNodeInner):
     status: ?str
     when: ?str
 
-    def __init__(self, target_node: str, description: ?str=None, if_feature: list[str]=[], reference: ?str=None, status: ?str=None, when: ?str=None, children=[], namespace=None, prefix=None):
+    def __init__(self, target_node: str, description: ?str=None, if_feature: list[str]=[], reference: ?str=None, status: ?str=None, when: ?str=None, exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in children:
             n.parent = self
@@ -1767,6 +1841,7 @@ class Augment(SchemaNodeInner):
         self.reference = reference
         self.status = status
         self.when = when
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -1780,6 +1855,7 @@ class Augment(SchemaNodeInner):
             ("reference", self.reference),
             ("status", self.status),
             ("when", self.when),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.target_node) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -1833,10 +1909,11 @@ class BelongsTo(SchemaNodeOuter):
     """
     module: str
 
-    def __init__(self, module: str, prefix: ?str=None, namespace=None):
+    def __init__(self, module: str, prefix: ?str=None, exts=[], namespace=None):
         self.parent = None
         self.module = module
         self.prefix = prefix
+        self.exts = exts
         self.namespace = namespace
 
     def prsrc(self, indent=0):
@@ -1844,6 +1921,7 @@ class BelongsTo(SchemaNodeOuter):
         res = []
         attrs: list[(str, ?value)] = [
             ("prefix", self.prefix),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.module) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -1887,7 +1965,7 @@ class Bit(SchemaNodeOuter):
     reference: ?str
     status: ?str
 
-    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], position: ?int=None, reference: ?str=None, status: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], position: ?int=None, reference: ?str=None, status: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.name = name
         self.description = description
@@ -1895,6 +1973,7 @@ class Bit(SchemaNodeOuter):
         self.position = position
         self.reference = reference
         self.status = status
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -1907,6 +1986,7 @@ class Bit(SchemaNodeOuter):
             ("position", self.position),
             ("reference", self.reference),
             ("status", self.status),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -1954,7 +2034,7 @@ class Case(SchemaNodeInner):
     status: ?str
     when: ?str
 
-    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], reference: ?str=None, status: ?str=None, when: ?str=None, children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], reference: ?str=None, status: ?str=None, when: ?str=None, exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in children:
             n.parent = self
@@ -1964,6 +2044,7 @@ class Case(SchemaNodeInner):
         self.reference = reference
         self.status = status
         self.when = when
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -1977,6 +2058,7 @@ class Case(SchemaNodeInner):
             ("reference", self.reference),
             ("status", self.status),
             ("when", self.when),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2038,7 +2120,7 @@ class Choice(SchemaNodeInner):
     status: ?str
     when: ?str
 
-    def __init__(self, name: str, config: ?bool=None, default: ?str=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, reference: ?str=None, status: ?str=None, when: ?str=None, children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, config: ?bool=None, default: ?str=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, reference: ?str=None, status: ?str=None, when: ?str=None, exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in children:
             n.parent = self
@@ -2051,6 +2133,7 @@ class Choice(SchemaNodeInner):
         self.reference = reference
         self.status = status
         self.when = when
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -2067,6 +2150,7 @@ class Choice(SchemaNodeInner):
             ("reference", self.reference),
             ("status", self.status),
             ("when", self.when),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2131,7 +2215,7 @@ class Container_(SchemaNodeInner):
     status: ?str
     when: ?str
 
-    def __init__(self, name: str, config: ?bool=None, description: ?str=None, if_feature: list[str]=[], must: list[Must]=[], presence: ?str=None, reference: ?str=None, status: ?str=None, when: ?str=None, children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, config: ?bool=None, description: ?str=None, if_feature: list[str]=[], must: list[Must]=[], presence: ?str=None, reference: ?str=None, status: ?str=None, when: ?str=None, exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
@@ -2146,6 +2230,7 @@ class Container_(SchemaNodeInner):
         self.reference = reference
         self.status = status
         self.when = when
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -2162,6 +2247,7 @@ class Container_(SchemaNodeInner):
             ("reference", self.reference),
             ("status", self.status),
             ("when", self.when),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2246,7 +2332,7 @@ class Enum(SchemaNodeOuter):
     status: ?str
     value: ?str
 
-    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], reference: ?str=None, status: ?str=None, value: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], reference: ?str=None, status: ?str=None, value: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.name = name
         self.description = description
@@ -2254,6 +2340,7 @@ class Enum(SchemaNodeOuter):
         self.reference = reference
         self.status = status
         self.value = value
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -2266,6 +2353,7 @@ class Enum(SchemaNodeOuter):
             ("reference", self.reference),
             ("status", self.status),
             ("value", self.value),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2312,13 +2400,14 @@ class Extension(SchemaNodeOuter):
     reference: ?str
     status: ?str
 
-    def __init__(self, name: str, argument: ?str=None, description: ?str=None, reference: ?str=None, status: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, argument: ?str=None, description: ?str=None, reference: ?str=None, status: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.name = name
         self.argument = argument
         self.description = description
         self.reference = reference
         self.status = status
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -2330,6 +2419,7 @@ class Extension(SchemaNodeOuter):
             ("description", self.description),
             ("reference", self.reference),
             ("status", self.status),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2375,13 +2465,14 @@ class Feature(SchemaNodeOuter):
     reference: ?str
     status: ?str
 
-    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], reference: ?str=None, status: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], reference: ?str=None, status: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.name = name
         self.description = description
         self.if_feature = if_feature
         self.reference = reference
         self.status = status
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -2393,6 +2484,7 @@ class Feature(SchemaNodeOuter):
             ("if-feature", self.if_feature),
             ("reference", self.reference),
             ("status", self.status),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2437,7 +2529,7 @@ class Grouping(SchemaNodeInner):
     reference: ?str
     status: ?str
 
-    def __init__(self, name: str, description: ?str=None, reference: ?str=None, status: ?str=None, children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, description: ?str=None, reference: ?str=None, status: ?str=None, exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in children:
             n.parent = self
@@ -2445,6 +2537,7 @@ class Grouping(SchemaNodeInner):
         self.description = description
         self.reference = reference
         self.status = status
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -2456,6 +2549,7 @@ class Grouping(SchemaNodeInner):
             ("description", self.description),
             ("reference", self.reference),
             ("status", self.status),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2512,7 +2606,7 @@ class Identity_(SchemaNodeOuter):
     reference: ?str
     status: ?str
 
-    def __init__(self, name: str, base: list[str]=[], description: ?str=None, if_feature: list[str]=[], reference: ?str=None, status: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, base: list[str]=[], description: ?str=None, if_feature: list[str]=[], reference: ?str=None, status: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.name = name
         self.base = base
@@ -2520,6 +2614,7 @@ class Identity_(SchemaNodeOuter):
         self.if_feature = if_feature
         self.reference = reference
         self.status = status
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -2532,6 +2627,7 @@ class Identity_(SchemaNodeOuter):
             ("if-feature", self.if_feature),
             ("reference", self.reference),
             ("status", self.status),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2577,13 +2673,14 @@ class Import(SchemaNodeOuter):
     reference: ?str
     revision_date: ?str
 
-    def __init__(self, module: str, prefix: ?str=None, description: ?str=None, reference: ?str=None, revision_date: ?str=None, namespace=None):
+    def __init__(self, module: str, prefix: ?str=None, description: ?str=None, reference: ?str=None, revision_date: ?str=None, exts=[], namespace=None):
         self.parent = None
         self.module = module
         self.description = description
         self.prefix = prefix
         self.reference = reference
         self.revision_date = revision_date
+        self.exts = exts
         self.namespace = namespace
 
     def prsrc(self, indent=0):
@@ -2594,6 +2691,7 @@ class Import(SchemaNodeOuter):
             ("prefix", self.prefix),
             ("reference", self.reference),
             ("revision-date", self.revision_date),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.module) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2638,12 +2736,13 @@ class Include(SchemaNodeOuter):
     reference: ?str
     revision_date: ?str
 
-    def __init__(self, module: str, description: ?str=None, reference: ?str=None, revision_date: ?str=None, namespace=None, prefix=None):
+    def __init__(self, module: str, description: ?str=None, reference: ?str=None, revision_date: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.module = module
         self.description = description
         self.reference = reference
         self.revision_date = revision_date
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -2654,6 +2753,7 @@ class Include(SchemaNodeOuter):
             ("description", self.description),
             ("reference", self.reference),
             ("revision-date", self.revision_date),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.module) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2694,13 +2794,14 @@ class Input(SchemaNodeInner):
     """
     must: list[Must]
 
-    def __init__(self, must: list[Must]=[], children=[], namespace=None, prefix=None):
+    def __init__(self, must: list[Must]=[], exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
         for n in children:
             n.parent = self
         self.must = must
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -2710,6 +2811,7 @@ class Input(SchemaNodeInner):
         res = []
         attrs: list[(str, ?value)] = [
             ("must", self.must),
+            ("exts", self.exts),
         ]
         args = []
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2769,7 +2871,7 @@ class Leaf(SchemaNodeOuter):
     units: ?str
     when: ?str
 
-    def __init__(self, name: str, type_: Type, config: ?bool=None, default: ?str=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, must: list[Must]=[], reference: ?str=None, status: ?str=None, units: ?str=None, when: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, type_: Type, config: ?bool=None, default: ?str=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, must: list[Must]=[], reference: ?str=None, status: ?str=None, units: ?str=None, when: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
@@ -2787,6 +2889,7 @@ class Leaf(SchemaNodeOuter):
         self.type_ = type_
         self.units = units
         self.when = when
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -2805,6 +2908,7 @@ class Leaf(SchemaNodeOuter):
             ("type", self.type_),
             ("units", self.units),
             ("when", self.when),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -2891,7 +2995,7 @@ class LeafList(SchemaNodeOuter):
     units: ?str
     when: ?str
 
-    def __init__(self, name: str, type_: Type, config: ?bool=None, default: list[str]=[], description: ?str=None, if_feature: list[str]=[], max_elements: ?str=None, min_elements: ?str=None, must: list[Must]=[], ordered_by: ?str=None, reference: ?str=None, status: ?str=None, units: ?str=None, when: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, type_: Type, config: ?bool=None, default: list[str]=[], description: ?str=None, if_feature: list[str]=[], max_elements: ?str=None, min_elements: ?str=None, must: list[Must]=[], ordered_by: ?str=None, reference: ?str=None, status: ?str=None, units: ?str=None, when: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
@@ -2911,6 +3015,7 @@ class LeafList(SchemaNodeOuter):
         self.type_ = type_
         self.units = units
         self.when = when
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -2931,6 +3036,7 @@ class LeafList(SchemaNodeOuter):
             ("type", self.type_),
             ("units", self.units),
             ("when", self.when),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3019,13 +3125,14 @@ class Length(SchemaNodeOuter):
     error_message: ?str
     reference: ?str
 
-    def __init__(self, value: str, description: ?str=None, error_app_tag: ?str=None, error_message: ?str=None, reference: ?str=None, namespace=None, prefix=None):
+    def __init__(self, value: str, description: ?str=None, error_app_tag: ?str=None, error_message: ?str=None, reference: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.value = value
         self.description = description
         self.error_app_tag = error_app_tag
         self.error_message = error_message
         self.reference = reference
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -3037,6 +3144,7 @@ class Length(SchemaNodeOuter):
             ("error-app-tag", self.error_app_tag),
             ("error-message", self.error_message),
             ("reference", self.reference),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.value) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3090,7 +3198,7 @@ class List(SchemaNodeInner):
     unique: list[str]
     when: ?str
 
-    def __init__(self, name: str, config: ?bool=None, description: ?str=None, if_feature: list[str]=[], key: ?str=None, max_elements: ?str=None, min_elements: ?str=None, must: list[Must]=[], ordered_by: ?str=None, reference: ?str=None, status: ?str=None, unique: list[str]=[], when: ?str=None, children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, config: ?bool=None, description: ?str=None, if_feature: list[str]=[], key: ?str=None, max_elements: ?str=None, min_elements: ?str=None, must: list[Must]=[], ordered_by: ?str=None, reference: ?str=None, status: ?str=None, unique: list[str]=[], when: ?str=None, exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
@@ -3109,6 +3217,7 @@ class List(SchemaNodeInner):
         self.status = status
         self.unique = unique
         self.when = when
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -3129,6 +3238,7 @@ class List(SchemaNodeInner):
             ("status", self.status),
             ("unique", self.unique),
             ("when", self.when),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3238,7 +3348,7 @@ class Module(SchemaNodeInner):
     revision: list[Revision]
     yang_version: float
 
-    def __init__(self, name: str, namespace: ?str=None, prefix: ?str=None, yang_version: float=1.1, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], children=[]):
+    def __init__(self, name: str, namespace: ?str=None, prefix: ?str=None, yang_version: float=1.1, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], exts=[], children=[]):
         self.parent = None
         for n in augment:
             n.parent = self
@@ -3269,6 +3379,7 @@ class Module(SchemaNodeInner):
         self.reference = reference
         self.revision = revision
         self.yang_version = yang_version
+        self.exts = exts
         self.children = children
 
     def prsrc(self, indent=0):
@@ -3289,6 +3400,7 @@ class Module(SchemaNodeInner):
             ("reference", self.reference),
             ("revision", self.revision),
             ("yang-version", self.yang_version),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3395,13 +3507,14 @@ class Must(SchemaNodeOuter):
     error_message: ?str
     reference: ?str
 
-    def __init__(self, condition: str, description: ?str=None, error_app_tag: ?str=None, error_message: ?str=None, reference: ?str=None, namespace=None, prefix=None):
+    def __init__(self, condition: str, description: ?str=None, error_app_tag: ?str=None, error_message: ?str=None, reference: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.condition = condition
         self.description = description
         self.error_app_tag = error_app_tag
         self.error_message = error_message
         self.reference = reference
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -3413,6 +3526,7 @@ class Must(SchemaNodeOuter):
             ("error-app-tag", self.error_app_tag),
             ("error-message", self.error_message),
             ("reference", self.reference),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.condition) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3459,7 +3573,7 @@ class Notification(SchemaNodeInner):
     reference: ?str
     status: ?str
 
-    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], must: list[Must]=[], reference: ?str=None, status: ?str=None, children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], must: list[Must]=[], reference: ?str=None, status: ?str=None, exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
@@ -3471,6 +3585,7 @@ class Notification(SchemaNodeInner):
         self.must = must
         self.reference = reference
         self.status = status
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -3484,6 +3599,7 @@ class Notification(SchemaNodeInner):
             ("must", self.must),
             ("reference", self.reference),
             ("status", self.status),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3537,13 +3653,14 @@ class Output(SchemaNodeInner):
     """
     must: list[Must]
 
-    def __init__(self, must: list[Must]=[], children=[], namespace=None, prefix=None):
+    def __init__(self, must: list[Must]=[], exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
         for n in children:
             n.parent = self
         self.must = must
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -3553,6 +3670,7 @@ class Output(SchemaNodeInner):
         res = []
         attrs: list[(str, ?value)] = [
             ("must", self.must),
+            ("exts", self.exts),
         ]
         args = []
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3606,7 +3724,7 @@ class Pattern(SchemaNodeOuter):
     modifier: ?str
     reference: ?str
 
-    def __init__(self, value: str, description: ?str=None, error_app_tag: ?str=None, error_message: ?str=None, modifier: ?str=None, reference: ?str=None, namespace=None, prefix=None):
+    def __init__(self, value: str, description: ?str=None, error_app_tag: ?str=None, error_message: ?str=None, modifier: ?str=None, reference: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.value = value
         self.description = description
@@ -3614,6 +3732,7 @@ class Pattern(SchemaNodeOuter):
         self.error_message = error_message
         self.modifier = modifier
         self.reference = reference
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -3626,6 +3745,7 @@ class Pattern(SchemaNodeOuter):
             ("error-message", self.error_message),
             ("modifier", self.modifier),
             ("reference", self.reference),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.value) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3672,13 +3792,14 @@ class Range(SchemaNodeOuter):
     error_message: ?str
     reference: ?str
 
-    def __init__(self, value: str, description: ?str=None, error_app_tag: ?str=None, error_message: ?str=None, reference: ?str=None, namespace=None, prefix=None):
+    def __init__(self, value: str, description: ?str=None, error_app_tag: ?str=None, error_message: ?str=None, reference: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.value = value
         self.description = description
         self.error_app_tag = error_app_tag
         self.error_message = error_message
         self.reference = reference
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -3690,6 +3811,7 @@ class Range(SchemaNodeOuter):
             ("error-app-tag", self.error_app_tag),
             ("error-message", self.error_message),
             ("reference", self.reference),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.value) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3741,7 +3863,7 @@ class Refine(SchemaNodeOuter):
     presence: ?str
     reference: ?str
 
-    def __init__(self, target_node: str, config: ?bool=None, default: ?str=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, max_elements: ?str=None, min_elements: ?str=None, must: list[Must]=[], presence: ?str=None, reference: ?str=None, namespace=None, prefix=None):
+    def __init__(self, target_node: str, config: ?bool=None, default: ?str=None, description: ?str=None, if_feature: list[str]=[], mandatory: ?bool=None, max_elements: ?str=None, min_elements: ?str=None, must: list[Must]=[], presence: ?str=None, reference: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         for n in must:
             n.parent = self
@@ -3756,6 +3878,7 @@ class Refine(SchemaNodeOuter):
         self.must = must
         self.presence = presence
         self.reference = reference
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -3773,6 +3896,7 @@ class Refine(SchemaNodeOuter):
             ("must", self.must),
             ("presence", self.presence),
             ("reference", self.reference),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.target_node) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3822,11 +3946,12 @@ class Revision(SchemaNodeOuter):
     description: ?str
     reference: ?str
 
-    def __init__(self, date: str, description: ?str=None, reference: ?str=None, namespace=None, prefix=None):
+    def __init__(self, date: str, description: ?str=None, reference: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         self.date = date
         self.description = description
         self.reference = reference
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -3836,6 +3961,7 @@ class Revision(SchemaNodeOuter):
         attrs: list[(str, ?value)] = [
             ("description", self.description),
             ("reference", self.reference),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.date) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3881,7 +4007,7 @@ class Rpc(SchemaNodeInner):
     reference: ?str
     status: ?str
 
-    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], input: ?Input=None, output: ?Output=None, reference: ?str=None, status: ?str=None, children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, description: ?str=None, if_feature: list[str]=[], input: ?Input=None, output: ?Output=None, reference: ?str=None, status: ?str=None, exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         if input is not None:
             input.parent = self
@@ -3896,6 +4022,7 @@ class Rpc(SchemaNodeInner):
         self.output = output
         self.reference = reference
         self.status = status
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -3910,6 +4037,7 @@ class Rpc(SchemaNodeInner):
             ("output", self.output),
             ("reference", self.reference),
             ("status", self.status),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -3977,7 +4105,7 @@ class Submodule(SchemaNodeInner):
     revision: list[Revision]
     yang_version: float
 
-    def __init__(self, name: str, belongs_to: BelongsTo, yang_version: float=1.1, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], children=[], namespace=None, prefix=None):
+    def __init__(self, name: str, belongs_to: BelongsTo, yang_version: float=1.1, augment: list[Augment]=[], contact: ?str=None, description: ?str=None, deviation: list[str]=[], extension_: list[Extension]=[], feature: list[Feature]=[], import_: list[Import]=[], include: list[Include]=[], organization: ?str=None, reference: ?str=None, revision: list[Revision]=[], exts=[], children=[], namespace=None, prefix=None):
         self.parent = None
         for n in augment:
             n.parent = self
@@ -4009,6 +4137,7 @@ class Submodule(SchemaNodeInner):
         self.reference = reference
         self.revision = revision
         self.yang_version = yang_version
+        self.exts = exts
         self.children = children
         self.namespace = namespace
         self.prefix = prefix
@@ -4030,6 +4159,7 @@ class Submodule(SchemaNodeInner):
             ("reference", self.reference),
             ("revision", self.revision),
             ("yang-version", self.yang_version),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -4102,7 +4232,7 @@ class Type(SchemaNodeOuter):
     require_instance: ?bool
     type_: list[Type]
 
-    def __init__(self, name: str, base: list[str]=[], bit: list[Bit]=[], enum: list[Enum]=[], fraction_digits: ?int=None, length: ?Length=None, path: ?str=None, pattern: list[Pattern]=[], range_: ?Range=None, require_instance: ?bool=None, type_: list[Type]=[], namespace=None, prefix=None):
+    def __init__(self, name: str, base: list[str]=[], bit: list[Bit]=[], enum: list[Enum]=[], fraction_digits: ?int=None, length: ?Length=None, path: ?str=None, pattern: list[Pattern]=[], range_: ?Range=None, require_instance: ?bool=None, type_: list[Type]=[], exts=[], namespace=None, prefix=None):
         self.parent = None
         for n in bit:
             n.parent = self
@@ -4127,6 +4257,7 @@ class Type(SchemaNodeOuter):
         self.range_ = range_
         self.require_instance = require_instance
         self.type_ = type_
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -4144,6 +4275,7 @@ class Type(SchemaNodeOuter):
             ("range", self.range_),
             ("require-instance", self.require_instance),
             ("type", self.type_),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -4223,7 +4355,7 @@ class Typedef(SchemaNodeOuter):
     type_: Type
     units: ?str
 
-    def __init__(self, name: str, type_: Type, default: ?str=None, description: ?str=None, reference: ?str=None, status: ?str=None, units: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, type_: Type, default: ?str=None, description: ?str=None, reference: ?str=None, status: ?str=None, units: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         if type_ is not None:
             type_.parent = self
@@ -4234,6 +4366,7 @@ class Typedef(SchemaNodeOuter):
         self.status = status
         self.type_ = type_
         self.units = units
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -4247,6 +4380,7 @@ class Typedef(SchemaNodeOuter):
             ("status", self.status),
             ("type", self.type_),
             ("units", self.units),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -4307,7 +4441,7 @@ class Uses(SchemaNodeOuter):
     status: ?str
     when: ?str
 
-    def __init__(self, name: str, augment: list[Augment]=[], description: ?str=None, if_feature: list[str]=[], reference: ?str=None, refine: list[Refine]=[], status: ?str=None, when: ?str=None, namespace=None, prefix=None):
+    def __init__(self, name: str, augment: list[Augment]=[], description: ?str=None, if_feature: list[str]=[], reference: ?str=None, refine: list[Refine]=[], status: ?str=None, when: ?str=None, exts=[], namespace=None, prefix=None):
         self.parent = None
         for n in augment:
             n.parent = self
@@ -4321,6 +4455,7 @@ class Uses(SchemaNodeOuter):
         self.refine = refine
         self.status = status
         self.when = when
+        self.exts = exts
         self.namespace = namespace
         self.prefix = prefix
 
@@ -4335,6 +4470,7 @@ class Uses(SchemaNodeOuter):
             ("refine", self.refine),
             ("status", self.status),
             ("when", self.when),
+            ("exts", self.exts),
         ]
         args = ["'" + str(self.name) + "'"]
         attrs_text = _prsrc_attrs(indent, attrs)
@@ -4988,16 +5124,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        output=take_opt_output(ss),
                        reference=take_opt_str(ss, "reference"),
                        status=take_opt_str(ss, "status"),
-                       children=take_nodes(ss, ["grouping", "typedef"])
+                       children=take_nodes(ss, ["grouping", "typedef"]),
+                       exts=take_exts(ss)
                        )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under action: " + name)
+                raise ValueError("Invalid statement under action: %s" % (name))
             return n
     if stmt.kw == "anydata":
         if arg is not None:
@@ -5009,16 +5142,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         must=take_musts(ss),
                         reference=take_opt_str(ss, "reference"),
                         status=take_opt_str(ss, "status"),
-                        when=take_opt_str(ss, "when")
+                        when=take_opt_str(ss, "when"),
+                        exts=take_exts(ss)
                         )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under anydata: " + name)
+                raise ValueError("Invalid statement under anydata: %s" % (name))
             return n
     if stmt.kw == "anyxml":
         if arg is not None:
@@ -5030,16 +5160,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        must=take_musts(ss),
                        reference=take_opt_str(ss, "reference"),
                        status=take_opt_str(ss, "status"),
-                       when=take_opt_str(ss, "when")
+                       when=take_opt_str(ss, "when"),
+                       exts=take_exts(ss)
                        )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under anyxml: " + name)
+                raise ValueError("Invalid statement under anyxml: %s" % (name))
             return n
     if stmt.kw == "augment":
         if arg is not None:
@@ -5049,30 +5176,24 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         reference=take_opt_str(ss, "reference"),
                         status=take_opt_str(ss, "status"),
                         when=take_opt_str(ss, "when"),
-                        children=take_nodes(ss, ["action", "anydata", "anyxml", "case", "choice", "container", "leaf", "leaf-list", "list", "notification", "uses"])
+                        children=take_nodes(ss, ["action", "anydata", "anyxml", "case", "choice", "container", "leaf", "leaf-list", "list", "notification", "uses"]),
+                        exts=take_exts(ss)
                         )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under augment: " + name)
+                raise ValueError("Invalid statement under augment: %s" % (name))
             return n
     if stmt.kw == "belongs-to":
         if arg is not None:
             n = BelongsTo(arg,
-                           prefix=take_opt_str(ss, "prefix")
+                           prefix=take_opt_str(ss, "prefix"),
+                           exts=take_exts(ss)
                            )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under belongs-to: " + name)
+                raise ValueError("Invalid statement under belongs-to: %s" % (name))
             return n
     if stmt.kw == "bit":
         if arg is not None:
@@ -5081,16 +5202,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                     if_feature=take_strlist(ss, "if-feature"),
                     position=take_opt_int(ss, "position"),
                     reference=take_opt_str(ss, "reference"),
-                    status=take_opt_str(ss, "status")
+                    status=take_opt_str(ss, "status"),
+                    exts=take_exts(ss)
                     )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under bit: " + name)
+                raise ValueError("Invalid statement under bit: %s" % (name))
             return n
     if stmt.kw == "case":
         if arg is not None:
@@ -5100,16 +5218,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      reference=take_opt_str(ss, "reference"),
                      status=take_opt_str(ss, "status"),
                      when=take_opt_str(ss, "when"),
-                     children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "leaf", "leaf-list", "list", "uses"])
+                     children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "leaf", "leaf-list", "list", "uses"]),
+                     exts=take_exts(ss)
                      )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under case: " + name)
+                raise ValueError("Invalid statement under case: %s" % (name))
             return n
     if stmt.kw == "choice":
         if arg is not None:
@@ -5122,16 +5237,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        reference=take_opt_str(ss, "reference"),
                        status=take_opt_str(ss, "status"),
                        when=take_opt_str(ss, "when"),
-                       children=take_nodes(ss, ["anydata", "anyxml", "case", "choice", "container", "leaf", "leaf-list", "list"])
+                       children=take_nodes(ss, ["anydata", "anyxml", "case", "choice", "container", "leaf", "leaf-list", "list"]),
+                       exts=take_exts(ss)
                        )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under choice: " + name)
+                raise ValueError("Invalid statement under choice: %s" % (name))
             return n
     if stmt.kw == "container":
         if arg is not None:
@@ -5144,16 +5256,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                           reference=take_opt_str(ss, "reference"),
                           status=take_opt_str(ss, "status"),
                           when=take_opt_str(ss, "when"),
-                          children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"])
+                          children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"]),
+                          exts=take_exts(ss)
                           )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under container: " + name)
+                raise ValueError("Invalid statement under container: %s" % (name))
             return n
     if stmt.kw == "enum":
         if arg is not None:
@@ -5162,16 +5271,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      if_feature=take_strlist(ss, "if-feature"),
                      reference=take_opt_str(ss, "reference"),
                      status=take_opt_str(ss, "status"),
-                     value=take_opt_str(ss, "value")
+                     value=take_opt_str(ss, "value"),
+                     exts=take_exts(ss)
                      )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under enum: " + name)
+                raise ValueError("Invalid statement under enum: %s" % (name))
             return n
     if stmt.kw == "extension":
         if arg is not None:
@@ -5179,16 +5285,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                           argument=take_opt_str(ss, "argument"),
                           description=take_opt_str(ss, "description"),
                           reference=take_opt_str(ss, "reference"),
-                          status=take_opt_str(ss, "status")
+                          status=take_opt_str(ss, "status"),
+                          exts=take_exts(ss)
                           )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under extension: " + name)
+                raise ValueError("Invalid statement under extension: %s" % (name))
             return n
     if stmt.kw == "feature":
         if arg is not None:
@@ -5196,16 +5299,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         description=take_opt_str(ss, "description"),
                         if_feature=take_strlist(ss, "if-feature"),
                         reference=take_opt_str(ss, "reference"),
-                        status=take_opt_str(ss, "status")
+                        status=take_opt_str(ss, "status"),
+                        exts=take_exts(ss)
                         )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under feature: " + name)
+                raise ValueError("Invalid statement under feature: %s" % (name))
             return n
     if stmt.kw == "grouping":
         if arg is not None:
@@ -5213,16 +5313,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                          description=take_opt_str(ss, "description"),
                          reference=take_opt_str(ss, "reference"),
                          status=take_opt_str(ss, "status"),
-                         children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"])
+                         children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"]),
+                         exts=take_exts(ss)
                          )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under grouping: " + name)
+                raise ValueError("Invalid statement under grouping: %s" % (name))
             return n
     if stmt.kw == "identity":
         if arg is not None:
@@ -5231,16 +5328,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                          description=take_opt_str(ss, "description"),
                          if_feature=take_strlist(ss, "if-feature"),
                          reference=take_opt_str(ss, "reference"),
-                         status=take_opt_str(ss, "status")
+                         status=take_opt_str(ss, "status"),
+                         exts=take_exts(ss)
                          )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under identity: " + name)
+                raise ValueError("Invalid statement under identity: %s" % (name))
             return n
     if stmt.kw == "import":
         if arg is not None:
@@ -5248,46 +5342,37 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        description=take_opt_str(ss, "description"),
                        prefix=take_opt_str(ss, "prefix"),
                        reference=take_opt_str(ss, "reference"),
-                       revision_date=take_opt_str(ss, "revision-date")
+                       revision_date=take_opt_str(ss, "revision-date"),
+                       exts=take_exts(ss)
                        )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under import: " + name)
+                raise ValueError("Invalid statement under import: %s" % (name))
             return n
     if stmt.kw == "include":
         if arg is not None:
             n = Include(arg,
                         description=take_opt_str(ss, "description"),
                         reference=take_opt_str(ss, "reference"),
-                        revision_date=take_opt_str(ss, "revision-date")
+                        revision_date=take_opt_str(ss, "revision-date"),
+                        exts=take_exts(ss)
                         )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under include: " + name)
+                raise ValueError("Invalid statement under include: %s" % (name))
             return n
     if stmt.kw == "input":
         if arg is None:
             n = Input(must=take_musts(ss),
-                      children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "typedef", "uses"])
+                      children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "typedef", "uses"]),
+                      exts=take_exts(ss)
                       )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under input: " + name)
+                raise ValueError("Invalid statement under input: %s" % (name))
             return n
     if stmt.kw == "leaf":
         if arg is not None:
@@ -5302,16 +5387,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      status=take_opt_str(ss, "status"),
                      type_=take_type(ss),
                      units=take_opt_str(ss, "units"),
-                     when=take_opt_str(ss, "when")
+                     when=take_opt_str(ss, "when"),
+                     exts=take_exts(ss)
                      )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under leaf: " + name)
+                raise ValueError("Invalid statement under leaf: %s" % (name))
             return n
     if stmt.kw == "leaf-list":
         if arg is not None:
@@ -5328,16 +5410,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                           status=take_opt_str(ss, "status"),
                           type_=take_type(ss),
                           units=take_opt_str(ss, "units"),
-                          when=take_opt_str(ss, "when")
+                          when=take_opt_str(ss, "when"),
+                          exts=take_exts(ss)
                           )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under leaf-list: " + name)
+                raise ValueError("Invalid statement under leaf-list: %s" % (name))
             return n
     if stmt.kw == "length":
         if arg is not None:
@@ -5345,16 +5424,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        description=take_opt_str(ss, "description"),
                        error_app_tag=take_opt_str(ss, "error-app-tag"),
                        error_message=take_opt_str(ss, "error-message"),
-                       reference=take_opt_str(ss, "reference")
+                       reference=take_opt_str(ss, "reference"),
+                       exts=take_exts(ss)
                        )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under length: " + name)
+                raise ValueError("Invalid statement under length: %s" % (name))
             return n
     if stmt.kw == "list":
         if arg is not None:
@@ -5371,16 +5447,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      status=take_opt_str(ss, "status"),
                      unique=take_strlist(ss, "unique"),
                      when=take_opt_str(ss, "when"),
-                     children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"])
+                     children=take_nodes(ss, ["action", "anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "notification", "typedef", "uses"]),
+                     exts=take_exts(ss)
                      )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under list: " + name)
+                raise ValueError("Invalid statement under list: %s" % (name))
             return n
     if stmt.kw == "module":
         if arg is not None:
@@ -5399,16 +5472,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        reference=take_opt_str(ss, "reference"),
                        revision=take_revisions(ss),
                        yang_version=take_yang_version(ss),
-                       children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "identity", "leaf", "leaf-list", "list", "notification", "rpc", "typedef", "uses"])
+                       children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "identity", "leaf", "leaf-list", "list", "notification", "rpc", "typedef", "uses"]),
+                       exts=take_exts(ss)
                        )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under module: " + name)
+                raise ValueError("Invalid statement under module: %s" % (name))
             return n
     if stmt.kw == "must":
         if arg is not None:
@@ -5416,16 +5486,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      description=take_opt_str(ss, "description"),
                      error_app_tag=take_opt_str(ss, "error-app-tag"),
                      error_message=take_opt_str(ss, "error-message"),
-                     reference=take_opt_str(ss, "reference")
+                     reference=take_opt_str(ss, "reference"),
+                     exts=take_exts(ss)
                      )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under must: " + name)
+                raise ValueError("Invalid statement under must: %s" % (name))
             return n
     if stmt.kw == "notification":
         if arg is not None:
@@ -5435,30 +5502,24 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                              must=take_musts(ss),
                              reference=take_opt_str(ss, "reference"),
                              status=take_opt_str(ss, "status"),
-                             children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "typedef", "uses"])
+                             children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "typedef", "uses"]),
+                             exts=take_exts(ss)
                              )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under notification: " + name)
+                raise ValueError("Invalid statement under notification: %s" % (name))
             return n
     if stmt.kw == "output":
         if arg is None:
             n = Output(must=take_musts(ss),
-                       children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "typedef", "uses"])
+                       children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "leaf", "leaf-list", "list", "typedef", "uses"]),
+                       exts=take_exts(ss)
                        )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under output: " + name)
+                raise ValueError("Invalid statement under output: %s" % (name))
             return n
     if stmt.kw == "pattern":
         if arg is not None:
@@ -5467,16 +5528,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         error_app_tag=take_opt_str(ss, "error-app-tag"),
                         error_message=take_opt_str(ss, "error-message"),
                         modifier=take_opt_str(ss, "modifier"),
-                        reference=take_opt_str(ss, "reference")
+                        reference=take_opt_str(ss, "reference"),
+                        exts=take_exts(ss)
                         )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under pattern: " + name)
+                raise ValueError("Invalid statement under pattern: %s" % (name))
             return n
     if stmt.kw == "range":
         if arg is not None:
@@ -5484,16 +5542,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                       description=take_opt_str(ss, "description"),
                       error_app_tag=take_opt_str(ss, "error-app-tag"),
                       error_message=take_opt_str(ss, "error-message"),
-                      reference=take_opt_str(ss, "reference")
+                      reference=take_opt_str(ss, "reference"),
+                      exts=take_exts(ss)
                       )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under range: " + name)
+                raise ValueError("Invalid statement under range: %s" % (name))
             return n
     if stmt.kw == "refine":
         if arg is not None:
@@ -5507,31 +5562,25 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                        min_elements=take_opt_str(ss, "min-elements"),
                        must=take_musts(ss),
                        presence=take_opt_str(ss, "presence"),
-                       reference=take_opt_str(ss, "reference")
+                       reference=take_opt_str(ss, "reference"),
+                       exts=take_exts(ss)
                        )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under refine: " + name)
+                raise ValueError("Invalid statement under refine: %s" % (name))
             return n
     if stmt.kw == "revision":
         if arg is not None:
             n = Revision(arg,
                          description=take_opt_str(ss, "description"),
-                         reference=take_opt_str(ss, "reference")
+                         reference=take_opt_str(ss, "reference"),
+                         exts=take_exts(ss)
                          )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under revision: " + name)
+                raise ValueError("Invalid statement under revision: %s" % (name))
             return n
     if stmt.kw == "rpc":
         if arg is not None:
@@ -5542,16 +5591,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                     output=take_opt_output(ss),
                     reference=take_opt_str(ss, "reference"),
                     status=take_opt_str(ss, "status"),
-                    children=take_nodes(ss, ["grouping", "typedef"])
+                    children=take_nodes(ss, ["grouping", "typedef"]),
+                    exts=take_exts(ss)
                     )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under rpc: " + name)
+                raise ValueError("Invalid statement under rpc: %s" % (name))
             return n
     if stmt.kw == "submodule":
         if arg is not None:
@@ -5569,16 +5615,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                           reference=take_opt_str(ss, "reference"),
                           revision=take_revisions(ss),
                           yang_version=take_yang_version(ss),
-                          children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "identity", "leaf", "leaf-list", "list", "notification", "rpc", "typedef", "uses"])
+                          children=take_nodes(ss, ["anydata", "anyxml", "choice", "container", "grouping", "identity", "leaf", "leaf-list", "list", "notification", "rpc", "typedef", "uses"]),
+                          exts=take_exts(ss)
                           )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under submodule: " + name)
+                raise ValueError("Invalid statement under submodule: %s" % (name))
             return n
     if stmt.kw == "type":
         if arg is not None:
@@ -5592,16 +5635,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      pattern=take_patterns(ss),
                      range_=take_opt_range(ss),
                      require_instance=take_opt_bool(ss, "require-instance"),
-                     type_=take_types(ss)
+                     type_=take_types(ss),
+                     exts=take_exts(ss)
                      )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under type: " + name)
+                raise ValueError("Invalid statement under type: %s" % (name))
             return n
     if stmt.kw == "typedef":
         if arg is not None:
@@ -5611,16 +5651,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                         reference=take_opt_str(ss, "reference"),
                         status=take_opt_str(ss, "status"),
                         type_=take_type(ss),
-                        units=take_opt_str(ss, "units")
+                        units=take_opt_str(ss, "units"),
+                        exts=take_exts(ss)
                         )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under typedef: " + name)
+                raise ValueError("Invalid statement under typedef: %s" % (name))
             return n
     if stmt.kw == "uses":
         if arg is not None:
@@ -5631,16 +5668,13 @@ def stmt_to_snode(stmt: Statement) -> SchemaNode:
                      reference=take_opt_str(ss, "reference"),
                      refine=take_refines(ss),
                      status=take_opt_str(ss, "status"),
-                     when=take_opt_str(ss, "when")
+                     when=take_opt_str(ss, "when"),
+                     exts=take_exts(ss)
                      )
             if len(ss) > 0:
                 name = ss[0].kw
                 prefix = ss[0].prefix
-                if prefix is not None:
-                    name = prefix + ":" + name
-                    print("Warning: Ignoring extension %s under %s" % (name, stmt.kw))
-                else:
-                    raise ValueError("Invalid statement under uses: " + name)
+                raise ValueError("Invalid statement under uses: %s" % (name))
             return n
     raise ValueError("Unknown statement:" + stmt.kw)
 
