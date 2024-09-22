@@ -33,7 +33,7 @@ netinfra_yang = """module netinfra {
         type string;
       }
     }
-    list backbonelink {
+    list backbone-link {
       key "left-router left-interface right-router right-interface";
 
       orchestron:transform respnet.CfsBBLink;
@@ -98,17 +98,17 @@ nodes_yang = """module nodes {
         type string;
       }
 
-      leaf ipv4address {
+      leaf ipv4-address {
         type string;
       }
 
-      leaf ipv6address {
+      leaf ipv6-address {
         type string;
       }
       leaf corefoo {
         type string;
       }
-      list backboneinterface {
+      list backbone-interface {
         key name;
         leaf name {
           type string;

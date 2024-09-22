@@ -48,7 +48,7 @@ def cfs_router_service(service: netinfra__netinfra__routers_entry, otree: rfs_ro
     router = otree.nodes.routers.create(service.name)
     router.id = service.id
     sid = service.id
-    router.ipv4address = "10.0.1.%s/32" % sid if sid is not None else ""
+    router.ipv4_address = "10.0.1.%s/32" % sid if sid is not None else ""
     #router.ipv6address = "2001:db8:0:1::%s/128" % sid if sid is not None else ""
     return otree
 

@@ -408,7 +408,6 @@ class DNodeInner(DNode):
             res.append("")
 
             list_key_args = list(map(lambda x: _safe_name(x), self.key))
-            # TODO:
             for child in self.children:
                 if isinstance(child, DLeaf):
                     pass
