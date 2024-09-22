@@ -329,6 +329,7 @@ snode_methods = {
             reference=self.reference,
             status=self.status,
             when=self.when,
+            exts=self.exts,
             children=self.get_dnode_children()
         )
         for child in new_dnode.children:
@@ -375,6 +376,7 @@ snode_methods = {
             description=self.description,
             revision=self.revision,
             reference=self.reference,
+            exts=self.exts,
             children=self.get_dnode_children()
         )
         for child in new_dnode.children:
@@ -418,6 +420,7 @@ snode_methods = {
             reference=self.reference,
             status=self.status,
             when=self.when,
+            exts=self.exts,
             children=self.get_dnode_children()
         )
         for child in new_dnode.children:
@@ -466,7 +469,8 @@ snode_methods = {
             status=self.status,
             type_=self.type_,
             units=self.units,
-            when=self.when
+            when=self.when,
+            exts=self.exts
         )
 
 """
@@ -524,7 +528,8 @@ snode_methods = {
             status=self.status,
             type_=self.type_,
             units=self.units,
-            when=self.when
+            when=self.when,
+            exts=self.exts
         )
 
 """

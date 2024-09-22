@@ -215,6 +215,7 @@ class DNode(object):
     config: bool
     description: ?str
     reference: ?str
+    exts: list[Ext]
 
     def prdaclass(self, loose=False, top=True) -> str:
         """Print the data class for this schema node
@@ -488,7 +489,7 @@ class DContainer(DNodeInner):
     must: list[Must]
     presence: bool
 
-    def __init__(self, name: str, config: bool, description: ?str=None, if_feature=[], must=[], presence: bool, reference=None, status=None, when=None, children=[]):
+    def __init__(self, name: str, config: bool, description: ?str=None, if_feature=[], must=[], presence: bool, reference=None, status=None, when=None, exts=[], children=[]):
         self.name = name
         self.dname = "Container_"
         self.config = config
@@ -498,6 +499,7 @@ class DContainer(DNodeInner):
         self.presence = presence
         self.reference = reference
         self.status = status
+        self.exts = exts
         self.children = children
 
 class DModule(DNodeInner):
@@ -514,7 +516,7 @@ class DModule(DNodeInner):
     revision: list[Revision]
     yang_version: float
 
-    def __init__(self, name: str, namespace: str, prefix: str, yang_version: ?float, description: ?str=None, contact=None, deviation=[], extension_=[], feature=[], import_=[], include=[], organization=None, reference=None, revision=[], children=[]):
+    def __init__(self, name: str, namespace: str, prefix: str, yang_version: ?float, description: ?str=None, contact=None, deviation=[], extension_=[], feature=[], import_=[], include=[], organization=None, reference=None, revision=[], exts=[], children=[]):
         self.name = name
         self.dname = "Module"
         self.namespace = namespace
@@ -536,6 +538,7 @@ class DModule(DNodeInner):
         self.organization = organization
         self.reference = reference
         self.revision = revision
+        self.exts = exts
         self.children = children
 
 class DList(DNodeInner):
@@ -549,7 +552,7 @@ class DList(DNodeInner):
     unique: list[str]
     when: ?str
 
-    def __init__(self, name: str, key: list[str], config: bool, description: ?str=None, if_feature=[], max_elements: ?int=None, min_elements=0, must=[], ordered_by="system", reference=None, status=None, unique=[], when=None, children=[]):
+    def __init__(self, name: str, key: list[str], config: bool, description: ?str=None, if_feature=[], max_elements: ?int=None, min_elements=0, must=[], ordered_by="system", reference=None, status=None, unique=[], when=None, exts=[], children=[]):
         self.name = name
         self.dname = "List"
         self.key = key
@@ -564,13 +567,14 @@ class DList(DNodeInner):
         self.status = status
         self.unique = unique
         self.when = when
+        self.exts = exts
         self.children = children
 
 class DLeaf(DNodeLeaf):
     default: ?str
     units: ?str
 
-    def __init__(self, name: str, config: bool, description: ?str=None, default=None, if_feature=[], mandatory=False, must=[], reference=None, status=None, type_: Type, units=None, when=None):
+    def __init__(self, name: str, config: bool, description: ?str=None, default=None, if_feature=[], mandatory=False, must=[], reference=None, status=None, type_: Type, units=None, when=None, exts=[]):
         self.name = name
         self.dname = "Leaf"
         self.config = config
@@ -584,6 +588,7 @@ class DLeaf(DNodeLeaf):
         self.type_ = type_
         self.units = units
         self.when = when
+        self.exts = exts
 
     def is_key(self) -> bool:
         parent = self.parent
@@ -599,7 +604,7 @@ class DLeafList(DNodeLeaf):
     ordered_by: str
     units: ?str
 
-    def __init__(self, name: str, config: bool, description: ?str=None, default=[], if_feature=[], max_elements: ?int=None, min_elements=0, must=[], ordered_by="system", reference=None, status=None, type_: Type, units=None, when=None):
+    def __init__(self, name: str, config: bool, description: ?str=None, default=[], if_feature=[], max_elements: ?int=None, min_elements=0, must=[], ordered_by="system", reference=None, status=None, type_: Type, units=None, when=None, exts=[]):
         self.name = name
         self.dname = "LeafList"
         self.config = config
@@ -615,6 +620,7 @@ class DLeafList(DNodeLeaf):
         self.type_ = type_
         self.units = units
         self.when = when
+        self.exts = exts
 
 class DRoot(DNodeInner):
     def __init__(self, modules: list[DNode]=[]):
@@ -2285,6 +2291,7 @@ class Container_(SchemaNodeInner):
             reference=self.reference,
             status=self.status,
             when=self.when,
+            exts=self.exts,
             children=self.get_dnode_children()
         )
         for child in new_dnode.children:
@@ -2956,7 +2963,8 @@ class Leaf(SchemaNodeOuter):
             status=self.status,
             type_=self.type_,
             units=self.units,
-            when=self.when
+            when=self.when,
+            exts=self.exts
         )
 
     def __str__(self):
@@ -3095,7 +3103,8 @@ class LeafList(SchemaNodeOuter):
             status=self.status,
             type_=self.type_,
             units=self.units,
-            when=self.when
+            when=self.when,
+            exts=self.exts
         )
 
     def __str__(self):
@@ -3290,6 +3299,7 @@ class List(SchemaNodeInner):
             reference=self.reference,
             status=self.status,
             when=self.when,
+            exts=self.exts,
             children=self.get_dnode_children()
         )
         for child in new_dnode.children:
@@ -3454,6 +3464,7 @@ class Module(SchemaNodeInner):
             description=self.description,
             revision=self.revision,
             reference=self.reference,
+            exts=self.exts,
             children=self.get_dnode_children()
         )
         for child in new_dnode.children:

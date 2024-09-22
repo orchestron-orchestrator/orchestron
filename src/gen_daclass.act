@@ -154,9 +154,9 @@ actor main(env):
         await async wf_rfs.write(rfs_root.prdaclass().encode())
         await async wf_rfs.close()
 
-        #wf_appttt = file.WriteFile(wfc, "src/appttt.act")
-        #a = ttt_gen.dschema_to_tttsrc(cfs_root)
-        #await async wf_appttt.write(a.encode())
-        #await async wf_appttt.close()
+        wf_appttt = file.WriteFile(wfc, "src/appttt.act")
+        a = ttt_gen.dschema_to_tttsrc(cfs_root)
+        await async wf_appttt.write(a.encode())
+        await async wf_appttt.close()
 
     env.exit(0)
