@@ -1,0 +1,21 @@
+
+import ttt
+import yang.gdata
+
+from y_rfs import root as rfs_root
+from y_rfs import nodes__nodes__routers_entry
+
+class Router(ttt.TTTTransform):
+    def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        mi = nodes__nodes__routers_entry.from_gdata(i)
+        return self.rfs_router_transform(mi).to_gdata()
+
+    mut def rfs_router_transform(self, i: nodes__nodes__routers_entry) -> rfs_root:
+        #sto_dev = y_dev.IosXr24()
+        print("RFS /nodes/routers transform running", i.name, i.id)
+        print("  IPv4 address:", i.ipv4_address)
+        print("  IPv6 address:", i.ipv6_address)
+        for bbi in i.backbone_interface.elements:
+            print("  Backbone interface: %s [%s] <-> %s [%s]" % (i.name, bbi.name, bbi.remote.device, bbi.remote.interface))
+        o = rfs_root()
+        return o

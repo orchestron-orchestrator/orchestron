@@ -1,0 +1,48 @@
+
+
+import ttt
+import yang.gdata
+
+from y_cfs import root as cfs_root
+from y_cfs import netinfra__netinfra__routers_entry
+from y_cfs import netinfra__netinfra__backbone_link_entry
+
+from y_rfs_loose import root as rfs_root_loose
+
+class Router(ttt.TTTTransform):
+    # TODO: this should be generated
+    def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        mi = netinfra__netinfra__routers_entry.from_gdata(i)
+        return self.cfs_router_transform(mi).to_gdata()
+
+    mut def cfs_router_transform(self, i: netinfra__netinfra__routers_entry) -> rfs_root_loose:
+        o = rfs_root_loose()
+        print("CFS router transform running", i.name, i.id)
+        router = o.nodes.routers.create(i.name)
+        router.id = i.id
+        sid = i.id
+        router.ipv4_address = "10.0.1.%s/32" % sid if sid is not None else ""
+        router.ipv6_address = "2001:db8:0:1::%s/128" % sid if sid is not None else ""
+        return o
+
+class BBLink(ttt.TTTTransform):
+    # TODO: this should be generated
+    def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        mi = netinfra__netinfra__backbone_link_entry.from_gdata(i)
+        return self.cfs_bblink_transform(mi).to_gdata()
+
+    mut def cfs_bblink_transform(self, i: netinfra__netinfra__backbone_link_entry) -> rfs_root_loose:
+        print("CFS backbonelink transform running %s [%s] <-> %s [%s]" % (i.left_router, i.left_interface, i.right_router, i.right_interface))
+        o = rfs_root_loose()
+
+        left_r = o.nodes.routers.create(i.left_router)
+        li = left_r.backbone_interface.create(i.left_interface)
+        li.remote.device = i.right_router
+        li.remote.interface = i.right_interface
+
+        right_r = o.nodes.routers.create(i.right_router)
+        ri = right_r.backbone_interface.create(i.right_interface)
+        ri.remote.device = i.left_router
+        ri.remote.interface = i.left_interface
+
+        return o
