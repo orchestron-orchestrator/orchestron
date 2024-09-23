@@ -30,24 +30,24 @@ nb_input = """
             <id>8</id>
             <role>edge</role>
         </routers>
-        <backbonelink>
+        <backbone-link>
             <left-router>AMS-CORE-1</left-router>
             <left-interface>Bundle-Ether1</left-interface>
             <right-router>STO-CORE-1</right-router>
             <right-interface>Bundle-Ether1</right-interface>
-        </backbonelink>
-        <backbonelink>
+        </backbone-link>
+        <backbone-link>
             <left-router>FRA-CORE-1</left-router>
             <left-interface>Bundle-Ether1</left-interface>
             <right-router>STO-CORE-1</right-router>
             <right-interface>Bundle-Ether2</right-interface>
-        </backbonelink>
-        <backbonelink>
+        </backbone-link>
+        <backbone-link>
             <left-router>AMS-CORE-1</left-router>
             <left-interface>Bundle-Ether2</left-interface>
             <right-router>FRA-CORE-1</right-router>
             <right-interface>Bundle-Ether2</right-interface>
-        </backbonelink>
+        </backbone-link>
     </netinfra>
     <l3vpn>
     </l3vpn>
