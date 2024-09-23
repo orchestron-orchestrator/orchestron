@@ -94,6 +94,8 @@ nodes_yang = """module nodes {
         type string;
       }
 
+      orchestron:transform respnet.RfsRouter;
+
       leaf id {
         type string;
       }
@@ -155,8 +157,14 @@ actor main(env):
         await async wf_rfs.close()
 
         wf_appttt = file.WriteFile(wfc, "src/appttt.act")
-        a = ttt_gen.dschema_to_tttsrc(cfs_root)
-        await async wf_appttt.write(a.encode())
+        tttsrc = "import ttt\n"
+        tttsrc += "import respnet\n\n"
+        tttsrc += "def get_layers():\n"
+        tttsrc += "    res = []\n"
+        for ym in [cfs_root, rfs_root]:
+            tttsrc += "    res.append(" + ttt_gen.dschema_to_tttsrc(ym) + ")\n"
+        tttsrc += "    return res\n"
+        await async wf_appttt.write(tttsrc.encode())
         await async wf_appttt.close()
 
     env.exit(0)
