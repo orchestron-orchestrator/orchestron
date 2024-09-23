@@ -1,0 +1,10 @@
+import ttt
+import respnet.cfs
+
+import respnet.rfs
+
+def get_layers():
+    res = []
+    res.append(ttt.TTTContainer({"netinfra": ttt.TTTContainer({"routers": ttt.TTTList(respnet.cfs.Router), "backbone-link": ttt.TTTList(respnet.cfs.BBLink)}), "l3vpn": ttt.TTTContainer({})}))
+    res.append(ttt.TTTContainer({"nodes": ttt.TTTContainer({"routers": ttt.TTTList(respnet.rfs.Router)})}))
+    return res

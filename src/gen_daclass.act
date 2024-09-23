@@ -20,7 +20,7 @@ netinfra_yang = """module netinfra {
     list routers {
       key name;
 
-      orchestron:transform respnet.CfsRouter;
+      orchestron:transform respnet.cfs.Router;
 
       leaf name {
         type string;
@@ -36,7 +36,7 @@ netinfra_yang = """module netinfra {
     list backbone-link {
       key "left-router left-interface right-router right-interface";
 
-      orchestron:transform respnet.CfsBBLink;
+      orchestron:transform respnet.cfs.BBLink;
 
       leaf left-router {
         type string;
@@ -94,7 +94,7 @@ nodes_yang = """module nodes {
         type string;
       }
 
-      orchestron:transform respnet.RfsRouter;
+      orchestron:transform respnet.rfs.Router;
 
       leaf id {
         type string;
@@ -156,9 +156,11 @@ actor main(env):
         await async wf_rfs.write(rfs_root.prdaclass().encode())
         await async wf_rfs.close()
 
-        wf_appttt = file.WriteFile(wfc, "src/appttt.act")
+        wf_appttt = file.WriteFile(wfc, "src/respnet/layers.act")
         tttsrc = "import ttt\n"
-        tttsrc += "import respnet\n\n"
+        # TODO: generate import list from transforms in yang models
+        tttsrc += "import respnet.cfs\n\n"
+        tttsrc += "import respnet.rfs\n\n"
         tttsrc += "def get_layers():\n"
         tttsrc += "    res = []\n"
         for ym in [cfs_root, rfs_root]:

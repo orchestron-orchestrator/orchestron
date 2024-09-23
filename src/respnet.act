@@ -12,6 +12,7 @@ import ttt
 
 import respnet.cfs
 import respnet.rfs
+import respnet.layers
 
 import testing
 
@@ -97,18 +98,10 @@ nb_input2 = """
 #    return dev_tree.xr["STO-CORE-1"]
 
 actor main(env):
-    root = ttt.TTTContainer({
-        "netinfra": ttt.TTTContainer({
-            "routers": ttt.TTTList(respnet.cfs.Router),
-            "backbone-link": ttt.TTTList(respnet.cfs.BBLink),
-        })
-    })
+    layers = respnet.layers.get_layers()
 
-    l2_root = ttt.TTTContainer({
-        "nodes": ttt.TTTContainer({
-            "routers": ttt.TTTList(respnet.rfs.Router)
-        })
-    })
+    l1_root = layers[0]
+    l2_root = layers[1]
 
     def conf(nb_in):
         input_config = cfs_root.from_xml(xml.decode(nb_in))
@@ -116,24 +109,7 @@ actor main(env):
         return config_per_source
 
     l1_output = {}
-    root.configure(conf(nb_input), l1_output)
+    l1_root.configure(conf(nb_input), l1_output)
     l2_output = {}
     l2_root.configure(l1_output, l2_output)
     env.exit(0)
-
-#actor main(env):
-#    layers = appttt.get_layers()
-#
-#    l1_root = layers[0]
-#    l2_root = layers[1]
-#
-#    def conf(nb_in):
-#        input_config = cfs_root.from_xml(xml.decode(nb_in))
-#        config_per_source = {"source1": input_config.to_gdata()}
-#        return config_per_source
-#
-#    l1_output = {}
-#    l1_root.configure(conf(nb_input), l1_output)
-##    l2_output = {}
-##    l2_root.configure(l1_output, l2_output)
-#    env.exit(0)

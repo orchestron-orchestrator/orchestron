@@ -1,0 +1,36 @@
+
+import yang.schema as schema
+import ttt
+
+#def wrap_transform(fq_transform_fn: str)
+#    short_transform_fn = fq_transform_fn.split(".")[-1]
+#    res = """class Wrapped%s(%s):
+#    def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+#        mi = %s.from_gdata(i)
+#        return self.transform(mi).to_gdata()
+#""" % (short_transform_fn, fq_transform_fn)
+#    return res
+
+def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> str:
+    print("dschema_to_ttt", sn)
+    if isinstance(sn, schema.DList):
+        # TODO: FIXME
+        print("dschema_to_ttt DList", sn)
+        for ext in sn.exts:
+            print("dschema_to_ttt DList ext", ext)
+            extprefix = ext.prefix
+            if extprefix is not None and extprefix == "orchestron" and ext.name == "transform":
+                extarg = ext.arg
+                if extarg is not None:
+                    transform = extarg
+                    return "ttt.TTTList(%s)" % transform
+        raise NotImplementedError("DList without transform")
+    elif isinstance(sn, schema.DNodeInner):
+        elems = []
+        for child in sn.children:
+            if isinstance(child, schema.DLeaf):
+                continue
+            elems.append('"%s": %s' % (child.name, dschema_to_tttsrc(child)))
+        return "ttt.TTTContainer({%s})" % ", ".join(elems)
+
+    raise NotImplementedError("Unhandled schema type: %s" % str(type(sn)))
