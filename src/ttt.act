@@ -92,7 +92,6 @@ class TTTList(TTTNode):
 class TTTTransform(TTTNode):
     def __init__(self):
         #self.state = TTTTransformState(self)
-        print("TTTTransform.__init__")
         pass
 
     mut def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
