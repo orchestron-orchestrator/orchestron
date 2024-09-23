@@ -5,6 +5,9 @@ import yang.schema
 import ttt_gen
 import ttt
 
+# Generate the automatically generated code for RESPNET
+#
+
 netinfra_yang = """module netinfra {
   yang-version "1.1";
   namespace "http://example.com/netinfra";
