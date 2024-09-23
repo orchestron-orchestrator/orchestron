@@ -77,8 +77,8 @@ class TTTList(TTTNode):
     """
     state: TTTListState
 
-    def __init__(self, state: TTTListState):
-        self.state = state
+    def __init__(self, template):
+        self.state = TTTListState(template)
 
     proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
         transp = transpose(diff)
@@ -109,10 +109,3 @@ class TTTTransform(TTTNode):
         output = self.transform_wrapper(merged_config)
         output_tree[str(self)] = output
         print("TTTTransform.configure output:\n", output.to_xmlstr())
-
-
-def TTTListFactory(template):
-    # HAHAHA LOL. I hate Factories but there's a bug somewhere lurking so we
-    # can't initialize an actor from under a class in this hierarchy
-    # https://github.com/actonlang/acton/issues/1921
-    return TTTList(TTTListState(template))

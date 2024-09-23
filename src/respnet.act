@@ -162,19 +162,17 @@ mut def rfs_router_transform(i: nodes__nodes__routers_entry) -> rfs_root:
 #def transform2():
 #    return dev_tree.xr["STO-CORE-1"]
 
-
-
 actor main(env):
     root = ttt.TTTContainer({
         "netinfra": ttt.TTTContainer({
-            "routers": ttt.TTTListFactory(CfsRouter),
-            "backbone-link": ttt.TTTListFactory(CfsBBLink),
+            "routers": ttt.TTTList(CfsRouter),
+            "backbone-link": ttt.TTTList(CfsBBLink),
         })
     })
 
     l2_root = ttt.TTTContainer({
         "nodes": ttt.TTTContainer({
-            "routers": ttt.TTTListFactory(RfsRouter)
+            "routers": ttt.TTTList(RfsRouter)
         })
     })
 
