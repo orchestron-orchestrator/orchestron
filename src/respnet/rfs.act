@@ -8,9 +8,9 @@ from y_rfs import nodes__nodes__routers_entry
 class Router(ttt.TTTTransform):
     def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
         mi = nodes__nodes__routers_entry.from_gdata(i)
-        return self.rfs_router_transform(mi).to_gdata()
+        return self.transform(mi).to_gdata()
 
-    mut def rfs_router_transform(self, i: nodes__nodes__routers_entry) -> rfs_root:
+    mut def transform(self, i: nodes__nodes__routers_entry) -> rfs_root:
         #sto_dev = y_dev.IosXr24()
         print("RFS /nodes/routers transform running", i.name, i.id)
         print("  IPv4 address:", i.ipv4_address)
