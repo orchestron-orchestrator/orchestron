@@ -98,18 +98,18 @@ nb_input2 = """
 #    return dev_tree.xr["STO-CORE-1"]
 
 actor main(env):
-    layers = respnet.layers.get_layers()
-
-    l1_root = layers[0]
-    l2_root = layers[1]
-
     def conf(nb_in):
         input_config = cfs_root.from_xml(xml.decode(nb_in))
         config_per_source = {"source1": input_config.to_gdata()}
         return config_per_source
 
-    l1_output = {}
-    l1_root.configure(conf(nb_input), l1_output)
-    l2_output = {}
-    l2_root.configure(l1_output, l2_output)
+    config_in = conf(nb_input)
+    layers = respnet.layers.get_layers()
+    config_out = {}
+    for layer in respnet.layers.get_layers():
+        layer.configure(config_in, config_out)
+        config_in = config_out
+
+    print(config_out)
+
     env.exit(0)
