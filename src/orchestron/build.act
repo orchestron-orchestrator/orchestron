@@ -11,11 +11,13 @@ class Layer(object):
 
 def gen_app(wfc: file.WriteFileCap, app_name: str, output_dir: str, layers):
     tttsrc = "import ttt\nimport yang.adata\nimport yang.gdata\n\n"
+    tttsrc += "# WARNING: DO NOT MODIFY THIS FILE!!!\n"
+    tttsrc += "# This file is generated, do NOT directly modify it.\n\n"
     imports = []
     tttsrc_getlayers = "def get_layers():\n    res = []\n"
     for idx, models in enumerate(layers):
         print("Generating layer %d" % idx)
-        name = "%s/%s/y_%d.act" % (output_dir, app_name, idx)
+        name = "%s/%s/layers/y_%d.act" % (output_dir, app_name, idx)
 #        if idx == 0:
 #            name = "src/y_cfs.act"
 #        elif idx == len(layers) - 1:
@@ -26,7 +28,7 @@ def gen_app(wfc: file.WriteFileCap, app_name: str, output_dir: str, layers):
         await async wf_l.write(layer_src.prdaclass().encode())
         await async wf_l.close()
 
-        tttsrc += "import %s.y_%d as y_%d\n" % (app_name, idx, idx)
+        tttsrc += "import %s.layers.y_%d as y_%d\n" % (app_name, idx, idx)
         if idx < len(layers) - 1:
             print("Generating TTT for layer %d" % idx)
             lttt = ttt_gen.dschema_to_tttsrc(layer_src)
@@ -35,12 +37,12 @@ def gen_app(wfc: file.WriteFileCap, app_name: str, output_dir: str, layers):
         #tttsrc_getlayers += "    res.append(" + ttt_gen.dschema_to_tttsrc(layer_src) + ")\n"
 
         if idx > 0:
-            loose_name = "%s/%s/y_%d_loose.act" % (output_dir, app_name, idx)
+            loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, app_name, idx)
             wf_ll = file.WriteFile(wfc, loose_name)
             await async wf_ll.write(layer_src.prdaclass(loose=True).encode())
             await async wf_ll.close()
 
-            tttsrc += "import %s.y_%d_loose as y_%d_loose\n" % (app_name, idx, idx)
+            tttsrc += "import %s.layers.y_%d_loose as y_%d_loose\n" % (app_name, idx, idx)
 
     tttsrc_getlayers += "    return res\n"
     tttsrc += "\n".join(list(set(imports))) + "\n\n"
