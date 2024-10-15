@@ -55,29 +55,51 @@ class TTTContainer(TTTNode):
                 elem = self.elems[path]
                 elem.configure(subdiff, output_tree)
 
-actor TTTListState(template: () -> TTTNode):
-    var elems = {}
+#actor TTTListState(template: proc() -> TTTNode):
+#    var _elems = {}
+#
+#    def get_elems(keys: list[str]=[]) -> dict[str, TTTNode]:
+#        res = {}
+#        for key in keys:
+#            res[key] = get_elem(key)
+#        return res
+#
+#    def get_elem(key: str) -> TTTNode:
+#        if key in _elems:
+#            return _elems[key]
+#        else:
+#            raise ValueError("TTTListState.get_elem: key not found: " + key)
+#            elem = _template()
+#            _elems[key] = elem
+#            return elem
 
-    def get_elems(keys: list[str]=[]) -> dict[str, TTTNode]:
+class TTTListState(object):
+
+    def __init__(self, template: mut() -> TTTNode):
+        self._elems = {}
+        self._template = template
+
+    def get_elems(self, keys: list[str]=[]) -> dict[str, TTTNode]:
         res = {}
         for key in keys:
-            res[key] = get_elem(key)
+            res[key] = self.get_elem(key)
         return res
 
-    def get_elem(key: str) -> TTTNode:
-        if key in elems:
-            return elems[key]
+    def get_elem(self, key: str) -> TTTNode:
+        if key in self._elems:
+            return self._elems[key]
         else:
-            elem = template()
-            elems[key] = elem
+            elem = self._template()
+            self._elems[key] = elem
             return elem
+
 
 class TTTList(TTTNode):
     """We only support unordered lists
     """
     state: TTTListState
 
-    def __init__(self, template):
+    def __init__(self, template: mut() -> TTTNode):
         self.state = TTTListState(template)
 
     proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
