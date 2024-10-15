@@ -9,13 +9,13 @@ class Layer(object):
         self.name = name
 
 
-def gen_app(wfc: file.WriteFileCap, app_name, layers):
+def gen_app(wfc: file.WriteFileCap, app_name: str, output_dir: str, layers):
     tttsrc = "import ttt\nimport yang.adata\nimport yang.gdata\n\n"
     imports = []
     tttsrc_getlayers = "def get_layers():\n    res = []\n"
     for idx, models in enumerate(layers):
         print("Generating layer %d" % idx)
-        name = "src/%s/y_%d.act" % (app_name, idx)
+        name = "%s/%s/y_%d.act" % (output_dir, app_name, idx)
 #        if idx == 0:
 #            name = "src/y_cfs.act"
 #        elif idx == len(layers) - 1:
@@ -35,7 +35,7 @@ def gen_app(wfc: file.WriteFileCap, app_name, layers):
         #tttsrc_getlayers += "    res.append(" + ttt_gen.dschema_to_tttsrc(layer_src) + ")\n"
 
         if idx > 0:
-            loose_name = "src/%s/y_%d_loose.act" % (app_name, idx)
+            loose_name = "%s/%s/y_%d_loose.act" % (output_dir, app_name, idx)
             wf_ll = file.WriteFile(wfc, loose_name)
             await async wf_ll.write(layer_src.prdaclass(loose=True).encode())
             await async wf_ll.close()
@@ -45,6 +45,6 @@ def gen_app(wfc: file.WriteFileCap, app_name, layers):
     tttsrc_getlayers += "    return res\n"
     tttsrc += "\n".join(list(set(imports))) + "\n\n"
     tttsrc += tttsrc_getlayers
-    wf_appttt = file.WriteFile(wfc, "src/%s/layers.act" % app_name)
+    wf_appttt = file.WriteFile(wfc, "%s/%s/layers.act" % (output_dir, app_name))
     await async wf_appttt.write(tttsrc.encode())
     await async wf_appttt.close()
