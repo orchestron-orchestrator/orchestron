@@ -1,0 +1,50 @@
+import file
+import yangy
+import ttt_gen
+import ttt
+
+class Layer(object):
+    def __init__(self, models, name: ?str=None):
+        self.models = models
+        self.name = name
+
+
+def gen_app(wfc: file.WriteFileCap, app_name, layers):
+    tttsrc = "import ttt\nimport yang.adata\nimport yang.gdata\n\n"
+    imports = []
+    tttsrc_getlayers = "def get_layers():\n    res = []\n"
+    for idx, models in enumerate(layers):
+        print("Generating layer %d" % idx)
+        name = "src/%s/y_%d.act" % (app_name, idx)
+#        if idx == 0:
+#            name = "src/y_cfs.act"
+#        elif idx == len(layers) - 1:
+#            name = "src/y_rfs.act"
+
+        wf_l = file.WriteFile(wfc, name)
+        layer_src = yangy.compile(models)
+        await async wf_l.write(layer_src.prdaclass().encode())
+        await async wf_l.close()
+
+        tttsrc += "import %s.y_%d as y_%d\n" % (app_name, idx, idx)
+        if idx < len(layers) - 1:
+            print("Generating TTT for layer %d" % idx)
+            lttt = ttt_gen.dschema_to_tttsrc(layer_src)
+            imports.extend(lttt.imports)
+            tttsrc_getlayers += "    res.append(" + lttt.src + ")\n"
+        #tttsrc_getlayers += "    res.append(" + ttt_gen.dschema_to_tttsrc(layer_src) + ")\n"
+
+        if idx > 0:
+            loose_name = "src/%s/y_%d_loose.act" % (app_name, idx)
+            wf_ll = file.WriteFile(wfc, loose_name)
+            await async wf_ll.write(layer_src.prdaclass(loose=True).encode())
+            await async wf_ll.close()
+
+            tttsrc += "import %s.y_%d_loose as y_%d_loose\n" % (app_name, idx, idx)
+
+    tttsrc_getlayers += "    return res\n"
+    tttsrc += "\n".join(list(set(imports))) + "\n\n"
+    tttsrc += tttsrc_getlayers
+    wf_appttt = file.WriteFile(wfc, "src/%s/layers.act" % app_name)
+    await async wf_appttt.write(tttsrc.encode())
+    await async wf_appttt.close()

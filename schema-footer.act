@@ -1,7 +1,0 @@
-
-
-def stmt_to_smodule(stmt):
-    m = stmt_to_snode(stmt)
-    if isinstance(m, Module):
-        return m
-    raise ValueError("Expected a module, got " + type(m))

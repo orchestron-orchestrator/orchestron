@@ -11,11 +11,12 @@ import ttt
 #""" % (short_transform_fn, fq_transform_fn)
 #    return res
 
-def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> str:
+def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[str]):
+    imports = []
     print("dschema_to_ttt", sn)
     if isinstance(sn, schema.DList):
         # TODO: FIXME
-        print("dschema_to_ttt DList", sn)
+        print("dschema_to_ttt DList", sn, sn.name, sn.exts)
         for ext in sn.exts:
             print("dschema_to_ttt DList ext", ext)
             extprefix = ext.prefix
@@ -23,14 +24,17 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> str:
                 extarg = ext.arg
                 if extarg is not None:
                     transform = extarg
-                    return "ttt.TTTList(%s)" % transform
+                    imports.append("import %s" % (".".join(transform.split(".")[:-1])))
+                    return (src="ttt.TTTList(%s)" % transform, imports=imports)
         raise NotImplementedError("DList without transform")
     elif isinstance(sn, schema.DNodeInner):
         elems = []
         for child in sn.children:
             if isinstance(child, schema.DLeaf):
                 continue
-            elems.append('"%s": %s' % (child.name, dschema_to_tttsrc(child)))
-        return "ttt.TTTContainer({%s})" % ", ".join(elems)
+            res = dschema_to_tttsrc(child)
+            imports.extend(res.imports)
+            elems.append('"%s": %s' % (child.name, res.src))
+        return (src="ttt.TTTContainer({%s})" % ", ".join(elems), imports=imports)
 
     raise NotImplementedError("Unhandled schema type: %s" % str(type(sn)))

@@ -1,18 +1,12 @@
 
 import xml
+import yang.adata
 import yang.gdata
 import orchestron.trans as otrans
-from y_cfs import root as cfs_root
-from y_cfs import netinfra__netinfra__routers_entry
-from y_cfs import netinfra__netinfra__backbone_link_entry
-from y_rfs import root as rfs_root
-from y_rfs_loose import root as rfs_root_loose
-from y_rfs import nodes__nodes__routers_entry
 import ttt
 
-import respnet.cfs
-import respnet.rfs
 import respnet.layers
+from respnet.y_0 import root as cfs_root
 
 import testing
 
@@ -98,18 +92,22 @@ nb_input2 = """
 #    return dev_tree.xr["STO-CORE-1"]
 
 actor main(env):
-    def conf(nb_in):
-        input_config = cfs_root.from_xml(xml.decode(nb_in))
-        config_per_source = {"source1": input_config.to_gdata()}
-        return config_per_source
 
-    config_in = conf(nb_input)
     layers = respnet.layers.get_layers()
+    # Bootstrap first layer
+    input_config = cfs_root.from_xml(xml.decode(nb_input))
+    config_in = {"source1": input_config.to_gdata()}
+
     config_out = {}
-    for layer in respnet.layers.get_layers():
+    for layer in respnet.layers.get_layers()[:-1]:
         layer.configure(config_in, config_out)
         config_in = config_out
 
-    print(config_out)
+    pieces = list(config_out.values())
+    merged = pieces[0]
+    for piece in pieces[1:]:
+        merged = yang.gdata.merge(merged, piece)
+    print("Final config")
+    print(merged.to_xmlstr())
 
     env.exit(0)

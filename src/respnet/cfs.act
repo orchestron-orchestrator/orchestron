@@ -1,11 +1,13 @@
+
+
 import ttt
+import yang.adata
 import yang.gdata
 
-from y_cfs import root as cfs_root
-from y_cfs import netinfra__netinfra__routers_entry
-from y_cfs import netinfra__netinfra__backbone_link_entry
+from respnet.y_0 import netinfra__netinfra__routers_entry
+from respnet.y_0 import netinfra__netinfra__backbone_link_entry
+from respnet.y_1_loose import root as o_root
 
-from y_rfs_loose import root as rfs_root_loose
 
 class Router(ttt.TTTTransform):
     # TODO: this should be generated
@@ -13,8 +15,8 @@ class Router(ttt.TTTTransform):
         mi = netinfra__netinfra__routers_entry.from_gdata(i)
         return self.transform(mi).to_gdata()
 
-    mut def transform(self, i: netinfra__netinfra__routers_entry) -> rfs_root_loose:
-        o = rfs_root_loose()
+    mut def transform(self, i: netinfra__netinfra__routers_entry) -> o_root:
+        o = o_root()
         print("CFS router transform running", i.name, i.id)
         router = o.nodes.routers.create(i.name)
         router.id = i.id
@@ -30,9 +32,9 @@ class BBLink(ttt.TTTTransform):
         mi = netinfra__netinfra__backbone_link_entry.from_gdata(i)
         return self.transform(mi).to_gdata()
 
-    mut def transform(self, i: netinfra__netinfra__backbone_link_entry) -> rfs_root_loose:
+    mut def transform(self, i: netinfra__netinfra__backbone_link_entry) -> o_root:
         print("CFS backbonelink transform running %s [%s] <-> %s [%s]" % (i.left_router, i.left_interface, i.right_router, i.right_interface))
-        o = rfs_root_loose()
+        o = o_root()
 
         left_r = o.nodes.routers.create(i.left_router)
         li = left_r.backbone_interface.create(i.left_interface)

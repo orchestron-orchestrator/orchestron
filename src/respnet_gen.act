@@ -1,9 +1,7 @@
 import file
 
-import yang.parser
-import yang.schema
-import ttt_gen
-import ttt
+import orchestron.build
+import ymodels
 
 # Generate the automatically generated code for RESPNET
 #
@@ -134,42 +132,55 @@ nodes_yang = """module nodes {
 }
 """
 
+dev_junos_yang = """module junos {
+    yang-version "1.1";
+    namespace "http://example.com/junos";
+    prefix "junos";
+    description "JUNOS device";
+
+    container interfaces {
+        list interface {
+            key name;
+            leaf name {
+                type string;
+            }
+            leaf description {
+                type string;
+            }
+        }
+    }
+}
+"""
+
+dev_xr_yang = """module xr {
+    yang-version "1.1";
+    namespace "http://example.com/xr";
+    prefix "xr";
+    description "XR device";
+
+    list interface {
+        key name;
+        leaf name {
+            type string;
+        }
+        leaf description {
+            type string;
+        }
+    }
+}
+"""
+
 
 actor main(env):
     fc = file.FileCap(env.cap)
     wfc = file.WriteFileCap(fc)
 
-    cfs_netinfra = yang.schema.stmt_to_snode(yang.parser.parse(netinfra_yang)).to_dnode()
-    cfs_l3vpn = yang.schema.stmt_to_snode(yang.parser.parse(l3vpn_yang)).to_dnode()
-
-    rfs_netinfra = yang.schema.stmt_to_snode(yang.parser.parse(nodes_yang)).to_dnode()
-    if isinstance(cfs_netinfra, yang.schema.DModule) and isinstance(cfs_l3vpn, yang.schema.DModule) and isinstance(rfs_netinfra, yang.schema.DModule):
-        cfs_root = yang.schema.DRoot([cfs_netinfra, cfs_l3vpn])
-        rfs_root = yang.schema.DRoot([rfs_netinfra])
-
-        wf_cfs = file.WriteFile(wfc, "src/y_cfs.act")
-        await async wf_cfs.write(cfs_root.prdaclass().encode())
-        await async wf_cfs.close()
-
-        wf_rfsl = file.WriteFile(wfc, "src/y_rfs_loose.act")
-        await async wf_rfsl.write(rfs_root.prdaclass(loose=True).encode())
-        await async wf_rfsl.close()
-
-        wf_rfs = file.WriteFile(wfc, "src/y_rfs.act")
-        await async wf_rfs.write(rfs_root.prdaclass().encode())
-        await async wf_rfs.close()
-
-        wf_appttt = file.WriteFile(wfc, "src/respnet/layers.act")
-        tttsrc = "import ttt\n"
-        # TODO: generate import list from transforms in yang models
-        tttsrc += "import respnet.cfs\n\n"
-        tttsrc += "import respnet.rfs\n\n"
-        tttsrc += "def get_layers():\n"
-        tttsrc += "    res = []\n"
-        for ym in [cfs_root, rfs_root]:
-            tttsrc += "    res.append(" + ttt_gen.dschema_to_tttsrc(ym) + ")\n"
-        tttsrc += "    return res\n"
-        await async wf_appttt.write(tttsrc.encode())
-        await async wf_appttt.close()
+    layers = [
+        [netinfra_yang, l3vpn_yang],
+        [nodes_yang],
+#        [rfs_yang, ymodels.ietf_inet_types],
+        [dev_junos_yang, dev_xr_yang],
+    ]
+    orchestron.build.gen_app(wfc, "respnet", layers)
 
     env.exit(0)

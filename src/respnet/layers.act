@@ -1,7 +1,16 @@
 import ttt
-import respnet.cfs
+import yang.adata
+import yang.gdata
 
+import respnet.y_0 as y_0
+import respnet.y_1 as y_1
+import respnet.y_1_loose as y_1_loose
+import respnet.y_2 as y_2
+import respnet.y_2_loose as y_2_loose
+import respnet.cfs
 import respnet.rfs
+
+cfs_root = y_0.root
 
 def get_layers():
     res = []
