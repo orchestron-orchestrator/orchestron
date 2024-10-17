@@ -1,4 +1,5 @@
 
+import yang
 import yang.schema as schema
 import ttt
 
@@ -11,8 +12,29 @@ import ttt
 #""" % (short_transform_fn, fq_transform_fn)
 #    return res
 
-def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[str]):
+def get_list_name(sn: schema.DList) -> str:
+    sn_parent = sn.parent
+    if sn_parent is not None:
+        return sn.name
+    raise NotImplementedError("List without parent")
+
+def children_to_tttsrc(sn: schema.DNodeInner) -> (src: str, imports: list[str], defs: list[str]):
     imports = []
+    defs = []
+    elems = []
+    for child in sn.children:
+        if isinstance(child, schema.DLeaf):
+            continue
+        res = dschema_to_tttsrc(child)
+        imports.extend(res.imports)
+        defs.extend(res.defs)
+        elems.append('"%s": %s' % (child.name, res.src))
+    children_src = ", ".join(elems)
+    return (src=children_src, imports=imports, defs=defs)
+
+def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[str], defs: list[str]):
+    imports = []
+    defs = []
     print("dschema_to_ttt", sn)
     if isinstance(sn, schema.DList):
         # TODO: FIXME
@@ -25,16 +47,31 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[st
                 if extarg is not None:
                     transform = extarg
                     imports.append("import %s" % (".".join(transform.split(".")[:-1])))
-                    return (src="ttt.TTTList(%s)" % transform, imports=imports)
-        raise NotImplementedError("DList without transform")
+                    return (src="ttt.TTTList(%s)" % transform, imports=imports, defs=[])
+
+        # List without an extension
+        children_res = children_to_tttsrc(sn)
+        imports.extend(children_res.imports)
+        n = schema.get_path_name(sn)
+        clname = "create_list_entry_%s" % n
+        cl_def = "def %s():\n" % clname
+        cl_def += "    return ttt.TTTContainer({%s})" % children_res.src
+        return (src="ttt.TTTList(%s)" % clname, imports=imports, defs=[cl_def])
+
     elif isinstance(sn, schema.DNodeInner):
-        elems = []
-        for child in sn.children:
-            if isinstance(child, schema.DLeaf):
-                continue
-            res = dschema_to_tttsrc(child)
-            imports.extend(res.imports)
-            elems.append('"%s": %s' % (child.name, res.src))
-        return (src="ttt.TTTContainer({%s})" % ", ".join(elems), imports=imports)
+        children_res = children_to_tttsrc(sn)
+        imports.extend(children_res.imports)
+        return (src="ttt.TTTContainer({%s})" % children_res.src, imports=imports, defs=children_res.defs)
 
     raise NotImplementedError("Unhandled schema type: %s" % str(type(sn)))
+
+def ttt_prsrc(sn: schema.DNode) -> str:
+    ts = dschema_to_tttsrc(sn)
+    res = "# WARNING WARNING WARNING WARNING WARNING\n"
+    res += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
+    res += "# WARNING WARNING WARNING WARNING WARNING\n\n"
+    res += "import ttt\nimport yang.adata\nimport yang.gdata\n\n"
+    res += "\n".join(list(set(ts.imports))) + "\n\n"
+    res += "\n\n".join(ts.defs) + "\n\n"
+    res += "def get_ttt() -> ttt.TTTNode:\n    r = " + ts.src + "\n    return r\n"
+    return res
