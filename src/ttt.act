@@ -1,7 +1,6 @@
 
 import xml
 import yang.gdata
-import orchestron.trans as otrans
 
 import testing
 
