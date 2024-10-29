@@ -37,17 +37,25 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[st
     defs = []
     print("dschema_to_ttt", sn)
     if isinstance(sn, schema.DList):
-        # TODO: FIXME
         print("dschema_to_ttt DList", sn, sn.name, sn.exts)
         for ext in sn.exts:
             print("dschema_to_ttt DList ext", ext)
             extprefix = ext.prefix
-            if extprefix is not None and extprefix == "orchestron" and ext.name == "transform":
+            if extprefix is not None and extprefix == "orchestron":
                 extarg = ext.arg
-                if extarg is not None:
-                    transform = extarg
-                    imports.append("import %s" % (".".join(transform.split(".")[:-1])))
-                    return (src="ttt.TTTList(%s)" % transform, imports=imports, defs=[])
+                if ext.name == "transform":
+                    if extarg is not None:
+                        transform = extarg
+                        # TODO: somewhere we should check that the transform
+                        # reference is valid, i.e. an instance of TTTTransform
+                        imports.append("import %s" % (".".join(transform.split(".")[:-1])))
+                        return (src="ttt.TTTList(%s)" % transform, imports=imports, defs=[])
+                    else:
+                        raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
+                elif ext.name == "device":
+                    if extarg is not None:
+                        raise ValueError("Extraneous argument to orchstron:device. Remove argument.")
+                    return (src="ttt.TTTList(ttt.TTTDevice)", imports=imports, defs=[])
 
         # List without an extension
         children_res = children_to_tttsrc(sn)

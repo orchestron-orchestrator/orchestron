@@ -25,17 +25,6 @@ def transpose(cfg_per_src: dict[str, yang.gdata.Node]) -> dict[str, dict[str, ya
 
     return cfg_per_key
 
-#def _test_transpose():
-#    cfg1 = cfs_root.from_xml(xml.decode(nb_input))
-#    cfg2 = cfs_root.from_xml(xml.decode(nb_input2))
-#    cfg_per_src = {"source1": cfg1.to_gdata(), "source2": cfg2.to_gdata()}
-#    cfg_per_key = transpose(cfg_per_src)
-#    print(cfg_per_key)
-#    #testing.assertEqual(cfg_per_key["routers"]["STO-CORE-1"].id, 4)
-#    #testing.assertEqual(cfg_per_key["routers"]["AMS-CORE-1"].id, 8)
-#    #testing.assertEqual(cfg_per_key["routers"]["NYC-CORE-1"].id, 1)
-
-
 # TTT - Transactional Transform Trees
 
 class TTTNode(object):
@@ -105,7 +94,26 @@ class TTTList(TTTNode):
         transp = transpose(diff)
         elems: dict[str, TTTNode] = self.state.get_elems(list(transp.keys()))
         for key, subdiff in transp.items():
-            elems[key].configure(subdiff, output_tree)
+            elem = elems[key]
+            if isinstance(elem, TTTRFSTransform):
+                # RFS transforms are special, they need to know about various
+                # device information. RFS services always exist nested under a
+                # list keyed by device name, so we can extract the device name
+                # by visiting the parent node. It should already be verified at
+                # compile time, but we have an extra check here on key length.
+                l = list(diff.values())[0]
+                lp = l.parent
+                if isinstance(lp, yang.gdata.ListElement):
+                    k = lp.key_vals
+                    if len(k) != 1:
+                        raise ValueError("RFSTransform parent list key length != 1")
+                    di = DeviceInfo(lp.key_str())
+                    elem.configure_rfs(di, subdiff, output_tree)
+                else:
+                    raise ValueError("RFSTransform parent not a ListElement")
+            else:
+                elem.configure(subdiff, output_tree)
+
 
 #actor TTTTransformState(transform):
 #    pass
@@ -120,8 +128,6 @@ class TTTTransform(TTTNode):
 
     proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
         print("TTTTransform.configure", self)
-#        for d in diff.values():
-#            merged_config
         diffs = list(diff.values())
         merged_config = diffs[0]
         for d in diffs[1:]:
@@ -129,3 +135,66 @@ class TTTTransform(TTTNode):
         output = self.transform_wrapper(merged_config)
         output_tree[str(self)] = output
         print("TTTTransform.configure output:\n", output.to_xmlstr())
+
+class DeviceInfo(object):
+    def __init__(self, name: str):
+        self.name = name
+
+class TTTRFSTransform(TTTNode):
+    def __init__(self):
+        #self.state = TTTTransformState(self)
+        pass
+
+    mut def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        raise NotImplementedError("TTTRFSTransform.transform not implemented")
+
+    proc def configure_rfs(self, device_info: DeviceInfo, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
+        print("TTTRFSTransform.configure", self)
+        diffs = list(diff.values())
+        merged_config = diffs[0]
+        for d in diffs[1:]:
+            merged_config = yang.gdata.merge(merged_config, d)
+        # TODO: consider returning yang.gdata.Root instead of yang.gdata.Node from transform_wrapper()
+        output = self.transform_wrapper(merged_config)
+        # The root of the output tree from an RFS transform is the config of one
+        # (1) device, while the combined output from all transforms on a TTT
+        # layer is expected to be one data tree. Clearly we want to support
+        # multiple devices, so we join the output trees of all RFS transforms
+        # into a single data tree by inserting the device config under a list
+        # keyed by device name. The device name is extracted from the parent
+        # list element of the diff. The way the RFS transforms are expected to
+        # be used is that they are always nested under a list keyed by device
+        # name, so this is safe, it should be verified at compile time.
+
+        if isinstance(output, yang.gdata.Root):
+            rfs_output = yang.gdata.Module(
+                name="orchestron-device",
+                #ns="http://orchestron.org/yang/orchestron-device.yang", # TODO: add namespace
+                children={
+                    "device": yang.gdata.List(
+                        "device",
+                        ["name"],
+                        #ns="http://orchestron.org/yang/orchestron-device.yang", # TODO: add namespace
+                        elements=[
+                            yang.gdata.ListElement(
+                                [device_info.name],
+                                #ns="http://orchestron.org/yang/orchestron-device.yang", # TODO: add namespace
+                                children=output.children
+                            )
+                        ]
+                    )
+                }
+            )
+            output_tree[str(self)] = rfs_output
+        else:
+            raise NotImplementedError("TTTRFSTransform.configure_rfs: unsupported output type: " + str(type(output)))
+        print("TTTRFSTransform.configure output:\n", output.to_xmlstr())
+
+class TTTDevice(TTTNode):
+    def __init__(self):
+        #self.state = TTTTransformState(self)
+        print("TTTDevice.__init__")
+        pass
+
+    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
+        print("TTTDevice.configure", self)
