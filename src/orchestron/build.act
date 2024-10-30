@@ -24,7 +24,8 @@ class SysSpec(object):
         tttsrc_getlayers = "def get_layers():\n    res = []\n"
         for idx, layer in enumerate(self.layers):
             print("Generating layer %d" % idx)
-            name = "%s/%s/layers/y_%d.act" % (output_dir, self.name, idx)
+            layer_name = layer.name
+            name = "%s/%s/layers/y_%s.act" % (output_dir, self.name, layer_name if layer_name is not None else str(idx))
     #        if idx == 0:
     #            name = "src/y_cfs.act"
     #        elif idx == len(layers) - 1:
