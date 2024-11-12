@@ -20,7 +20,7 @@ class SysSpec(object):
         tttsrc = "# WARNING WARNING WARNING WARNING WARNING\n"
         tttsrc += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
         tttsrc += "# WARNING WARNING WARNING WARNING WARNING\n\n"
-        tttsrc += "import ttt\nimport yang.adata\nimport yang.gdata\n\n"
+        tttsrc += "import orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
         imports = []
         tttsrc_getlayers = "def get_layers():\n    res = []\n"
         for idx, layer in enumerate(self.layers):

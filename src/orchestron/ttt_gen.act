@@ -83,7 +83,7 @@ def ttt_prsrc(sn: schema.DNode) -> str:
     res = "# WARNING WARNING WARNING WARNING WARNING\n"
     res += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
     res += "# WARNING WARNING WARNING WARNING WARNING\n\n"
-    res += "import ttt\nimport yang.adata\nimport yang.gdata\n\n"
+    res += "import orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
     res += "\n".join(list(set(ts.imports))) + "\n\n"
     res += "\n\n".join(ts.defs) + "\n\n"
     res += "def get_ttt() -> ttt.TTTNode:\n    r = " + ts.src + "\n    return r\n"
