@@ -58,6 +58,7 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[st
                     return (src="ttt.TTTList(ttt.TTTDevice)", imports=imports, defs=[])
 
         # List without an extension
+        print("dschema_to_ttt DList no ext", sn)
         children_res = children_to_tttsrc(sn)
         imports.extend(children_res.imports)
         n = schema.get_path_name(sn)
@@ -67,6 +68,10 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[st
         return (src="ttt.TTTList(%s)" % clname, imports=imports, defs=[cl_def])
 
     elif isinstance(sn, schema.DNodeInner):
+        print("dschema_to_ttt DNodeInner", sn)
+        sn_children = sn.children
+        if sn_children is None:
+            print("dschema_to_ttt DNodeInner no children", sn)
         children_res = children_to_tttsrc(sn)
         imports.extend(children_res.imports)
         return (src="ttt.TTTContainer({%s})" % children_res.src, imports=imports, defs=children_res.defs)

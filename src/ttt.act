@@ -134,7 +134,7 @@ class TTTTransform(TTTNode):
             merged_config = yang.gdata.merge(merged_config, d)
         output = self.transform_wrapper(merged_config)
         output_tree[str(self)] = output
-        print("TTTTransform.configure output:\n", output.to_xmlstr())
+        print("TTTTransform.configure output:\n%s" % output.to_xmlstr())
 
 class DeviceInfo(object):
     def __init__(self, name: str):
@@ -188,7 +188,7 @@ class TTTRFSTransform(TTTNode):
             output_tree[str(self)] = rfs_output
         else:
             raise NotImplementedError("TTTRFSTransform.configure_rfs: unsupported output type: " + str(type(output)))
-        print("TTTRFSTransform.configure output:\n", output.to_xmlstr())
+        print("TTTRFSTransform.configure output:\n%s" % output.to_xmlstr())
 
 class TTTDevice(TTTNode):
     def __init__(self):

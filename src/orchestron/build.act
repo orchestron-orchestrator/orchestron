@@ -1,7 +1,9 @@
 import file
 import yang
+import yang.schema
 import ttt_gen
 import ttt
+
 
 class SysSpec(object):
     """Orchestration System specification
@@ -36,7 +38,7 @@ class SysSpec(object):
             await async wf_l.write(layer_src.prdaclass().encode())
             await async wf_l.close()
 
-            if idx < len(self.layers) - 1:
+            if idx < len(self.layers):
                 tttsrc += "import %s.layers.t_%d\n" % (self.name, idx)
                 print("Generating TTT for layer %d" % idx)
 
@@ -54,6 +56,15 @@ class SysSpec(object):
                 await async wf_ll.write(layer_src.prdaclass(loose=True).encode())
                 await async wf_ll.close()
 
+        for dev_type in self.dev_types:
+            print("Generating device type %s" % dev_type.name)
+            for idx, model in enumerate(dev_type.models):
+                print("Generating model %d" % idx)
+            dev_tree = yang.compile(dev_type.models)
+            name = "%s/%s/devices/%s.act" % (output_dir, self.name, dev_type.name)
+            wf_dt = file.WriteFile(wfc, name)
+            await async wf_dt.write(dev_tree.prdaclass().encode())
+            await async wf_dt.close()
 
         tttsrc_getlayers += "    return res\n"
         tttsrc += "\n".join(list(set(imports))) + "\n\n"
@@ -75,7 +86,7 @@ class Layer(object):
 class DeviceType(object):
     def __init__(self, name: str, models: list[str]):
         self.name = name
-        self.models = []
+        self.models = models
 
     @staticmethod
     def from_dir(fc: file.FileCap, name: str, dir: str) -> DeviceType:
