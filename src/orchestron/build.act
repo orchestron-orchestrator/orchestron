@@ -1,8 +1,7 @@
 import file
 import yang
 import yang.schema
-import ttt_gen
-import ttt
+import orchestron.ttt_gen as ttt_gen
 
 
 class SysSpec(object):

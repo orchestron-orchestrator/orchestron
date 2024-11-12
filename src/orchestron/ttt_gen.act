@@ -1,7 +1,7 @@
 
 import yang
 import yang.schema as schema
-import ttt
+import orchestron.ttt
 
 #def wrap_transform(fq_transform_fn: str)
 #    short_transform_fn = fq_transform_fn.split(".")[-1]
