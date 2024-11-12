@@ -145,7 +145,7 @@ class TTTRFSTransform(TTTNode):
         #self.state = TTTTransformState(self)
         pass
 
-    mut def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+    mut def transform_wrapper(self, i: yang.gdata.Node, di: DeviceInfo) -> yang.gdata.Node:
         raise NotImplementedError("TTTRFSTransform.transform not implemented")
 
     proc def configure_rfs(self, device_info: DeviceInfo, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
@@ -155,7 +155,7 @@ class TTTRFSTransform(TTTNode):
         for d in diffs[1:]:
             merged_config = yang.gdata.merge(merged_config, d)
         # TODO: consider returning yang.gdata.Root instead of yang.gdata.Node from transform_wrapper()
-        output = self.transform_wrapper(merged_config)
+        output = self.transform_wrapper(merged_config, device_info)
         # The root of the output tree from an RFS transform is the config of one
         # (1) device, while the combined output from all transforms on a TTT
         # layer is expected to be one data tree. Clearly we want to support
