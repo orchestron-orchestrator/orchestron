@@ -1,0 +1,64 @@
+import testing
+
+import yang
+import orchestron.ttt_gen as ttt_gen
+import orchestron.yang as oyang
+
+def _test_ttt_gen1():
+    ys = """module foo {
+  yang-version "1.1";
+  namespace "http://example.com/foo";
+  prefix "foo";
+  container c1 {
+    list foo {
+      key name;
+
+      leaf name {
+        type string;
+      }
+
+      list bar {
+        key name;
+
+        orchestron:transform respnet.cfs.Foobar;
+
+        leaf name {
+          type string;
+        }
+      }
+    }
+  }
+}
+"""
+    y = yang.compile([ys])
+    ts = ttt_gen.ttt_prsrc(y)
+    return ts
+
+def _test_ttt_gen_rfs():
+    ys = """module foo {
+  yang-version "1.1";
+  namespace "http://example.com/foo";
+  prefix "foo";
+  import orchestron-rfs {
+    prefix orfs;
+  }
+  augment /orfs:rfs {
+    list backbone-interface {
+      key name;
+
+      orchestron:transform respnet.rfs.BBInterface;
+
+      leaf name {
+        type string;
+      }
+    }
+  }
+}
+"""
+    y = yang.compile([oyang.rfs, oyang.ietf_inet_types, ys])
+    ts = ttt_gen.ttt_prsrc(y)
+    return ts
+
+actor main(env):
+    _test_ttt_gen_rfs()
+    env.exit(0)

@@ -1,0 +1,16 @@
+# WARNING WARNING WARNING WARNING WARNING
+# DO NOT MODIFY THIS FILE!! This file is generated!
+# WARNING WARNING WARNING WARNING WARNING
+
+import ttt
+import yang.adata
+import yang.gdata
+
+import respnet.rfs
+
+def create_list_entry_orchestron_rfs__rfs():
+    return ttt.TTTContainer({"backbone-interface": ttt.TTTList(respnet.rfs.BBInterface)})
+
+def get_ttt() -> ttt.TTTNode:
+    r = ttt.TTTContainer({"device": ttt.TTTList(ttt.TTTDevice), "rfs": ttt.TTTList(create_list_entry_orchestron_rfs__rfs)})
+    return r
