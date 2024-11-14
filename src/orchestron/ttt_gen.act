@@ -35,11 +35,8 @@ def children_to_tttsrc(sn: schema.DNodeInner) -> (src: str, imports: list[str], 
 def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[str], defs: list[str]):
     imports = []
     defs = []
-    print("dschema_to_ttt", sn)
     if isinstance(sn, schema.DList):
-        print("dschema_to_ttt DList", sn, sn.name, sn.exts)
         for ext in sn.exts:
-            print("dschema_to_ttt DList ext", ext)
             extprefix = ext.prefix
             if extprefix is not None and extprefix == "orchestron":
                 extarg = ext.arg
@@ -58,7 +55,6 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[st
                     return (src="ttt.TTTList(ttt.TTTDevice)", imports=imports, defs=[])
 
         # List without an extension
-        print("dschema_to_ttt DList no ext", sn)
         children_res = children_to_tttsrc(sn)
         imports.extend(children_res.imports)
         n = schema.get_path_name(sn)
@@ -68,10 +64,7 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[st
         return (src="ttt.TTTList(%s)" % clname, imports=imports, defs=[cl_def])
 
     elif isinstance(sn, schema.DNodeInner):
-        print("dschema_to_ttt DNodeInner", sn)
         sn_children = sn.children
-        if sn_children is None:
-            print("dschema_to_ttt DNodeInner no children", sn)
         children_res = children_to_tttsrc(sn)
         imports.extend(children_res.imports)
         return (src="ttt.TTTContainer({%s})" % children_res.src, imports=imports, defs=children_res.defs)
