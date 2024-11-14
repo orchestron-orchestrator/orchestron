@@ -18,7 +18,16 @@ def get_list_name(sn: schema.DList) -> str:
         return sn.name
     raise NotImplementedError("List without parent")
 
-def children_to_tttsrc(sn: schema.DNodeInner) -> (src: str, imports: list[str], defs: list[str]):
+class TTTSrc(object):
+    def __init__(self, src: str, input_classes: list[str], imports: list[str], defs: list[str]):
+        self.src = src
+        self.input_classes = input_classes
+        self.imports = imports
+        self.defs = defs
+
+
+def children_to_tttsrc(sn: schema.DNodeInner) -> TTTSrc:
+    input_classes = []
     imports = []
     defs = []
     elems = []
@@ -26,13 +35,15 @@ def children_to_tttsrc(sn: schema.DNodeInner) -> (src: str, imports: list[str], 
         if isinstance(child, schema.DLeaf):
             continue
         res = dschema_to_tttsrc(child)
+        input_classes.extend(res.input_classes)
         imports.extend(res.imports)
         defs.extend(res.defs)
         elems.append('"%s": %s' % (child.name, res.src))
     children_src = ", ".join(elems)
-    return (src=children_src, imports=imports, defs=defs)
+    return TTTSrc(src=children_src, input_classes=input_classes, imports=imports, defs=defs)
 
-def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[str], defs: list[str]):
+def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> TTTSrc:
+    input_classes = []
     imports = []
     defs = []
     if isinstance(sn, schema.DList):
@@ -40,43 +51,77 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> (src: str, imports: list[st
             extprefix = ext.prefix
             if extprefix is not None and extprefix == "orchestron":
                 extarg = ext.arg
-                if ext.name == "transform":
+                if ext.name == "transform" or ext.name == "rfs-transform":
                     if extarg is not None:
                         transform = extarg
                         # TODO: somewhere we should check that the transform
                         # reference is valid, i.e. an instance of TTTTransform
-                        imports.append("import %s" % (".".join(transform.split(".")[:-1])))
-                        return (src="ttt.TTTList(%s)" % transform, imports=imports, defs=[])
+                        transform_module = ".".join(transform.split(".")[:-1])
+                        transform_name = transform.split(".")[-1]
+                        imports.append("import %s" % transform_module)
+                        input_class = schema.get_path_name(sn)
+                        if isinstance(sn, schema.DList):
+                            input_class += "_entry"
+                        input_classes.append(input_class)
+                        if ext.name == "transform":
+                            defs.append("""class %s_Wrapper(%s):
+    mut def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        \"\"\"Wrap the user provided transform method to convert from gdata to
+        modeled input and back to gdata
+        \"\"\"
+        modeled_input = %s.from_gdata(i)
+        return self.transform(modeled_input).to_gdata()
+""" % (transform_name, transform, input_class))
+                        elif ext.name == "rfs-transform":
+                            defs.append("""class %s_Wrapper(%s):
+    mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttt.DeviceInfo) -> yang.gdata.Node:
+        \"\"\"Wrap the user provided transform method to convert from gdata to
+        modeled input and back to gdata
+        \"\"\"
+        modeled_input = %s.from_gdata(i)
+        return self.transform(modeled_input, device_info).to_gdata()
+""" % (transform_name, transform, input_class))
+                        else:
+                            raise ValueError("Unknown extension name: %s" % ext.name)
+                        return TTTSrc(src="ttt.TTTList(%s_Wrapper)" % transform_name, input_classes=input_classes, imports=imports, defs=defs)
                     else:
                         raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
                 elif ext.name == "device":
                     if extarg is not None:
                         raise ValueError("Extraneous argument to orchstron:device. Remove argument.")
-                    return (src="ttt.TTTList(ttt.TTTDevice)", imports=imports, defs=[])
+                    return TTTSrc(src="ttt.TTTList(ttt.TTTDevice)", input_classes=input_classes, imports=imports, defs=defs)
 
         # List without an extension
         children_res = children_to_tttsrc(sn)
+        input_classes.extend(children_res.input_classes)
         imports.extend(children_res.imports)
+        defs.extend(children_res.defs)
         n = schema.get_path_name(sn)
         clname = "create_list_entry_%s" % n
         cl_def = "def %s():\n" % clname
         cl_def += "    return ttt.TTTContainer({%s})" % children_res.src
-        return (src="ttt.TTTList(%s)" % clname, imports=imports, defs=[cl_def])
+        defs.append(cl_def)
+        return TTTSrc(src="ttt.TTTList(%s)" % clname, input_classes=input_classes, imports=imports, defs=defs)
 
     elif isinstance(sn, schema.DNodeInner):
         sn_children = sn.children
         children_res = children_to_tttsrc(sn)
+        input_classes.extend(children_res.input_classes)
         imports.extend(children_res.imports)
-        return (src="ttt.TTTContainer({%s})" % children_res.src, imports=imports, defs=children_res.defs)
+        defs.extend(children_res.defs)
+        return TTTSrc(src="ttt.TTTContainer({%s})" % children_res.src, input_classes=input_classes, imports=imports, defs=defs)
 
     raise NotImplementedError("Unhandled schema type: %s" % str(type(sn)))
 
-def ttt_prsrc(sn: schema.DNode) -> str:
+def ttt_prsrc(sn: schema.DNode, input_yang_module: str) -> str:
     ts = dschema_to_tttsrc(sn)
     res = "# WARNING WARNING WARNING WARNING WARNING\n"
     res += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
     res += "# WARNING WARNING WARNING WARNING WARNING\n\n"
     res += "import orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
+    for ic in ts.input_classes:
+        res += "from %s import %s\n" % (input_yang_module, ic)
+    res += "\n"
     res += "\n".join(list(set(ts.imports))) + "\n\n"
     res += "\n\n".join(ts.defs) + "\n\n"
     res += "def get_ttt() -> ttt.TTTNode:\n    r = " + ts.src + "\n    return r\n"

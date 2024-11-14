@@ -26,7 +26,9 @@ class SysSpec(object):
         for idx, layer in enumerate(self.layers):
             print("Generating layer %d" % idx)
             layer_name = layer.name
-            name = "%s/%s/layers/y_%s.act" % (output_dir, self.name, layer_name if layer_name is not None else str(idx))
+            lname = layer_name if layer_name is not None else str(idx)
+            name = "%s/%s/layers/y_%s.act" % (output_dir, self.name, lname)
+            modname = "%s.layers.y_%s" % (self.name, lname)
     #        if idx == 0:
     #            name = "src/y_cfs.act"
     #        elif idx == len(layers) - 1:
@@ -43,7 +45,7 @@ class SysSpec(object):
 
                 t_name = "%s/%s/layers/t_%d.act" % (output_dir, self.name, idx)
                 wf_tl = file.WriteFile(wfc, t_name)
-                tttl_src = ttt_gen.ttt_prsrc(layer_src)
+                tttl_src = ttt_gen.ttt_prsrc(layer_src, modname)
                 await async wf_tl.write(tttl_src.encode())
                 await async wf_tl.close()
 
