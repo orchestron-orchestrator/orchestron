@@ -143,7 +143,7 @@ class TTTRFSTransform(TTTNode):
         #self.state = TTTTransformState(self)
         pass
 
-    mut def transform_wrapper(self, i: yang.gdata.Node, di: DeviceInfo) -> yang.gdata.Node:
+    mut def transform_wrapper(self, i: yang.gdata.Node, device_info: DeviceInfo) -> yang.gdata.Node:
         raise NotImplementedError("TTTRFSTransform.transform not implemented")
 
     proc def configure_rfs(self, device_info: DeviceInfo, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):

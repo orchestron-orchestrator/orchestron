@@ -31,7 +31,7 @@ def _test_ttt_gen1():
 }
 """
     y = yang.compile([ys])
-    ts = ttt_gen.ttt_prsrc(y)
+    ts = ttt_gen.ttt_prsrc(y, 'y_0')
     return ts
 
 def _test_ttt_gen_rfs():
@@ -46,7 +46,7 @@ def _test_ttt_gen_rfs():
     list backbone-interface {
       key name;
 
-      orchestron:transform respnet.rfs.BBInterface;
+      orchestron:rfs-transform respnet.rfs.BBInterface;
 
       leaf name {
         type string;
@@ -56,7 +56,7 @@ def _test_ttt_gen_rfs():
 }
 """
     y = yang.compile([oyang.rfs, oyang.ietf_inet_types, ys])
-    ts = ttt_gen.ttt_prsrc(y)
+    ts = ttt_gen.ttt_prsrc(y, 'y_0')
     return ts
 
 actor main(env):
