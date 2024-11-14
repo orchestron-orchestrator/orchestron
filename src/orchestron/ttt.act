@@ -2,8 +2,6 @@
 import xml
 import yang.gdata
 
-import testing
-
 def transpose(cfg_per_src: dict[str, yang.gdata.Node]) -> dict[str, dict[str, yang.gdata.Node]]:
     cfg_per_key = {}
     for src, conf in cfg_per_src.items():
