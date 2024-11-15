@@ -1,0 +1,16 @@
+# WARNING WARNING WARNING WARNING WARNING
+# DO NOT MODIFY THIS FILE!! This file is generated!
+# WARNING WARNING WARNING WARNING WARNING
+
+import orchestron.ttt as ttt
+import yang.adata
+
+from respnet.layers.y_0 import foo__c1__foo__bar_entry
+from respnet.layers.y_1_loose import root as output_root
+
+def o_root():
+    return output_root()
+
+
+class Foobar(ttt.TTTTransform):
+    transform: mut(foo__c1__foo__bar_entry) -> yang.adata.MNode

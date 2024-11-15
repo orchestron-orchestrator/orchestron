@@ -4,8 +4,7 @@ import yang
 import orchestron.ttt_gen as ttt_gen
 import orchestron.yang as oyang
 
-def _test_ttt_gen1():
-    ys = """module foo {
+ys_cfs = """module foo {
   yang-version "1.1";
   namespace "http://example.com/foo";
   prefix "foo";
@@ -30,12 +29,18 @@ def _test_ttt_gen1():
   }
 }
 """
-    y = yang.compile([ys])
-    ts = ttt_gen.ttt_prsrc(y, 'y_0')
-    return ts
 
-def _test_ttt_gen_rfs():
-    ys = """module foo {
+def _test_ttt_gen_cfs_base():
+    y = yang.compile([ys_cfs])
+    r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_0', 'respnet.layers.y_1_loose')
+    return r.base
+
+def _test_ttt_gen_cfs_ttt():
+    y = yang.compile([ys_cfs])
+    r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_0', 'respnet.layers.y_1_loose')
+    return r.ttt
+
+ys_rfs = """module foo {
   yang-version "1.1";
   namespace "http://example.com/foo";
   prefix "foo";
@@ -55,10 +60,13 @@ def _test_ttt_gen_rfs():
   }
 }
 """
-    y = yang.compile([oyang.rfs, oyang.ietf_inet_types, ys])
-    ts = ttt_gen.ttt_prsrc(y, 'y_0')
-    return ts
 
-actor main(env):
-    _test_ttt_gen_rfs()
-    env.exit(0)
+def _test_ttt_gen_rfs_base():
+    y = yang.compile([oyang.rfs, oyang.ietf_inet_types, ys_rfs])
+    r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_1', '')
+    return r.base
+
+def _test_ttt_gen_rfs_ttt():
+    y = yang.compile([oyang.rfs, oyang.ietf_inet_types, ys_rfs])
+    r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_1', '')
+    return r.ttt

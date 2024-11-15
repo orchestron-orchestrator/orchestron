@@ -39,17 +39,27 @@ class SysSpec(object):
             await async wf_l.write(layer_src.prdaclass().encode())
             await async wf_l.close()
 
-            if idx < len(self.layers):
-                tttsrc += "import %s.layers.t_%d\n" % (self.name, idx)
-                print("Generating TTT for layer %d" % idx)
+            tttsrc += "import %s.layers.t_%d\n" % (self.name, idx)
+            print("Generating base & TTT for layer %d" % idx)
 
-                t_name = "%s/%s/layers/t_%d.act" % (output_dir, self.name, idx)
-                wf_tl = file.WriteFile(wfc, t_name)
-                tttl_src = ttt_gen.ttt_prsrc(layer_src, modname)
-                await async wf_tl.write(tttl_src.encode())
-                await async wf_tl.close()
+            # Not for the last layer
+            out_layer_modname = None
+            if idx < len(self.layers) - 1:
+                out_layer_modname = "%s.layers.y_%d_loose" % (self.name, idx+1)
 
-                tttsrc_getlayers += "    res.append(respnet.layers.t_%d.get_ttt())\n" % idx
+            tttl = ttt_gen.ttt_prsrc(layer_src, modname, out_layer_modname)
+
+            base_name = "%s/%s/layers/base_%d.act" % (output_dir, self.name, idx)
+            wf_bl = file.WriteFile(wfc, base_name)
+            await async wf_bl.write(tttl.base.encode())
+            await async wf_bl.close()
+
+            t_name = "%s/%s/layers/t_%d.act" % (output_dir, self.name, idx)
+            wf_tl = file.WriteFile(wfc, t_name)
+            await async wf_tl.write(tttl.ttt.encode())
+            await async wf_tl.close()
+
+            tttsrc_getlayers += "    res.append(respnet.layers.t_%d.get_ttt())\n" % idx
 
             if idx > 0:
                 loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)
