@@ -2,7 +2,7 @@
     "dependencies": {
         "yang": {
             "url": "https://github.com/orchestron-orchestrator/acton-yang/archive/refs/heads/main.zip",
-            "hash": "12200cf412d050e5daf2d1dfcf0f189057b2ca620243db7f4118eb4969a85e5d4757"
+            "hash": "1220c97651fcce3e497cae2979bad32f3a7b0df5e9f8bf9f2b1f4ab30009f5456152"
         }
     },
     "zig_dependencies": {}
