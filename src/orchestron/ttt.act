@@ -167,21 +167,19 @@ class TTTRFSTransform(TTTNode):
         if isinstance(output, yang.gdata.Root):
             rfs_output = yang.gdata.Module(
                 name="orchestron-device",
-                #ns="http://orchestron.org/yang/orchestron-device.yang", # TODO: add namespace
                 children={
                     "device": yang.gdata.List(
-                        "device",
-                        ["name"],
-                        #ns="http://orchestron.org/yang/orchestron-device.yang", # TODO: add namespace
+                        name="device",
+                        keys=["name"],
                         elements=[
                             yang.gdata.ListElement(
                                 [device_info.name],
-                                #ns="http://orchestron.org/yang/orchestron-device.yang", # TODO: add namespace
-                                children=output.children
+                                children={"config": yang.gdata.Container("config", children=output.children)}
                             )
                         ]
                     )
-                }
+                },
+                ns="http://orchestron.org/yang/orchestron-device.yang"
             )
             output_tree[str(self)] = rfs_output
         else:
