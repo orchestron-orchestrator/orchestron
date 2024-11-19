@@ -1,0 +1,28 @@
+
+import yang.gdata
+
+from orchestron.device_meta_config import orchestron_rfs__device_entry as DeviceMetaConfig
+
+#import netconf
+
+actor DeviceManager():
+    var devices = {}
+
+    def get(name: str) -> Device:
+        if name not in devices:
+            devices[name] = Device()
+        return devices[name]
+
+
+# State machine
+# connect
+actor Device():
+    #nc = netconf.Client()
+    var metaconf: ?DeviceMetaConfig = None
+
+    def set_meta_config(new_metaconf: DeviceMetaConfig):
+        metaconf = new_metaconf
+
+    def edit_config(conf: yang.gdata.Root):
+        pass
+        #nc.edit_config(conf, edited_config)
