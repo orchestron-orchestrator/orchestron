@@ -151,5 +151,6 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     ttt_src += "\n"
     ttt_src += "\n".join(list(set(ts.imports))) + "\n\n"
     ttt_src += "\n\n".join(ts.defs) + "\n\n"
-    ttt_src += "def get_ttt() -> ttt.TTTNode:\n    r = " + ts.src + "\n    return r\n"
+    ttt_src += "def get_ttt() -> ttt.TTTNode:\n"
+    ttt_src += "    r = " + ts.src + "\n    return r\n"
     return (base=base_src, ttt=ttt_src)
