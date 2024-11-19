@@ -69,30 +69,28 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> TTTSrc:
                         if ext.name == "transform":
                             base_defs.append("""class %s(ttt.TTTTransform):
     transform: mut(%s) -> yang.adata.MNode
-""" % (transform_name, input_class))
-                            defs.append("""class %s_Wrapper(%s):
+
     mut def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
         \"\"\"Wrap the user provided transform method to convert from gdata to
         modeled input and back to gdata
         \"\"\"
         modeled_input = %s.from_gdata(i)
         return self.transform(modeled_input).to_gdata()
-""" % (transform_name, transform, input_class))
+""" % (transform_name, input_class, input_class))
                         elif ext.name == "rfs-transform":
                             base_defs.append("""class %s(ttt.TTTRFSTransform):
     transform: mut(%s, ttt.DeviceInfo) -> yang.adata.MNode
-""" % (transform_name, input_class))
-                            defs.append("""class %s_Wrapper(%s):
+
     mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttt.DeviceInfo) -> yang.gdata.Node:
         \"\"\"Wrap the user provided transform method to convert from gdata to
         modeled input and back to gdata
         \"\"\"
         modeled_input = %s.from_gdata(i)
         return self.transform(modeled_input, device_info).to_gdata()
-""" % (transform_name, transform, input_class))
+""" % (transform_name, input_class, input_class))
                         else:
                             raise ValueError("Unknown extension name: %s" % ext.name)
-                        return TTTSrc(src="ttt.TTTList(%s_Wrapper)" % transform_name, input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
+                        return TTTSrc(src="ttt.TTTList(%s)" % transform, input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
                     else:
                         raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
                 elif ext.name == "device":
@@ -130,7 +128,7 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     base_src = "# WARNING WARNING WARNING WARNING WARNING\n"
     base_src += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
     base_src += "# WARNING WARNING WARNING WARNING WARNING\n\n"
-    base_src += "import orchestron.ttt as ttt\nimport yang.adata\n\n"
+    base_src += "import orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
     for ic in ts.input_classes:
         base_src += "from %s import %s\n" % (input_yang_module, ic)
 

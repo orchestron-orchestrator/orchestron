@@ -10,15 +10,6 @@ from respnet.layers.y_0 import foo__c1__foo__bar_entry
 
 import respnet.cfs
 
-class Foobar_Wrapper(respnet.cfs.Foobar):
-    mut def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
-        """Wrap the user provided transform method to convert from gdata to
-        modeled input and back to gdata
-        """
-        modeled_input = foo__c1__foo__bar_entry.from_gdata(i)
-        return self.transform(modeled_input).to_gdata()
-
-
 def create_list_entry_foo__c1__foo():
     return ttt.TTTContainer({"bar": ttt.TTTList(Foobar_Wrapper)})
 

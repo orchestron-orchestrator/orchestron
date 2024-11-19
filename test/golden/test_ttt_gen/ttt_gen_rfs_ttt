@@ -10,15 +10,6 @@ from respnet.layers.y_1 import orchestron_rfs__rfs__backbone_interface_entry
 
 import respnet.rfs
 
-class BBInterface_Wrapper(respnet.rfs.BBInterface):
-    mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttt.DeviceInfo) -> yang.gdata.Node:
-        """Wrap the user provided transform method to convert from gdata to
-        modeled input and back to gdata
-        """
-        modeled_input = orchestron_rfs__rfs__backbone_interface_entry.from_gdata(i)
-        return self.transform(modeled_input, device_info).to_gdata()
-
-
 def create_list_entry_orchestron_rfs__rfs():
     return ttt.TTTContainer({"backbone-interface": ttt.TTTList(BBInterface_Wrapper)})
 

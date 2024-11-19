@@ -14,3 +14,10 @@ def o_root():
 
 class Foobar(ttt.TTTTransform):
     transform: mut(foo__c1__foo__bar_entry) -> yang.adata.MNode
+
+    mut def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
+        """Wrap the user provided transform method to convert from gdata to
+        modeled input and back to gdata
+        """
+        modeled_input = foo__c1__foo__bar_entry.from_gdata(i)
+        return self.transform(modeled_input).to_gdata()
