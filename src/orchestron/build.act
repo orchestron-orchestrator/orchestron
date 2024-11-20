@@ -20,9 +20,12 @@ class SysSpec(object):
         tttsrc = "# WARNING WARNING WARNING WARNING WARNING\n"
         tttsrc += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
         tttsrc += "# WARNING WARNING WARNING WARNING WARNING\n\n"
-        tttsrc += "import orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
+        tttsrc += "import orchestron.device as odev\n"
+        tttsrc += "import orchestron.ttt as ttt\n"
+        tttsrc += "import yang.adata\n"
+        tttsrc += "import yang.gdata\n\n"
         imports = []
-        tttsrc_getlayers = "def get_layers():\n    res = []\n"
+        tttsrc_getlayers = "def get_layers(dev_mgr: odev.DeviceManager):\n    res = []\n"
         for idx, layer in enumerate(self.layers):
             print("Generating layer %d" % idx)
             layer_name = layer.name
@@ -59,7 +62,7 @@ class SysSpec(object):
             await async wf_tl.write(tttl.ttt.encode())
             await async wf_tl.close()
 
-            tttsrc_getlayers += "    res.append(respnet.layers.t_%d.get_ttt())\n" % idx
+            tttsrc_getlayers += "    res.append(respnet.layers.t_%d.get_ttt(dev_mgr))\n" % idx
 
             if idx > 0:
                 loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)

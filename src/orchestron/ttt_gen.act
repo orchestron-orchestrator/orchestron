@@ -95,8 +95,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> TTTSrc:
                         raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
                 elif ext.name == "device":
                     if extarg is not None:
-                        raise ValueError("Extraneous argument to orchstron:device. Remove argument.")
-                    return TTTSrc(src="ttt.TTTList(ttt.TTTDevice)", input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
+                        raise ValueError("Extraneous argument to orchestron:device. Remove argument.")
+                    return TTTSrc(src="ttt.TTTList(lambda: ttt.TTTDevice(dev_mgr))", input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
 
         # List without an extension
         children_res = children_to_tttsrc(sn)
@@ -106,8 +106,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> TTTSrc:
         base_defs.extend(children_res.base_defs)
         n = schema.get_path_name(sn)
         clname = "create_list_entry_%s" % n
-        cl_def = "def %s():\n" % clname
-        cl_def += "    return ttt.TTTContainer({%s})" % children_res.src
+        cl_def = "    def %s():\n" % clname
+        cl_def += "        return ttt.TTTContainer({%s})" % children_res.src
         defs.append(cl_def)
         return TTTSrc(src="ttt.TTTList(%s)" % clname, input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
 
@@ -143,12 +143,13 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     ttt_src = "# WARNING WARNING WARNING WARNING WARNING\n"
     ttt_src += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
     ttt_src += "# WARNING WARNING WARNING WARNING WARNING\n\n"
+    ttt_src += "import orchestron.device as odev\n"
     ttt_src += "import orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
     for ic in ts.input_classes:
         ttt_src += "from %s import %s\n" % (input_yang_module, ic)
     ttt_src += "\n"
     ttt_src += "\n".join(list(set(ts.imports))) + "\n\n"
+    ttt_src += "def get_ttt(dev_mgr: odev.DeviceManager) -> ttt.TTTNode:\n"
     ttt_src += "\n\n".join(ts.defs) + "\n\n"
-    ttt_src += "def get_ttt() -> ttt.TTTNode:\n"
     ttt_src += "    r = " + ts.src + "\n    return r\n"
     return (base=base_src, ttt=ttt_src)

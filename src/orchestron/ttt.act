@@ -210,7 +210,7 @@ class TTTDevice(TTTNode):
     """
     dev: Device
 
-    def __init__(self):
+    def __init__(self, dev_mgr: odev.DeviceManager):
         #self.state = TTTTransformState(self)
         print("TTTDevice.__init__")
         self.dev = Device()
