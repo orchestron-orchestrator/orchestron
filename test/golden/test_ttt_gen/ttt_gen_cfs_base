@@ -4,6 +4,7 @@
 
 import orchestron.ttt as ttt
 import yang.adata
+import yang.gdata
 
 from respnet.layers.y_0 import foo__c1__foo__bar_entry
 from respnet.layers.y_1_loose import root as output_root

@@ -1,6 +1,6 @@
 import file
 
-import orchestron.yang as oyang
+import oyang
 import yang
 
 actor main(env):

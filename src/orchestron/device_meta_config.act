@@ -76,11 +76,11 @@ class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
 
 class orchestron_rfs__device__address_entry(yang.adata.MNode):
     name: str
-    address: ?str
-    port: ?int
+    address: str
+    port: ?str
     initial_credentials: orchestron_rfs__device__address__initial_credentials
 
-    def __init__(self, name: str, address: ?str, port: ?int, initial_credentials: list[orchestron_rfs__device__address__initial_credentials_entry]=[]):
+    def __init__(self, name: str, address: str, port: ?str, initial_credentials: list[orchestron_rfs__device__address__initial_credentials_entry]=[]):
         self._ns = "http://orchestron.org/yang/orchestron-rfs.yang"
         self.name = name
         self.address = address
@@ -108,11 +108,11 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
 
     @staticmethod
     def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
-        return orchestron_rfs__device__address_entry(name=n.get_str("name"), address=n.get_opt_str("address"), port=n.get_opt_int("port"), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_list("initial-credentials")))
+        return orchestron_rfs__device__address_entry(name=n.get_str("name"), address=n.get_str("address"), port=n.get_opt_str("port"), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_list("initial-credentials")))
 
     @staticmethod
     def from_xml(n: xml.Node) -> orchestron_rfs__device__address_entry:
-        return orchestron_rfs__device__address_entry(name=yang.gdata.from_xml_str(n, "name"), address=yang.gdata.from_xml_opt_str(n, "address"), port=yang.gdata.from_xml_opt_int(n, "port"), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_xml(yang.gdata.get_xml_children(n, "initial-credentials")))
+        return orchestron_rfs__device__address_entry(name=yang.gdata.from_xml_str(n, "name"), address=yang.gdata.from_xml_str(n, "address"), port=yang.gdata.from_xml_opt_str(n, "port"), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_xml(yang.gdata.get_xml_children(n, "initial-credentials")))
 
 class orchestron_rfs__device__address(yang.adata.MNode):
     elements: list[orchestron_rfs__device__address_entry]
@@ -121,8 +121,8 @@ class orchestron_rfs__device__address(yang.adata.MNode):
         self._name = 'address'
         self.elements = elements
 
-    def create(self, name):
-        res = orchestron_rfs__device__address_entry(name)
+    def create(self, name, address):
+        res = orchestron_rfs__device__address_entry(name, address)
         self.elements.append(res)
         return res
 
@@ -214,11 +214,11 @@ class orchestron_rfs__device__credentials__key(yang.adata.MNode):
 
 
 class orchestron_rfs__device__credentials(yang.adata.MNode):
-    username: ?str
+    username: str
     password: ?str
     key: orchestron_rfs__device__credentials__key
 
-    def __init__(self, username: ?str, password: ?str, key: list[orchestron_rfs__device__credentials__key_entry]=[]):
+    def __init__(self, username: str, password: ?str, key: list[orchestron_rfs__device__credentials__key_entry]=[]):
         self._ns = "http://orchestron.org/yang/orchestron-rfs.yang"
         self.username = username
         self.password = password
@@ -242,11 +242,11 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
 
     @staticmethod
     def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__credentials:
-        return orchestron_rfs__device__credentials(username=n.get_opt_str("username"), password=n.get_opt_str("password"), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_list("key")))
+        return orchestron_rfs__device__credentials(username=n.get_str("username"), password=n.get_opt_str("password"), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_list("key")))
 
     @staticmethod
     def from_xml(n: xml.Node) -> orchestron_rfs__device__credentials:
-        return orchestron_rfs__device__credentials(username=yang.gdata.from_xml_opt_str(n, "username"), password=yang.gdata.from_xml_opt_str(n, "password"), key=orchestron_rfs__device__credentials__key.from_xml(yang.gdata.get_xml_children(n, "key")))
+        return orchestron_rfs__device__credentials(username=yang.gdata.from_xml_str(n, "username"), password=yang.gdata.from_xml_opt_str(n, "password"), key=orchestron_rfs__device__credentials__key.from_xml(yang.gdata.get_xml_children(n, "key")))
 
 
 class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
@@ -325,19 +325,14 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
     credentials: orchestron_rfs__device__credentials
     initial_credentials: orchestron_rfs__device__initial_credentials
 
-    def __init__(self, name: str, description: ?str, address: list[orchestron_rfs__device__address_entry]=[], credentials: ?orchestron_rfs__device__credentials=None, initial_credentials: list[orchestron_rfs__device__initial_credentials_entry]=[]):
+    def __init__(self, name: str, credentials: orchestron_rfs__device__credentials, description: ?str, address: list[orchestron_rfs__device__address_entry]=[], initial_credentials: list[orchestron_rfs__device__initial_credentials_entry]=[]):
         self._ns = "http://orchestron.org/yang/orchestron-rfs.yang"
         self.name = name
         self.description = description
         self.address = orchestron_rfs__device__address(elements=address)
         self.address._parent = self
-        if credentials is not None:
-            self.credentials = credentials
-        else:
-            self.credentials = orchestron_rfs__device__credentials()
-        self_credentials = self.credentials
-        if self_credentials is not None:
-            self_credentials._parent = self
+        self.credentials = credentials
+        self.credentials._parent = self
         self.initial_credentials = orchestron_rfs__device__initial_credentials(elements=initial_credentials)
         self.initial_credentials._parent = self
 
@@ -377,8 +372,8 @@ class orchestron_rfs__device(yang.adata.MNode):
         self._name = 'device'
         self.elements = elements
 
-    def create(self, name):
-        res = orchestron_rfs__device_entry(name)
+    def create(self, name, credentials):
+        res = orchestron_rfs__device_entry(name, credentials)
         self.elements.append(res)
         return res
 

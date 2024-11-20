@@ -2,6 +2,7 @@ import file
 import yang
 import yang.schema
 import orchestron.ttt_gen as ttt_gen
+import orchestron.yang as oyang
 
 
 class SysSpec(object):
@@ -13,7 +14,7 @@ class SysSpec(object):
     layers: list[Layer]
     def __init__(self, name: str, layers: list[Layer], device_types: list[DeviceType]):
         self.name = name
-        self.layers = layers
+        self.layers = layers + [Layer([oyang.device])]
         self.dev_types = device_types
 
     def gen_app(self, wfc: file.WriteFileCap, output_dir: str):

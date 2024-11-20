@@ -1,28 +1,97 @@
+import logging
 
+import yang.adata
 import yang.gdata
 
 from orchestron.device_meta_config import orchestron_rfs__device_entry as DeviceMetaConfig
 
-#import netconf
+import netconf
 
-actor DeviceManager():
+actor DeviceManager(wcap: WorldCap):
     var devices = {}
 
     def get(name: str) -> Device:
         if name not in devices:
-            devices[name] = Device()
+            devices[name] = Device(wcap)
         return devices[name]
 
 
 # State machine
 # connect
-actor Device():
-    #nc = netconf.Client()
-    var metaconf: ?DeviceMetaConfig = None
+actor Device(wcap: WorldCap):
+    """NETCONF Device
 
-    def set_meta_config(new_metaconf: DeviceMetaConfig):
-        metaconf = new_metaconf
+    Some day this will be the base class for all devices and we'll support all
+    kinds of device types and protocols but for now we are just doing NETCONF.
+    """
+    var dmc: ?DeviceMetaConfig = None
+    var client: ?netconf.Client = None
+    var conf: ?yang.gdata.Node = None
+    var state = 0
 
-    def edit_config(conf: yang.gdata.Root):
-        pass
-        #nc.edit_config(conf, edited_config)
+    logh = logging.Handler("TestNC")
+    logh.add_sink(logging.StdoutSink())
+
+    def _on_connect(c):
+        print("Connected to device", c)
+        state = 1
+        if conf is not None:
+            print("Sending config")
+            edit_config(conf)
+        else:
+            print("No config to send")
+
+    def _on_error(c, error):
+        print("Error connecting to device")
+
+    def _on_notif(c, n):
+        print("Notification from device")
+
+    def set_meta_config(conf: DeviceMetaConfig):
+        print("Device.set_meta_config")
+        print(conf)
+        print(conf.to_gdata())
+
+        if not len(conf.address.elements) > 0:
+            print("Not enough addressess :/")
+            return
+
+        addr = conf.address.elements[0]
+        address = addr.address
+        addr_port = addr.port
+        port = int(addr_port) if addr_port is not None else 830
+        username = conf.credentials.username
+        password = conf.credentials.password
+        if username is not None and password is not None:
+            print("Setting up NETCONF client...", address, port, username, password)
+            c = netconf.Client(wcap, address, port, username, password,
+                               on_connect=_on_connect,
+                               on_error=_on_error,
+                               on_notif=_on_notif,
+                               log_handler=logh)
+            client = c
+        dmc = conf
+
+
+    def edit_config(new_conf: yang.gdata.Node):
+        print("Device.edit_config")
+        conf = new_conf
+        if state != 1:
+            print("Device.edit_config not connected yet, storing config")
+            return
+        if client is not None:
+            print("Device.edit_config Sending config...")
+            client.edit_config(new_conf.to_xmlstr(pretty=False), _on_conf, datastore="candidate")
+
+    def _on_conf(c, r):
+        if r is not None:
+            print("Device._on_conf", r.encode())
+            c.commit(_on_commit)
+        else:
+            print("Device._on_conf went to shit")
+
+    def _on_commit(c, r):
+        if r is not None:
+            print("Device._on_commit", r.encode())
+        else:
+            print("Device._on_commit went to shit")

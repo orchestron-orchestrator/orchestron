@@ -1,5 +1,8 @@
 {
     "dependencies": {
+        "netconf": {
+            "path": "../acton-netconf"
+        },
         "yang": {
             "url": "https://github.com/orchestron-orchestrator/acton-yang/archive/refs/heads/main.zip",
             "hash": "12204e2278b27ee6917461d5169c9baabe476b3cf53fe082619ed6b320c10973f498"

@@ -97,6 +97,10 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> TTTSrc:
                     if extarg is not None:
                         raise ValueError("Extraneous argument to orchestron:device. Remove argument.")
                     return TTTSrc(src="ttt.TTTList(lambda: ttt.TTTDevice(dev_mgr))", input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
+                elif ext.name == "device-config":
+                    if extarg is not None:
+                        raise ValueError("Extraneous argument to orchestron:device-config. Remove argument.")
+                    return TTTSrc(src="ttt.TTTList(lambda: ttt.TTTDeviceConfig(dev_mgr))", input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
 
         # List without an extension
         children_res = children_to_tttsrc(sn)

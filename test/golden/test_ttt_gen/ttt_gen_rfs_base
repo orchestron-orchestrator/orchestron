@@ -4,6 +4,7 @@
 
 import orchestron.ttt as ttt
 import yang.adata
+import yang.gdata
 
 from respnet.layers.y_1 import orchestron_rfs__rfs__backbone_interface_entry
 from  import root as output_root

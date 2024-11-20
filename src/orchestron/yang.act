@@ -31,9 +31,11 @@ rfs = """module orchestron-rfs {
       }
       leaf address {
         type inet:host;
+        mandatory true;
       }
       leaf port {
-        type inet:port-number;
+        //type uint16;
+        type string;
       }
       list initial-credentials {
         key "username password key";
@@ -52,6 +54,7 @@ rfs = """module orchestron-rfs {
     container credentials {
       leaf username {
         type string;
+        mandatory true;
       }
       leaf password {
         type string;
@@ -101,18 +104,20 @@ device = """module orchestron-device {
 
   description "Device config";
 
-  list device {
-    key name;
+  container devices {
+    list device {
+      key name;
 
-    orchestron:device-config;
+      orchestron:device-config;
 
-    leaf name {
-      type string;
+      leaf name {
+        type string;
+      }
+
+      //anydata config {
+      //  description "Device configuration";
+      //}
     }
-
-    //anydata config {
-    //  description "Device configuration";
-    //}
   }
 }
 """

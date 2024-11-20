@@ -2,6 +2,7 @@
 # DO NOT MODIFY THIS FILE!! This file is generated!
 # WARNING WARNING WARNING WARNING WARNING
 
+import orchestron.device as odev
 import orchestron.ttt as ttt
 import yang.adata
 import yang.gdata
@@ -10,9 +11,9 @@ from respnet.layers.y_0 import foo__c1__foo__bar_entry
 
 import respnet.cfs
 
-def create_list_entry_foo__c1__foo():
-    return ttt.TTTContainer({"bar": ttt.TTTList(Foobar_Wrapper)})
+def get_ttt(dev_mgr: odev.DeviceManager) -> ttt.TTTNode:
+    def create_list_entry_foo__c1__foo():
+        return ttt.TTTContainer({"bar": ttt.TTTList(respnet.cfs.Foobar)})
 
-def get_ttt() -> ttt.TTTNode:
     r = ttt.TTTContainer({"c1": ttt.TTTContainer({"foo": ttt.TTTList(create_list_entry_foo__c1__foo)})})
     return r
