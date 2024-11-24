@@ -24,9 +24,18 @@ rfs = """module orchestron-rfs {
     }
 
     list address {
-      key host;
-      leaf host {
+      key name;
+      leaf name {
+        description "Name of address, e.g. 'loopback' or 'OOB'";
+        type string;
+      }
+      leaf address {
         type inet:host;
+        mandatory true;
+      }
+      leaf port {
+        //type uint16;
+        type string;
       }
       list initial-credentials {
         key "username password key";
@@ -45,6 +54,7 @@ rfs = """module orchestron-rfs {
     container credentials {
       leaf username {
         type string;
+        mandatory true;
       }
       leaf password {
         type string;
@@ -78,10 +88,36 @@ rfs = """module orchestron-rfs {
     key name;
 
     leaf name {
+      description "Device name";
       type string;
     }
 
     // Augment
+  }
+}
+"""
+
+device = """module orchestron-device {
+  yang-version "1.1";
+  namespace "http://orchestron.org/yang/orchestron-device.yang";
+  prefix "odev";
+
+  description "Device config";
+
+  container devices {
+    list device {
+      key name;
+
+      orchestron:device-config;
+
+      leaf name {
+        type string;
+      }
+
+      //anydata config {
+      //  description "Device configuration";
+      //}
+    }
   }
 }
 """

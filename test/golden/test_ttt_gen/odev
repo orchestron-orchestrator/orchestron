@@ -7,13 +7,11 @@ import orchestron.ttt as ttt
 import yang.adata
 import yang.gdata
 
-from respnet.layers.y_0 import foo__c1__foo__bar_entry
 
-import respnet.cfs
+
 
 def get_ttt(dev_mgr: odev.DeviceManager) -> ttt.TTTNode:
-    def create_list_entry_foo__c1__foo():
-        return ttt.TTTContainer({"bar": ttt.TTTList(respnet.cfs.Foobar)})
 
-    r = ttt.TTTContainer({"c1": ttt.TTTContainer({"foo": ttt.TTTList(create_list_entry_foo__c1__foo)})})
+
+    r = ttt.TTTContainer({"devices": ttt.TTTContainer({"device": ttt.TTTList(lambda: ttt.TTTDeviceConfig(dev_mgr))})})
     return r

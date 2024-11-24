@@ -70,3 +70,8 @@ def _test_ttt_gen_rfs_ttt():
     y = yang.compile([oyang.rfs, oyang.ietf_inet_types, ys_rfs])
     r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_1', '')
     return r.ttt
+
+def _test_odev() -> str:
+    y = yang.compile([oyang.device])
+    r = ttt_gen.ttt_prsrc(y, '', '')
+    return r.ttt

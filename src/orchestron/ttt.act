@@ -1,6 +1,9 @@
 
 import xml
+import yang.adata
 import yang.gdata
+import orchestron.device as odev
+from orchestron.device_meta_config import orchestron_rfs__device_entry as DeviceMetaConfig
 
 def transpose(cfg_per_src: dict[str, yang.gdata.Node]) -> dict[str, dict[str, yang.gdata.Node]]:
     cfg_per_key = {}
@@ -167,32 +170,84 @@ class TTTRFSTransform(TTTNode):
         if isinstance(output, yang.gdata.Root):
             rfs_output = yang.gdata.Module(
                 name="orchestron-device",
-                #ns="http://orchestron.org/yang/orchestron-device.yang", # TODO: add namespace
                 children={
-                    "device": yang.gdata.List(
-                        "device",
-                        ["name"],
-                        #ns="http://orchestron.org/yang/orchestron-device.yang", # TODO: add namespace
-                        elements=[
-                            yang.gdata.ListElement(
-                                [device_info.name],
-                                #ns="http://orchestron.org/yang/orchestron-device.yang", # TODO: add namespace
-                                children=output.children
+                    "devices": yang.gdata.Container(
+                        "devices",
+                        children={
+                            "device": yang.gdata.List(
+                                name="device",
+                                keys=["name"],
+                                elements=[
+                                    yang.gdata.ListElement(
+                                        [device_info.name],
+                                        children={
+                                            "name": yang.gdata.Leaf("name", device_info.name),
+                                            "config": yang.gdata.Container("config", children=output.children)
+                                        }
+                                    )
+                                ]
                             )
-                        ]
+                        }
                     )
-                }
+                },
+                ns="http://orchestron.org/yang/orchestron-device.yang"
             )
             output_tree[str(self)] = rfs_output
         else:
             raise NotImplementedError("TTTRFSTransform.configure_rfs: unsupported output type: " + str(type(output)))
-        print("TTTRFSTransform.configure output:\n%s" % output.to_xmlstr())
+        #print("TTTRFSTransform.configure output:\n%s" % output.to_xmlstr())
 
 class TTTDevice(TTTNode):
-    def __init__(self):
+    """Device itself, this represents the device in itself, with the metadata
+    about the device, such as its address, credentials, etc.
+
+    Note how this does not include the configuration that we send to the device.
+    """
+    dev_mgr: odev.DeviceManager
+    dev: ?odev.Device
+    dev_conf: TTTDeviceConfig
+
+    def __init__(self, dev_mgr: odev.DeviceManager):
         #self.state = TTTTransformState(self)
         print("TTTDevice.__init__")
-        pass
+        self.dev_mgr = dev_mgr
+        self.dev = None
 
     proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
         print("TTTDevice.configure", self)
+        diffs = list(diff.values())
+        merged_config = diffs[0]
+        for d in diffs[1:]:
+            merged_config = yang.gdata.merge(merged_config, d)
+        dmc = DeviceMetaConfig.from_gdata(merged_config)
+        dev = self.dev_mgr.get(dmc.name)
+        dev.set_meta_config(dmc)
+        self.dev = dev
+
+
+class TTTDeviceConfig(TTTNode):
+    """The configuration that goes on a device, i.e. the last layer of the
+    system that is written to by RFS transforms
+    """
+    dev_mgr: odev.DeviceManager
+
+    def __init__(self, dev_mgr: odev.DeviceManager):
+        #self.state = TTTTransformState(self)
+        print("TTTDeviceConfig.__init__")
+        self.dev_mgr = dev_mgr
+
+    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
+        print("TTTDeviceConfig.configure", self)
+        diffs = list(diff.values())
+        merged_config = diffs[0]
+        for d in diffs[1:]:
+            merged_config = yang.gdata.merge(merged_config, d)
+        if isinstance(merged_config, yang.gdata.ListElement):
+            name = merged_config.key_str()
+            dev_config_cntr = merged_config.children["config"]
+            if isinstance(dev_config_cntr, yang.gdata.Container):
+                dev = self.dev_mgr.get(name)
+                dev_config = yang.gdata.Root(dev_config_cntr.children)
+                dev.edit_config(dev_config)
+
+            #print("TTTDeviceConfig.configure %s config:\n%s" % (name, dev_config.to_xmlstr()))

@@ -4,6 +4,7 @@
 
 import orchestron.ttt as ttt
 import yang.adata
+import yang.gdata
 
 from respnet.layers.y_1 import orchestron_rfs__rfs__backbone_interface_entry
 from  import root as output_root
@@ -14,3 +15,10 @@ def o_root():
 
 class BBInterface(ttt.TTTRFSTransform):
     transform: mut(orchestron_rfs__rfs__backbone_interface_entry, ttt.DeviceInfo) -> yang.adata.MNode
+
+    mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttt.DeviceInfo) -> yang.gdata.Node:
+        """Wrap the user provided transform method to convert from gdata to
+        modeled input and back to gdata
+        """
+        modeled_input = orchestron_rfs__rfs__backbone_interface_entry.from_gdata(i)
+        return self.transform(modeled_input, device_info).to_gdata()

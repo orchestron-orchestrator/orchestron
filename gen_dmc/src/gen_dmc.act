@@ -1,0 +1,16 @@
+import file
+
+import oyang
+import yang
+
+actor main(env):
+    wfc = file.WriteFileCap(file.FileCap(env.cap))
+
+    y = yang.compile([oyang.rfs, oyang.ietf_inet_types])
+    ydev = y.get("device")
+    src = ydev.prdaclass().encode()
+
+    wf = file.WriteFile(wfc, "src/orchestron/device_meta_config.act")
+    await async wf.write(src)
+    await async wf.close()
+    env.exit(0)
