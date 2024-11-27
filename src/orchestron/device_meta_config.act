@@ -17,16 +17,16 @@ class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNod
         self.key = key
 
     def to_gdata(self) -> yang.gdata.Node:
-        res = yang.gdata.ListElement([str(self.username), str(self.password), str(self.key)])
+        res = yang.gdata.ListElement([str(self.username), str(self.password), str(self.key)], ns=self._ns)
         _username = self.username
         _password = self.password
         _key = self.key
         if _username is not None:
-            res.children['username'] = yang.gdata.Leaf('username', _username, ns=self._ns)
+            res.children['username'] = yang.gdata.Leaf('username', _username, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _password is not None:
-            res.children['password'] = yang.gdata.Leaf('password', _password, ns=self._ns)
+            res.children['password'] = yang.gdata.Leaf('password', _password, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _key is not None:
-            res.children['key'] = yang.gdata.Leaf('key', _key, ns=self._ns)
+            res.children['key'] = yang.gdata.Leaf('key', _key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         for child in res.children.values():
             child.parent = res
         return res
@@ -47,6 +47,20 @@ class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
         self.elements = elements
 
     def create(self, username, password, key):
+        for e in self.elements:
+            match = True
+            if e.username != username:
+                match = False
+                break
+            if e.password != password:
+                match = False
+                break
+            if e.key != key:
+                match = False
+                break
+            if match:
+                return e
+
         res = orchestron_rfs__device__address__initial_credentials_entry(username, password, key)
         self.elements.append(res)
         return res
@@ -89,17 +103,17 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
         self.initial_credentials._parent = self
 
     def to_gdata(self) -> yang.gdata.Node:
-        res = yang.gdata.ListElement([str(self.name)])
+        res = yang.gdata.ListElement([str(self.name)], ns=self._ns)
         _name = self.name
         _address = self.address
         _port = self.port
         _initial_credentials = self.initial_credentials
         if _name is not None:
-            res.children['name'] = yang.gdata.Leaf('name', _name, ns=self._ns)
+            res.children['name'] = yang.gdata.Leaf('name', _name, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _address is not None:
-            res.children['address'] = yang.gdata.Leaf('address', _address, ns=self._ns)
+            res.children['address'] = yang.gdata.Leaf('address', _address, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _port is not None:
-            res.children['port'] = yang.gdata.Leaf('port', _port, ns=self._ns)
+            res.children['port'] = yang.gdata.Leaf('port', _port, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _initial_credentials is not None:
             res.children['initial-credentials'] = _initial_credentials.to_gdata()
         for child in res.children.values():
@@ -122,6 +136,14 @@ class orchestron_rfs__device__address(yang.adata.MNode):
         self.elements = elements
 
     def create(self, name, address):
+        for e in self.elements:
+            match = True
+            if e.name != name:
+                match = False
+                break
+            if match:
+                return e
+
         res = orchestron_rfs__device__address_entry(name, address)
         self.elements.append(res)
         return res
@@ -159,13 +181,13 @@ class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
         self.private_key = private_key
 
     def to_gdata(self) -> yang.gdata.Node:
-        res = yang.gdata.ListElement([str(self.key)])
+        res = yang.gdata.ListElement([str(self.key)], ns=self._ns)
         _key = self.key
         _private_key = self.private_key
         if _key is not None:
-            res.children['key'] = yang.gdata.Leaf('key', _key, ns=self._ns)
+            res.children['key'] = yang.gdata.Leaf('key', _key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _private_key is not None:
-            res.children['private-key'] = yang.gdata.Leaf('private-key', _private_key, ns=self._ns)
+            res.children['private-key'] = yang.gdata.Leaf('private-key', _private_key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         for child in res.children.values():
             child.parent = res
         return res
@@ -186,6 +208,14 @@ class orchestron_rfs__device__credentials__key(yang.adata.MNode):
         self.elements = elements
 
     def create(self, key):
+        for e in self.elements:
+            match = True
+            if e.key != key:
+                match = False
+                break
+            if match:
+                return e
+
         res = orchestron_rfs__device__credentials__key_entry(key)
         self.elements.append(res)
         return res
@@ -231,9 +261,9 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
         _password = self.password
         _key = self.key
         if _username is not None:
-            res.children['username'] = yang.gdata.Leaf('username', _username, ns=self._ns)
+            res.children['username'] = yang.gdata.Leaf('username', _username, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _password is not None:
-            res.children['password'] = yang.gdata.Leaf('password', _password, ns=self._ns)
+            res.children['password'] = yang.gdata.Leaf('password', _password, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _key is not None:
             res.children['key'] = _key.to_gdata()
         for child in res.children.values():
@@ -241,12 +271,16 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
         return res
 
     @staticmethod
-    def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__credentials:
-        return orchestron_rfs__device__credentials(username=n.get_str("username"), password=n.get_opt_str("password"), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_list("key")))
+    def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__credentials:
+        if n != None:
+            return orchestron_rfs__device__credentials(username=n.get_str("username"), password=n.get_opt_str("password"), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_list("key")))
+        raise ValueError("Missing required subtree orchestron_rfs__device__credentials")
 
     @staticmethod
-    def from_xml(n: xml.Node) -> orchestron_rfs__device__credentials:
-        return orchestron_rfs__device__credentials(username=yang.gdata.from_xml_str(n, "username"), password=yang.gdata.from_xml_opt_str(n, "password"), key=orchestron_rfs__device__credentials__key.from_xml(yang.gdata.get_xml_children(n, "key")))
+    def from_xml(n: ?xml.Node) -> orchestron_rfs__device__credentials:
+        if n != None:
+            return orchestron_rfs__device__credentials(username=yang.gdata.from_xml_str(n, "username"), password=yang.gdata.from_xml_opt_str(n, "password"), key=orchestron_rfs__device__credentials__key.from_xml(yang.gdata.get_xml_children(n, "key")))
+        raise ValueError("Missing required subtree orchestron_rfs__device__credentials")
 
 
 class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
@@ -261,16 +295,16 @@ class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
         self.key = key
 
     def to_gdata(self) -> yang.gdata.Node:
-        res = yang.gdata.ListElement([str(self.username), str(self.password), str(self.key)])
+        res = yang.gdata.ListElement([str(self.username), str(self.password), str(self.key)], ns=self._ns)
         _username = self.username
         _password = self.password
         _key = self.key
         if _username is not None:
-            res.children['username'] = yang.gdata.Leaf('username', _username, ns=self._ns)
+            res.children['username'] = yang.gdata.Leaf('username', _username, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _password is not None:
-            res.children['password'] = yang.gdata.Leaf('password', _password, ns=self._ns)
+            res.children['password'] = yang.gdata.Leaf('password', _password, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _key is not None:
-            res.children['key'] = yang.gdata.Leaf('key', _key, ns=self._ns)
+            res.children['key'] = yang.gdata.Leaf('key', _key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         for child in res.children.values():
             child.parent = res
         return res
@@ -291,6 +325,20 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
         self.elements = elements
 
     def create(self, username, password, key):
+        for e in self.elements:
+            match = True
+            if e.username != username:
+                match = False
+                break
+            if e.password != password:
+                match = False
+                break
+            if e.key != key:
+                match = False
+                break
+            if match:
+                return e
+
         res = orchestron_rfs__device__initial_credentials_entry(username, password, key)
         self.elements.append(res)
         return res
@@ -337,16 +385,16 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         self.initial_credentials._parent = self
 
     def to_gdata(self) -> yang.gdata.Node:
-        res = yang.gdata.ListElement([str(self.name)])
+        res = yang.gdata.ListElement([str(self.name)], ns=self._ns)
         _name = self.name
         _description = self.description
         _address = self.address
         _credentials = self.credentials
         _initial_credentials = self.initial_credentials
         if _name is not None:
-            res.children['name'] = yang.gdata.Leaf('name', _name, ns=self._ns)
+            res.children['name'] = yang.gdata.Leaf('name', _name, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _description is not None:
-            res.children['description'] = yang.gdata.Leaf('description', _description, ns=self._ns)
+            res.children['description'] = yang.gdata.Leaf('description', _description, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _address is not None:
             res.children['address'] = _address.to_gdata()
         if _credentials is not None:
@@ -373,6 +421,14 @@ class orchestron_rfs__device(yang.adata.MNode):
         self.elements = elements
 
     def create(self, name, credentials):
+        for e in self.elements:
+            match = True
+            if e.name != name:
+                match = False
+                break
+            if match:
+                return e
+
         res = orchestron_rfs__device_entry(name, credentials)
         self.elements.append(res)
         return res

@@ -6,7 +6,7 @@
         },
         "yang": {
             "url": "https://github.com/orchestron-orchestrator/acton-yang/archive/refs/heads/main.zip",
-            "hash": "122003c0ceba1b0b2a2cedd5a1c0c7f2b901ca3413569012aa4a7758ea4de493d465"
+            "hash": "1220f57b5d74df757d3be25edffb7418674352c09f9395e3da5fac12d56683f73c54"
         }
     },
     "zig_dependencies": {}
