@@ -30,7 +30,7 @@ actor Device(wcap: WorldCap):
     var state = 0
 
     logh = logging.Handler("TestNC")
-    logh.add_sink(logging.StdoutSink())
+    #logh.add_sink(logging.StdoutSink())
 
     def _on_connect(c):
         print("Connected to device", c)
@@ -49,8 +49,18 @@ actor Device(wcap: WorldCap):
 
     def set_meta_config(conf: DeviceMetaConfig):
         print("Device.set_meta_config")
-        print(conf)
-        print(conf.to_gdata())
+
+        if state == 1:
+            print("Device already connected, ignoring new config")
+            return
+
+#        if dmc is not None:
+#            # TODO: should compare existing dmc with new conf
+#            if dmc.to_gdata() == conf.to_gdata():
+#                print("Device Meta Config already set to same value")
+#                return
+
+        #print(conf.to_gdata().to_xmlstr())
 
         if not len(conf.address.elements) > 0:
             print("Not enough addressess :/")
@@ -62,6 +72,7 @@ actor Device(wcap: WorldCap):
         port = int(addr_port) if addr_port is not None else 830
         username = conf.credentials.username
         password = conf.credentials.password
+
         if username is not None and password is not None:
             print("Setting up NETCONF client...", address, port, username, password)
             c = netconf.Client(wcap, address, port, username, password,
