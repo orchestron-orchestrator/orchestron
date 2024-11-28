@@ -181,7 +181,7 @@ class TTTRFSTransform(TTTNode):
                                     yang.gdata.ListElement(
                                         [device_info.name],
                                         children={
-                                            "name": yang.gdata.Leaf("name", device_info.name),
+                                            "name": yang.gdata.Leaf("name", "str", device_info.name),
                                             "config": yang.gdata.Container("config", children=output.children)
                                         }
                                     )
