@@ -22,11 +22,11 @@ class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNod
         _password = self.password
         _key = self.key
         if _username is not None:
-            res.children['username'] = yang.gdata.Leaf('username', _username, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['username'] = yang.gdata.Leaf('username', 'string', _username, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _password is not None:
-            res.children['password'] = yang.gdata.Leaf('password', _password, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['password'] = yang.gdata.Leaf('password', 'string', _password, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _key is not None:
-            res.children['key'] = yang.gdata.Leaf('key', _key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['key'] = yang.gdata.Leaf('key', 'string', _key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         for child in res.children.values():
             child.parent = res
         return res
@@ -109,11 +109,11 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
         _port = self.port
         _initial_credentials = self.initial_credentials
         if _name is not None:
-            res.children['name'] = yang.gdata.Leaf('name', _name, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['name'] = yang.gdata.Leaf('name', 'string', _name, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _address is not None:
-            res.children['address'] = yang.gdata.Leaf('address', _address, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['address'] = yang.gdata.Leaf('address', 'union', _address, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _port is not None:
-            res.children['port'] = yang.gdata.Leaf('port', _port, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['port'] = yang.gdata.Leaf('port', 'string', _port, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _initial_credentials is not None:
             res.children['initial-credentials'] = _initial_credentials.to_gdata()
         for child in res.children.values():
@@ -185,9 +185,9 @@ class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
         _key = self.key
         _private_key = self.private_key
         if _key is not None:
-            res.children['key'] = yang.gdata.Leaf('key', _key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['key'] = yang.gdata.Leaf('key', 'string', _key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _private_key is not None:
-            res.children['private-key'] = yang.gdata.Leaf('private-key', _private_key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['private-key'] = yang.gdata.Leaf('private-key', 'string', _private_key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         for child in res.children.values():
             child.parent = res
         return res
@@ -261,9 +261,9 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
         _password = self.password
         _key = self.key
         if _username is not None:
-            res.children['username'] = yang.gdata.Leaf('username', _username, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['username'] = yang.gdata.Leaf('username', 'string', _username, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _password is not None:
-            res.children['password'] = yang.gdata.Leaf('password', _password, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['password'] = yang.gdata.Leaf('password', 'string', _password, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _key is not None:
             res.children['key'] = _key.to_gdata()
         for child in res.children.values():
@@ -300,11 +300,11 @@ class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
         _password = self.password
         _key = self.key
         if _username is not None:
-            res.children['username'] = yang.gdata.Leaf('username', _username, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['username'] = yang.gdata.Leaf('username', 'string', _username, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _password is not None:
-            res.children['password'] = yang.gdata.Leaf('password', _password, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['password'] = yang.gdata.Leaf('password', 'string', _password, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _key is not None:
-            res.children['key'] = yang.gdata.Leaf('key', _key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['key'] = yang.gdata.Leaf('key', 'string', _key, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         for child in res.children.values():
             child.parent = res
         return res
@@ -392,9 +392,9 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         _credentials = self.credentials
         _initial_credentials = self.initial_credentials
         if _name is not None:
-            res.children['name'] = yang.gdata.Leaf('name', _name, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['name'] = yang.gdata.Leaf('name', 'string', _name, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _description is not None:
-            res.children['description'] = yang.gdata.Leaf('description', _description, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+            res.children['description'] = yang.gdata.Leaf('description', 'string', _description, ns='http://orchestron.org/yang/orchestron-rfs.yang')
         if _address is not None:
             res.children['address'] = _address.to_gdata()
         if _credentials is not None:
