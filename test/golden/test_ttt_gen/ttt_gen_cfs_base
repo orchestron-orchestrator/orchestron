@@ -2,6 +2,7 @@
 # DO NOT MODIFY THIS FILE!! This file is generated!
 # WARNING WARNING WARNING WARNING WARNING
 
+import xml
 import orchestron.ttt as ttt
 import yang.adata
 import yang.gdata
@@ -21,4 +22,11 @@ class Foobar(ttt.TTTTransform):
         modeled input and back to gdata
         """
         modeled_input = foo__c1__foo__bar_entry.from_gdata(i)
+        return self.transform(modeled_input).to_gdata()
+
+    mut def transform_xml(self, i: xml.Node) -> yang.gdata.Node:
+        """Wrap the user provided transform method to convert from XML to
+        modeled input and return gdata
+        """
+        modeled_input = foo__c1__foo__bar_entry.from_xml(i)
         return self.transform(modeled_input).to_gdata()
