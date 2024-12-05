@@ -13,7 +13,7 @@ import respnet.rfs
 
 def get_ttt(dev_mgr: odev.DeviceManager) -> ttt.TTTNode:
     def create_list_entry_orchestron_rfs__rfs():
-        return ttt.TTTContainer({"backbone-interface": ttt.TTTList(respnet.rfs.BBInterface)})
+        return ttt.TTTContainer({"backbone-interface": ttt.TTTList(lambda: respnet.rfs.BBInterface(dev_mgr))})
 
     r = ttt.TTTContainer({"device": ttt.TTTList(lambda: ttt.TTTDevice(dev_mgr)), "rfs": ttt.TTTList(create_list_entry_orchestron_rfs__rfs)})
     return r

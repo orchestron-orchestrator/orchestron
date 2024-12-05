@@ -84,6 +84,7 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> TTTSrc:
         modeled_input = %s.from_xml(i)
         return self.transform(modeled_input).to_gdata()
 """ % (transform_name, input_class, input_class, input_class))
+                            return TTTSrc(src="ttt.TTTList(%s)" % transform, input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
                         elif ext.name == "rfs-transform":
                             base_defs.append("""class %s(ttt.TTTRFSTransform):
     transform: mut(%s, ttt.DeviceInfo) -> yang.adata.MNode
@@ -95,9 +96,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> TTTSrc:
         modeled_input = %s.from_gdata(i)
         return self.transform(modeled_input, device_info).to_gdata()
 """ % (transform_name, input_class, input_class))
-                        else:
-                            raise ValueError("Unknown extension name: %s" % ext.name)
-                        return TTTSrc(src="ttt.TTTList(%s)" % transform, input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
+                            return TTTSrc(src="ttt.TTTList(lambda: %s(dev_mgr))" % transform, input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
+                        raise ValueError("Unknown extension name: %s" % ext.name)
                     else:
                         raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
                 elif ext.name == "device":

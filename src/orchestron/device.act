@@ -1,4 +1,5 @@
 import logging
+import testing
 
 import yang.adata
 import yang.gdata
@@ -7,14 +8,81 @@ from orchestron.device_meta_config import orchestron_rfs__device_entry as Device
 
 import netconf
 
-actor DeviceManager(wcap: ?WorldCap=None):
+class UnsupportedDevice(Exception):
+    pass
 
+class EmptyConfig(yang.adata.MNode):
+    def to_gdata(self) -> yang.gdata.Node:
+        return yang.gdata.Root()
+
+
+actor DeviceManager(wcap: ?WorldCap=None):
     var devices = {}
 
     def get(name: str) -> Device:
         if name not in devices:
             devices[name] = Device(wcap)
         return devices[name]
+
+class ModCap(object):
+    name: str
+    namespace: str
+    revision: ?str
+    feature: list[str]
+
+    def __init__(self, name: str, namespace: str, revision: ?str=None, feature: list[str]=[]):
+        self.name = name
+        self.namespace = namespace
+        self.revision = revision
+        self.feature = feature
+
+
+def parse_cap(tcap: str) -> ModCap:
+    parts = tcap.split("?", 1)
+
+    name = parts[0]
+    namespace = parts[0]
+    revision = None
+    feature = []
+
+    qps = {}
+    if len(parts) > 1:
+        qparts = parts[1].split("&amp;")
+        for qpart in qparts:
+            qkvparts = qpart.split("=")
+            if len(qkvparts) == 2:
+                qk, qv = qkvparts[0], qkvparts[1]
+                qps[qk] = qv
+
+    if "module" in qps:
+        name = qps["module"]
+    if "revision" in qps:
+        revision = qps["revision"]
+
+    return ModCap(name, namespace, revision, feature)
+
+
+def _test_parse_cap_base():
+    mod = parse_cap("urn:ietf:params:netconf:base:1.1")
+    testing.assertEqual(mod.name, "urn:ietf:params:netconf:base:1.1")
+    testing.assertEqual(mod.namespace, "urn:ietf:params:netconf:base:1.1")
+    testing.assertEqual(mod.revision, None)
+    testing.assertEqual(mod.feature, [])
+
+def _test_parse_cap_xr_isis():
+    mod = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-isis-act?module=Cisco-IOS-XR-isis-act&amp;revision=2019-10-01")
+    testing.assertEqual(mod.name, "Cisco-IOS-XR-isis-act")
+    testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-isis-act")
+    testing.assertEqual(mod.revision, "2019-10-01")
+    testing.assertEqual(mod.feature, [])
+
+def _test_parse_cap_xr_hostname():
+    mod = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&amp;revision=2021-04-21")
+    testing.assertEqual(mod.name, "Cisco-IOS-XR-um-hostname-cfg")
+    testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg")
+    testing.assertEqual(mod.revision, "2021-04-21")
+    testing.assertEqual(mod.feature, [])
+
 
 
 # State machine
@@ -29,13 +97,29 @@ actor Device(wcap: ?WorldCap=None):
     var client: ?netconf.Client = None
     var conf: ?yang.gdata.Node = None
     var state = 0
+    var modset: dict[str, ModCap] = {}
+    var subs = []
 
     logh = logging.Handler("TestNC")
     #logh.add_sink(logging.StdoutSink())
 
+    if wcap == None:
+        # TODO: remove this and inject mock support modules elsewhere
+        mxr1 = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&amp;revision=2021-04-21")
+        modset[mxr1.name] = mxr1
+        mxr2 = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&amp;revision=2022-07-11")
+        modset[mxr2.name] = mxr2
+        mxr3 = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&amp;revision=2022-07-11")
+        modset[mxr3.name] = mxr3
+
     def _on_connect(c):
         print("Connected to device", c)
         state = 1
+
+        for cap in c.get_capabilities():
+            m = parse_cap(cap)
+            modset[m.name] = m
+
         if conf != None:
             print("Sending config")
             edit_config(conf)
@@ -43,6 +127,7 @@ actor Device(wcap: ?WorldCap=None):
             print("No config to send")
 
     def _on_error(c, error):
+        modset = {}
         print("Error connecting to device")
 
     def _on_notif(c, n):
@@ -54,6 +139,9 @@ actor Device(wcap: ?WorldCap=None):
         if wcap == None:
             print("Device in MOCK mode, pretending to connect to device...")
             state = 1
+            for mock_cap in conf.mock.modules.elements:
+                m = ModCap(mock_cap.name, mock_cap.namespace, mock_cap.revision, mock_cap.feature)
+                modset[m.name] = m
             return
 
         if state == 1:
@@ -89,6 +177,8 @@ actor Device(wcap: ?WorldCap=None):
             client = c
         dmc = conf
 
+    def get_modules():
+        return modset
 
     def edit_config(new_conf: yang.gdata.Node):
         print("Device.edit_config")

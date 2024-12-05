@@ -97,19 +97,20 @@ class TTTList(TTTNode):
         for key, subdiff in transp.items():
             elem = elems[key]
             if isinstance(elem, TTTRFSTransform):
-                # RFS transforms are special, they need to know about various
-                # device information. RFS services always exist nested under a
-                # list keyed by device name, so we can extract the device name
-                # by visiting the parent node. It should already be verified at
-                # compile time, but we have an extra check here on key length.
+                # RFS transforms are special, they need to know which device
+                # they are configuring. RFS services always exist nested under
+                # a list keyed by device name, so we can extract the device name
+                # by visiting the parent node.
                 l = list(diff.values())[0]
                 lp = l.parent
                 if isinstance(lp, yang.gdata.ListElement):
                     k = lp.key_vals
+                    # Key length should already be verified at compile time, but
+                    # we have an extra check here.
                     if len(k) != 1:
                         raise ValueError("RFSTransform parent list key length != 1")
-                    di = DeviceInfo(lp.key_str())
-                    elem.configure_rfs(di, subdiff, output_tree)
+                    device_name = lp.key_str()
+                    elem.configure_rfs(device_name, subdiff, output_tree)
                 else:
                     raise ValueError("RFSTransform parent not a ListElement")
             else:
@@ -138,25 +139,51 @@ class TTTTransform(TTTNode):
         print("TTTTransform.configure output:\n%s" % output.to_xmlstr())
 
 class DeviceInfo(object):
-    def __init__(self, name: str):
+    name: str
+    modules: dict[str, odev.ModCap]
+
+    def __init__(self, name: str, modules: dict[str, odev.ModCap] = {}):
         self.name = name
+        self.modules = modules
 
 class TTTRFSTransform(TTTNode):
-    def __init__(self):
+    dev_mgr: odev.DeviceManager
+    dev: ?odev.Device
+
+    def __init__(self, dev_mgr: odev.DeviceManager):
+        self.dev_mgr = dev_mgr
+        self.dev = None
         #self.state = TTTTransformState(self)
-        pass
 
     mut def transform_wrapper(self, i: yang.gdata.Node, device_info: DeviceInfo) -> yang.gdata.Node:
         raise NotImplementedError("TTTRFSTransform.transform not implemented")
 
-    proc def configure_rfs(self, device_info: DeviceInfo, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
+    proc def configure_rfs(self, device_name: str, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
         print("TTTRFSTransform.configure", self)
         diffs = list(diff.values())
         merged_config = diffs[0]
         for d in diffs[1:]:
             merged_config = yang.gdata.merge(merged_config, d)
         # TODO: consider returning yang.gdata.Root instead of yang.gdata.Node from transform_wrapper()
-        output = self.transform_wrapper(merged_config, device_info)
+        self_dev = self.dev
+        dev = self_dev if self_dev is not None else self.dev_mgr.get(device_name)
+        if self_dev == None:
+            self.dev = dev
+        device_info = DeviceInfo(device_name, dev.get_modules())
+
+        output = yang.gdata.Root()
+        if len(device_info.modules) > 0:
+            try:
+                output = self.transform_wrapper(merged_config, device_info)
+            except odev.UnsupportedDevice:
+                output = yang.gdata.Root()
+                # TODO: should we abort the transaction or something?
+        else:
+            # TODO: do logging..
+            #self.log.info("No capabilities for device, skipping RFS transform")
+            pass
+
+
         # The root of the output tree from an RFS transform is the config of one
         # (1) device, while the combined output from all transforms on a TTT
         # layer is expected to be one data tree. Clearly we want to support
