@@ -7,7 +7,8 @@ from orchestron.device_meta_config import orchestron_rfs__device_entry as Device
 
 import netconf
 
-actor DeviceManager(wcap: WorldCap):
+actor DeviceManager(wcap: ?WorldCap=None):
+
     var devices = {}
 
     def get(name: str) -> Device:
@@ -18,7 +19,7 @@ actor DeviceManager(wcap: WorldCap):
 
 # State machine
 # connect
-actor Device(wcap: WorldCap):
+actor Device(wcap: ?WorldCap=None):
     """NETCONF Device
 
     Some day this will be the base class for all devices and we'll support all
@@ -35,7 +36,7 @@ actor Device(wcap: WorldCap):
     def _on_connect(c):
         print("Connected to device", c)
         state = 1
-        if conf is not None:
+        if conf != None:
             print("Sending config")
             edit_config(conf)
         else:
@@ -49,6 +50,11 @@ actor Device(wcap: WorldCap):
 
     def set_meta_config(conf: DeviceMetaConfig):
         print("Device.set_meta_config")
+
+        if wcap == None:
+            print("Device in MOCK mode, pretending to connect to device...")
+            state = 1
+            return
 
         if state == 1:
             print("Device already connected, ignoring new config")
@@ -69,11 +75,11 @@ actor Device(wcap: WorldCap):
         addr = conf.address.elements[0]
         address = addr.address
         addr_port = addr.port
-        port = int(addr_port) if addr_port is not None else 830
+        port = int(addr_port) if addr_port != None else 830
         username = conf.credentials.username
         password = conf.credentials.password
 
-        if username is not None and password is not None:
+        if wcap != None and username != None and password != None:
             print("Setting up NETCONF client...", address, port, username, password)
             c = netconf.Client(wcap, address, port, username, password,
                                on_connect=_on_connect,
@@ -89,6 +95,9 @@ actor Device(wcap: WorldCap):
         conf = new_conf
         if state != 1:
             print("Device.edit_config not connected yet, storing config")
+            return
+        if wcap == None:
+            print("Device in MOCK mode, \"sending config\"... *hihi*")
             return
         if client is not None:
             print("Device.edit_config Sending config...")
