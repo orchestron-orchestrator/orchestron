@@ -2,7 +2,7 @@
     "dependencies": {
         "netconf": {
             "url": "https://github.com/orchestron-orchestrator/netconf/archive/refs/heads/main.zip",
-            "hash": "1220f7859542182b799d206fdbf64a70f652103f7d5c74bd513225a5d1a9a5575a26"
+            "hash": "1220f6ec6a90b14fe17479aed21eac801a3061a1a0b12f081a1a89a0b773a0f969f0"
         },
         "yang": {
             "url": "https://github.com/orchestron-orchestrator/acton-yang/archive/refs/heads/main.zip",
