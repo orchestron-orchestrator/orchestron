@@ -116,7 +116,10 @@ actor Device(wcap: ?WorldCap=None):
         print("Connected to device", c)
         state = 1
 
-        for cap in c.get_capabilities():
+        # TODO: actonc bug - try uncommenting this
+        # for cap in c.get_capabilities():
+        caps = c.get_capabilities()
+        for cap in caps:
             m = parse_cap(cap)
             modset[m.name] = m
 
