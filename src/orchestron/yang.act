@@ -82,6 +82,25 @@ rfs = """module orchestron-rfs {
         type string;
       }
     }
+
+    container mock {
+      list modules {
+        key "name";
+        leaf name {
+          type string;
+        }
+        leaf namespace {
+          type string;
+          mandatory true;
+        }
+        leaf revision {
+          type string;
+        }
+        leaf-list feature {
+          type string;
+        }
+      }
+    }
   }
 
   list rfs {
