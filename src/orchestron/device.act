@@ -47,7 +47,7 @@ def parse_cap(tcap: str) -> ModCap:
 
     qps = {}
     if len(parts) > 1:
-        qparts = parts[1].split("&amp;")
+        qparts = parts[1].split("&")
         for qpart in qparts:
             qkvparts = qpart.split("=")
             if len(qkvparts) == 2:
@@ -70,14 +70,14 @@ def _test_parse_cap_base():
     testing.assertEqual(mod.feature, [])
 
 def _test_parse_cap_xr_isis():
-    mod = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-isis-act?module=Cisco-IOS-XR-isis-act&amp;revision=2019-10-01")
+    mod = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-isis-act?module=Cisco-IOS-XR-isis-act&revision=2019-10-01")
     testing.assertEqual(mod.name, "Cisco-IOS-XR-isis-act")
     testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-isis-act")
     testing.assertEqual(mod.revision, "2019-10-01")
     testing.assertEqual(mod.feature, [])
 
 def _test_parse_cap_xr_hostname():
-    mod = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&amp;revision=2021-04-21")
+    mod = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21")
     testing.assertEqual(mod.name, "Cisco-IOS-XR-um-hostname-cfg")
     testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg")
     testing.assertEqual(mod.revision, "2021-04-21")
@@ -105,11 +105,11 @@ actor Device(wcap: ?WorldCap=None):
 
     if wcap == None:
         # TODO: remove this and inject mock support modules elsewhere
-        mxr1 = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&amp;revision=2021-04-21")
+        mxr1 = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21")
         modset[mxr1.name] = mxr1
-        mxr2 = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&amp;revision=2022-07-11")
+        mxr2 = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&revision=2022-07-11")
         modset[mxr2.name] = mxr2
-        mxr3 = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&amp;revision=2022-07-11")
+        mxr3 = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&revision=2022-07-11")
         modset[mxr3.name] = mxr3
 
     def _on_connect(c):
