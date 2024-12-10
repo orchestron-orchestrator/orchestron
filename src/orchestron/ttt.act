@@ -1,5 +1,7 @@
 
+import logging
 import xml
+
 import yang.adata
 import yang.gdata
 import orchestron.device as odev
@@ -35,7 +37,7 @@ class TTTNode(object):
 class TTTContainer(TTTNode):
     elems: dict[str, TTTNode]
 
-    def __init__(self, elems: dict[str, TTTNode]):
+    def __init__(self, elems: dict[str, TTTNode], log_handler: logging.Handler):
         self.elems = elems
 
     proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
@@ -88,7 +90,7 @@ class TTTList(TTTNode):
     """
     state: TTTListState
 
-    def __init__(self, template: mut() -> TTTNode):
+    def __init__(self, template: mut() -> TTTNode, log_handler: logging.Handler):
         self.state = TTTListState(template)
 
     proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
@@ -121,7 +123,7 @@ class TTTList(TTTNode):
 #    pass
 
 class TTTTransform(TTTNode):
-    def __init__(self):
+    def __init__(self, log_handler: ?logging.Handler=None):
         #self.state = TTTTransformState(self)
         pass
 
@@ -150,16 +152,17 @@ class TTTRFSTransform(TTTNode):
     dev_mgr: odev.DeviceManager
     dev: ?odev.Device
 
-    def __init__(self, dev_mgr: odev.DeviceManager):
+    def __init__(self, dev_mgr: odev.DeviceManager, log_handler: logging.Handler):
         self.dev_mgr = dev_mgr
         self.dev = None
+        self.log = logging.Logger(log_handler)
         #self.state = TTTTransformState(self)
 
     mut def transform_wrapper(self, i: yang.gdata.Node, device_info: DeviceInfo) -> yang.gdata.Node:
         raise NotImplementedError("TTTRFSTransform.transform not implemented")
 
     proc def configure_rfs(self, device_name: str, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
-        print("TTTRFSTransform.configure", self)
+        self.log.info("TTTRFSTransform.configure", {"transform": str(self)})
         diffs = list(diff.values())
         merged_config = diffs[0]
         for d in diffs[1:]:
@@ -176,11 +179,12 @@ class TTTRFSTransform(TTTNode):
             try:
                 output = self.transform_wrapper(merged_config, device_info)
             except odev.UnsupportedDevice:
+                self.log.info("RFS transform unsupported device", {"transform": str(self)})
                 output = yang.gdata.Root()
                 # TODO: should we abort the transaction or something?
         else:
             # TODO: do logging..
-            #self.log.info("No capabilities for device, skipping RFS transform")
+            self.log.info("No capabilities for device, skipping RFS transform")
             pass
 
 
@@ -234,7 +238,7 @@ class TTTDevice(TTTNode):
     dev: ?odev.Device
     dev_conf: TTTDeviceConfig
 
-    def __init__(self, dev_mgr: odev.DeviceManager):
+    def __init__(self, dev_mgr: odev.DeviceManager, log_handler: logging.Handler):
         #self.state = TTTTransformState(self)
         print("TTTDevice.__init__")
         self.dev_mgr = dev_mgr
@@ -258,7 +262,7 @@ class TTTDeviceConfig(TTTNode):
     """
     dev_mgr: odev.DeviceManager
 
-    def __init__(self, dev_mgr: odev.DeviceManager):
+    def __init__(self, dev_mgr: odev.DeviceManager, log_handler: logging.Handler):
         #self.state = TTTTransformState(self)
         print("TTTDeviceConfig.__init__")
         self.dev_mgr = dev_mgr
