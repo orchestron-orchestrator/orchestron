@@ -180,6 +180,11 @@ actor Device(wcap: ?WorldCap=None):
             client = c
         dmc = conf
 
+    def get_capabilities():
+        if client != None:
+            return client.get_capabilities()
+        return []
+
     def get_modules():
         return modset
 
