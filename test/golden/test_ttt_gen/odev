@@ -2,6 +2,8 @@
 # DO NOT MODIFY THIS FILE!! This file is generated!
 # WARNING WARNING WARNING WARNING WARNING
 
+import logging
+
 import orchestron.device as odev
 import orchestron.ttt as ttt
 import yang.adata
@@ -10,8 +12,8 @@ import yang.gdata
 
 
 
-def get_ttt(dev_mgr: odev.DeviceManager) -> ttt.TTTNode:
+def get_ttt(dev_mgr: odev.DeviceManager, log_handler: logging.Handler) -> ttt.TTTNode:
 
 
-    r = ttt.TTTContainer({"devices": ttt.TTTContainer({"device": ttt.TTTList(lambda: ttt.TTTDeviceConfig(dev_mgr))})})
+    r = ttt.TTTContainer({"devices": ttt.TTTContainer({"device": ttt.TTTList(lambda: ttt.TTTDeviceConfig(dev_mgr, log_handler), log_handler)}, log_handler)}, log_handler)
     return r
