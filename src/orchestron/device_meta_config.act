@@ -69,6 +69,7 @@ class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
         res = yang.gdata.List('initial-credentials', ['username', 'password', 'key'], ns=self._ns)
         for e in self.elements:
             e_gdata = e.to_gdata()
+            e_gdata.parent = res
             if isinstance(e_gdata, yang.gdata.ListElement):
                 res.elements.append(e_gdata)
         return res
@@ -152,6 +153,7 @@ class orchestron_rfs__device__address(yang.adata.MNode):
         res = yang.gdata.List('address', ['name'], ns=self._ns)
         for e in self.elements:
             e_gdata = e.to_gdata()
+            e_gdata.parent = res
             if isinstance(e_gdata, yang.gdata.ListElement):
                 res.elements.append(e_gdata)
         return res
@@ -224,6 +226,7 @@ class orchestron_rfs__device__credentials__key(yang.adata.MNode):
         res = yang.gdata.List('key', ['key'], ns=self._ns)
         for e in self.elements:
             e_gdata = e.to_gdata()
+            e_gdata.parent = res
             if isinstance(e_gdata, yang.gdata.ListElement):
                 res.elements.append(e_gdata)
         return res
@@ -347,6 +350,7 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
         res = yang.gdata.List('initial-credentials', ['username', 'password', 'key'], ns=self._ns)
         for e in self.elements:
             e_gdata = e.to_gdata()
+            e_gdata.parent = res
             if isinstance(e_gdata, yang.gdata.ListElement):
                 res.elements.append(e_gdata)
         return res
@@ -430,6 +434,7 @@ class orchestron_rfs__device__mock__modules(yang.adata.MNode):
         res = yang.gdata.List('modules', ['name'], ns=self._ns)
         for e in self.elements:
             e_gdata = e.to_gdata()
+            e_gdata.parent = res
             if isinstance(e_gdata, yang.gdata.ListElement):
                 res.elements.append(e_gdata)
         return res
@@ -561,6 +566,7 @@ class orchestron_rfs__device(yang.adata.MNode):
         res = yang.gdata.List('device', ['name'], ns=self._ns)
         for e in self.elements:
             e_gdata = e.to_gdata()
+            e_gdata.parent = res
             if isinstance(e_gdata, yang.gdata.ListElement):
                 res.elements.append(e_gdata)
         return res
