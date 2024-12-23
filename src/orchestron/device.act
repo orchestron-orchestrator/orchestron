@@ -16,13 +16,18 @@ class EmptyConfig(yang.adata.MNode):
         return yang.gdata.Root()
 
 
-actor DeviceManager(wcap: ?WorldCap=None):
+actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
     var devices = {}
+    var reconf_cb: ?action() -> None = None
 
     def get(name: str) -> Device:
         if name not in devices:
-            devices[name] = Device(wcap)
-        return devices[name]
+            devices[name] = Device(wcap, name, log_handler, reconf_cb)
+        dev = devices[name]
+        return dev
+
+    def on_reconf(on_reconf: action() -> None):
+        reconf_cb = on_reconf
 
 class ModCap(object):
     name: str
@@ -35,6 +40,23 @@ class ModCap(object):
         self.namespace = namespace
         self.revision = revision
         self.feature = feature
+
+extension ModCap(Eq):
+    def __eq__(self, other: ModCap) -> bool:
+        self_revision = self.revision
+        other_revision = other.revision
+        revision_eq = (self_revision == None and other_revision == None) or (self_revision != None and other_revision != None and self_revision == other_revision)
+        return self.name == other.name and self.namespace == other.namespace and revision_eq and self.feature == other.feature
+
+def modcap_eq(a: dict[str, ModCap], b: dict[str, ModCap]) -> bool:
+    if len(a) != len(b):
+        return False
+    if set(a.keys()) != set(b.keys()):
+        return False
+    for k in a.keys():
+        if a[k] != b[k]:
+            return False
+    return True
 
 
 def parse_cap(tcap: str) -> ModCap:
@@ -87,7 +109,7 @@ def _test_parse_cap_xr_hostname():
 
 # State machine
 # connect
-actor Device(wcap: ?WorldCap=None):
+actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action() -> None=None):
     """NETCONF Device
 
     Some day this will be the base class for all devices and we'll support all
@@ -100,8 +122,8 @@ actor Device(wcap: ?WorldCap=None):
     var modset: dict[str, ModCap] = {}
     var subs = []
 
-    logh = logging.Handler("TestNC")
-    #logh.add_sink(logging.StdoutSink())
+    _log = logging.Logger(log_handler)
+    _log.name = "Device " + name
 
     if wcap == None:
         # TODO: remove this and inject mock support modules elsewhere
@@ -113,15 +135,21 @@ actor Device(wcap: ?WorldCap=None):
         modset[mxr3.name] = mxr3
 
     def _on_connect(c):
-        print("Connected to device", c)
+        _log.info("Connected to device")
         state = 1
 
         # TODO: actonc bug - try uncommenting this
         # for cap in c.get_capabilities():
         caps = c.get_capabilities()
+        new_modset: dict[str, ModCap] = {}
         for cap in caps:
             m = parse_cap(cap)
-            modset[m.name] = m
+            new_modset[m.name] = m
+
+        if not modcap_eq(modset, new_modset):
+            modset = new_modset
+            if on_reconf != None:
+                on_reconf()
 
         if conf != None:
             print("Sending config")
@@ -176,7 +204,7 @@ actor Device(wcap: ?WorldCap=None):
                                on_connect=_on_connect,
                                on_error=_on_error,
                                on_notif=_on_notif,
-                               log_handler=logh)
+                               log_handler=log_handler)
             client = c
         dmc = conf
 

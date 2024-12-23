@@ -131,7 +131,7 @@ class TTTTransform(TTTNode):
         raise NotImplementedError("TTTTransform.transform not implemented")
 
     proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
-        self._log.info("TTTTransform.configure", {"transform": str(self)})
+        self._log.debug("TTTTransform.configure", {"transform": str(self)})
         diffs = list(diff.values())
         merged_config = diffs[0]
         for d in diffs[1:]:
@@ -162,7 +162,7 @@ class TTTRFSTransform(TTTNode):
         raise NotImplementedError("TTTRFSTransform.transform not implemented")
 
     proc def configure_rfs(self, device_name: str, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
-        self._log.info("TTTRFSTransform.configure", {"transform": str(self)})
+        self._log.debug("TTTRFSTransform.configure", {"transform": str(self)})
         diffs = list(diff.values())
         merged_config = diffs[0]
         for d in diffs[1:]:
@@ -179,12 +179,12 @@ class TTTRFSTransform(TTTNode):
             try:
                 output = self.transform_wrapper(merged_config, device_info)
             except odev.UnsupportedDevice:
-                self._log.info("RFS transform unsupported device", {"transform": str(self)})
+                self._log.warning("RFS transform unsupported device", {"transform": str(self)})
                 output = yang.gdata.Root()
                 # TODO: should we abort the transaction or something?
         else:
             # TODO: do logging..
-            self._log.info("No capabilities for device, skipping RFS transform")
+            self._log.info("No capabilities for device, skipping RFS transform", {"device": device_name})
             pass
 
 
@@ -245,7 +245,7 @@ class TTTDevice(TTTNode):
         self.dev = None
 
     proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
-        self._log.info("TTTDevice.configure", {"ttt": str(self)})
+        self._log.debug("TTTDevice.configure", {"ttt": str(self)})
         diffs = list(diff.values())
         merged_config = diffs[0]
         for d in diffs[1:]:
@@ -268,7 +268,7 @@ class TTTDeviceConfig(TTTNode):
         self.dev_mgr = dev_mgr
 
     proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node]):
-        self._log.info("TTTDeviceConfig.configure", {"ttt": str(self)})
+        self._log.debug("TTTDeviceConfig.configure", {"ttt": str(self)})
         diffs = list(diff.values())
         merged_config = diffs[0]
         for d in diffs[1:]:
@@ -279,5 +279,5 @@ class TTTDeviceConfig(TTTNode):
             if isinstance(dev_config_cntr, yang.gdata.Container):
                 dev = self.dev_mgr.get(name)
                 dev_config = yang.gdata.Root(dev_config_cntr.children)
-                self._log.info("TTTDeviceConfig.configure output", {"name": name, "config": dev_config.to_xmlstr()})
+                self._log.debug("TTTDeviceConfig.configure output", {"name": name, "config": dev_config.to_xmlstr()})
                 dev.edit_config(dev_config)
