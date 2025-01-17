@@ -1,0 +1,608 @@
+#import orchestron.gdata as gdata
+import yang.gdata as gdata
+
+def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
+    cfg_per_key = {}
+    for src, conf in cfg_per_src.items():
+        if isinstance(conf, gdata.List):
+            for le in conf.elements:
+                key = le.key_str()
+                if key in cfg_per_key:
+                    cfg_per_key[key][src] = le
+                else:
+                    cfg_per_key[key] = {src: le}
+        elif isinstance(conf, gdata.Inner):
+            for key, subconf in conf.children.items():
+                if key in cfg_per_key:
+                    cfg_per_key[key][src] = subconf
+                else:
+                    cfg_per_key[key] = {src: subconf}
+        else:
+            raise NotImplementedError("Cannot transpose configuration type" + str(type(conf)))
+
+    return cfg_per_key
+
+def difference(a: ?gdata.Node, b: gdata.Node):
+    return b
+
+def diff_apply(conf: dict[str,gdata.Node], diff: dict[str,gdata.Node]):
+    return diff
+
+def assert_complete(conf: gdata.Node):
+    return conf
+
+def merge(cfg_per_src: dict[str,gdata.Node]):
+    acc = None
+    for conf in cfg_per_src.values():
+        if acc is not None:
+            acc = gdata.merge(acc, conf)
+        else:
+            acc = conf
+    if acc is not None:
+        return acc
+    else:
+        raise ValueError("Nothing to merge")
+
+
+##################### Node & Transactions #####################
+
+class YieldState(object):
+    it: Iterator[str]
+    key: str
+    tid: str
+    out: Session
+    results: dict[str,value]
+    @property
+    done: action(value) -> None
+
+    def __init__(self, it, key, tid, out, done):
+        self.it = it
+        self.key = key
+        self.tid = tid
+        self.out = out
+        self.result = {}
+        self.done = done
+
+
+actor Node(impl: _Node):
+    def newtrans():
+        return impl.newtrans()
+
+    def get():
+        return impl.get()
+
+class _Node(object):
+    newtrans: proc() -> Transaction
+    get: proc() -> gdata.Node
+
+
+actor Transaction(impl: _Transaction):
+    def configure(tid, diff, out):
+        return impl.configure(tid, diff, out)
+
+    # yield action
+    def apply(tid, out, done):
+        impl.apply(self, tid, out, done)
+
+    def apply_cont(res):
+        impl.apply_cont(self, res)
+
+    def commit(tid, ok):
+        impl.commit(tid, ok)
+
+    def get():
+        return impl.get()
+
+class _Transaction(object):
+    configure:  proc(tid: str, diff: dict[str,gdata.Node], out: Session) -> value
+    # yield action
+    apply : proc(actself: Transaction, tid: str, out: Session, done: action(value) -> None) -> None
+    apply_cont : proc(actself: Transaction, res: value) -> None
+    commit: proc(tid: str, ok: bool) -> None
+    get: proc() -> gdata.Node
+
+
+####################### Layer ########################
+
+actor GenLayer(impl: _GenLayer):
+
+    def newsession():
+        return impl.newsession()
+
+class _GenLayer(object):
+    newsession: proc() -> Session
+
+
+actor Session(impl: _Session):
+    def execute(diff, done):
+        impl.execute(self, diff, done)
+
+    def execute_cont(res):
+        impl.execute_cont(res)
+
+    def write(diff_per_source):
+        impl.write(diff_per_source)
+
+    def prepare(tid):
+        return impl.prepare(tid)
+
+    def finalize(tid, done):
+        impl.finalize(self, tid, done)
+
+    def finalize_cont1(res):
+        impl.finalize_cont1(self, res)
+
+    def finalize_cont2(res):
+        impl.finalize_cont2(res)
+
+    def close(tid, ok):
+        impl.close(tid, ok)
+
+class _Session(object):
+    execute:        proc(actself: Session, diff: gdata.Node, done: action(value)->None) -> None
+    execute_cont:   proc(res: value) -> None
+    write:          proc(diff_per_source: dict[str,gdata.Node]) -> None
+    prepare:        proc(tid: str) -> value
+    finalize:       proc(actself: Session, tid: str, done: action(value)->None) -> None
+    finalize_cont1: proc(actself: Session, res: value) -> None
+    finalize_cont2: proc(res: value) -> None
+    close:          proc(tid: str, ok: bool) -> None
+
+
+
+def Layer(root: Node, lower: GenLayer):
+    return GenLayer(_Layer(root, lower))
+
+class _Layer(_GenLayer):
+    root: Node
+    lower: GenLayer
+
+    def __init__(self, root: Node, lower: GenLayer):
+        self.root = root
+        self.lower = lower
+
+    def newsession(self):
+        return LayerSession(self.root, self.lower)
+
+def Devices():
+    return GenLayer(_Devices(DeviceSession()))
+
+class _Devices(_GenLayer):
+    session: Session
+
+    def __init__(self, session):
+        self.session = session
+
+    def newsession(self):
+        return self.session
+
+
+def LayerSession(rootnode: Node, lowerlayer: GenLayer):
+    return Session(_LayerSession(rootnode.newtrans(), lowerlayer.newsession()))
+
+class _LayerSession(_Session):
+    root: Transaction
+    lower: Session
+    buf: dict[str,gdata.Node]
+    exe_cont: ?action(value)->None
+    fin_cont: ?action(value)->None
+    tr_id: ?str
+
+    def __init__(self, root: Transaction, lower: Session):
+        self.root = root
+        self.lower = lower
+        self.buf = {}
+        self.exe_cont = None
+        self.fin_cont = None
+        self.tr_id = None
+
+    # yield action
+    def execute(self, actself, diff: gdata.Node, done):
+        tr_id = str(self)
+        self.exe_cont = done
+        self.write({tr_id: diff})
+        res = self.prepare(tr_id)
+        if isinstance(res, str) and res == 'Ok':
+            self.finalize(actself, tr_id, actself.execute_cont)    # yield await
+
+    def execute_cont(self, res: value):
+        exe_cont = self.exe_cont
+        tr_id = self.tr_id
+        if exe_cont is not None and tr_id is not None:
+            self.close(tr_id, isinstance(res, str) and res == 'Ok')
+            exe_cont(res)
+        self.exe_cont = None
+        self.tr_id = None
+
+    def write(self, diff_per_source: dict[str,gdata.Node]):
+        self.buf.update(diff_per_source.items())
+
+    def prepare(self, tid):
+        res = self.root.configure(tid, self.buf, self.lower)
+        self.buf = {}
+        if not isinstance(res, Exception):
+            res = self.lower.prepare(tid)
+        return 'Ok' if isinstance(res, str) and res == 'Empty' else res
+
+    # yield action
+    def finalize(self, actself, tid: str, done: action(value) -> None):
+        self.tr_id = tid
+        self.fin_cont = done
+        self.root.apply(tid, self.lower, actself.finalize_cont1)    # yield await
+
+    def finalize_cont1(self, actself, res: value):
+        tr_id = self.tr_id
+        if tr_id is not None:
+            if not isinstance(res, Exception):
+                self.lower.finalize(tr_id, actself.finalize_cont2)  # yield await
+
+    def finalize_cont2(self, res: value):
+        fin_cont = self.fin_cont
+        if fin_cont is not None:
+            fin_cont('Ok' if isinstance(res, str) and res == 'Empty' else res)
+        self.fin_cont = None
+
+    def close(self, tid, ok):
+        self.root.commit(tid, ok)
+        self.lower.close(tid, ok)
+
+
+def DeviceSession():
+    return Session(_DeviceSession())
+
+class _DeviceSession(_Session):
+    buf: dict[str,gdata.Node]
+
+    def __init__(self):
+        self.buf = {}
+
+    # yield action
+    def execute(self, actself, diff: gdata.Node, done):
+        pass
+
+    def execute_cont(self, res: value):
+        pass
+
+    def write(self, diff_per_source: dict[str,gdata.Node]):
+        self.buf.update(diff_per_source.items())
+
+    def prepare(self, tid):
+        return 'Ok'
+
+    # yield action
+    def finalize(self, actself, tid: str, done: action(value) -> None):
+        pass
+
+    def finalize_cont1(self, actself, res: value):
+        pass
+
+    def finalize_cont2(self, res: value):
+        pass
+
+    def close(self, tid, ok):
+        pass
+
+
+############## Containers ##################
+
+def Container(template):
+    return Node(_Container(template))
+
+class _Container(_Node):
+    def __init__(self, template: dict[str, Node]):
+        self.elems = template
+
+    def newtrans(self):
+        return ContainerTransaction(self.elems)
+
+    def get(self):
+        res = {}
+        for tag,node in self.elems.items():
+            res[tag] = node.get()
+        return gdata.Container("GET", res)
+
+def ContainerTransaction(contents):
+    return Transaction(_ContainerTransaction(contents))
+
+class _ContainerTransaction(_Transaction):
+    elems : dict[str, Transaction]
+    accum : dict[str, value]
+    state : ?YieldState
+
+    def __init__(self, contents):
+        self.elems = {}
+        self.accum = {}
+        self.state = None
+        for key,node in contents.items():
+            self.elems[key] = node.newtrans()
+
+    def configure(self, tid, diff, out):
+        diff_by_child = transpose(diff)
+        msgs = {}
+        for child,subdiff in diff_by_child.items():
+            msgs[child] = async self.elems[child].configure(tid, subdiff, out)
+        results = {}
+        for child,msg in msgs.items():
+            results[child] = await msg
+        return self._analyze(results)
+
+    def _analyze(self, results):
+        self.accum.update(results.items())
+        for r in results.values():
+            if isinstance(r, Exception):
+                return r
+        return 'Ok'
+
+    # yield action
+    def apply(self, actself, tid, out, done):
+        it = iter(self.accum.keys())
+        key = next(it)
+        if key is not None:
+            self.state = YieldState(it, key, tid, out, done)
+            tr = self.elems[key]
+            tr.apply(tid, out, actself.apply_cont)              # yield await
+        else:
+            done('Ok')
+
+    proc def apply_cont (self, actself, res):
+        state = self.state
+        if state is not None:
+            state.results[state.key] = res
+            key = next(state.it)
+            if key is not None:
+                state.key = key
+                tr = self.elems[key]
+                tr.apply(state.tid, state.out, actself.apply_cont)
+            else:
+                self.state = None
+                state.done(self._analyze(state.results))
+
+    proc def commit(self, tid, ok):
+        for child in self.accum.keys():
+            self.elems[child].commit(tid, ok)
+        self.accum = {}
+
+    def get(self):
+        res = {}
+        for tag,node in self.elems.items():
+            res[tag] = node.get()
+        return gdata.Container("GET", res)
+
+
+################# Lists ####################
+
+def List(template):
+    return Node(_List(template))
+
+class _List(_Node):
+    liststate: ListState
+
+    def __init__(self, template):
+        self.liststate = ListState(template)
+
+    def newtrans(self):
+        return ListTransaction(self.liststate)
+
+    def get(self):
+        return self.liststate.get()
+
+actor ListState(template: proc() -> Node):
+    var elems = {}
+    var active = {}
+    var provisional = set()
+
+    def acquire(tid: str, keys: set[str]):
+        active[tid] = keys
+        new = keys - set(elems.keys())
+        for k in new:
+            elems[k] = template()
+        provisional |= new
+        result = {}
+        for k in keys:
+            result[k] = elems[k]
+        return result
+
+    def release(tid: str, ok: bool, deletes: set[str]):
+        if ok:
+            provisional -= active[tid]
+            provisional |= deletes
+        del active[tid]
+        if not active:
+            for k in provisional:
+                del elems[k]
+            provisional = set()
+
+    def get():
+        res = []
+        for key,node in elems.items():
+            r = node.get()
+            if isinstance(r, gdata.ListElement):
+                res.append(r)
+            elif isinstance(r, gdata.Inner):
+                res.append(gdata.ListElement([key], r.children))
+        return gdata.List("GET", ["name"], res)
+
+
+class _ListTransaction(_Transaction):
+    liststate : ListState
+    elems : dict[str, Transaction]
+    accum : dict[str, value]
+    state : ?YieldState
+
+    def __init__(self, liststate):
+        self.liststate = liststate
+        self.elems = {}
+        self.accum = {}
+        self.state = None
+
+    def configure(self, tid, diff, out):
+        diff_by_key = transpose(diff)
+        newkeys = set(diff_by_key.keys()) - set(self.elems.keys())
+        for key,node in self.liststate.acquire(tid, newkeys).items():
+            self.elems[key] = node.newtrans()
+        msgs = {}
+        for key,subdiff in diff_by_key.items():
+            msgs[key] = async self.elems[key].configure(tid, subdiff, out)
+        results = {}
+        for key,msg in msgs.items():
+            results[key] = await msg
+        return self._analyze(results)
+
+    def _analyze(self, results: dict[str,value]):
+        self.accum.update(results.items())
+        res = 'Empty'
+        for r in results.values():
+            if isinstance(r, Exception):
+                return r
+            if isinstance(r, str) and r == 'Ok':
+                res = r
+        return res
+
+    # yield action
+    def apply(self, actself, tid, out, done):
+        it = iter(self.accum.keys())
+        key = next(it)
+        if key is not None:
+            self.state = YieldState(it, key, tid, out, done)
+            tr = self.elems[key]
+            tr.apply(tid, out, actself.apply_cont)              # yield await
+        else:
+            done('Ok')
+
+    proc def apply_cont (self, actself, res):
+        state = self.state
+        if state is not None:
+            state.results[state.key] = res
+            key = next(state.it)
+            if key is not None:
+                state.key = key
+                tr = self.elems[key]
+                tr.apply(state.tid, state.out, actself.apply_cont)
+            else:
+                self.state = None
+                state.done(self._analyze({}))
+
+    proc def commit(self, tid, ok):
+        for tr in self.elems.values():
+            tr.commit(tid, ok)
+        deletes = set()
+        for key,res in self.accum.items():
+            if isinstance(res, str) and res == 'Empty':
+                deletes.add(key)
+        self.liststate.release(tid, ok, deletes)
+        self.elems = {}
+        self.accum = {}
+
+    proc def get(self):
+        return self.liststate.get()
+
+def ListTransaction(liststate:ListState):
+    return Transaction(_ListTransaction(liststate))
+
+
+################# Transforms ####################
+
+def Transform(transform):
+    return lambda: Node(_Transform(transform))
+
+class _Transform(_Node):
+    def __init__(self, transform):
+        self.transaction = TransformTransaction(transform)
+
+    def newtrans(self):
+        return self.transaction
+
+    def get(self):
+        return self.transaction.get()
+
+def TransformTransaction(transform):
+    return Transaction(_TransformTransaction(transform))
+
+class _TransformTransaction(_Transaction):
+#    @property
+#    validate: (gdata.Node) -> bool
+    @property
+    transform: mut(gdata.Node) -> gdata.Node
+
+    inputs: dict[str, dict[str, gdata.Node]]
+    config: dict[str, gdata.Node]
+    candidates: dict[str, (dict[str,gdata.Node], ?gdata.Node)]
+    output: ?gdata.Node
+    locker: ?str
+    pending: list[(Transaction, str, Session, action(value)->None)]
+
+    def __init__(self, transform):
+        self.transform = transform
+        self.inputs = {}
+        self.config = {}
+        self.candidates = {}
+        self.output = None
+        self.locker = None
+        self.pending = []
+
+    def configure(self, tid, diff, out):
+        if tid in self.inputs:
+            self.inputs[tid].update(diff.items())
+        else:
+            self.inputs[tid] = diff
+        newconf = diff_apply(self.config, self.inputs[tid])
+        if newconf == self.config:
+            self.candidates[tid] = (self.config, self.output)
+            return 'Ok'
+        elif newconf == {}:
+            self.candidates[tid] = ({}, None)
+            return 'Empty'
+        else:
+            try:
+                merged = assert_complete(merge(newconf))
+#                assert self.validate(merged)
+            except Exception as e:
+                return e
+            else:
+                newout = self.transform(merged)
+                self.candidates[tid] = (newconf, newout)
+                out.write({str(self): difference(self.output, newout)})
+                return 'Ok'
+        return 'Ok'
+
+    # yield action
+    def apply(self, actself, tid, out, done):  #
+        locker = self.locker
+        if locker is not None:
+            if locker == tid:
+                done('Ok')
+            else:
+                self.pending.append((actself, tid, out, done))      # suspend
+                return
+        self.locker = tid
+        if tid not in self.candidates:
+            res = self.configure(tid, self.inputs.get_def(tid, {}), out)
+            done(res)
+        else:
+            done('Ok')
+
+    def apply_cont (self, actself, res):
+        pass
+
+    def commit(self, tid, ok):
+        self.inputs.pop(tid)
+        if tid == self.locker:
+            if ok and tid in self.candidates:
+                config, output = self.candidates[tid]
+                self.config = config
+                self.output = output
+                self.candidates = {}
+            else:
+                self.candidates.pop(tid)
+            self.locker = None
+            if self.pending:
+                (actself, tid, out, done) = self.pending.pop(0)
+                self.apply(actself, tid, out, done)                 # resume
+        else:
+            self.candidates.pop(tid)
+
+    def get(self):
+        if self.config:
+            return merge(self.config)
+        else:
+            return gdata.Absent("GET")
