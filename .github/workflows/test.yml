@@ -15,3 +15,4 @@ jobs:
       - run: make
       - run: acton test
       - run: acton test perf
+      - run: git diff --exit-code
