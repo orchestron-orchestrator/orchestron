@@ -12,6 +12,6 @@ jobs:
           channel: 'tip'
       - name: "Check out repository code"
         uses: actions/checkout@v4
-      - run: acton build
+      - run: make
       - run: acton test
       - run: acton test perf
