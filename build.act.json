@@ -5,8 +5,8 @@
             "hash": "1220f06a94a27db599596cc58dc20c0e2a2bd8d92724ec4ddb77eb6e958db5eb4785"
         },
         "yang": {
-            "url": "https://github.com/orchestron-orchestrator/acton-yang/archive/ee8e1aa66e5fc5189d3a11f4bdbae548aa93627a.zip",
-            "hash": "1220cc4dc8374da182b22a63eb32b7cd261b5576792dab1f9596f3d943e670a1dcb2"
+            "url": "https://github.com/orchestron-orchestrator/acton-yang/archive/9100050ade3c6564bb7249b19ad35e7d7588d4ef.zip",
+            "hash": "122055ca1112405e25469ac8739f2e1d845ab045f20be5a1cd895019fd1add837c43"
         }
     },
     "zig_dependencies": {}
