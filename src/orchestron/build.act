@@ -64,7 +64,7 @@ class SysSpec(object):
             await async wf_tl.write(tttl.ttt.encode())
             await async wf_tl.close()
 
-            tttsrc_getlayers += "    res.append(respnet.layers.t_%d.get_ttt(dev_mgr, log_handler))\n" % idx
+            tttsrc_getlayers += "    res.append(%s.layers.t_%d.get_ttt(dev_mgr, log_handler))\n" % (self.name, idx)
 
             if idx > 0:
                 loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)
