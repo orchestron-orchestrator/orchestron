@@ -554,6 +554,7 @@ class _TransformTransaction(_Transaction):
             return 'Empty'
         else:
             try:
+                print('MERGING', tid, newconf)
                 merged = assert_complete(merge(newconf))
 #                assert self.validate(merged)
             except Exception as e:
@@ -576,7 +577,9 @@ class _TransformTransaction(_Transaction):
                 return
         self.locker = tid
         if tid not in self.candidates:
-            res = self.configure(tid, self.inputs.get_def(tid, {}), out)
+            inp = self.inputs.get_def(tid, {})
+            print('RE-CONFIGURING', tid, inp)
+            res = self.configure(tid, inp, out)
             done(res)
         else:
             done('Ok')
@@ -589,6 +592,7 @@ class _TransformTransaction(_Transaction):
         if tid == self.locker:
             if ok and tid in self.candidates:
                 config, output = self.candidates[tid]
+                print('COMMITTING', tid, config)
                 self.config = config
                 self.output = output
                 self.candidates = {}
