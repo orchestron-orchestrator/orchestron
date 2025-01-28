@@ -238,12 +238,24 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def _on_conf(c, r):
         if r is not None:
             print("Device._on_conf", r.encode())
-            c.commit(_on_commit)
+            if not _is_writable_running():
+                # We edit-config'd candidate, now commit
+                c.commit(_on_commit)
         else:
             print("Device._on_conf went to shit")
 
     def _on_commit(c, r):
         if r is not None:
             print("Device._on_commit", r.encode())
+            if any(filter(lambda c: c.tag == "rpc-error", r.children)) and not _is_writable_running():
+                # We commit'ed candidate, but got an error, now discard-changes
+                # TODO: what if the device does this (:rollback-on-error)?!
+                c.discard_changes(_on_discard_changes)
         else:
             print("Device._on_commit went to shit")
+
+    def _on_discard_changes(c, r):
+        if r is not None:
+            print("Device._on_discard_changes", r.encode())
+        else:
+            print("Device._on_discard_changes went to shit")
