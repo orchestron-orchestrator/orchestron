@@ -216,6 +216,9 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def get_modules():
         return modset
 
+    def _is_writable_running():
+        return ":writable-running" in modset
+
     def edit_config(new_conf: yang.gdata.Node):
         print("Device.edit_config")
         conf = new_conf
@@ -227,7 +230,10 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             return
         if client is not None:
             print("Device.edit_config Sending config...")
-            client.edit_config(new_conf.to_xmlstr(pretty=False), _on_conf, datastore="candidate")
+            if _is_writable_running():
+                client.edit_config(new_conf.to_xmlstr(pretty=False), _on_conf)
+            else:
+                client.edit_config(new_conf.to_xmlstr(pretty=False), _on_conf, datastore="candidate")
 
     def _on_conf(c, r):
         if r is not None:
