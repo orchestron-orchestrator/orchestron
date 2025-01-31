@@ -299,7 +299,7 @@ class _Container(_Node):
         res = {}
         for tag,node in self.elems.items():
             res[tag] = node.get()
-        return gdata.Container("GET", res)
+        return gdata.Container(res)
 
 def ContainerTransaction(contents):
     return Transaction(_ContainerTransaction(contents))
@@ -366,7 +366,7 @@ class _ContainerTransaction(_Transaction):
         res = {}
         for tag,node in self.elems.items():
             res[tag] = node.get()
-        return gdata.Container("GET", res)
+        return gdata.Container(res)
 
 
 ################# Lists ####################
@@ -420,7 +420,7 @@ actor ListState(template: proc() -> Node):
                 res.append(r)
             elif isinstance(r, gdata.Inner):
                 res.append(gdata.ListElement([key], r.children))
-        return gdata.List("GET", ["name"], res)
+        return gdata.List(["name"], res)
 
 
 class _ListTransaction(_Transaction):
@@ -609,4 +609,4 @@ class _TransformTransaction(_Transaction):
         if self.config:
             return merge(self.config)
         else:
-            return gdata.Absent("GET")
+            return gdata.Absent()
