@@ -84,7 +84,7 @@ rfs = """module orchestron-rfs {
     }
 
     container mock {
-      list modules {
+      list module {
         key "name";
         leaf name {
           type string;

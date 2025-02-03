@@ -126,6 +126,9 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     _log.name = "Device " + name
 
     if wcap == None:
+        # This is the "init" modset, where we pretend to be an IOS XR device,
+        # even when the /orfs:device entry does not exist at all. This is really
+        # only useful for testing RFS transforms without the /orfs:device entry.
         # TODO: remove this and inject mock support modules elsewhere
         mxr1 = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21")
         modset[mxr1.name] = mxr1
@@ -170,9 +173,15 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         if wcap == None:
             print("Device in MOCK mode, pretending to connect to device...")
             state = 1
-            for mock_cap in conf.mock.modules.elements:
-                m = ModCap(mock_cap.name, mock_cap.namespace, mock_cap.revision, mock_cap.feature)
-                modset[m.name] = m
+
+            if len(conf.mock.module.elements) > 0:
+                # Replace init modset with mock modset
+                mock_modset = {}
+                for mock_cap in conf.mock.module.elements:
+                    m = ModCap(mock_cap.name, mock_cap.namespace, mock_cap.revision, mock_cap.feature)
+                    print("Adding mock cap", m)
+                    mock_modset[m.name] = m
+                modset = mock_modset
             return
 
         if state == 1:
