@@ -84,6 +84,12 @@ rfs = """module orchestron-rfs {
     }
 
     container mock {
+      leaf-list preset {
+        type enumeration {
+          enum cisco-ios-xr;
+          enum juniper-junos;
+        }
+      }
       list module {
         key "name";
         leaf name {
