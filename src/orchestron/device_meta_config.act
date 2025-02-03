@@ -356,7 +356,7 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
         return res
 
 
-class orchestron_rfs__device__mock__modules_entry(yang.adata.MNode):
+class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
     name: str
     namespace: str
     revision: ?str
@@ -387,18 +387,18 @@ class orchestron_rfs__device__mock__modules_entry(yang.adata.MNode):
         return yang.gdata.ListElement([str(self.name)], children)
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__mock__modules_entry:
-        return orchestron_rfs__device__mock__modules_entry(name=n.get_str("name"), namespace=n.get_str("namespace"), revision=n.get_opt_str("revision"), feature=n.get_opt_strs("feature"))
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__mock__module_entry:
+        return orchestron_rfs__device__mock__module_entry(name=n.get_str("name"), namespace=n.get_str("namespace"), revision=n.get_opt_str("revision"), feature=n.get_opt_strs("feature"))
 
     @staticmethod
-    mut def from_xml(n: xml.Node) -> orchestron_rfs__device__mock__modules_entry:
-        return orchestron_rfs__device__mock__modules_entry(name=yang.gdata.from_xml_str(n, "name"), namespace=yang.gdata.from_xml_str(n, "namespace"), revision=yang.gdata.from_xml_opt_str(n, "revision"), feature=yang.gdata.from_xml_opt_strs(n, "feature"))
+    mut def from_xml(n: xml.Node) -> orchestron_rfs__device__mock__module_entry:
+        return orchestron_rfs__device__mock__module_entry(name=yang.gdata.from_xml_str(n, "name"), namespace=yang.gdata.from_xml_str(n, "namespace"), revision=yang.gdata.from_xml_opt_str(n, "revision"), feature=yang.gdata.from_xml_opt_strs(n, "feature"))
 
-class orchestron_rfs__device__mock__modules(yang.adata.MNode):
-    elements: list[orchestron_rfs__device__mock__modules_entry]
+class orchestron_rfs__device__mock__module(yang.adata.MNode):
+    elements: list[orchestron_rfs__device__mock__module_entry]
     mut def __init__(self, elements=[]):
         self._ns = "http://orchestron.org/yang/orchestron-rfs.yang"
-        self._name = 'modules'
+        self._name = 'module'
         self.elements = elements
 
     mut def create(self, name, namespace):
@@ -410,7 +410,7 @@ class orchestron_rfs__device__mock__modules(yang.adata.MNode):
             if match:
                 return e
 
-        res = orchestron_rfs__device__mock__modules_entry(name, namespace)
+        res = orchestron_rfs__device__mock__module_entry(name, namespace)
         self.elements.append(res)
         return res
 
@@ -423,45 +423,51 @@ class orchestron_rfs__device__mock__modules(yang.adata.MNode):
         return yang.gdata.List(['name'], elements)
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.List) -> list[orchestron_rfs__device__mock__modules_entry]:
+    mut def from_gdata(n: yang.gdata.List) -> list[orchestron_rfs__device__mock__module_entry]:
         res = []
         for e in n.elements:
-            res.append(orchestron_rfs__device__mock__modules_entry.from_gdata(e))
+            res.append(orchestron_rfs__device__mock__module_entry.from_gdata(e))
         return res
 
     @staticmethod
-    mut def from_xml(nodes: list[xml.Node]) -> list[orchestron_rfs__device__mock__modules_entry]:
+    mut def from_xml(nodes: list[xml.Node]) -> list[orchestron_rfs__device__mock__module_entry]:
         res = []
         for node in nodes:
-            res.append(orchestron_rfs__device__mock__modules_entry.from_xml(node))
+            res.append(orchestron_rfs__device__mock__module_entry.from_xml(node))
         return res
 
 
 class orchestron_rfs__device__mock(yang.adata.MNode):
-    modules: orchestron_rfs__device__mock__modules
+    preset: list[str]
+    module: orchestron_rfs__device__mock__module
 
-    mut def __init__(self, modules: list[orchestron_rfs__device__mock__modules_entry]=[]):
+    mut def __init__(self, preset: ?list[str]=None, module: list[orchestron_rfs__device__mock__module_entry]=[]):
         self._ns = "http://orchestron.org/yang/orchestron-rfs.yang"
-        self.modules = orchestron_rfs__device__mock__modules(elements=modules)
-        self.modules._parent = self
+        if preset is not None:
+            self.preset = preset
+        else:
+            self.preset = []
+        self.module = orchestron_rfs__device__mock__module(elements=module)
+        self.module._parent = self
 
     mut def to_gdata(self) -> yang.gdata.Node:
         children = {}
-        _modules = self.modules
-        if _modules is not None:
-            children['modules'] = _modules.to_gdata()
+        _module = self.module
+        children['preset'] = yang.gdata.LeafList(self.preset)
+        if _module is not None:
+            children['module'] = _module.to_gdata()
         return yang.gdata.Container(children)
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__mock:
         if n != None:
-            return orchestron_rfs__device__mock(modules=orchestron_rfs__device__mock__modules.from_gdata(n.get_list("modules")))
+            return orchestron_rfs__device__mock(preset=n.get_opt_strs("preset"), module=orchestron_rfs__device__mock__module.from_gdata(n.get_list("module")))
         return orchestron_rfs__device__mock()
 
     @staticmethod
     mut def from_xml(n: ?xml.Node) -> orchestron_rfs__device__mock:
         if n != None:
-            return orchestron_rfs__device__mock(modules=orchestron_rfs__device__mock__modules.from_xml(yang.gdata.get_xml_children(n, "modules")))
+            return orchestron_rfs__device__mock(preset=yang.gdata.from_xml_opt_strs(n, "preset"), module=orchestron_rfs__device__mock__module.from_xml(yang.gdata.get_xml_children(n, "module")))
         return orchestron_rfs__device__mock()
 
 
