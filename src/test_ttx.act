@@ -1,0 +1,197 @@
+import testing
+import logging
+
+import orchestron.ttx as ttx
+#import orchestron.gdata as gdata
+import yang.gdata as gdata
+
+
+y0 = gdata.Container({
+    "a": gdata.Leaf("int", 1),
+    "l1": gdata.List(["name"], [
+        gdata.ListElement(["k1"], {
+            "n1": gdata.Leaf("int", 1),
+            "n2": gdata.Leaf("int", 2)
+        }),
+        gdata.ListElement(["k4"], {
+            "n4": gdata.Leaf("int", 4)
+        })
+    ])
+})
+y0_transp = {
+    "a": {
+        'src': gdata.Leaf("int", 1)
+    },
+    "l1": {
+        'src': gdata.List(["name"], [
+            gdata.ListElement(["k1"], {
+                "n1": gdata.Leaf("int", 1),
+                "n2": gdata.Leaf("int", 2)
+            }),
+            gdata.ListElement(["k4"], {
+                "n4": gdata.Leaf("int", 4)
+            })
+        ])
+    }
+}
+y0_transp_l1 = {
+    "k1": {
+        'src': gdata.ListElement(["k1"], {
+            "n1": gdata.Leaf("int", 1),
+            "n2": gdata.Leaf("int", 2)
+        })
+    },
+    "k4": {
+        'src': gdata.ListElement(["k4"], {
+            "n4": gdata.Leaf("int", 4)
+        })
+    }
+}
+y0_transp_l1_k1 = {
+    "n1": {
+        'src': gdata.Leaf("int", 1)
+    },
+    "n2": {
+        'src': gdata.Leaf("int", 2)
+    }
+}
+y1 = gdata.Container({
+    "a": gdata.Leaf("int", 1),
+    "l1": gdata.List(["name"], [
+        gdata.ListElement(["k1"], {
+            "n1": gdata.Leaf("int", 1),
+            "n2": gdata.Leaf("int", 2)
+        }),
+        gdata.ListElement(["k4"], {
+            "n4": gdata.Leaf("int", 4)
+        })
+    ])
+})
+y2 = gdata.Container({
+    "b": gdata.Leaf("int", 2),
+    "c": gdata.Leaf("int", 3),
+    "l1": gdata.List(["name"], [
+        gdata.ListElement(["k1"], {
+            "n2": gdata.Leaf("int", 2)
+        }),
+        gdata.ListElement(["k2"], {
+            "n1": gdata.Leaf("int", 1),
+            "n3": gdata.Leaf("int", 3)
+        })
+    ]),
+    "d": gdata.LeafList(["a", "b", "c"])
+})
+merge_y1_y2 = gdata.Container({
+    "a": gdata.Leaf("int", 1),
+    "b": gdata.Leaf("int", 2),
+    "c": gdata.Leaf("int", 3),
+    "l1": gdata.List(["name"], [
+        gdata.ListElement(["k1"], {
+            "n1": gdata.Leaf("int", 1),
+            "n2": gdata.Leaf("int", 2)
+        }),
+        gdata.ListElement(["k2"], {
+            "n1": gdata.Leaf("int", 1),
+            "n3": gdata.Leaf("int", 3)
+        }),
+        gdata.ListElement(["k4"], {
+            "n4": gdata.Leaf("int", 4)
+        })
+    ]),
+    "d": gdata.LeafList(["a", "b", "c"])
+})
+
+def _test_transpose():
+    transp0 = ttx.transpose({'src': y0})
+    testing.assertEqual(transp0, y0_transp)
+    
+    transp1 = ttx.transpose(transp0["l1"])
+    testing.assertEqual(transp1, y0_transp_l1)
+    
+    transp2 = ttx.transpose(transp1["k1"])
+    testing.assertEqual(transp2, y0_transp_l1_k1)
+
+def _test_multi_merge():
+    mrg = gdata.merge(y1, y2)
+    testing.assertEqual(mrg, merge_y1_y2)
+
+    mrg1 = ttx.merge({'srcA': y1, 'srcB': y2})
+    testing.assertEqual(mrg1, merge_y1_y2)
+
+    mrg2: gdata.Node = ttx.merge({'srcB': y2})
+    testing.assertEqual(mrg2, y2)
+
+actor basic_commit_tester(done: action(?bool, ?Exception)->None):
+#    cfs = ttx.Container({
+#        'netinfra':  ttx.Container({
+#            'routers':       ttx.List(ttx.Transform(Router_cfs)),
+#            'backbone-link': ttx.List(ttx.Transform(Backbone_cfs))
+#        })
+#    })
+#    rfs = ttx.Container({
+#        "rfs": ttx.List(lambda: ttx.Container({
+#            "base-config": ttx.List(ttx.Transform(BaseConfig_rfs)),
+#            "vrf": ttx.List(ttx.Transform(Vrf_rfs))
+#        }))
+#    })
+
+    devices = ttx.Devices()
+    out = devices.newsession()
+
+#    stack = ttx.Layer(cfs, ttx.Layer(rfs, devices))
+
+    router = ttx.Transform(transform_fun)()
+    trX = router.newtrans()
+    # trX is reused several times below, knowing it's the constant 
+    # transaction actor of a Transform
+
+    trX.configure("1", {'srcA': y1}, out)
+
+    def cont1(r1: value):
+        trX.commit("1", True)
+        trX.configure("2", {'srcB': y2}, out)
+        
+        def cont2(r2: value):
+            trX.commit("2", True)
+            r = trX.get()            
+            trX.configure("3", {
+                'srcA': gdata.Container({
+                    'l1': gdata.Absent()
+                }),
+                'srcB': gdata.Container({
+                    'b': gdata.Absent(),
+                    'd': gdata.LeafList(['a','c'])
+                })
+            }, out)
+            
+            def cont3(r3: value):
+                trX.commit("3", True)
+                r = trX.get()
+                expected = gdata.Container({
+                    'a': gdata.Leaf("int", 1),
+                    'c': gdata.Leaf("int", 3),
+                    'l1': gdata.List(['name'], [
+                        gdata.ListElement(['k1'], {
+                            'n2': gdata.Leaf("int", 2)
+                        }),
+                        gdata.ListElement(['k2'], {
+                            'n1': gdata.Leaf("int", 1),
+                            'n3': gdata.Leaf("int", 3)
+                        })
+                    ]),
+                    'd': gdata.LeafList(['a', 'c'])
+                })
+                testing.assertEqual(r, expected)
+                done(True, None)
+
+            trX.apply("3", out, cont3)
+            
+        trX.apply("2", out, cont2)
+
+    trX.apply("1", out, cont1)
+
+def transform_fun(any: gdata.Node):
+    return any
+
+def _test_basic_commit(done, logger: logging.Handler):
+    c = basic_commit_tester(done)
