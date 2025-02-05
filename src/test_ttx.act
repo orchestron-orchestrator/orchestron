@@ -140,9 +140,9 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
 
 #    stack = ttx.Layer(cfs, ttx.Layer(rfs, devices))
 
-    router = ttx.Transform(transform_fun)()
+    router = ttx.Transform(lambda cfg: cfg)()
     trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant 
+    # trX is reused several times below, knowing it's the constant
     # transaction actor of a Transform
 
     trX.configure("1", {'srcA': y1}, out)
@@ -150,7 +150,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
     def cont1(r1: value):
         trX.commit("1", True)
         trX.configure("2", {'srcB': y2}, out)
-        
+
         def cont2(r2: value):
             trX.commit("2", True)
             r = trX.get()            
@@ -163,7 +163,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
                     'd': gdata.LeafList(['a','c'])
                 })
             }, out)
-            
+
             def cont3(r3: value):
                 trX.commit("3", True)
                 r = trX.get()
@@ -185,13 +185,44 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
                 done(True, None)
 
             trX.apply("3", out, cont3)
-            
+
         trX.apply("2", out, cont2)
 
     trX.apply("1", out, cont1)
 
-def transform_fun(any: gdata.Node):
-    return any
-
 def _test_basic_commit(done, logger: logging.Handler):
     c = basic_commit_tester(done)
+
+
+actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router = ttx.Transform(lambda cfg: cfg)()
+    trX = router.newtrans()
+    # trX is reused several times below, knowing it's the constant
+    # transaction actor of a Transform
+
+    trX.configure("1", {'srcA': y1}, out)
+    trX.configure("2", {'srcB': y2}, out)
+
+    def cont1(r1: value):
+        r = trX.get()
+        testing.assertEqual(r, gdata.Absent())
+        trX.commit("1", True)
+
+    def cont2(r2: value):
+        r = trX.get()
+        testing.assertEqual(r, y1)
+        trX.commit("2", True)
+        r = trX.get()
+        testing.assertEqual(r, merge_y1_y2)
+        done(True, None)
+
+    trX.apply("1", out, cont1)
+    trX.apply("2", out, cont2)
+
+def _test_overlapping_commit(done, logger: logging.Handler):
+    c = overlapping_commit_tester(done)
+
+#actor main(env):
+#    overlapping_commit_tester(lambda s,e: env.exit(0))
