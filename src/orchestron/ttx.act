@@ -558,9 +558,9 @@ class _TransformTransaction(_Transaction):
         self.pending = []
 
     def configure(self, tid, diff, out):
-        #print('#### configure', tid)
-        #for s,c in self.config.items():
-        #    print("=", s, ":", c.prsrc())
+        print('#### configure', tid)
+        for s,c in self.config.items():
+            print("=", s, ":", c.prsrc())
         if tid in self.inputs:
             self.inputs[tid].update(diff.items())
         else:
@@ -568,62 +568,62 @@ class _TransformTransaction(_Transaction):
         newconf = diff_apply(self.config, self.inputs[tid])
         if newconf == self.config:
             self.candidates[tid] = (self.config, self.output)
-            #print('   # NO CHANGE', tid)
+            print('   # NO CHANGE', tid)
             return 'Ok'
         elif newconf == {}:
             self.candidates[tid] = ({}, None)
-            #print('   # EMPTY RESULT', tid)
+            print('   # EMPTY RESULT', tid)
             return 'Empty'
         else:
             try:
                 merged = assert_complete(merge(newconf))
-                #print('   # MERGED', tid)
-                #print(merged.prsrc())
+                print('   # MERGED', tid)
+                print(merged.prsrc())
 #                assert self.validate(merged)
             except Exception as e:
-                #print('   # FAILURE', tid, e)
+                print('   # FAILURE', tid, e)
                 return e
             else:
                 newout = self.transform(merged)
                 self.candidates[tid] = (newconf, newout)
                 res = difference(self.output, newout)
                 out.write({str(self): res})
-                #print('   # OUTPUT', tid)
+                print('   # OUTPUT', tid)
                 return 'Ok'
         return 'Ok'
 
     # yield action
     def apply(self, actself, tid, out, done):                       # yield await
-        #print("#### apply", tid)
+        print("#### apply", tid)
         locker = self.locker
         if locker is not None:
             if locker == tid:
-                #print('   # ALREADY LOCKED', tid)
+                print('   # ALREADY LOCKED', tid)
                 done('Ok')
             else:
-                #print('   # SUSPENDING', tid)
+                print('   # SUSPENDING', tid)
                 self.pending.append((actself, tid, out, done))      # suspend
             return
         self.locker = tid
         if tid not in self.candidates:
             inp = self.inputs.get_def(tid, {})
-            #print('   # RE-CONFIGURING', tid)
+            print('   # RE-CONFIGURING', tid)
             res = self.configure(tid, inp, out)
             done(res)
         else:
-            #print('   # LOCKING', tid)
+            print('   # LOCKING', tid)
             done('Ok')
 
     def apply_cont (self, actself, res):
         pass
 
     def commit(self, tid, ok):
-        #print("#### commit", tid)
+        print("#### commit", tid)
         self.inputs.pop(tid)
         if tid == self.locker:
             if ok and tid in self.candidates:
                 config, output = self.candidates[tid]
-                #print('   # COMMITTING', tid)
+                print('   # COMMITTING', tid)
                 self.config = config
                 self.output = output
                 self.candidates = {}
@@ -632,7 +632,7 @@ class _TransformTransaction(_Transaction):
             self.locker = None
             if self.pending:
                 (actself, tid2, out, done) = self.pending.pop(0)
-                #print("   # RESUMING", tid2)
+                print("   # RESUMING", tid2)
                 self.apply(actself, tid2, out, done)                # resume
         else:
             self.candidates.pop(tid)

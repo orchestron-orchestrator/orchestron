@@ -104,10 +104,10 @@ merge_y1_y2 = gdata.Container({
 def _test_transpose():
     transp0 = ttx.transpose({'src': y0})
     testing.assertEqual(transp0, y0_transp)
-    
+
     transp1 = ttx.transpose(transp0["l1"])
     testing.assertEqual(transp1, y0_transp_l1)
-    
+
     transp2 = ttx.transpose(transp1["k1"])
     testing.assertEqual(transp2, y0_transp_l1_k1)
 
@@ -153,7 +153,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
 
         def cont2(r2: value):
             trX.commit("2", True)
-            r = trX.get()            
+            r = trX.get()
             trX.configure("3", {
                 'srcA': gdata.Container({
                     'l1': gdata.Absent()
