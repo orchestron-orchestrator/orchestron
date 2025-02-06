@@ -559,12 +559,17 @@ class _TransformTransaction(_Transaction):
 
     def configure(self, tid, diff, out):
         print('#### configure', tid)
-        for s,c in self.config.items():
-            print("=", s, ":", c.prsrc())
         if tid in self.inputs:
             self.inputs[tid].update(diff.items())
         else:
             self.inputs[tid] = diff
+        print('   # INPUT')
+        inp = self.inputs[tid]
+        for s,c in inp.items():
+            print("-", s, ":", c.prsrc())
+        print('   # CURRENT CONFIG')
+        for s,c in self.config.items():
+            print("=", s, ":", c.prsrc())
         newconf = diff_apply(self.config, self.inputs[tid])
         if newconf == self.config:
             self.candidates[tid] = (self.config, self.output)
