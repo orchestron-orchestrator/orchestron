@@ -7,6 +7,15 @@ import yang.gdata as gdata
 
 
 y0 = gdata.Container({
+    "a": gdata.Leaf("int", 0),
+    "l1": gdata.List(["name"], [
+        gdata.ListElement(["k4"], {
+            "n4": gdata.Leaf("int", 0)
+        })
+    ]),
+    "d": gdata.LeafList(["a", "b"])
+})
+y1 = gdata.Container({
     "a": gdata.Leaf("int", 1),
     "l1": gdata.List(["name"], [
         gdata.ListElement(["k1"], {
@@ -18,7 +27,7 @@ y0 = gdata.Container({
         })
     ])
 })
-y0_transp = {
+y1_transp = {
     "a": {
         'src': gdata.Leaf("int", 1)
     },
@@ -34,7 +43,7 @@ y0_transp = {
         ])
     }
 }
-y0_transp_l1 = {
+y1_transp_l1 = {
     "k1": {
         'src': gdata.ListElement(["k1"], {
             "n1": gdata.Leaf("int", 1),
@@ -47,7 +56,7 @@ y0_transp_l1 = {
         })
     }
 }
-y0_transp_l1_k1 = {
+y1_transp_l1_k1 = {
     "n1": {
         'src': gdata.Leaf("int", 1)
     },
@@ -55,18 +64,6 @@ y0_transp_l1_k1 = {
         'src': gdata.Leaf("int", 2)
     }
 }
-y1 = gdata.Container({
-    "a": gdata.Leaf("int", 1),
-    "l1": gdata.List(["name"], [
-        gdata.ListElement(["k1"], {
-            "n1": gdata.Leaf("int", 1),
-            "n2": gdata.Leaf("int", 2)
-        }),
-        gdata.ListElement(["k4"], {
-            "n4": gdata.Leaf("int", 4)
-        })
-    ])
-})
 y2 = gdata.Container({
     "b": gdata.Leaf("int", 2),
     "c": gdata.Leaf("int", 3),
@@ -100,16 +97,20 @@ merge_y1_y2 = gdata.Container({
     ]),
     "d": gdata.LeafList(["a", "b", "c"])
 })
+y3 = gdata.Container({
+    "b": gdata.Leaf("int", 0),
+    "c": gdata.Leaf("int", 0),
+})
 
 def _test_transpose():
-    transp0 = ttx.transpose({'src': y0})
-    testing.assertEqual(transp0, y0_transp)
+    transp0 = ttx.transpose({'src': y1})
+    testing.assertEqual(transp0, y1_transp)
 
     transp1 = ttx.transpose(transp0["l1"])
-    testing.assertEqual(transp1, y0_transp_l1)
+    testing.assertEqual(transp1, y1_transp_l1)
 
     transp2 = ttx.transpose(transp1["k1"])
-    testing.assertEqual(transp2, y0_transp_l1_k1)
+    testing.assertEqual(transp2, y1_transp_l1_k1)
 
 def _test_multi_merge():
     mrg = gdata.merge(y1, y2)
@@ -120,6 +121,18 @@ def _test_multi_merge():
 
     mrg2: gdata.Node = ttx.merge({'srcB': y2})
     testing.assertEqual(mrg2, y2)
+
+def _test_diff_apply():
+    fst = {'srcA': y1}
+    snd = {'srcA': gdata.Container({'l1': gdata.Absent()})}
+    res = ttx.diff_apply(fst, snd)
+    exp = {'srcA': gdata.Container({'a': gdata.Leaf("int", 1)})}
+    print('fst:', fst['srcA'].prsrc())
+    print('snd:', snd['srcA'].prsrc())
+    print('res:', res['srcA'].prsrc())
+    print('exp:', exp['srcA'].prsrc())
+    testing.assertEqual(res, exp)
+
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
 #    cfs = ttx.Container({
@@ -224,5 +237,106 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
 def _test_overlapping_commit(done, logger: logging.Handler):
     c = overlapping_commit_tester(done)
 
-#actor main(env):
-#    overlapping_commit_tester(lambda s,e: env.exit(0))
+
+actor modified_commit_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router = ttx.Transform(lambda cfg: cfg)()
+    trX = router.newtrans()
+
+    trX.configure("1", {'srcA': y1}, out)
+    trX.configure("1", {'srcA': y2}, out)
+
+    def cont1(r1: value):
+        trX.commit("1", True)
+        r = trX.get()
+        testing.assertEqual(r, y2)
+        done(True, None)
+
+    trX.apply("1", out, cont1)
+
+def _test_modified_commit(done, logger: logging.Handler):
+    c = modified_commit_tester(done)
+
+
+actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router = ttx.Transform(lambda cfg: cfg)()
+    trX = router.newtrans()
+
+    trX.configure("1", {'srcA': y1}, out)
+
+    def cont1(r1: value):
+        trX.configure("1", {'srcA': y2}, out)
+        trX.commit("1", True)
+        r = trX.get()
+        testing.assertEqual(r, y2)
+        done(True, None)
+
+    trX.apply("1", out, cont1)
+
+def _test_modified_commit2(done, logger: logging.Handler):
+    c = modified_commit_tester2(done)
+
+
+actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router = ttx.Transform(lambda cfg: cfg)()
+    trX = router.newtrans()
+    # trX is reused several times below, knowing it's the constant
+    # transaction actor of a Transform
+
+    trX.configure("1", {'srcA': y0}, out)
+    trX.configure("2", {'srcB': y2}, out)
+
+    def cont1(r1: value):
+        trX.configure("1", {'srcA': y1}, out)
+        trX.commit("1", True)
+
+    def cont2(r2: value):
+        trX.commit("2", True)
+        r = trX.get()
+        testing.assertEqual(r, merge_y1_y2)
+        done(True, None)
+
+    trX.apply("1", out, cont1)
+    trX.apply("2", out, cont2)
+
+def _test_modified_overlapping_commit(done, logger: logging.Handler):
+    c = modified_overlapping_commit_tester(done)
+
+
+actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router = ttx.Transform(lambda cfg: cfg)()
+    trX = router.newtrans()
+    # trX is reused several times below, knowing it's the constant
+    # transaction actor of a Transform
+
+    trX.configure("1", {'srcA': y1}, out)
+    trX.configure("2", {'srcB': y3}, out)
+
+    def cont1(r1: value):
+        trX.commit("1", True)
+
+    def cont2(r2: value):
+        trX.configure("2", {'srcB': y2}, out)
+        trX.commit("2", True)
+        r = trX.get()
+        testing.assertEqual(r, merge_y1_y2)
+        done(True, None)
+
+    trX.apply("1", out, cont1)
+    trX.apply("2", out, cont2)
+
+def _test_modified_overlapping_commit2(done, logger: logging.Handler):
+    c = modified_overlapping_commit_tester2(done)
+
+
+
+
+actor main(env):
+    modified_overlapping_commit_tester2(lambda s,e: env.exit(0))
