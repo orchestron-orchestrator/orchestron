@@ -241,10 +241,15 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             return
         if client is not None:
             print("Device.edit_config Sending config...")
+            xml_conf = new_conf.to_xmlstr(pretty=False)
+            if xml_conf == "":
+                # Cisco IOS XRd doesn't like empty <edit-config>, returns error
+                print("Device.edit_config Config is empty, noop")
+                return
             if _is_writable_running():
-                client.edit_config(new_conf.to_xmlstr(pretty=False), _on_conf)
+                client.edit_config(xml_conf, _on_conf)
             else:
-                client.edit_config(new_conf.to_xmlstr(pretty=False), _on_conf, datastore="candidate")
+                client.edit_config(xml_conf, _on_conf, datastore="candidate")
 
     def _on_conf(c, r):
         if r is not None:
