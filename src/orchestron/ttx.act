@@ -603,7 +603,7 @@ class _TransformTransaction(_Transaction):
         locker = self.locker
         if locker is not None:
             if locker == tid:
-                print('   # ALREADY LOCKED', tid)
+                print('   # REDUNDANT LOCK', tid)
                 done('Ok')
             else:
                 print('   # SUSPENDING', tid)
@@ -633,6 +633,7 @@ class _TransformTransaction(_Transaction):
                 self.output = output
                 self.candidates = {}
             else:
+                print('   # ABORTING', tid)
                 self.candidates.pop(tid)
             self.locker = None
             if self.pending:
@@ -640,6 +641,7 @@ class _TransformTransaction(_Transaction):
                 print("   # RESUMING", tid2)
                 self.apply(actself, tid2, out, done)                # resume
         else:
+            print('   # IGNORING', tid)
             self.candidates.pop(tid)
 
     def get(self):
