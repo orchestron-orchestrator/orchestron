@@ -77,7 +77,7 @@ class YieldState(object):
         self.key = key
         self.tid = tid
         self.out = out
-        self.result = {}
+        self.results = {}
         self.done = done
 
 
@@ -334,49 +334,65 @@ class _ContainerTransaction(_Transaction):
             self.elems[key] = node.newtrans()
 
     def configure(self, tid, diff, out):
+        print('#### (Container) configure', tid)
         diff_by_child = transpose(diff)
         msgs = {}
         for child,subdiff in diff_by_child.items():
+            print('   # (Container) CONFIGURE CHILD', child)
             msgs[child] = async self.elems[child].configure(tid, subdiff, out)
         results = {}
         for child,msg in msgs.items():
             results[child] = await msg
+            print('   # (Container) RESULT CHILD', child, ':', results[child])
         return self._analyze(results)
 
     def _analyze(self, results):
         self.accum.update(results.items())
         for r in results.values():
             if isinstance(r, Exception):
+                print('   # (Container) RESULT:', r)
                 return r
+        print('   # (Container) RESULT:', 'Ok')
         return 'Ok'
 
     # yield action
     def apply(self, actself, tid, out, done):
+        print('#### (Container) apply', tid)
         it = iter(self.accum.keys())
         key = next(it)
         if key is not None:
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
+            print('   # (Container) LOCK CHILD', key)
             tr.apply(tid, out, actself.apply_cont)              # yield await
         else:
+            print('   # (Container) LOCK IMMEDIATELY DONE')
             done('Ok')
 
     proc def apply_cont (self, actself, res):
         state = self.state
         if state is not None:
+            print('   # (Container) LOCK', state.tid, 'CHILD', state.key, 'RESULT:', res)
             state.results[state.key] = res
             key = next(state.it)
             if key is not None:
                 state.key = key
                 tr = self.elems[key]
+                print('   # (Container) LOCK CHILD', key)
                 tr.apply(state.tid, state.out, actself.apply_cont)
             else:
                 self.state = None
+                print('   # (Container) LOCK DONE')
                 state.done(self._analyze(state.results))
+        else:
+            print('#### (Container) apply_cont empty state')
 
     proc def commit(self, tid, ok):
+        print('#### (Container) commit', tid)
         for child in self.accum.keys():
+            print('   # (Container) COMMIT CHILD', child)
             self.elems[child].commit(tid, ok)
+        print('   # (Container) COMMIT DONE')
         self.accum = {}
 
     def get(self):

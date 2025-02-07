@@ -1,0 +1,70 @@
+import testing
+import logging
+
+import orchestron.ttx as ttx
+#import orchestron.gdata as gdata
+import yang.gdata as gdata
+
+
+y1 = gdata.Container({
+    "a": gdata.Leaf("int", 1),
+    "l1": gdata.List(["name"], [
+        gdata.ListElement(["k1"], {
+            "n1": gdata.Leaf("int", 1),
+            "n2": gdata.Leaf("int", 2)
+        }),
+        gdata.ListElement(["k4"], {
+            "n4": gdata.Leaf("int", 4)
+        })
+    ])
+})
+y2 = gdata.Container({
+    "b": gdata.Leaf("int", 2),
+    "c": gdata.Leaf("int", 3),
+    "l1": gdata.List(["name"], [
+        gdata.ListElement(["k1"], {
+            "n2": gdata.Leaf("int", 2)
+        }),
+        gdata.ListElement(["k2"], {
+            "n1": gdata.Leaf("int", 1),
+            "n3": gdata.Leaf("int", 3)
+        })
+    ]),
+    "d": gdata.LeafList(["a", "b", "c"])
+})
+
+########################
+
+actor basic_commit_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router_l = ttx.Transform(lambda cfg: cfg)()
+    router_r = ttx.Transform(lambda cfg: cfg)()
+    container = ttx.Container({
+        'left': router_l,
+        'right': router_r
+    })
+    tr1 = container.newtrans()
+    
+    tree1 = gdata.Container({
+        'left': y1
+    })
+
+    tr1.configure("1", {'srcA': tree1}, out)
+
+    def cont1(r1: value):
+        tr1.commit("1", True)
+        r = tr1.get()
+        testing.assertEqual(r, y1)
+        done(True, None)
+
+    tr1.apply("1", out, cont1)
+
+def _test_basic_commit(done, logger: logging.Handler):
+    c = basic_commit_tester(done)
+
+########################
+
+
+actor main(env):
+    basic_commit_tester(lambda s,e: env.exit(0))
