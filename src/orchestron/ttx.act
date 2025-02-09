@@ -359,13 +359,13 @@ class _ContainerTransaction(_Transaction):
     def apply(self, actself, tid, out, done):
         print('#### (Container) apply', tid)
         it = iter(self.accum.keys())
-        key = next(it)
-        if key is not None:
+        try:
+            key = next(it)
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
             print('   # (Container) LOCK CHILD', key)
             tr.apply(tid, out, actself.apply_cont)              # yield await
-        else:
+        except StopIteration:
             print('   # (Container) LOCK IMMEDIATELY DONE')
             done('Ok')
 
@@ -374,18 +374,18 @@ class _ContainerTransaction(_Transaction):
         if state is not None:
             print('   # (Container) LOCK', state.tid, 'CHILD', state.key, 'RESULT:', res)
             state.results[state.key] = res
-            key = next(state.it)
-            if key is not None:
+            try:
+                key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
                 print('   # (Container) LOCK CHILD', key)
                 tr.apply(state.tid, state.out, actself.apply_cont)
-            else:
+            except StopIteration:
                 self.state = None
                 print('   # (Container) LOCK DONE')
                 state.done(self._analyze(state.results))
         else:
-            print('#### (Container) apply_cont empty state')
+            print('#### (Container) apply_cont empty state!!!')
 
     proc def commit(self, tid, ok):
         print('#### (Container) commit', tid)
@@ -494,24 +494,24 @@ class _ListTransaction(_Transaction):
     # yield action
     def apply(self, actself, tid, out, done):
         it = iter(self.accum.keys())
-        key = next(it)
-        if key is not None:
+        try:
+            key = next(it)
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
             tr.apply(tid, out, actself.apply_cont)                  # yield await
-        else:
+        except StopIteration:
             done('Ok')
 
     proc def apply_cont (self, actself, res):
         state = self.state
         if state is not None:
             state.results[state.key] = res
-            key = next(state.it)
-            if key is not None:
+            try:
+                key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
                 tr.apply(state.tid, state.out, actself.apply_cont)
-            else:
+            except StopIteration:
                 self.state = None
                 state.done(self._analyze({}))
 
