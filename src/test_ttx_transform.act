@@ -152,39 +152,23 @@ def _test_diff_apply():
 ########################
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
-#    cfs = ttx.Container({
-#        'netinfra':  ttx.Container({
-#            'routers':       ttx.List(ttx.Transform(Router_cfs)),
-#            'backbone-link': ttx.List(ttx.Transform(Backbone_cfs))
-#        })
-#    })
-#    rfs = ttx.Container({
-#        "rfs": ttx.List(lambda: ttx.Container({
-#            "base-config": ttx.List(ttx.Transform(BaseConfig_rfs)),
-#            "vrf": ttx.List(ttx.Transform(Vrf_rfs))
-#        }))
-#    })
-
     devices = ttx.Devices()
     out = devices.newsession()
-
-#    stack = ttx.Layer(cfs, ttx.Layer(rfs, devices))
-
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant
-    # transaction actor of a Transform
+    t1 = router.newtrans()
+    t2 = router.newtrans()
+    t3 = router.newtrans()
 
-    trX.configure("1", {'srcA': y1}, out)
+    t1.configure("1", {'srcA': y1}, out)
 
-    def cont1(r1: value):
-        trX.commit("1", True)
-        trX.configure("2", {'srcB': y2}, out)
+    def cont1(_r: value):
+        t1.commit("1", True)
+        t2.configure("2", {'srcB': y2}, out)
 
-        def cont2(r2: value):
-            trX.commit("2", True)
-            r = trX.get()
-            trX.configure("3", {
+        def cont2(_r: value):
+            t2.commit("2", True)
+            r = t2.get()
+            t3.configure("3", {
                 'srcA': gdata.Container({
                     'l1': gdata.Absent()
                 }),
@@ -194,9 +178,9 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
                 })
             }, out)
 
-            def cont3(r3: value):
-                trX.commit("3", True)
-                r = trX.get()
+            def cont3(_r: value):
+                t3.commit("3", True)
+                r = t3.get()
                 expected = gdata.Container({
                     'a': gdata.Leaf("int", 1),
                     'c': gdata.Leaf("int", 3),
@@ -214,11 +198,11 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
                 testing.assertEqual(r, expected)
                 done(True, None)
 
-            trX.apply("3", out, cont3)
+            t3.apply("3", out, cont3)
 
-        trX.apply("2", out, cont2)
+        t2.apply("2", out, cont2)
 
-    trX.apply("1", out, cont1)
+    t1.apply("1", out, cont1)
 
 def _test_basic_commit(done, logger: logging.Handler):
     c = basic_commit_tester(done)
@@ -229,28 +213,27 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant
-    # transaction actor of a Transform
+    t1 = router.newtrans()
+    t2 = router.newtrans()
 
-    trX.configure("1", {'srcA': y1}, out)
-    trX.configure("2", {'srcB': y2}, out)
+    t1.configure("1", {'srcA': y1}, out)
+    t2.configure("2", {'srcB': y2}, out)
 
-    def cont1(r1: value):
-        r = trX.get()
+    def cont1(_r: value):
+        r = t1.get()
         testing.assertEqual(r, gdata.Absent())
-        trX.commit("1", True)
+        t2.apply("2", out, cont2)
+        t1.commit("1", True)
 
-    def cont2(r2: value):
-        r = trX.get()
+    def cont2(_r: value):
+        r = t2.get()
         testing.assertEqual(r, y1)
-        trX.commit("2", True)
-        r = trX.get()
+        t2.commit("2", True)
+        r = t2.get()
         testing.assertEqual(r, merge_y1_y2)
         done(True, None)
 
-    trX.apply("1", out, cont1)
-    trX.apply("2", out, cont2)
+    t1.apply("1", out, cont1)
 
 def _test_overlapping_commit(done, logger: logging.Handler):
     c = overlapping_commit_tester(done)
@@ -261,18 +244,18 @@ actor modified_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
+    t1 = router.newtrans()
 
-    trX.configure("1", {'srcA': y1}, out)
-    trX.configure("1", {'srcA': y2}, out)
+    t1.configure("1", {'srcA': y1}, out)
+    t1.configure("1", {'srcA': y2}, out)
 
-    def cont1(r1: value):
-        trX.commit("1", True)
-        r = trX.get()
+    def cont1(_r: value):
+        t1.commit("1", True)
+        r = t1.get()
         testing.assertEqual(r, y2)
         done(True, None)
 
-    trX.apply("1", out, cont1)
+    t1.apply("1", out, cont1)
 
 def _test_modified_commit(done, logger: logging.Handler):
     c = modified_commit_tester(done)
@@ -283,18 +266,18 @@ actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
+    t1 = router.newtrans()
 
-    trX.configure("1", {'srcA': y1}, out)
+    t1.configure("1", {'srcA': y1}, out)
 
-    def cont1(r1: value):
-        trX.configure("1", {'srcA': y2}, out)
-        trX.commit("1", True)
-        r = trX.get()
+    def cont1(_r: value):
+        t1.configure("1", {'srcA': y2}, out)
+        t1.commit("1", True)
+        r = t1.get()
         testing.assertEqual(r, y2)
         done(True, None)
 
-    trX.apply("1", out, cont1)
+    t1.apply("1", out, cont1)
 
 def _test_modified_commit2(done, logger: logging.Handler):
     c = modified_commit_tester2(done)
@@ -315,25 +298,24 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant
-    # transaction actor of a Transform
+    t1 = router.newtrans()
+    t2 = router.newtrans()
 
-    trX.configure("1", {'srcA': y0}, out)
-    trX.configure("2", {'srcB': y2}, out)
+    t1.configure("1", {'srcA': y0}, out)
+    t2.configure("2", {'srcB': y2}, out)
 
-    def cont1(r1: value):
-        trX.configure("1", {'srcA': y1}, out)
-        trX.commit("1", True)
+    def cont1(_r: value):
+        t1.apply("2", out, cont2)
+        t1.configure("1", {'srcA': y1}, out)
+        t1.commit("1", True)
 
-    def cont2(r2: value):
-        trX.commit("2", True)
-        r = trX.get()
+    def cont2(_r: value):
+        t2.commit("2", True)
+        r = t2.get()
         testing.assertEqual(r, merge_y1_y2)
         done(True, None)
 
-    trX.apply("1", out, cont1)
-    trX.apply("2", out, cont2)
+    t1.apply("1", out, cont1)
 
 def _test_modified_overlapping_commit(done, logger: logging.Handler):
     c = modified_overlapping_commit_tester(done)
@@ -349,25 +331,24 @@ actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None)
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant
-    # transaction actor of a Transform
+    t1 = router.newtrans()
+    t2 = router.newtrans()
 
-    trX.configure("1", {'srcA': y1}, out)
-    trX.configure("2", {'srcB': y3}, out)
+    t1.configure("1", {'srcA': y1}, out)
+    t2.configure("2", {'srcB': y3}, out)
 
-    def cont1(r1: value):
-        trX.commit("1", True)
+    def cont1(_r: value):
+        t2.apply("2", out, cont2)
+        t1.commit("1", True)
 
-    def cont2(r2: value):
-        trX.configure("2", {'srcB': y2}, out)
-        trX.commit("2", True)
-        r = trX.get()
+    def cont2(_r: value):
+        t2.configure("2", {'srcB': y2}, out)
+        t2.commit("2", True)
+        r = t2.get()
         testing.assertEqual(r, merge_y1_y2)
         done(True, None)
 
-    trX.apply("1", out, cont1)
-    trX.apply("2", out, cont2)
+    t1.apply("1", out, cont1)
 
 def _test_modified_overlapping_commit2(done, logger: logging.Handler):
     c = modified_overlapping_commit_tester2(done)
@@ -395,27 +376,26 @@ actor config_failure_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant
-    # transaction actor of a Transform
+    t1 = router.newtrans()
+    t2 = router.newtrans()
 
-    trX.configure("1", {'srcA': a0}, out)
-    trX.configure("2", {'srcB': a1}, out)
+    t1.configure("1", {'srcA': a0}, out)
+    t2.configure("2", {'srcB': a1}, out)
 
-    def cont1(r1: value):
-        trX.commit("1", True)
+    def cont1(_r: value):
+        t1.commit("1", True)
 
-        def cont2(r2: value):
-            if isinstance(r2, Exception):
-                trX.configure("2", {'srcB': b1}, out)
-            trX.commit("2", True)
-            r = trX.get()
+        def cont2(_r: value):
+            if isinstance(_r, Exception):
+                t2.configure("2", {'srcB': b1}, out)
+            t2.commit("2", True)
+            r = t2.get()
             testing.assertEqual(r, a0b1)
             done(True, None)
 
-        trX.apply("2", out, cont2)
+        t2.apply("2", out, cont2)
 
-    trX.apply("1", out, cont1)
+    t1.apply("1", out, cont1)
 
 def _test_config_failure(done, logger: logging.Handler):
     c = config_failure_tester(done)
@@ -426,24 +406,23 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant
-    # transaction actor of a Transform
+    t1 = router.newtrans()
+    t2 = router.newtrans()
 
-    trX.configure("1", {'srcA': a0}, out)
-    trX.configure("2", {'srcB': a1}, out)
+    t1.configure("1", {'srcA': a0}, out)
+    t2.configure("2", {'srcB': a1}, out)
 
-    def cont1(r1: value):
-        trX.commit("1", False)
+    def cont1(_r: value):
+        t2.apply("2", out, cont2)
+        t1.commit("1", False)
 
-    def cont2(r2: value):
-        trX.commit("2", True)
-        r = trX.get()
+    def cont2(_r: value):
+        t2.commit("2", True)
+        r = t2.get()
         testing.assertEqual(r, a1)
         done(True, None)
 
-    trX.apply("1", out, cont1)
-    trX.apply("2", out, cont2)
+    t1.apply("1", out, cont1)
 
 def _test_config_abort(done, logger: logging.Handler):
     c = config_abort_tester(done)
@@ -454,22 +433,22 @@ actor multi_apply_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
+    t1 = router.newtrans()
 
-    trX.configure("1", {'srcA': y1}, out)
+    t1.configure("1", {'srcA': y1}, out)
 
-    def cont1(r1: value):
+    def cont1(_r: value):
 
-        def cont2(r2: value):
-            trX.configure("1", {'srcA': y2}, out)
-            trX.commit("1", True)
-            r = trX.get()
+        def cont2(_r: value):
+            t1.configure("1", {'srcA': y2}, out)
+            t1.commit("1", True)
+            r = t1.get()
             testing.assertEqual(r, y2)
             done(True, None)
 
-        trX.apply("1", out, cont2)
+        t1.apply("1", out, cont2)
 
-    trX.apply("1", out, cont1)
+    t1.apply("1", out, cont1)
 
 def _test_multi_apply(done, logger: logging.Handler):
     c = multi_apply_tester(done)
@@ -480,24 +459,23 @@ actor empty_apply_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant
-    # transaction actor of a Transform
+    t1 = router.newtrans()
+    t2 = router.newtrans()
 
-    trX.configure("2", {'srcB': y3}, out)
+    t2.configure("2", {'srcB': y3}, out)
 
-    def cont1(r1: value):
-        trX.commit("1", True)
+    def cont1(_r: value):
+        t2.apply("2", out, cont2)
+        t1.commit("1", True)
 
-    def cont2(r2: value):
-        trX.configure("2", {'srcB': y2}, out)
-        trX.commit("2", True)
-        r = trX.get()
+    def cont2(_r: value):
+        t2.configure("2", {'srcB': y2}, out)
+        t2.commit("2", True)
+        r = t2.get()
         testing.assertEqual(r, y2)
         done(True, None)
 
-    trX.apply("1", out, cont1)
-    trX.apply("2", out, cont2)
+    t1.apply("1", out, cont1)
 
 def _test_empty_apply(done, logger: logging.Handler):
     c = empty_apply_tester(done)
@@ -508,24 +486,23 @@ actor empty_apply_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant
-    # transaction actor of a Transform
+    t1 = router.newtrans()
+    t2 = router.newtrans()
 
-    trX.configure("2", {'srcB': y3}, out)
+    t1.configure("2", {'srcB': y3}, out)
 
-    def cont1(r1: value):
-        trX.commit("1", True)
-
-    def cont2(r2: value):
-        trX.configure("2", {'srcB': y2}, out)
-        trX.commit("2", True)
-        r = trX.get()
+    def cont1(_r: value):
+        t1.commit("1", True)
+        r = t1.get()
         testing.assertEqual(r, y2)
         done(True, None)
 
-    trX.apply("2", out, cont2)
-    trX.apply("1", out, cont1)
+    def cont2(_r: value):
+        t1.apply("1", out, cont1)
+        t2.configure("2", {'srcB': y2}, out)
+        t2.commit("2", True)
+
+    t2.apply("2", out, cont2)
 
 def _test_empty_apply2(done, logger: logging.Handler):
     c = empty_apply_tester2(done)
@@ -536,21 +513,20 @@ actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant
-    # transaction actor of a Transform
+    t1 = router.newtrans()
+    t2 = router.newtrans()
 
-    trX.configure("1", {'srcA': y1}, out)
+    t1.configure("1", {'srcA': y1}, out)
 
-    def cont1(r1: value):
-        trX.commit("2", True)
+    def cont1(_r: value):
+        t2.commit("2", True)
 
-        trX.commit("1", True)
-        r = trX.get()
+        t1.commit("1", True)
+        r = t1.get()
         testing.assertEqual(r, y1)
         done(True, None)
 
-    trX.apply("1", out, cont1)
+    t1.apply("1", out, cont1)
 
 def _test_spurious_commit(done, logger: logging.Handler):
     c = spurious_commit_tester(done)
@@ -561,23 +537,22 @@ actor spurious_config_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router = ttx.Transform(lambda cfg: cfg)()
-    trX = router.newtrans()
-    # trX is reused several times below, knowing it's the constant
-    # transaction actor of a Transform
+    t1 = router.newtrans()
+    t2 = router.newtrans()
 
-    trX.configure("1", {'srcA': y1}, out)
-    trX.configure("2", {'srcB': y2}, out)
+    t1.configure("1", {'srcA': y1}, out)
+    t2.configure("2", {'srcB': y2}, out)
 
-    def cont1(r1: value):
-        trX.configure("2", {'srcB': y3}, out)
-        trX.commit("2", True)
+    def cont1(_r: value):
+        t2.configure("2", {'srcB': y3}, out)
+        t2.commit("2", True)
 
-        trX.commit("1", True)
-        r = trX.get()
+        t1.commit("1", True)
+        r = t1.get()
         testing.assertEqual(r, y1)
         done(True, None)
 
-    trX.apply("1", out, cont1)
+    t1.apply("1", out, cont1)
 
 def _test_spurious_config(done, logger: logging.Handler):
     c = spurious_config_tester(done)
