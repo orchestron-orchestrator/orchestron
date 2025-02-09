@@ -6,7 +6,7 @@ import orchestron.ttx as ttx
 import yang.gdata as gdata
 
 
-y1 = gdata.Container({
+l1 = gdata.Container({
     "a": gdata.Leaf("int", 1),
     "l1": gdata.List(["name"], [
         gdata.ListElement(["k1"], {
@@ -18,20 +18,13 @@ y1 = gdata.Container({
         })
     ])
 })
-y2 = gdata.Container({
-    "b": gdata.Leaf("int", 2),
-    "c": gdata.Leaf("int", 3),
-    "l1": gdata.List(["name"], [
-        gdata.ListElement(["k1"], {
-            "n2": gdata.Leaf("int", 2)
-        }),
-        gdata.ListElement(["k2"], {
-            "n1": gdata.Leaf("int", 1),
-            "n3": gdata.Leaf("int", 3)
-        })
-    ]),
-    "d": gdata.LeafList(["a", "b", "c"])
+tree1 = gdata.Container({
+    'left': l1,
+    'right': gdata.Container({
+        "b": gdata.LeafList([1,2,3])
+    })
 })
+
 
 ########################
 
@@ -44,21 +37,18 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
         'left': router_l,
         'right': router_r
     })
-    tr1 = container.newtrans()
+    t1 = container.newtrans()
     
-    tree1 = gdata.Container({
-        'left': y1
-    })
 
-    tr1.configure("1", {'srcA': tree1}, out)
+    t1.configure("1", {'srcA': tree1}, out)
 
     def cont1(r1: value):
-        tr1.commit("1", True)
-        r = tr1.get()
-        testing.assertEqual(r, y1)
+        t1.commit("1", True)
+        r = t1.get()
+        testing.assertEqual(r, tree1)
         done(True, None)
 
-    tr1.apply("1", out, cont1)
+    t1.apply("1", out, cont1)
 
 def _test_basic_commit(done, logger: logging.Handler):
     c = basic_commit_tester(done)
