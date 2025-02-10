@@ -222,8 +222,8 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     def cont1(_r: value):
         r = t1.get()
         testing.assertEqual(r, gdata.Absent())
-        t2.apply("2", out, cont2)
         t1.commit("1", True)
+        t2.apply("2", out, cont2)
 
     def cont2(_r: value):
         r = t2.get()
@@ -305,9 +305,9 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     t2.configure("2", {'srcB': y2}, out)
 
     def cont1(_r: value):
-        t1.apply("2", out, cont2)
         t1.configure("1", {'srcA': y1}, out)
         t1.commit("1", True)
+        t1.apply("2", out, cont2)
 
     def cont2(_r: value):
         t2.commit("2", True)
@@ -338,8 +338,8 @@ actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None)
     t2.configure("2", {'srcB': y3}, out)
 
     def cont1(_r: value):
-        t2.apply("2", out, cont2)
         t1.commit("1", True)
+        t2.apply("2", out, cont2)
 
     def cont2(_r: value):
         t2.configure("2", {'srcB': y2}, out)
@@ -413,8 +413,8 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
     t2.configure("2", {'srcB': a1}, out)
 
     def cont1(_r: value):
-        t2.apply("2", out, cont2)
         t1.commit("1", False)
+        t2.apply("2", out, cont2)
 
     def cont2(_r: value):
         t2.commit("2", True)
@@ -465,8 +465,8 @@ actor empty_apply_tester(done: action(?bool, ?Exception)->None):
     t2.configure("2", {'srcB': y3}, out)
 
     def cont1(_r: value):
-        t2.apply("2", out, cont2)
         t1.commit("1", True)
+        t2.apply("2", out, cont2)
 
     def cont2(_r: value):
         t2.configure("2", {'srcB': y2}, out)
@@ -498,9 +498,9 @@ actor empty_apply_tester2(done: action(?bool, ?Exception)->None):
         done(True, None)
 
     def cont2(_r: value):
-        t1.apply("1", out, cont1)
         t2.configure("2", {'srcB': y2}, out)
         t2.commit("2", True)
+        t1.apply("1", out, cont1)
 
     t2.apply("2", out, cont2)
 
