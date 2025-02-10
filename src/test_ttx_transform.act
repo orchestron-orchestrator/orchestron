@@ -493,8 +493,10 @@ actor empty_apply_tester2(done: action(?bool, ?Exception)->None):
 
     def cont1(_r: value):
         t1.commit("1", True)
-        r = t1.get()
-        testing.assertEqual(r, y2)
+        r2 = t2.get()
+        testing.assertEqual(r2, y2)
+        r1 = t1.get()
+        testing.assertEqual(r1, y2)
         done(True, None)
 
     def cont2(_r: value):
@@ -523,7 +525,7 @@ actor no_apply_tester(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         t2.configure("2", {'srcB': y2}, out)
         t2.commit("2", True)
-        r = t1.get()
+        r = t2.get()
         testing.assertEqual(r, y2)
         done(True, None)
 
