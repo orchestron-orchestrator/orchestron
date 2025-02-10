@@ -6,67 +6,56 @@ import orchestron.ttx as ttx
 import yang.gdata as gdata
 
 
-l1 = gdata.Container({
-    "a": gdata.Leaf("int", 1),
-    "l1": gdata.List(["name"], [
-        gdata.ListElement(["k1"], {
-            "n1": gdata.Leaf("int", 1),
-            "n2": gdata.Leaf("int", 2)
-        }),
-        gdata.ListElement(["k4"], {
-            "n4": gdata.Leaf("int", 4)
-        })
-    ])
-})
 tree1 = gdata.Container({
-    'left': l1,
+    'left': gdata.Container({
+        "l1": gdata.List(["name"], [
+            gdata.ListElement(["k1"], {
+                "n1": gdata.Leaf("int", 1),
+                "n2": gdata.Leaf("int", 2)
+            }),
+            gdata.ListElement(["k4"], {
+                "n4": gdata.Leaf("int", 4)
+            })
+        ])
+    }),
     'right': gdata.Container({
         "a": gdata.LeafList([1,2,3])
     })
 })
 
-l2 = gdata.Container({
-    "b": gdata.Leaf("int", 2),
-    "c": gdata.Leaf("int", 3),
-    "l1": gdata.List(["name"], [
-        gdata.ListElement(["k1"], {
-            "n2": gdata.Leaf("int", 2)
-        }),
-        gdata.ListElement(["k2"], {
-            "n1": gdata.Leaf("int", 1),
-            "n3": gdata.Leaf("int", 3)
-        })
-    ]),
-    "d": gdata.LeafList(["a", "b", "c"])
-})
 tree2 = gdata.Container({
-    'left': l2,
+    'left': gdata.Container({
+        "l1": gdata.List(["name"], [
+            gdata.ListElement(["k1"], {
+                "n2": gdata.Leaf("int", 2)
+            }),
+            gdata.ListElement(["k2"], {
+                "n1": gdata.Leaf("int", 1),
+                "n3": gdata.Leaf("int", 3)
+            })
+        ]),
+    }),
     'right': gdata.Container({
         "b": gdata.Leaf("int", 1)
     })
 })
 
-merge_l1_l2 = gdata.Container({
-    "a": gdata.Leaf("int", 1),
-    "b": gdata.Leaf("int", 2),
-    "c": gdata.Leaf("int", 3),
-    "l1": gdata.List(["name"], [
-        gdata.ListElement(["k1"], {
-            "n1": gdata.Leaf("int", 1),
-            "n2": gdata.Leaf("int", 2)
-        }),
-        gdata.ListElement(["k2"], {
-            "n1": gdata.Leaf("int", 1),
-            "n3": gdata.Leaf("int", 3)
-        }),
-        gdata.ListElement(["k4"], {
-            "n4": gdata.Leaf("int", 4)
-        })
-    ]),
-    "d": gdata.LeafList(["a", "b", "c"])
-})
-merge_tree = gdata.Container({
-    'left': merge_l1_l2,
+merge_1_2 = gdata.Container({
+    'left': gdata.Container({
+        "l1": gdata.List(["name"], [
+            gdata.ListElement(["k1"], {
+                "n1": gdata.Leaf("int", 1),
+                "n2": gdata.Leaf("int", 2)
+            }),
+            gdata.ListElement(["k2"], {
+                "n1": gdata.Leaf("int", 1),
+                "n3": gdata.Leaf("int", 3)
+            }),
+            gdata.ListElement(["k4"], {
+                "n4": gdata.Leaf("int", 4)
+            })
+        ]),
+    }),
     'right': gdata.Container({
         "a": gdata.LeafList([1,2,3]),
         "b": gdata.Leaf("int", 1)
@@ -85,11 +74,10 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
         'right': router_r
     })
     t1 = container.newtrans()
-    
 
     t1.configure("1", {'srcA': tree1}, out)
 
-    def cont1(r1: value):
+    def cont1(_r: value):
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r, tree1)
@@ -118,6 +106,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     t2.configure("2", {'srcB': tree2}, out)
 
     def cont1(_r: value):
+        t2.apply("2", out, cont2)
         t1.commit("1", True)
 
     def cont2(_r: value):
@@ -125,13 +114,12 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1, tree1)
         t2.commit("2", True)
         r2 = t2.get()
-        testing.assertEqual(r2, merge_tree)
+        testing.assertEqual(r2, merge_1_2)
         r1 = t1.get()
         testing.assertEqual(r1, r2)
         done(True, None)
 
-    await async t1.apply("1", out, cont1)   # syncronous, so that t1 gets the lock first
-    t2.apply("2", out, cont2)
+    t1.apply("1", out, cont1)
 
 def _test_overlapping_commit(done, logger: logging.Handler):
     c = overlapping_commit_tester(done)
@@ -154,6 +142,7 @@ actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
     t2.configure("2", {'srcB': tree2}, out)
 
     def cont2(_r: value):
+        t1.apply("1", out, cont1)
         t2.commit("2", True)
 
     def cont1(_r: value):
@@ -161,19 +150,215 @@ actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r2, tree2)
         t1.commit("1", True)
         r1 = t1.get()
-        testing.assertEqual(r1, merge_tree)
+        testing.assertEqual(r1, merge_1_2)
         r2 = t2.get()
         testing.assertEqual(r1, r2)
         done(True, None)
 
-    await async t2.apply("2", out, cont2)   # syncronous, so that t2 gets the lock first
-    t1.apply("1", out, cont1)
+    t2.apply("2", out, cont2)
 
 def _test_overlapping_commit2(done, logger: logging.Handler):
     c = overlapping_commit_tester2(done)
 
 ########################
 
+actor modified_commit_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router_l = ttx.Transform(lambda cfg: cfg)()
+    router_r = ttx.Transform(lambda cfg: cfg)()
+    container = ttx.Container({
+        'left': router_l,
+        'right': router_r
+    })
+    t1 = container.newtrans()
+
+    t1.configure("1", {'srcA': tree1}, out)
+    t1.configure("1", {'srcA': tree2}, out)
+
+    def cont1(_r: value):
+        t1.commit("1", True)
+        r1 = t1.get()
+        testing.assertEqual(r1, tree2)
+        done(True, None)
+
+    t1.apply("1", out, cont1)
+
+def _test_modified_commit(done, logger: logging.Handler):
+    c = modified_commit_tester(done)
+
+########################
+
+actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router_l = ttx.Transform(lambda cfg: cfg)()
+    router_r = ttx.Transform(lambda cfg: cfg)()
+    container = ttx.Container({
+        'left': router_l,
+        'right': router_r
+    })
+    t1 = container.newtrans()
+
+    t1.configure("1", {'srcA': tree1}, out)
+
+    def cont1(_r: value):
+        t1.configure("1", {'srcA': tree2}, out)
+        t1.commit("1", True)
+        r1 = t1.get()
+        testing.assertEqual(r1, tree2)
+        done(True, None)
+
+    t1.apply("1", out, cont1)
+
+def _test_modified_commit2(done, logger: logging.Handler):
+    c = modified_commit_tester2(done)
+
+########################
+
+tree0 = gdata.Container({
+    'left': gdata.Container({
+        "l1": gdata.List(["name"], [
+            gdata.ListElement(["k4"], {
+                "n4": gdata.Leaf("int", 0)
+            })
+        ]),
+    }),
+    'right': gdata.Container({
+        "a": gdata.LeafList([1,2,3])
+    })
+})
+
+actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router_l = ttx.Transform(lambda cfg: cfg)()
+    router_r = ttx.Transform(lambda cfg: cfg)()
+    container = ttx.Container({
+        'left': router_l,
+        'right': router_r
+    })
+    t1 = container.newtrans()
+    t2 = container.newtrans()
+
+    t1.configure("1", {'srcA': tree0}, out)
+    t2.configure("2", {'srcB': tree2}, out)
+
+    def cont1(_r: value):
+        t2.apply("2", out, cont2)
+        t1.configure("1", {'srcA': tree1}, out)
+        t1.commit("1", True)
+
+    def cont2(_r: value):
+        t2.commit("2", True)
+        r2 = t2.get()
+        testing.assertEqual(r2, merge_1_2)
+        done(True, None)
+
+    t1.apply("1", out, cont1)
+
+def _test_modified_overlapping_commit(done, logger: logging.Handler):
+    c = modified_overlapping_commit_tester(done)
+
+########################
+
+a0 = gdata.Container({
+    'left': gdata.Container({
+        'a': gdata.Leaf("int", 0)
+    }),
+    'right': gdata.Container({
+        'x': gdata.Leaf("int", 0)
+    })
+})
+
+a1 = gdata.Container({
+    'left': gdata.Container({
+        'a': gdata.Leaf("int", 1)
+    })
+})
+
+b1 = gdata.Container({
+    'left': gdata.Container({
+        'b': gdata.Leaf("int", 1)
+    })
+})
+
+a0b1 = gdata.Container({
+    'left': gdata.Container({
+        'a': gdata.Leaf("int", 0),
+        'b': gdata.Leaf("int", 1)
+    }),
+    'right': gdata.Container({
+        'x': gdata.Leaf("int", 0)
+    })
+})
+
+actor config_failure_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router_l = ttx.Transform(lambda cfg: cfg)()
+    router_r = ttx.Transform(lambda cfg: cfg)()
+    container = ttx.Container({
+        'left': router_l,
+        'right': router_r
+    })
+    t1 = container.newtrans()
+    t2 = container.newtrans()
+
+    t1.configure("1", {'srcA': a0}, out)
+    t2.configure("2", {'srcB': a1}, out)
+
+    def cont1(_r: value):
+        t1.commit("1", True)
+
+        def cont2(_r: value):
+            if isinstance(_r, Exception):
+                t2.configure("2", {'srcB': b1}, out)
+            t2.commit("2", True)
+            r = t2.get()
+            testing.assertEqual(r, a0b1)
+            done(True, None)
+
+        t2.apply("2", out, cont2)
+
+    t1.apply("1", out, cont1)
+
+def _test_config_failure(done, logger: logging.Handler):
+    c = config_failure_tester(done)
+
+########################
+
+actor config_abort_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router_l = ttx.Transform(lambda cfg: cfg)()
+    router_r = ttx.Transform(lambda cfg: cfg)()
+    container = ttx.Container({
+        'left': router_l,
+        'right': router_r
+    })
+    t1 = container.newtrans()
+    t2 = container.newtrans()
+
+    t1.configure("1", {'srcA': a0}, out)
+    t2.configure("2", {'srcB': a1}, out)
+
+    def cont2(_r: value):
+        t1.apply("1", out, cont1)
+        t2.commit("2", False)
+
+    def cont1(_r: value):
+        t1.commit("1", True)
+        r = t1.get()
+        testing.assertEqual(r.prsrc(), a0.prsrc())
+        done(True, None)
+
+    t2.apply("2", out, cont2)
+
+def _test_config_abort(done, logger: logging.Handler):
+    c = config_abort_tester(done)
+
+########################
 
 actor main(env):
-    overlapping_commit_tester2(lambda s,e: env.exit(0))
+    config_failure_tester(lambda s,e: env.exit(0))
