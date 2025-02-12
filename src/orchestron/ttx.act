@@ -428,6 +428,7 @@ actor ListState(template: proc() -> Node):
         for k in new:
             elems[k] = template()
         provisional |= new
+        print("==== acquire", tid, "keys:", keys, "new:", new, "provisional:", provisional)
         result = {}
         for k in keys:
             result[k] = elems[k]
@@ -438,7 +439,9 @@ actor ListState(template: proc() -> Node):
             provisional -= active[tid]
             provisional |= deletes
         del active[tid]
+        print("==== release", tid, ok, "deletes:", deletes, "provisional:", provisional)
         if not active:
+            print("==== delete", provisional)
             for k in provisional:
                 del elems[k]
             provisional = set()
@@ -469,8 +472,8 @@ class _ListTransaction(_Transaction):
     def configure(self, tid, diff, out):
         print('#### (List) configure', tid)
         diff_by_key = transpose(diff)
-        newkeys = set(diff_by_key.keys()) - set(self.elems.keys())
-        for key,node in self.liststate.acquire(tid, newkeys).items():
+        keys = set(diff_by_key.keys())
+        for key,node in self.liststate.acquire(tid, keys).items():
             self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():

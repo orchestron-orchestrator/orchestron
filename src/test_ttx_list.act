@@ -105,5 +105,124 @@ def _test_basic_delete(done, logger: logging.Handler):
 
 ########################
 
+list1a = gdata.List(["name"], [
+    gdata.ListElement(["key1"], {
+        "a": gdata.Leaf("int", 0)
+    })
+])
+
+list1b = gdata.List(["name"], [
+    gdata.ListElement(["key1"], {
+        "b": gdata.Leaf("int", 1)
+    })
+])
+
+list1 = gdata.List(["name"], [
+    gdata.ListElement(["key1"], {
+        "a": gdata.Leaf("int", 0),
+        "b": gdata.Leaf("int", 1)
+    })
+])
+
+actor simultaneous_create_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router = ttx.Transform(lambda cfg: cfg)
+    tlist = ttx.List(router)
+    t1 = tlist.newtrans()
+    t2 = tlist.newtrans()
+
+    def cont1(_r: value):
+        t2.apply("2", out, cont2)
+        t1.commit("1", True)
+
+    def cont2(_r: value):
+        t2.commit("2", True)
+        r = t2.get()
+        testing.assertEqual(r, list1)
+        done(True, None)
+
+    t1.configure("1", {'srcA': list1a}, out)
+    t2.configure("2", {'srcB': list1b}, out)
+    t1.apply("1", out, cont1)
+
+def _test_simultaneous_create(done, logger: logging.Handler):
+    c = simultaneous_create_tester(done)
+
+########################
+
+actor aborted_create_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router = ttx.Transform(lambda cfg: cfg)
+    tlist = ttx.List(router)
+    t1 = tlist.newtrans()
+
+    def cont1(_r: value):
+        t1.commit("1", False)
+        r = t1.get()
+        testing.assertEqual(r, gdata.List(["name"], []))
+        done(True, None)
+
+    t1.configure("1", {'srcA': list1a}, out)
+    t1.apply("1", out, cont1)
+
+def _test_aborted_create(done, logger: logging.Handler):
+    c = aborted_create_tester(done)
+
+########################
+
+y1 = gdata.List(["name"], [
+    gdata.ListElement(["key0"], {
+        "a": gdata.Leaf("int", 0)
+    }),
+    gdata.ListElement(["key1"], {
+        "a": gdata.Leaf("int", 1)
+    })
+])
+
+y2 = gdata.List(["name"], [
+    gdata.ListElement(["key1"], {
+        "b": gdata.Leaf("int", 1)
+    }),
+    gdata.ListElement(["key2"], {
+        "a": gdata.Leaf("int", 1)
+    })
+])
+
+y2b = gdata.List(["name"], [
+    gdata.ListElement(["key1"], {
+        "b": gdata.Leaf("int", 1)
+    })
+])
+
+actor aborted_create_tester2(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router = ttx.Transform(lambda cfg: cfg)
+    tlist = ttx.List(router)
+    t1 = tlist.newtrans()
+    t2 = tlist.newtrans()
+
+    def cont1(_r: value):
+        t2.apply("2", out, cont2)
+        t1.commit("1", False)
+
+    def cont2(_r: value):
+        t2.configure("2", {'srcB': y2b}, out)
+        t2.commit("2", True)
+        r = t2.get()
+        testing.assertEqual(r.prsrc(), y2b.prsrc())
+        done(True, None)
+
+    t1.configure("1", {'srcA': y1}, out)
+    t2.configure("2", {'srcB': y2}, out)
+    t1.apply("1", out, cont1)
+
+def _test_aborted_create2(done, logger: logging.Handler):
+    c = aborted_create_tester2(done)
+
+########################
+
 actor main(env):
-    basic_delete_tester(lambda s,e: env.exit(0))
+    aborted_create_tester2(lambda s,e: env.exit(0))
