@@ -1,0 +1,142 @@
+import testing
+import logging
+
+import orchestron.ttx as ttx
+#import orchestron.gdata as gdata
+import yang.gdata as gdata
+
+
+cfg1 = gdata.List(["name"], [
+    gdata.ListElement(["k1"], {
+        "n1": gdata.Leaf("int", 1),
+        "n2": gdata.Leaf("int", 2)
+    }),
+    gdata.ListElement(["k4"], {
+        "n1": gdata.Leaf("int", 4)
+    })
+])
+
+cfg2 = gdata.List(["name"], [
+    gdata.ListElement(["k1"], {
+        "n2": gdata.Leaf("int", 2),
+        "n3": gdata.Leaf("int", 3)
+    }),
+    gdata.ListElement(["k2"], {
+        "n1": gdata.Leaf("int", 1),
+        "n3": gdata.Leaf("int", 3)
+    })
+])
+
+out1 = gdata.Container({
+    'devices': gdata.List(["id"], [
+        gdata.ListElement(["k1"], {
+            "n1": gdata.Leaf("int", 1),
+            "n2": gdata.Leaf("int", 2)
+        }),
+        gdata.ListElement(["k4"], {
+            "n1": gdata.Leaf("int", 4)
+        })
+    ])
+})
+
+out1_2 = gdata.Container({
+    'devices': gdata.List(["id"], [
+        gdata.ListElement(["k1"], {
+            "n1": gdata.Leaf("int", 1),
+            "n2": gdata.Leaf("int", 2),
+            "n3": gdata.Leaf("int", 3)
+        }),
+        gdata.ListElement(["k2"], {
+            "n1": gdata.Leaf("int", 1),
+            "n3": gdata.Leaf("int", 3)
+        }),
+        gdata.ListElement(["k4"], {
+            "n1": gdata.Leaf("int", 4)
+        })
+    ])
+})
+
+def transf(cfg):
+    if isinstance(cfg, gdata.ListElement):
+        return gdata.Container({
+            'devices': gdata.List(["id"], [
+                cfg
+            ])
+        })
+    else:
+        return gdata.Container({})
+
+
+########################
+
+actor basic_output_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    out = devices.newsession()
+    router = ttx.Transform(transf)
+    tlist = ttx.List(router)
+    t1 = tlist.newtrans()
+
+    t1.configure("1", {'srcA': cfg1}, out)
+
+    def cont1(_r: value):
+        t1.commit("1", True)
+        t1.get()
+        r = out.get()
+        testing.assertEqual(r, out1)
+        done(True, None)
+
+    t1.apply("1", out, cont1)
+
+def _test_basic_output(done, logger: logging.Handler):
+    c = basic_output_tester(done)
+
+########################
+
+actor layered_commit_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    stack = ttx.Layer(ttx.List(ttx.Transform(transf)), devices)
+    
+    s1 = stack.newsession()
+    out = devices.newsession()
+
+    def cont1(_r: value):
+        r1 = s1.get()
+        testing.assertEqual(r1, cfg1)
+        r2 = out.get()
+        testing.assertEqual(r2, out1)
+        done(True, None)
+
+    s1.execute(cfg1, cont1)
+
+def _test_layered_commit(done, logger: logging.Handler):
+    c = layered_commit_tester(done)
+
+########################
+
+actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    stack = ttx.Layer(ttx.List(ttx.Transform(transf)), devices)
+    
+    s1 = stack.newsession()
+    s2 = stack.newsession()
+    out = devices.newsession()
+
+    var acks = 0
+    
+    def cont(_r: value):
+        acks += 1
+        if acks == 2:
+            r = out.get()
+            testing.assertEqual(r.prsrc(), out1_2.prsrc())
+            done(True, None)
+
+    s1.execute(cfg1, cont)
+    s2.execute(cfg2, cont)
+
+def _test_simultaneous_commit(done, logger: logging.Handler):
+    c = simultaneous_commit_tester(done)
+
+########################
+
+actor main(env):
+    simultaneous_commit_tester(lambda s,e: env.exit(0))
