@@ -305,13 +305,13 @@ class _DeviceSession(_Session):
 
     def write(self, tid: str, diff_per_source: dict[str,gdata.Node]):
         for s,c in diff_per_source.items():
-            print('#### device write', tid, 'source', s, ':', c.prsrc())
+            print('#### (Device) write', tid, 'source', s, ':', c.prsrc())
         if tid not in self.buf:
             self.buf[tid] = {}
         self.buf[tid].update(diff_per_source.items())
 
     def prepare(self, tid):
-        print('#### device prepare', tid)
+        print('#### (Device) prepare', tid)
         self.cfg = diff_apply(self.cfg, self.buf[tid])
         del self.buf[tid]
         return 'Ok'
@@ -327,7 +327,7 @@ class _DeviceSession(_Session):
         pass
 
     def close(self, tid, ok):
-        print('#### device close', tid)
+        print('#### (Device) close', tid)
         pass
 
     def get(self):
@@ -637,13 +637,13 @@ class _TransformTransaction(_Transaction):
         else:
             self.inputs[tid] = diff
         inp = self.inputs[tid]
-        for s,c in inp.items():
-            print("# INPUT", tid, self.me, s, ":", c.prsrc())
-        for s,c in self.config.items():
-            print("   # CURRENT", tid, self.me, s, ":", c.prsrc())
-        newconf = diff_apply(self.config, self.inputs[tid])
-        for s,c in newconf.items():
-            print("   # NEWCONF", tid, self.me, s, ":", c.prsrc())
+        newconf = diff_apply(self.config, inp)
+        #for s,c in inp.items():
+        #    print("# INPUT", tid, self.me, s, ":", c.prsrc())
+        #for s,c in self.config.items():
+        #    print("   # CURRENT", tid, self.me, s, ":", c.prsrc())
+        #for s,c in newconf.items():
+        #    print("   # NEWCONF", tid, self.me, s, ":", c.prsrc())
         if newconf == self.config:
             self.candidates[tid] = (self.config, self.output)
             print('   # (Transform) NO CHANGE', tid, self.me)
@@ -665,7 +665,7 @@ class _TransformTransaction(_Transaction):
                 self.candidates[tid] = (newconf, newout)
                 res = difference(self.output, newout)
                 out.write(tid, {self.me: res})
-                print('   # OUTPUT', tid, self.me)
+                print('   # (Transform) OUTPUT', tid, self.me)
                 return 'Ok'
         return 'Ok'
 
