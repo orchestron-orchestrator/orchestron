@@ -2,8 +2,8 @@
     "dependencies": {
         "yang": {
             "repo_url": "https://github.com/orchestron-orchestrator/acton-yang.git",
-            "url": "https://github.com/orchestron-orchestrator/acton-yang/archive/68fd423771f0dd733061487de3f79ef64f7024b2.zip",
-            "hash": "1220292c374dc25742e4f254f93f52fadbe67de3e05e935653ea6a1a02c091681dbe"
+            "url": "https://github.com/orchestron-orchestrator/acton-yang/archive/168a004d511ac41b811232a914f2e2af757bc02c.zip",
+            "hash": "12202b8a6d7017cbd0ef258eebf9b027519e3fcf0e3daf4ed080b7f38b55818e9693"
         }
     },
     "zig_dependencies": {}
