@@ -79,7 +79,7 @@ class SysSpec(object):
             dev_tree = yang.compile(dev_type.models)
             name = "%s/%s/devices/%s.act" % (output_dir, self.name, dev_type.name)
             wf_dt = file.WriteFile(wfc, name)
-            await async wf_dt.write(dev_tree.prdaclass().encode())
+            await async wf_dt.write(dev_tree.prdaclass(gen_json=False).encode())
             await async wf_dt.close()
 
         tttsrc_getlayers += "    return res\n"

@@ -1,9 +1,34 @@
+import json
 import xml
 import yang.adata
 import yang.gdata
 
 # == This file is generated ==
 
+
+mut def from_json_orchestron_rfs__device__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__description(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__address__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__address__address(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("union", val)
+
+mut def from_json_orchestron_rfs__device__address__port(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__address__initial_credentials__username(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__address__initial_credentials__password(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__address__initial_credentials__key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
 
 class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNode):
     username: str
@@ -85,6 +110,7 @@ class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
         for node in nodes:
             res.append(orchestron_rfs__device__address__initial_credentials_entry.from_xml(node))
         return res
+
 
 
 class orchestron_rfs__device__address_entry(yang.adata.MNode):
@@ -169,6 +195,19 @@ class orchestron_rfs__device__address(yang.adata.MNode):
         return res
 
 
+
+mut def from_json_orchestron_rfs__device__credentials__username(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__credentials__password(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__credentials__key__key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__credentials__key__private_key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
 class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
     key: str
     private_key: ?str
@@ -240,6 +279,7 @@ class orchestron_rfs__device__credentials__key(yang.adata.MNode):
         return res
 
 
+
 class orchestron_rfs__device__credentials(yang.adata.MNode):
     username: str
     password: ?str
@@ -277,6 +317,16 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
             return orchestron_rfs__device__credentials(username=yang.gdata.from_xml_str(n, "username"), password=yang.gdata.from_xml_opt_str(n, "password"), key=orchestron_rfs__device__credentials__key.from_xml(yang.gdata.get_xml_children(n, "key")))
         raise ValueError("Missing required subtree orchestron_rfs__device__credentials")
 
+
+
+mut def from_json_orchestron_rfs__device__initial_credentials__username(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__initial_credentials__password(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__initial_credentials__key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
 
 class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
     username: str
@@ -360,6 +410,22 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
         return res
 
 
+
+mut def from_json_orchestron_rfs__device__mock__preset(val: list[value]) -> yang.gdata.LeafList:
+    return yang.gdata.LeafList(val)
+
+mut def from_json_orchestron_rfs__device__mock__module__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__mock__module__namespace(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__mock__module__revision(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
+mut def from_json_orchestron_rfs__device__mock__module__feature(val: list[value]) -> yang.gdata.LeafList:
+    return yang.gdata.LeafList(val)
+
 class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
     name: str
     namespace: str
@@ -442,6 +508,7 @@ class orchestron_rfs__device__mock__module(yang.adata.MNode):
         return res
 
 
+
 class orchestron_rfs__device__mock(yang.adata.MNode):
     preset: list[str]
     module: orchestron_rfs__device__mock__module
@@ -474,6 +541,7 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
         if n != None:
             return orchestron_rfs__device__mock(preset=yang.gdata.from_xml_opt_strs(n, "preset"), module=orchestron_rfs__device__mock__module.from_xml(yang.gdata.get_xml_children(n, "module")))
         return orchestron_rfs__device__mock()
+
 
 
 class orchestron_rfs__device_entry(yang.adata.MNode):
@@ -574,4 +642,5 @@ class orchestron_rfs__device(yang.adata.MNode):
         for node in nodes:
             res.append(orchestron_rfs__device_entry.from_xml(node))
         return res
+
 
