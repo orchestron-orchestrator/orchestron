@@ -81,6 +81,8 @@ actor basic_output_tester(done: action(?bool, ?Exception)->None):
     def cont1(_r: value):
         t1.commit("1", True)
         t1.get()
+        out.prepare("1")
+        out.close("1", True)
         r = out.get()
         testing.assertEqual(r, out1)
         done(True, None)
@@ -127,7 +129,7 @@ actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
         acks += 1
         if acks == 2:
             r = out.get()
-            testing.assertEqual(r.prsrc(), out1_2.prsrc())
+            testing.assertEqual(r, out1_2)
             done(True, None)
 
     s1.execute(cfg1, cont)
@@ -138,5 +140,102 @@ def _test_simultaneous_commit(done, logger: logging.Handler):
 
 ########################
 
+cfg3 = gdata.Container({
+    "left": gdata.Container({
+        "a": gdata.Leaf("int", 1)
+    }),
+    "right": gdata.Container({
+        "a": gdata.Leaf("int", 2)
+    })
+})
+
+out3 = gdata.Container({
+    'devices': gdata.List(["id"], [
+        gdata.ListElement(["1"], {
+            "val": gdata.Leaf("int", 1)
+        }),
+        gdata.ListElement(["2"], {
+            "val": gdata.Leaf("int", 2)
+        })
+    ])
+})
+
+def write_dev(cfg: gdata.Node):
+    i = cfg.get_int("a")
+    return gdata.Container({
+        'devices': gdata.List(["id"], [
+            gdata.ListElement([str(i)], {
+                "val": gdata.Leaf("int", i)
+            })
+        ])
+    })
+
+actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    twin_sources = ttx.Container({
+        "left": ttx.Transform(write_dev)(),
+        "right": ttx.Transform(write_dev)()
+    })
+    stack = ttx.Layer(twin_sources, devices)
+
+    s1 = stack.newsession()
+    out = devices.newsession()
+
+    def cont(_r: value):
+        r = out.get()
+        testing.assertEqual(r, out3)
+        done(True, None)
+
+    s1.execute(cfg3, cont)
+
+def _test_diamond_commit(done, logger: logging.Handler):
+    c = diamond_commit_tester(done)
+
+########################
+
+cfg4 = gdata.Container({
+    "ll": gdata.Leaf("int", 1),
+    "rr": gdata.Leaf("int", 2)
+})
+
+def service_map(cfg):
+    ll = cfg.get_int("ll")
+    rr = cfg.get_int("rr")
+    return gdata.Container({
+        "left": gdata.Container({
+            "a": gdata.Leaf("int", ll)
+        }),
+        "right": gdata.Container({
+            "a": gdata.Leaf("int", rr)
+        })
+    })
+
+actor multi_layer_tester(done: action(?bool, ?Exception)->None):
+    devices = ttx.Devices()
+    top = ttx.Transform(service_map)()
+    twin_sources = ttx.Container({
+        "left": ttx.Transform(write_dev)(),
+        "right": ttx.Transform(write_dev)()
+    })
+    layer2 = ttx.Layer(twin_sources, devices)
+    layer1 = ttx.Layer(top, layer2)
+
+    s1 = layer1.newsession()
+    out = devices.newsession()
+
+    def cont(_r: value):
+        r1 = layer2.newsession().get()
+        testing.assertEqual(r1, cfg3)
+        r2 = out.get()
+        testing.assertEqual(r2, out3)
+        done(True, None)
+
+    s1.execute(cfg4, cont)
+
+def _test_multi_layer(done, logger: logging.Handler):
+    c = multi_layer_tester(done)
+
+########################
+
 actor main(env):
-    simultaneous_commit_tester(lambda s,e: env.exit(0))
+    multi_layer_tester(lambda s,e: env.exit(0))
