@@ -62,13 +62,14 @@ merge_1_2 = gdata.Container({
     })
 })
 
+
 ########################
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -93,8 +94,8 @@ def _test_basic_commit(done, logger: logging.Handler):
 actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -129,8 +130,8 @@ def _test_overlapping_commit(done, logger: logging.Handler):
 actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -165,8 +166,8 @@ def _test_overlapping_commit2(done, logger: logging.Handler):
 actor modified_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -192,8 +193,8 @@ def _test_modified_commit(done, logger: logging.Handler):
 actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -232,8 +233,8 @@ tree0 = gdata.Container({
 actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -296,8 +297,8 @@ a0b1 = gdata.Container({
 actor config_failure_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -331,8 +332,8 @@ def _test_config_failure(done, logger: logging.Handler):
 actor config_abort_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -363,8 +364,8 @@ def _test_config_abort(done, logger: logging.Handler):
 actor multi_apply_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -403,8 +404,8 @@ tree3 = gdata.Container({
 actor empty_apply_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -435,8 +436,8 @@ def _test_empty_apply(done, logger: logging.Handler):
 actor empty_apply_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -469,8 +470,8 @@ def _test_empty_apply2(done, logger: logging.Handler):
 actor no_apply_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -499,8 +500,8 @@ def _test_no_apply(done, logger: logging.Handler):
 actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
@@ -528,8 +529,8 @@ def _test_spurious_commit(done, logger: logging.Handler):
 actor spurious_config_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router_l = ttx.Transform(lambda cfg: cfg)
-    router_r = ttx.Transform(lambda cfg: cfg)
+    router_l = ttx.Transform(ttx.Identity)
+    router_r = ttx.Transform(ttx.Identity)
     container = ttx.Container({
         'left': router_l,
         'right': router_r
