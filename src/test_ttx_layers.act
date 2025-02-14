@@ -95,20 +95,19 @@ def _test_basic_output(done, logger: logging.Handler):
 ########################
 
 actor layered_commit_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Devices()
-    stack = ttx.Layer(ttx.List(ttx.Transform(transf)), devices)
-    
-    s1 = stack.newsession()
-    out = devices.newsession()
+    stack = ttx.Layer(ttx.List(ttx.Transform(transf)),
+                      ttx.Devices())
+
+    sess = stack.newsession()
 
     def cont1(_r: value):
-        r1 = s1.get()
-        testing.assertEqual(r1, cfg1)
-        r2 = out.get()
-        testing.assertEqual(r2, out1)
+        r0 = sess.get()
+        testing.assertEqual(r0, cfg1)
+        r1 = sess.below().get()
+        testing.assertEqual(r1, out1)
         done(True, None)
 
-    s1.execute(cfg1, cont1)
+    sess.execute(cfg1, cont1)
 
 def _test_layered_commit(done, logger: logging.Handler):
     c = layered_commit_tester(done)
@@ -116,24 +115,22 @@ def _test_layered_commit(done, logger: logging.Handler):
 ########################
 
 actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Devices()
-    stack = ttx.Layer(ttx.List(ttx.Transform(transf)), devices)
+    stack = ttx.Layer(ttx.List(ttx.Transform(transf)), ttx.Devices())
     
-    s1 = stack.newsession()
-    s2 = stack.newsession()
-    out = devices.newsession()
+    sess1 = stack.newsession()
+    sess2 = stack.newsession()
 
     var acks = 0
     
     def cont(_r: value):
         acks += 1
         if acks == 2:
-            r = out.get()
+            r = sess1.below().get()
             testing.assertEqual(r, out1_2)
             done(True, None)
 
-    s1.execute(cfg1, cont)
-    s2.execute(cfg2, cont)
+    sess1.execute(cfg1, cont)
+    sess2.execute(cfg2, cont)
 
 def _test_simultaneous_commit(done, logger: logging.Handler):
     c = simultaneous_commit_tester(done)
@@ -171,22 +168,21 @@ def write_dev(cfg: gdata.Node):
     })
 
 actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Devices()
-    twin_sources = ttx.Container({
-        "left": ttx.Transform(write_dev)(),
-        "right": ttx.Transform(write_dev)()
-    })
-    stack = ttx.Layer(twin_sources, devices)
+    stack = ttx.Layer(
+        ttx.Container({
+            "left": ttx.Transform(write_dev),
+            "right": ttx.Transform(write_dev)
+        }),
+        ttx.Devices())
 
-    s1 = stack.newsession()
-    out = devices.newsession()
+    sess = stack.newsession()
 
     def cont(_r: value):
-        r = out.get()
+        r = sess.below().get()
         testing.assertEqual(r, out3)
         done(True, None)
 
-    s1.execute(cfg3, cont)
+    sess.execute(cfg3, cont)
 
 def _test_diamond_commit(done, logger: logging.Handler):
     c = diamond_commit_tester(done)
@@ -211,26 +207,25 @@ def service_map(cfg):
     })
 
 actor multi_layer_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Devices()
-    top = ttx.Transform(service_map)()
-    twin_sources = ttx.Container({
-        "left": ttx.Transform(write_dev)(),
-        "right": ttx.Transform(write_dev)()
-    })
-    layer2 = ttx.Layer(twin_sources, devices)
-    layer1 = ttx.Layer(top, layer2)
+    stack = ttx.Layer(
+                ttx.Transform(service_map)(),
+                ttx.Layer(
+                    ttx.Container({
+                        "left": ttx.Transform(write_dev),
+                        "right": ttx.Transform(write_dev)
+                    }),
+                    ttx.Devices()))
 
-    s1 = layer1.newsession()
-    out = devices.newsession()
+    sess = stack.newsession()
 
     def cont(_r: value):
-        r1 = layer2.newsession().get()
+        r1 = sess.below().get()
         testing.assertEqual(r1, cfg3)
-        r2 = out.get()
+        r2 = sess.below().below().get()
         testing.assertEqual(r2, out3)
         done(True, None)
 
-    s1.execute(cfg4, cont)
+    sess.execute(cfg4, cont)
 
 def _test_multi_layer(done, logger: logging.Handler):
     c = multi_layer_tester(done)
