@@ -127,7 +127,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     def _on_connect(c):
         _log.info("Connected to device")
-        state = 1
+        state = 2
 
         # TODO: actonc bug - try uncommenting this
         # for cap in c.get_capabilities():
@@ -160,7 +160,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
         if wcap == None:
             print("Device in MOCK mode, pretending to connect to device...")
-            state = 1
+            state = 2
 
             preset_caps = []
             if "cisco-ios-xr" in conf.mock.preset:
@@ -186,7 +186,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                     modset[m.name] = m
             return
 
-        if state == 1:
+        if state > 0:
             print("Device already connected, ignoring new config")
             return
 
@@ -210,6 +210,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         password = conf.credentials.password
 
         if wcap != None and username != None and password != None:
+            state = 1
             print("Setting up NETCONF client...", address, port, username, password)
             c = netconf.Client(wcap, address, port, username, password,
                                on_connect=_on_connect,
@@ -233,7 +234,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def edit_config(new_conf: yang.gdata.Node):
         print("Device.edit_config")
         conf = new_conf
-        if state != 1:
+        if state != 2:
             print("Device.edit_config not connected yet, storing config")
             return
         if wcap == None:
