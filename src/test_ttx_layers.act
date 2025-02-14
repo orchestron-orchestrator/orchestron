@@ -56,15 +56,16 @@ out1_2 = gdata.Container({
     ])
 })
 
-def transf(cfg):
-    if isinstance(cfg, gdata.ListElement):
-        return gdata.Container({
-            'devices': gdata.List(["id"], [
-                cfg
-            ])
-        })
-    else:
-        return gdata.Container({})
+class TransF(ttx.TransformWrapper):
+    def transform_gdata(self, cfg):
+        if isinstance(cfg, gdata.ListElement):
+            return gdata.Container({
+                'devices': gdata.List(["id"], [
+                    cfg
+                ])
+            })
+        else:
+            return gdata.Container({})
 
 
 ########################
@@ -72,7 +73,7 @@ def transf(cfg):
 actor basic_output_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(transf)
+    router = ttx.Transform(TransF)
     tlist = ttx.List(router)
     t1 = tlist.newtrans()
 
@@ -95,7 +96,7 @@ def _test_basic_output(done, logger: logging.Handler):
 ########################
 
 actor layered_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer(ttx.List(ttx.Transform(transf)),
+    stack = ttx.Layer(ttx.List(ttx.Transform(TransF)),
                       ttx.Devices())
 
     sess = stack.newsession()
@@ -115,7 +116,7 @@ def _test_layered_commit(done, logger: logging.Handler):
 ########################
 
 actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer(ttx.List(ttx.Transform(transf)), ttx.Devices())
+    stack = ttx.Layer(ttx.List(ttx.Transform(TransF)), ttx.Devices())
     
     sess1 = stack.newsession()
     sess2 = stack.newsession()
@@ -157,21 +158,22 @@ out3 = gdata.Container({
     ])
 })
 
-def write_dev(cfg: gdata.Node):
-    i = cfg.get_int("a")
-    return gdata.Container({
-        'devices': gdata.List(["id"], [
-            gdata.ListElement([str(i)], {
-                "val": gdata.Leaf("int", i)
-            })
-        ])
-    })
+class WriteDev(ttx.TransformWrapper):
+    def transform_gdata(self, cfg: gdata.Node):
+        i = cfg.get_int("a")
+        return gdata.Container({
+            'devices': gdata.List(["id"], [
+                gdata.ListElement([str(i)], {
+                    "val": gdata.Leaf("int", i)
+                })
+            ])
+        })
 
 actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
     stack = ttx.Layer(
         ttx.Container({
-            "left": ttx.Transform(write_dev),
-            "right": ttx.Transform(write_dev)
+            "left": ttx.Transform(WriteDev),
+            "right": ttx.Transform(WriteDev)
         }),
         ttx.Devices())
 
@@ -194,25 +196,26 @@ cfg4 = gdata.Container({
     "rr": gdata.Leaf("int", 2)
 })
 
-def service_map(cfg):
-    ll = cfg.get_int("ll")
-    rr = cfg.get_int("rr")
-    return gdata.Container({
-        "left": gdata.Container({
-            "a": gdata.Leaf("int", ll)
-        }),
-        "right": gdata.Container({
-            "a": gdata.Leaf("int", rr)
+class ServiceMap(ttx.TransformWrapper):
+    def transform_gdata(self, cfg):
+        ll = cfg.get_int("ll")
+        rr = cfg.get_int("rr")
+        return gdata.Container({
+            "left": gdata.Container({
+                "a": gdata.Leaf("int", ll)
+            }),
+            "right": gdata.Container({
+                "a": gdata.Leaf("int", rr)
+            })
         })
-    })
 
 actor multi_layer_tester(done: action(?bool, ?Exception)->None):
     stack = ttx.Layer(
-                ttx.Transform(service_map)(),
+                ttx.Transform(ServiceMap)(),
                 ttx.Layer(
                     ttx.Container({
-                        "left": ttx.Transform(write_dev),
-                        "right": ttx.Transform(write_dev)
+                        "left": ttx.Transform(WriteDev),
+                        "right": ttx.Transform(WriteDev)
                     }),
                     ttx.Devices()))
 
