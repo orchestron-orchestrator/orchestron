@@ -1,5 +1,6 @@
 #import orchestron.gdata as gdata
 import yang.gdata as gdata
+import xml
 
 def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
     cfg_per_key = {}
@@ -605,12 +606,29 @@ def ListTransaction(liststate:ListState):
 
 ################# Transforms ####################
 
-def Transform(transform):
-    return lambda: Node(_Transform(transform))
+class TransformWrapper():
+    transform_gdata: mut(gdata.Node) -> gdata.Node
+    transform_xml: mut(xml.Node) -> gdata.Node
+
+    def __init__(self):
+        pass
+
+    def transform_gdata(self, cfg):
+        return cfg
+
+    def transform_xml(self, cfg):
+        return gdata.Absent()
+
+class Identity(TransformWrapper):
+    pass
+
+
+def Transform(wrapper):
+    return lambda: Node(_Transform(wrapper))
 
 class _Transform(_Node):
-    def __init__(self, transform):
-        self.transaction = TransformTransaction(transform)
+    def __init__(self, wrapper):
+        self.transaction = TransformTransaction(wrapper)
 
     def newtrans(self):
         return self.transaction
@@ -618,14 +636,12 @@ class _Transform(_Node):
     def get(self):
         return self.transaction.get()
 
-def TransformTransaction(transform):
-    return Transaction(_TransformTransaction(transform))
+def TransformTransaction(wrapper):
+    return Transaction(_TransformTransaction(wrapper))
 
 class _TransformTransaction(_Transaction):
-#    @property
-#    validate: (gdata.Node) -> bool
     @property
-    transform: mut(gdata.Node) -> gdata.Node
+    wrapper: TransformWrapper
 
     inputs: dict[str, dict[str, gdata.Node]]
     config: dict[str, gdata.Node]
@@ -635,8 +651,8 @@ class _TransformTransaction(_Transaction):
     pending: list[(Transaction, str, Session, action(value)->None)]
     me: str
 
-    def __init__(self, transform):
-        self.transform = transform
+    def __init__(self, wrapper):
+        self.wrapper = wrapper()
         self.inputs = {}
         self.config = {}
         self.candidates = {}
@@ -676,7 +692,7 @@ class _TransformTransaction(_Transaction):
                 #print('   # (Transform) FAILURE', tid, self.me, e)
                 return e
             else:
-                newout = self.transform(merged)
+                newout = self.wrapper.transform_gdata(merged)
                 self.candidates[tid] = (newconf, newout)
                 res = difference(self.output, newout)
                 out.write(tid, {self.me: res})
