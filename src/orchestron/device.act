@@ -118,7 +118,9 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     var dmc: ?DeviceMetaConfig = None
     var client: ?netconf.Client = None
     var conf: ?yang.gdata.Node = None
+    var again = False
     var state = 0
+    var t_state = 0
     var modset: dict[str, ModCap] = {}
     var subs = []
 
@@ -231,8 +233,21 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def _is_writable_running():
         return ":writable-running" in modset
 
+    def _conf_again():
+        if again:
+            _log.debug("Device._conf_again")
+            again = False
+            if conf is not None:
+                _edit_config(conf)
+
     def edit_config(new_conf: yang.gdata.Node):
-        print("Device.edit_config")
+        _log.debug("Device.edit_config")
+        if conf == new_conf:
+            _log.debug("Device.edit_config config is same as current, noop")
+            return
+        _edit_config(new_conf)
+
+    def _edit_config(new_conf: yang.gdata.Node):
         conf = new_conf
         if state != 2:
             print("Device.edit_config not connected yet, storing config")
@@ -247,6 +262,11 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                 # Cisco IOS XRd doesn't like empty <edit-config>, returns error
                 print("Device.edit_config Config is empty, noop")
                 return
+            if t_state == 1:
+                _log.debug("Device.edit_config in progress transaction, storing config")
+                again = True
+                return
+            t_state = 1
             if _is_writable_running():
                 client.edit_config(xml_conf, _on_conf)
             else:
@@ -258,6 +278,9 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             if not _is_writable_running():
                 # We edit-config'd candidate, now commit
                 c.commit(_on_commit)
+            else:
+                t_state = 0
+                _conf_again()
         else:
             print("Device._on_conf went to shit")
 
@@ -268,11 +291,16 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                 # We commit'ed candidate, but got an error, now discard-changes
                 # TODO: what if the device does this (:rollback-on-error)?!
                 c.discard_changes(_on_discard_changes)
+            else:
+                t_state = 0
+                _conf_again()
         else:
             print("Device._on_commit went to shit")
 
     def _on_discard_changes(c, r):
         if r is not None:
-            print("Device._on_discard_changes", r.encode())
+            _log.debug("Device._on_discard_changes", {"r": r.encode()})
+            t_state = 0
+            _conf_again()
         else:
             print("Device._on_discard_changes went to shit")
