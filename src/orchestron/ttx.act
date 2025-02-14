@@ -156,6 +156,9 @@ actor Session(impl: _Session):
     def get():
         return impl.get()
 
+    def below():
+        return impl.below(self)
+
 class _Session(object):
     execute:        proc(actself: Session, diff: gdata.Node, done: action(value)->None) -> None
     execute_cont:   proc(res: value) -> None
@@ -166,6 +169,7 @@ class _Session(object):
     finalize_cont2: proc(res: value) -> None
     close:          proc(tid: str, ok: bool) -> None
     get:            proc() -> gdata.Node
+    below:          proc(actself: Session) -> Session
 
 
 
@@ -182,6 +186,7 @@ class _Layer(_GenLayer):
 
     def newsession(self):
         return LayerSession(self.root, self.lower)
+
 
 def Devices():
     return GenLayer(_Devices(DeviceSession()))
@@ -284,6 +289,9 @@ class _LayerSession(_Session):
     def get(self):
         return self.root.get()
 
+    def below(self, actself):
+        return self.lower
+
 
 def DeviceSession():
     return Session(_DeviceSession())
@@ -334,6 +342,9 @@ class _DeviceSession(_Session):
         merged = merge(self.cfg)
         return merged
 
+    def below(self, actself):
+        return actself
+
 
 ############## Containers ##################
 
@@ -341,8 +352,10 @@ def Container(template):
     return Node(_Container(template))
 
 class _Container(_Node):
-    def __init__(self, template: dict[str, Node]):
-        self.elems = template
+    def __init__(self, template: dict[str, proc()->Node]):
+        self.elems = {}
+        for key,templ in template.items():
+            self.elems[key] = templ()
 
     def newtrans(self):
         return ContainerTransaction(self.elems)
