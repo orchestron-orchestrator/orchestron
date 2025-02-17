@@ -84,7 +84,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, tree1)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_basic_commit(done, logger: logging.Handler):
     c = basic_commit_tester(done)
@@ -107,7 +107,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     t2.configure("2", {'srcB': tree2}, out)
 
     def cont1(_r: value):
-        t2.apply("2", out, cont2)
+        t2.lock("2", out, cont2)
         t1.commit("1", True)
 
     def cont2(_r: value):
@@ -120,7 +120,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1, r2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_overlapping_commit(done, logger: logging.Handler):
     c = overlapping_commit_tester(done)
@@ -144,7 +144,7 @@ actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
 
     def cont2(_r: value):
         t2.commit("2", True)
-        t1.apply("1", out, cont1)
+        t1.lock("1", out, cont1)
 
     def cont1(_r: value):
         r2 = t2.get()
@@ -156,7 +156,7 @@ actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1, r2)
         done(True, None)
 
-    t2.apply("2", out, cont2)
+    t2.lock("2", out, cont2)
 
 def _test_overlapping_commit2(done, logger: logging.Handler):
     c = overlapping_commit_tester2(done)
@@ -183,7 +183,7 @@ actor modified_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1, tree2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_modified_commit(done, logger: logging.Handler):
     c = modified_commit_tester(done)
@@ -210,7 +210,7 @@ actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1, tree2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_modified_commit2(done, logger: logging.Handler):
     c = modified_commit_tester2(done)
@@ -246,7 +246,7 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     t2.configure("2", {'srcB': tree2}, out)
 
     def cont1(_r: value):
-        t2.apply("2", out, cont2)
+        t2.lock("2", out, cont2)
         t1.configure("1", {'srcA': tree1}, out)
         t1.commit("1", True)
 
@@ -256,7 +256,7 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r2, merge_1_2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_modified_overlapping_commit(done, logger: logging.Handler):
     c = modified_overlapping_commit_tester(done)
@@ -320,9 +320,9 @@ actor config_failure_tester(done: action(?bool, ?Exception)->None):
             testing.assertEqual(r, a0b1)
             done(True, None)
 
-        t2.apply("2", out, cont2)
+        t2.lock("2", out, cont2)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_config_failure(done, logger: logging.Handler):
     c = config_failure_tester(done)
@@ -345,7 +345,7 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
     t2.configure("2", {'srcB': a1}, out)
 
     def cont2(_r: value):
-        t1.apply("1", out, cont1)
+        t1.lock("1", out, cont1)
         t2.commit("2", False)
 
     def cont1(_r: value):
@@ -354,7 +354,7 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r.prsrc(), a0.prsrc())
         done(True, None)
 
-    t2.apply("2", out, cont2)
+    t2.lock("2", out, cont2)
 
 def _test_config_abort(done, logger: logging.Handler):
     c = config_abort_tester(done)
@@ -383,9 +383,9 @@ actor multi_apply_tester(done: action(?bool, ?Exception)->None):
             testing.assertEqual(r, tree2)
             done(True, None)
 
-        t1.apply("1", out, cont2)
+        t1.lock("1", out, cont2)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_multi_apply(done, logger: logging.Handler):
     c = multi_apply_tester(done)
@@ -417,7 +417,7 @@ actor empty_apply_tester(done: action(?bool, ?Exception)->None):
 
     def cont1(_r: value):
         t1.commit("1", True)
-        t2.apply("2", out, cont2)
+        t2.lock("2", out, cont2)
 
     def cont2(_r: value):
         t2.configure("2", {'srcB': tree2}, out)
@@ -426,7 +426,7 @@ actor empty_apply_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, tree2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_empty_apply(done, logger: logging.Handler):
     c = empty_apply_tester(done)
@@ -458,9 +458,9 @@ actor empty_apply_tester2(done: action(?bool, ?Exception)->None):
     def cont2(_r: value):
         t2.configure("2", {'srcB': tree2}, out)
         t2.commit("2", True)
-        t1.apply("1", out, cont1)
+        t1.lock("1", out, cont1)
 
-    t2.apply("2", out, cont2)
+    t2.lock("2", out, cont2)
 
 def _test_empty_apply2(done, logger: logging.Handler):
     c = empty_apply_tester2(done)
@@ -490,7 +490,7 @@ actor no_apply_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, tree2)
         done(True, None)
 
-    t2.apply("2", out, cont2)
+    t2.lock("2", out, cont2)
 
 def _test_no_apply(done, logger: logging.Handler):
     c = no_apply_tester(done)
@@ -519,7 +519,7 @@ actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, tree1)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_spurious_commit(done, logger: logging.Handler):
     c = spurious_commit_tester(done)
@@ -550,7 +550,7 @@ actor spurious_config_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, tree1)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_spurious_config(done, logger: logging.Handler):
     c = spurious_config_tester(done)

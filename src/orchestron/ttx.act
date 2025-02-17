@@ -30,7 +30,7 @@ def difference(a: ?gdata.Node, b: gdata.Node) -> gdata.Node:
     else:
         return b
 
-def diff_apply(conf: dict[str,gdata.Node], diff: dict[str,gdata.Node]) -> dict[str,gdata.Node]:
+def patch(conf: dict[str,gdata.Node], diff: dict[str,gdata.Node]) -> dict[str,gdata.Node]:
     res = {}
     for s,d in diff.items():
         if s in conf:
@@ -97,11 +97,11 @@ actor Transaction(impl: _Transaction):
         return impl.configure(tid, diff, out)
 
     # yield action
-    def apply(tid, out, done):
-        impl.apply(self, tid, out, done)
+    def lock(tid, out, done):
+        impl.lock(self, tid, out, done)
 
-    def apply_cont(res):
-        impl.apply_cont(self, res)
+    def lock_cont(res):
+        impl.lock_cont(self, res)
 
     def commit(tid, ok):
         impl.commit(tid, ok)
@@ -112,8 +112,8 @@ actor Transaction(impl: _Transaction):
 class _Transaction(object):
     configure:  proc(tid: str, diff: dict[str,gdata.Node], out: Session) -> value
     # yield action
-    apply : proc(actself: Transaction, tid: str, out: Session, done: action(value) -> None) -> None
-    apply_cont : proc(actself: Transaction, res: value) -> None
+    lock : proc(actself: Transaction, tid: str, out: Session, done: action(value) -> None) -> None
+    lock_cont : proc(actself: Transaction, res: value) -> None
     commit: proc(tid: str, ok: bool) -> None
     get: proc() -> gdata.Node
 
@@ -130,29 +130,30 @@ class _GenLayer(object):
 
 
 actor Session(impl: _Session):
-    def execute(diff, done):
-        impl.execute(self, diff, done)
+    # yield action
+    def edit_config(diff, done):
+        impl.edit_config(self, diff, done)
 
-    def execute_cont(res):
-        impl.execute_cont(res)
+    def edit_config_cont(res):
+        impl.edit_config_cont(res)
 
-    def write(tid, diff_per_source):
-        impl.write(tid, diff_per_source)
+    def configure(tid, diff_per_source):
+        impl.configure(tid, diff_per_source)
 
-    def prepare(tid):
-        return impl.prepare(tid)
+    def apply(tid):
+        return impl.apply(tid)
 
-    def finalize(tid, done):
-        impl.finalize(self, tid, done)
+    def lock(tid, done):
+        impl.lock(self, tid, done)
 
-    def finalize_cont1(res):
-        impl.finalize_cont1(self, res)
+    def lock_cont1(res):
+        impl.lock_cont1(self, res)
 
-    def finalize_cont2(res):
-        impl.finalize_cont2(res)
+    def lock_cont2(res):
+        impl.lock_cont2(res)
 
-    def close(tid, ok):
-        impl.close(tid, ok)
+    def commit(tid, ok):
+        impl.commit(tid, ok)
 
     def get():
         return impl.get()
@@ -161,16 +162,16 @@ actor Session(impl: _Session):
         return impl.below(self)
 
 class _Session(object):
-    execute:        proc(actself: Session, diff: gdata.Node, done: action(value)->None) -> None
-    execute_cont:   proc(res: value) -> None
-    write:          proc(tid: str, diff_per_source: dict[str,gdata.Node]) -> None
-    prepare:        proc(tid: str) -> value
-    finalize:       proc(actself: Session, tid: str, done: action(value)->None) -> None
-    finalize_cont1: proc(actself: Session, res: value) -> None
-    finalize_cont2: proc(res: value) -> None
-    close:          proc(tid: str, ok: bool) -> None
-    get:            proc() -> gdata.Node
-    below:          proc(actself: Session) -> Session
+    edit_config:        proc(actself: Session, diff: gdata.Node, done: action(value)->None) -> None
+    edit_config_cont:   proc(res: value) -> None
+    configure:          proc(tid: str, diff_per_source: dict[str,gdata.Node]) -> None
+    apply:              proc(tid: str) -> value
+    lock:               proc(actself: Session, tid: str, done: action(value)->None) -> None
+    lock_cont1:         proc(actself: Session, res: value) -> None
+    lock_cont2:         proc(res: value) -> None
+    commit:             proc(tid: str, ok: bool) -> None
+    get:                proc() -> gdata.Node
+    below:              proc(actself: Session) -> Session
 
 
 
@@ -222,59 +223,59 @@ class _LayerSession(_Session):
         self.tid = None
 
     # yield action
-    def execute(self, actself, diff: gdata.Node, done):
+    def edit_config(self, actself, diff: gdata.Node, done):
         tid = 'tr_' + str(self)[-10:-1]
-        #print('#### (Layer) execute', tid)
+        #print('#### (Layer) edit_config', tid)
         self.exe_cont = done
-        self.write(tid, {'_': diff})
-        res = self.prepare(tid)
+        self.configure(tid, {'_': diff})
+        res = self.apply(tid)
         #print('   # (Layer) EXECUTE', tid, 'PREP RESULT', res)
         if isinstance(res, str) and res == 'Ok':
-            self.finalize(actself, tid, actself.execute_cont)    # yield await
+            self.lock(actself, tid, actself.edit_config_cont)       # yield await
 
-    def execute_cont(self, res: value):
+    def edit_config_cont(self, res: value):
         exe_cont = self.exe_cont
         tid = self.tid
-        #print('#### (Layer) execute_cont', tid)
+        #print('#### (Layer) edit_config_cont', tid)
         if exe_cont is not None and tid is not None:
-            self.close(tid, isinstance(res, str) and res == 'Ok')
+            self.commit(tid, isinstance(res, str) and res == 'Ok')
             #print('   # (Layer) EXECUTE', tid, 'DONE', res)
             exe_cont(res)
         self.exe_cont = None
         self.tid = None
 
-    def write(self, tid: str, diff_per_source: dict[str,gdata.Node]):
+    def configure(self, tid: str, diff_per_source: dict[str,gdata.Node]):
         if tid not in self.buf:
             self.buf[tid] = {}
         self.buf[tid].update(diff_per_source.items())
 
-    def prepare(self, tid):
-        #print('#### (Layer) prepare', tid)
+    def apply(self, tid):
+        #print('#### (Layer) apply', tid)
         res = self.root.configure(tid, self.buf[tid], self.lower)
         del self.buf[tid]
         if not isinstance(res, Exception):
-            res = self.lower.prepare(tid)
+            res = self.lower.apply(tid)
         rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
         #print('   # (Layer) PREPARE', tid, 'RESULT', rr)
         return rr
 
     # yield action
-    def finalize(self, actself, tid: str, done: action(value) -> None):
-        #print('#### (Layer) finalize', tid)
+    def lock(self, actself, tid: str, done: action(value) -> None):
+        #print('#### (Layer) lock', tid)
         self.tid = tid
         self.fin_cont = done
-        self.root.apply(tid, self.lower, actself.finalize_cont1)    # yield await
+        self.root.lock(tid, self.lower, actself.lock_cont1)     # yield await
 
-    def finalize_cont1(self, actself, res: value):
+    def lock_cont1(self, actself, res: value):
         tid = self.tid
-        #print('#### (Layer) finalize_cont1', tid)
+        #print('#### (Layer) lock_cont1', tid)
         if tid is not None:
             if not isinstance(res, Exception):
                 #print('   # (Layer) FINALIZE LOWER', tid)
-                self.lower.finalize(tid, actself.finalize_cont2)  # yield await
+                self.lower.lock(tid, actself.lock_cont2)        # yield await
 
-    def finalize_cont2(self, res: value):
-        #print('#### (Layer) finalize_cont2')
+    def lock_cont2(self, res: value):
+        #print('#### (Layer) lock_cont2')
         fin_cont = self.fin_cont
         if fin_cont is not None:
             self.fin_cont = None
@@ -282,10 +283,10 @@ class _LayerSession(_Session):
             #print('   # (Layer) FINALIZE RESULT', rr)
             fin_cont(rr)
 
-    def close(self, tid, ok):
-        #print('#### (Layer) close', tid)
+    def commit(self, tid, ok):
+        #print('#### (Layer) commit', tid)
         self.root.commit(tid, ok)
-        self.lower.close(tid, ok)
+        self.lower.commit(tid, ok)
 
     def get(self):
         return self.root.get()
@@ -306,37 +307,37 @@ class _DeviceSession(_Session):
         self.cfg = {}
 
     # yield action
-    def execute(self, actself, diff: gdata.Node, done):
+    def edit_config(self, actself, diff: gdata.Node, done):
         done('Ok')      # For now...
 
-    def execute_cont(self, res: value):
+    def edit_config_cont(self, res: value):
         pass
 
-    def write(self, tid: str, diff_per_source: dict[str,gdata.Node]):
+    def configure(self, tid: str, diff_per_source: dict[str,gdata.Node]):
         #for s,c in diff_per_source.items():
-            #print('#### (Device) write', tid, 'source', s, ':', c.prsrc())
+            #print('#### (Device) configure', tid, 'source', s, ':', c.prsrc())
         if tid not in self.buf:
             self.buf[tid] = {}
         self.buf[tid].update(diff_per_source.items())
 
-    def prepare(self, tid):
-        #print('#### (Device) prepare', tid)
-        self.cfg = diff_apply(self.cfg, self.buf[tid])
+    def apply(self, tid):
+        #print('#### (Device) apply', tid)
+        self.cfg = patch(self.cfg, self.buf[tid])
         del self.buf[tid]
         return 'Ok'
 
     # yield action
-    def finalize(self, actself, tid: str, done: action(value) -> None):
+    def lock(self, actself, tid: str, done: action(value) -> None):
         done('Ok')      # For now...
 
-    def finalize_cont1(self, actself, res: value):
+    def lock_cont1(self, actself, res: value):
         pass
 
-    def finalize_cont2(self, res: value):
+    def lock_cont2(self, res: value):
         pass
 
-    def close(self, tid, ok):
-        #print('#### (Device) close', tid)
+    def commit(self, tid, ok):
+        #print('#### (Device) commit', tid)
         pass
 
     def get(self):
@@ -405,20 +406,20 @@ class _ContainerTransaction(_Transaction):
         return 'Ok'
 
     # yield action
-    def apply(self, actself, tid, out, done):
-        #print('#### (Container) apply', tid)
+    def lock(self, actself, tid, out, done):
+        #print('#### (Container) lock', tid)
         it = iter(self.accum.keys())
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
             #print('   # (Container) LOCK CHILD', key)
-            tr.apply(tid, out, actself.apply_cont)              # yield await
+            tr.lock(tid, out, actself.lock_cont)                    # yield await
         except StopIteration:
             #print('   # (Container) LOCK IMMEDIATELY DONE')
             done('Ok')
 
-    proc def apply_cont (self, actself, res):
+    proc def lock_cont (self, actself, res):
         state = self.state
         if state is not None:
             #print('   # (Container) LOCK', state.tid, 'CHILD', state.key, 'RESULT:', res)
@@ -428,13 +429,13 @@ class _ContainerTransaction(_Transaction):
                 state.key = key
                 tr = self.elems[key]
                 #print('   # (Container) LOCK CHILD', key)
-                tr.apply(state.tid, state.out, actself.apply_cont)
+                tr.lock(state.tid, state.out, actself.lock_cont)
             except StopIteration:
                 self.state = None
                 #print('   # (Container) LOCK DONE')
                 state.done(self._analyze(state.results))
         else:
-            #print('#### (Container) apply_cont empty state!!!')
+            #print('#### (Container) lock_cont empty state!!!')
             pass
 
     proc def commit(self, tid, ok):
@@ -551,20 +552,20 @@ class _ListTransaction(_Transaction):
         return res
 
     # yield action
-    def apply(self, actself, tid, out, done):
-        #print('#### (List) apply', tid)
+    def lock(self, actself, tid, out, done):
+        #print('#### (List) lock', tid)
         it = iter(self.accum.keys())
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
             #print('   # (List) LOCK ELEMENT', key)
-            tr.apply(tid, out, actself.apply_cont)                  # yield await
+            tr.lock(tid, out, actself.lock_cont)                        # yield await
         except StopIteration:
             #print('   # (List) LOCK IMMEDIATELY DONE')
             done('Ok')
 
-    proc def apply_cont (self, actself, res):
+    proc def lock_cont (self, actself, res):
         state = self.state
         if state is not None:
             #print('   # (List) LOCK', state.tid, 'ELEMENT', state.key, 'RESULT:', res)
@@ -574,14 +575,14 @@ class _ListTransaction(_Transaction):
                 state.key = key
                 tr = self.elems[key]
                 #print('   # (List) LOCK ELEMENT', key)
-                tr.apply(state.tid, state.out, actself.apply_cont)
+                tr.lock(state.tid, state.out, actself.lock_cont)
             except StopIteration:
                 self.state = None
                 #print('   # (List) LOCK DONE')
                 state.done(self._analyze(state.results))
         else:
             pass
-            #print('#### (List) apply_cont empty state!!!')
+            #print('#### (List) lock_cont empty state!!!')
 
     proc def commit(self, tid, ok):
         #print('#### (List) commit', tid)
@@ -668,7 +669,7 @@ class _TransformTransaction(_Transaction):
         else:
             self.inputs[tid] = diff
         inp = self.inputs[tid]
-        newconf = diff_apply(self.config, inp)
+        newconf = patch(self.config, inp)
         #for s,c in inp.items():
         #    print("# INPUT", tid, self.me, s, ":", c.prsrc())
         #for s,c in self.config.items():
@@ -695,14 +696,14 @@ class _TransformTransaction(_Transaction):
                 newout = self.wrapper.transform_gdata(merged)
                 self.candidates[tid] = (newconf, newout)
                 res = difference(self.output, newout)
-                out.write(tid, {self.me: res})
+                out.configure(tid, {self.me: res})
                 #print('   # (Transform) OUTPUT', tid, self.me)
                 return 'Ok'
         return 'Ok'
 
     # yield action
-    def apply(self, actself, tid, out, done):                       # yield await
-        #print("#### (Transform) apply", tid, self.me)
+    def lock(self, actself, tid, out, done):                            # yield await
+        #print("#### (Transform) lock", tid, self.me)
         locker = self.locker
         if locker is not None:
             if locker == tid:
@@ -710,7 +711,7 @@ class _TransformTransaction(_Transaction):
                 done('Ok')
             else:
                 #print('   # (Transform) SUSPENDING', tid, self.me)
-                self.pending.append((actself, tid, out, done))      # suspend
+                self.pending.append((actself, tid, out, done))          # suspend
             return
         self.locker = tid
         if tid not in self.candidates:
@@ -722,7 +723,7 @@ class _TransformTransaction(_Transaction):
             #print('   # (Transform) LOCKING', tid, self.me)
             done('Ok' if self.candidates[tid].0 else 'Empty')
 
-    def apply_cont (self, actself, res):
+    def lock_cont (self, actself, res):
         pass
 
     def commit(self, tid, ok):
@@ -742,7 +743,7 @@ class _TransformTransaction(_Transaction):
             if self.pending:
                 (actself, tid2, out, done) = self.pending.pop(0)
                 #print("   # (Transform) RESUMING", tid2, self.me)
-                self.apply(actself, tid2, out, done)                # resume
+                self.lock(actself, tid2, out, done)                     # resume
         else:
             #print('   # (Transform) IGNORING', tid, self.me)
             self.candidates.pop(tid)
