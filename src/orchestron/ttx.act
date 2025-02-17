@@ -350,14 +350,15 @@ class _DeviceSession(_Session):
 
 ############## Containers ##################
 
-def Container(template):
-    return Node(_Container(template))
+def Container(elems):
+    return Node(_Container(elems))
+
+def ContainerTemplate(elems):
+    return lambda: Node(_Container(elems))
 
 class _Container(_Node):
-    def __init__(self, template: dict[str, proc()->Node]):
-        self.elems = {}
-        for key,templ in template.items():
-            self.elems[key] = templ()
+    def __init__(self, elems: dict[str, Node]):
+        self.elems = elems
 
     def newtrans(self):
         return ContainerTransaction(self.elems)
@@ -457,6 +458,9 @@ class _ContainerTransaction(_Transaction):
 
 def List(template):
     return Node(_List(template))
+
+def ListTemplate(template):
+    return lambda: Node(_List(template))
 
 class _List(_Node):
     liststate: ListState
@@ -620,11 +624,11 @@ class TransformWrapper():
     def transform_xml(self, cfg):
         return gdata.Absent()
 
-class Identity(TransformWrapper):
-    pass
-
 
 def Transform(wrapper):
+    return Node(_Transform(wrapper))
+
+def TransformTemplate(wrapper):
     return lambda: Node(_Transform(wrapper))
 
 class _Transform(_Node):
