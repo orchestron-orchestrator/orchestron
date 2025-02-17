@@ -18,10 +18,6 @@ CONNECTED = 2
 class UnsupportedDevice(Exception):
     pass
 
-class EmptyConfig(yang.adata.MNode):
-    def to_gdata(self) -> yang.gdata.Node:
-        return yang.gdata.Root()
-
 
 actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
     """Device Manager keeps track of all devices and hands out references to
@@ -41,83 +37,6 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
 
     def on_reconf(on_reconf: action() -> None):
         reconf_cb = on_reconf
-
-
-class ModCap(object):
-    name: str
-    namespace: str
-    revision: ?str
-    feature: list[str]
-
-    def __init__(self, name: str, namespace: str, revision: ?str=None, feature: list[str]=[]):
-        self.name = name
-        self.namespace = namespace
-        self.revision = revision
-        self.feature = feature
-
-extension ModCap(Eq):
-    def __eq__(self, other: ModCap) -> bool:
-        self_revision = self.revision
-        other_revision = other.revision
-        revision_eq = (self_revision == None and other_revision == None) or (self_revision is not None and other_revision is not None and self_revision == other_revision)
-        return self.name == other.name and self.namespace == other.namespace and revision_eq and self.feature == other.feature
-
-def modcap_eq(a: dict[str, ModCap], b: dict[str, ModCap]) -> bool:
-    if len(a) != len(b):
-        return False
-    if set(a.keys()) != set(b.keys()):
-        return False
-    for k in a.keys():
-        if a[k] != b[k]:
-            return False
-    return True
-
-
-def parse_cap(tcap: str) -> ModCap:
-    parts = tcap.split("?", 1)
-
-    name = parts[0]
-    namespace = parts[0]
-    revision = None
-    feature = []
-
-    qps = {}
-    if len(parts) > 1:
-        qparts = parts[1].split("&")
-        for qpart in qparts:
-            qkvparts = qpart.split("=")
-            if len(qkvparts) == 2:
-                qk, qv = qkvparts[0], qkvparts[1]
-                qps[qk] = qv
-
-    if "module" in qps:
-        name = qps["module"]
-    if "revision" in qps:
-        revision = qps["revision"]
-
-    return ModCap(name, namespace, revision, feature)
-
-
-def _test_parse_cap_base():
-    mod = parse_cap("urn:ietf:params:netconf:base:1.1")
-    testing.assertEqual(mod.name, "urn:ietf:params:netconf:base:1.1")
-    testing.assertEqual(mod.namespace, "urn:ietf:params:netconf:base:1.1")
-    testing.assertEqual(mod.revision, None)
-    testing.assertEqual(mod.feature, [])
-
-def _test_parse_cap_xr_isis():
-    mod = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-isis-act?module=Cisco-IOS-XR-isis-act&revision=2019-10-01")
-    testing.assertEqual(mod.name, "Cisco-IOS-XR-isis-act")
-    testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-isis-act")
-    testing.assertEqual(mod.revision, "2019-10-01")
-    testing.assertEqual(mod.feature, [])
-
-def _test_parse_cap_xr_hostname():
-    mod = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21")
-    testing.assertEqual(mod.name, "Cisco-IOS-XR-um-hostname-cfg")
-    testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg")
-    testing.assertEqual(mod.revision, "2021-04-21")
-    testing.assertEqual(mod.feature, [])
 
 
 actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action() -> None=None):
@@ -334,3 +253,80 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             _transaction_done()
         else:
             _log.debug("Device._on_discard_changes went to shit")
+
+
+class ModCap(object):
+    name: str
+    namespace: str
+    revision: ?str
+    feature: list[str]
+
+    def __init__(self, name: str, namespace: str, revision: ?str=None, feature: list[str]=[]):
+        self.name = name
+        self.namespace = namespace
+        self.revision = revision
+        self.feature = feature
+
+extension ModCap(Eq):
+    def __eq__(self, other: ModCap) -> bool:
+        self_revision = self.revision
+        other_revision = other.revision
+        revision_eq = (self_revision == None and other_revision == None) or (self_revision is not None and other_revision is not None and self_revision == other_revision)
+        return self.name == other.name and self.namespace == other.namespace and revision_eq and self.feature == other.feature
+
+def modcap_eq(a: dict[str, ModCap], b: dict[str, ModCap]) -> bool:
+    if len(a) != len(b):
+        return False
+    if set(a.keys()) != set(b.keys()):
+        return False
+    for k in a.keys():
+        if a[k] != b[k]:
+            return False
+    return True
+
+
+def parse_cap(tcap: str) -> ModCap:
+    parts = tcap.split("?", 1)
+
+    name = parts[0]
+    namespace = parts[0]
+    revision = None
+    feature = []
+
+    qps = {}
+    if len(parts) > 1:
+        qparts = parts[1].split("&")
+        for qpart in qparts:
+            qkvparts = qpart.split("=")
+            if len(qkvparts) == 2:
+                qk, qv = qkvparts[0], qkvparts[1]
+                qps[qk] = qv
+
+    if "module" in qps:
+        name = qps["module"]
+    if "revision" in qps:
+        revision = qps["revision"]
+
+    return ModCap(name, namespace, revision, feature)
+
+
+def _test_parse_cap_base():
+    mod = parse_cap("urn:ietf:params:netconf:base:1.1")
+    testing.assertEqual(mod.name, "urn:ietf:params:netconf:base:1.1")
+    testing.assertEqual(mod.namespace, "urn:ietf:params:netconf:base:1.1")
+    testing.assertEqual(mod.revision, None)
+    testing.assertEqual(mod.feature, [])
+
+def _test_parse_cap_xr_isis():
+    mod = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-isis-act?module=Cisco-IOS-XR-isis-act&revision=2019-10-01")
+    testing.assertEqual(mod.name, "Cisco-IOS-XR-isis-act")
+    testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-isis-act")
+    testing.assertEqual(mod.revision, "2019-10-01")
+    testing.assertEqual(mod.feature, [])
+
+def _test_parse_cap_xr_hostname():
+    mod = parse_cap("http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21")
+    testing.assertEqual(mod.name, "Cisco-IOS-XR-um-hostname-cfg")
+    testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg")
+    testing.assertEqual(mod.revision, "2021-04-21")
+    testing.assertEqual(mod.feature, [])
