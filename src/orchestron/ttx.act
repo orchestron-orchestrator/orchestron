@@ -1,6 +1,6 @@
 #import orchestron.gdata as gdata
 import yang.gdata as gdata
-import xml
+import xml, logging
 
 def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
     cfg_per_key = {}
@@ -610,8 +610,8 @@ class TransformWrapper():
     transform_gdata: mut(gdata.Node) -> gdata.Node
     transform_xml: mut(xml.Node) -> gdata.Node
 
-    def __init__(self):
-        pass
+    def __init__(self, log_handler: ?logging.Handler=None):
+        self._log = logging.Logger(log_handler)
 
     def transform_gdata(self, cfg):
         return cfg
