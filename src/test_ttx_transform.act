@@ -115,7 +115,7 @@ def _test_multi_merge():
 
 ########################
 
-def _test_diff_apply():
+def _test_patch():
     fst = {
         'srcA': y1,
         'srcB': y2
@@ -132,7 +132,7 @@ def _test_diff_apply():
             'd': gdata.Absent()
         })
     }
-    res = ttx.diff_apply(fst, snd)
+    res = ttx.patch(fst, snd)
     exp = {
         'srcA': gdata.Container({
             'a': gdata.Leaf("int", 1)
@@ -198,11 +198,11 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
                 testing.assertEqual(r, expected)
                 done(True, None)
 
-            t3.apply("3", out, cont3)
+            t3.lock("3", out, cont3)
 
-        t2.apply("2", out, cont2)
+        t2.lock("2", out, cont2)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_basic_commit(done, logger: logging.Handler):
     c = basic_commit_tester(done)
@@ -223,7 +223,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         r = t1.get()
         testing.assertEqual(r, gdata.Absent())
         t1.commit("1", True)
-        t2.apply("2", out, cont2)
+        t2.lock("2", out, cont2)
 
     def cont2(_r: value):
         r = t2.get()
@@ -233,7 +233,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, merge_y1_y2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_overlapping_commit(done, logger: logging.Handler):
     c = overlapping_commit_tester(done)
@@ -255,7 +255,7 @@ actor modified_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, y2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_modified_commit(done, logger: logging.Handler):
     c = modified_commit_tester(done)
@@ -277,7 +277,7 @@ actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, y2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_modified_commit2(done, logger: logging.Handler):
     c = modified_commit_tester2(done)
@@ -307,7 +307,7 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     def cont1(_r: value):
         t1.configure("1", {'srcA': y1}, out)
         t1.commit("1", True)
-        t1.apply("2", out, cont2)
+        t1.lock("2", out, cont2)
 
     def cont2(_r: value):
         t2.commit("2", True)
@@ -315,7 +315,7 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, merge_y1_y2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_modified_overlapping_commit(done, logger: logging.Handler):
     c = modified_overlapping_commit_tester(done)
@@ -339,7 +339,7 @@ actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None)
 
     def cont1(_r: value):
         t1.commit("1", True)
-        t2.apply("2", out, cont2)
+        t2.lock("2", out, cont2)
 
     def cont2(_r: value):
         t2.configure("2", {'srcB': y2}, out)
@@ -348,7 +348,7 @@ actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None)
         testing.assertEqual(r, merge_y1_y2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_modified_overlapping_commit2(done, logger: logging.Handler):
     c = modified_overlapping_commit_tester2(done)
@@ -393,9 +393,9 @@ actor config_failure_tester(done: action(?bool, ?Exception)->None):
             testing.assertEqual(r, a0b1)
             done(True, None)
 
-        t2.apply("2", out, cont2)
+        t2.lock("2", out, cont2)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_config_failure(done, logger: logging.Handler):
     c = config_failure_tester(done)
@@ -414,7 +414,7 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
 
     def cont1(_r: value):
         t1.commit("1", False)
-        t2.apply("2", out, cont2)
+        t2.lock("2", out, cont2)
 
     def cont2(_r: value):
         t2.commit("2", True)
@@ -422,7 +422,7 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, a1)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_config_abort(done, logger: logging.Handler):
     c = config_abort_tester(done)
@@ -446,9 +446,9 @@ actor multi_apply_tester(done: action(?bool, ?Exception)->None):
             testing.assertEqual(r, y2)
             done(True, None)
 
-        t1.apply("1", out, cont2)
+        t1.lock("1", out, cont2)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_multi_apply(done, logger: logging.Handler):
     c = multi_apply_tester(done)
@@ -466,7 +466,7 @@ actor empty_apply_tester(done: action(?bool, ?Exception)->None):
 
     def cont1(_r: value):
         t1.commit("1", True)
-        t2.apply("2", out, cont2)
+        t2.lock("2", out, cont2)
 
     def cont2(_r: value):
         t2.configure("2", {'srcB': y2}, out)
@@ -475,7 +475,7 @@ actor empty_apply_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, y2)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_empty_apply(done, logger: logging.Handler):
     c = empty_apply_tester(done)
@@ -502,9 +502,9 @@ actor empty_apply_tester2(done: action(?bool, ?Exception)->None):
     def cont2(_r: value):
         t2.configure("2", {'srcB': y2}, out)
         t2.commit("2", True)
-        t1.apply("1", out, cont1)
+        t1.lock("1", out, cont1)
 
-    t2.apply("2", out, cont2)
+    t2.lock("2", out, cont2)
 
 def _test_empty_apply2(done, logger: logging.Handler):
     c = empty_apply_tester2(done)
@@ -529,7 +529,7 @@ actor no_apply_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, y2)
         done(True, None)
 
-    t2.apply("2", out, cont2)
+    t2.lock("2", out, cont2)
 
 def _test_no_apply(done, logger: logging.Handler):
     c = no_apply_tester(done)
@@ -553,7 +553,7 @@ actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, y1)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_spurious_commit(done, logger: logging.Handler):
     c = spurious_commit_tester(done)
@@ -579,7 +579,7 @@ actor spurious_config_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, y1)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_spurious_config(done, logger: logging.Handler):
     c = spurious_config_tester(done)

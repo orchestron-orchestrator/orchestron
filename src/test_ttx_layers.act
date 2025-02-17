@@ -82,13 +82,13 @@ actor basic_output_tester(done: action(?bool, ?Exception)->None):
     def cont1(_r: value):
         t1.commit("1", True)
         t1.get()
-        out.prepare("1")
-        out.close("1", True)
+        out.apply("1")
+        out.commit("1", True)
         r = out.get()
         testing.assertEqual(r, out1)
         done(True, None)
 
-    t1.apply("1", out, cont1)
+    t1.lock("1", out, cont1)
 
 def _test_basic_output(done, logger: logging.Handler):
     c = basic_output_tester(done)
@@ -108,7 +108,7 @@ actor layered_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1, out1)
         done(True, None)
 
-    sess.execute(cfg1, cont1)
+    sess.edit_config(cfg1, cont1)
 
 def _test_layered_commit(done, logger: logging.Handler):
     c = layered_commit_tester(done)
@@ -130,8 +130,8 @@ actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
             testing.assertEqual(r, out1_2)
             done(True, None)
 
-    sess1.execute(cfg1, cont)
-    sess2.execute(cfg2, cont)
+    sess1.edit_config(cfg1, cont)
+    sess2.edit_config(cfg2, cont)
 
 def _test_simultaneous_commit(done, logger: logging.Handler):
     c = simultaneous_commit_tester(done)
@@ -184,7 +184,7 @@ actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, out3)
         done(True, None)
 
-    sess.execute(cfg3, cont)
+    sess.edit_config(cfg3, cont)
 
 def _test_diamond_commit(done, logger: logging.Handler):
     c = diamond_commit_tester(done)
@@ -228,7 +228,7 @@ actor multi_layer_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r2, out3)
         done(True, None)
 
-    sess.execute(cfg4, cont)
+    sess.edit_config(cfg4, cont)
 
 def _test_multi_layer(done, logger: logging.Handler):
     c = multi_layer_tester(done)
