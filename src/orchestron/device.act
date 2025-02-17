@@ -45,7 +45,7 @@ extension ModCap(Eq):
     def __eq__(self, other: ModCap) -> bool:
         self_revision = self.revision
         other_revision = other.revision
-        revision_eq = (self_revision == None and other_revision == None) or (self_revision != None and other_revision != None and self_revision == other_revision)
+        revision_eq = (self_revision == None and other_revision == None) or (self_revision is not None and other_revision is not None and self_revision == other_revision)
         return self.name == other.name and self.namespace == other.namespace and revision_eq and self.feature == other.feature
 
 def modcap_eq(a: dict[str, ModCap], b: dict[str, ModCap]) -> bool:
@@ -106,9 +106,6 @@ def _test_parse_cap_xr_hostname():
     testing.assertEqual(mod.feature, [])
 
 
-
-# State machine
-# connect
 actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action() -> None=None):
     """NETCONF Device
 
@@ -141,10 +138,10 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
         if not modcap_eq(modset, new_modset):
             modset = new_modset
-            if on_reconf != None:
+            if on_reconf is not None:
                 on_reconf()
 
-        if conf != None:
+        if conf is not None:
             _log.debug("Sending config")
             edit_config(conf)
         else:
@@ -207,11 +204,11 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         addr = conf.address.elements[0]
         address = addr.address
         addr_port = addr.port
-        port = int(addr_port) if addr_port != None else 830
+        port = int(addr_port) if addr_port is not None else 830
         username = conf.credentials.username
         password = conf.credentials.password
 
-        if wcap != None and username != None and password != None:
+        if wcap is not None and username is not None and password is not None:
             state = 1
             _log.debug("Setting up NETCONF client... %s %d %s %s" % (address, port, username, password))
             c = netconf.Client(wcap, address, port, username, password,
@@ -223,7 +220,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         dmc = conf
 
     def get_capabilities():
-        if client != None:
+        if client is not None:
             return client.get_capabilities()
         return []
 
