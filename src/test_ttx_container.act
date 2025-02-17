@@ -364,7 +364,7 @@ def _test_config_abort(done, logger: logging.Handler):
 
 ########################
 
-actor multi_apply_tester(done: action(?bool, ?Exception)->None):
+actor multi_lock_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router_l = ttx.Transform(Identity)
@@ -390,8 +390,8 @@ actor multi_apply_tester(done: action(?bool, ?Exception)->None):
 
     t1.lock("1", out, cont1)
 
-def _test_multi_apply(done, logger: logging.Handler):
-    c = multi_apply_tester(done)
+def _test_multi_lock(done, logger: logging.Handler):
+    c = multi_lock_tester(done)
 
 ########################
 
@@ -404,7 +404,7 @@ tree3 = gdata.Container({
     })
 })
 
-actor empty_apply_tester(done: action(?bool, ?Exception)->None):
+actor empty_lock_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router_l = ttx.Transform(Identity)
@@ -431,12 +431,12 @@ actor empty_apply_tester(done: action(?bool, ?Exception)->None):
 
     t1.lock("1", out, cont1)
 
-def _test_empty_apply(done, logger: logging.Handler):
-    c = empty_apply_tester(done)
+def _test_empty_lock(done, logger: logging.Handler):
+    c = empty_lock_tester(done)
 
 ########################
 
-actor empty_apply_tester2(done: action(?bool, ?Exception)->None):
+actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router_l = ttx.Transform(Identity)
@@ -465,12 +465,12 @@ actor empty_apply_tester2(done: action(?bool, ?Exception)->None):
 
     t2.lock("2", out, cont2)
 
-def _test_empty_apply2(done, logger: logging.Handler):
-    c = empty_apply_tester2(done)
+def _test_empty_lock2(done, logger: logging.Handler):
+    c = empty_lock_tester2(done)
 
 ########################
 
-actor no_apply_tester(done: action(?bool, ?Exception)->None):
+actor no_lock_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
     router_l = ttx.Transform(Identity)
@@ -495,8 +495,8 @@ actor no_apply_tester(done: action(?bool, ?Exception)->None):
 
     t2.lock("2", out, cont2)
 
-def _test_no_apply(done, logger: logging.Handler):
-    c = no_apply_tester(done)
+def _test_no_lock(done, logger: logging.Handler):
+    c = no_lock_tester(done)
 
 ########################
 
