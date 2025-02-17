@@ -89,6 +89,10 @@ merge_y1_y2 = gdata.Container({
     "d": gdata.LeafList(["a", "b", "c"])
 })
 
+class PassThrough(ttx.TransformWrapper):
+    pass
+
+
 ########################
 
 def _test_transpose():
@@ -154,7 +158,7 @@ def _test_patch():
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
     t3 = router.newtrans()
@@ -212,7 +216,7 @@ def _test_basic_commit(done, logger: logging.Handler):
 actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -243,7 +247,7 @@ def _test_overlapping_commit(done, logger: logging.Handler):
 actor modified_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
 
     t1.configure("1", {'srcA': y1}, out)
@@ -265,7 +269,7 @@ def _test_modified_commit(done, logger: logging.Handler):
 actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
 
     t1.configure("1", {'srcA': y1}, out)
@@ -297,7 +301,7 @@ y0 = gdata.Container({
 actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -330,7 +334,7 @@ y3 = gdata.Container({
 actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -375,7 +379,7 @@ a0b1 = gdata.Container({
 actor config_failure_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -405,7 +409,7 @@ def _test_config_failure(done, logger: logging.Handler):
 actor config_abort_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -432,7 +436,7 @@ def _test_config_abort(done, logger: logging.Handler):
 actor multi_apply_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
 
     t1.configure("1", {'srcA': y1}, out)
@@ -458,7 +462,7 @@ def _test_multi_apply(done, logger: logging.Handler):
 actor empty_apply_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -485,7 +489,7 @@ def _test_empty_apply(done, logger: logging.Handler):
 actor empty_apply_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -514,7 +518,7 @@ def _test_empty_apply2(done, logger: logging.Handler):
 actor no_apply_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -539,7 +543,7 @@ def _test_no_apply(done, logger: logging.Handler):
 actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -563,7 +567,7 @@ def _test_spurious_commit(done, logger: logging.Handler):
 actor spurious_config_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Devices()
     out = devices.newsession()
-    router = ttx.Transform(ttx.Identity)()
+    router = ttx.Transform(PassThrough)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
