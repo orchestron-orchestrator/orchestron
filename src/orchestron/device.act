@@ -8,6 +8,13 @@ from orchestron.device_meta_config import orchestron_rfs__device_entry as Device
 
 import netconf
 
+NO_TRANSACTION = 0
+IN_TRANSACTION = 1
+
+NOT_CONNECTED = 0
+CONNECTING = 1
+CONNECTED = 2
+
 class UnsupportedDevice(Exception):
     pass
 
@@ -17,6 +24,12 @@ class EmptyConfig(yang.adata.MNode):
 
 
 actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
+    """Device Manager keeps track of all devices and hands out references to
+    them based on name.
+
+    There must only be a single Device instance per device, i.e. the same device
+    name must always return the same Device instance.
+    """
     var devices = {}
     var reconf_cb: ?action() -> None = None
 
@@ -28,6 +41,7 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
 
     def on_reconf(on_reconf: action() -> None):
         reconf_cb = on_reconf
+
 
 class ModCap(object):
     name: str
@@ -112,12 +126,27 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     Some day this will be the base class for all devices and we'll support all
     kinds of device types and protocols but for now we are just doing NETCONF.
     """
+    # Orchestron's intended configuration, that we want on the device. Note how
+    # this is NOT the NMDA-speak "intended configuration" of the device itself
+    var intended_conf: ?yang.gdata.Node = None
+    # The currently running configuration on the device (which in NMDA lingo is
+    # the "intended configuration" of the device)
+    var running_conf: ?yang.gdata.Node = None
+
+    # The device's meta configuration, like address, credentials, etc.
     var dmc: ?DeviceMetaConfig = None
+
+    # The NETCONF client connection to the device
     var client: ?netconf.Client = None
-    var conf: ?yang.gdata.Node = None
+
+    # If we need to push configuration again after a transaction is done. This
+    # happens when the configuration changes while we have an outstanding
+    # in-progress transaction to the device.
     var again = False
-    var state = 0
-    var t_state = 0
+
+    var conn_state = NOT_CONNECTED
+    var txn_state = NO_TRANSACTION
+
     var modset: dict[str, ModCap] = {}
     var subs = []
 
@@ -126,7 +155,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     def _on_connect(c):
         _log.info("Connected to device")
-        state = 2
+        conn_state = CONNECTED
 
         # TODO: actonc bug - try uncommenting this
         # for cap in c.get_capabilities():
@@ -141,11 +170,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             if on_reconf is not None:
                 on_reconf()
 
-        if conf is not None:
-            _log.debug("Sending config")
-            edit_config(conf)
-        else:
-            _log.debug("No config to send")
+        _send_config()
 
     def _on_error(c, error):
         modset = {}
@@ -159,7 +184,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
         if wcap == None:
             _log.debug("Device in MOCK mode, pretending to connect to device...")
-            state = 2
+            state = CONNECTED
 
             preset_caps = []
             if "cisco-ios-xr" in conf.mock.preset:
@@ -185,7 +210,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                     modset[m.name] = m
             return
 
-        if state > 0:
+        if conn_state == CONNECTED:
             _log.debug("Device already connected, ignoring new config")
             return
 
@@ -209,7 +234,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         password = conf.credentials.password
 
         if wcap is not None and username is not None and password is not None:
-            state = 1
+            conn_state = CONNECTING
             _log.debug("Setting up NETCONF client... %s %d %s %s" % (address, port, username, password))
             c = netconf.Client(wcap, address, port, username, password,
                                on_connect=_on_connect,
@@ -218,6 +243,17 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                                log_handler=log_handler)
             client = c
         dmc = conf
+
+    def edit_config(new_conf: yang.gdata.Node):
+        # TODO: remove this, and use configure instead
+        return configure(new_conf)
+
+    def configure(new_conf: yang.gdata.Node):
+        if intended_conf == new_conf:
+            _log.debug("Ignoring new configuration identical to current intended configuration")
+        else:
+            intended_conf = new_conf
+            _send_config()
 
     def get_capabilities():
         if client is not None:
@@ -230,44 +266,44 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def _is_writable_running():
         return ":writable-running" in modset
 
-    def _conf_again():
+    def _transaction_done():
+        """Internal function called when transaction is done
+        """
+        txn_state = NO_TRANSACTION
+
         if again:
-            _log.debug("Device._conf_again")
+            _log.debug("Configuration changed during in-progress transaction, running again...")
             again = False
-            if conf is not None:
-                _edit_config(conf)
+            _send_config()
 
-    def edit_config(new_conf: yang.gdata.Node):
-        _log.debug("Device.edit_config")
-        if conf == new_conf:
-            _log.debug("Device.edit_config config is same as current, noop")
+    def _send_config():
+        """Attempt to send the intended configuration to the device"""
+        if intended_conf is None:
+            _log.debug("Device has no intended configuration")
             return
-        _edit_config(new_conf)
-
-    def _edit_config(new_conf: yang.gdata.Node):
-        conf = new_conf
-        if state != 2:
-            _log.debug("Device.edit_config not connected yet, storing config")
+        if conn_state != CONNECTED:
+            _log.debug("Device not connected, cannot send configuration")
             return
-        if wcap == None:
-            _log.debug("Device in MOCK mode, \"sending config\"... *hihi*")
-            return
-        if client is not None:
-            _log.debug("Device.edit_config Sending config...")
-            xml_conf = new_conf.to_xmlstr(pretty=False)
-            if xml_conf == "":
-                # Cisco IOS XRd doesn't like empty <edit-config>, returns error
-                _log.debug("Device.edit_config Config is empty, noop")
+        if intended_conf is not None:
+            if wcap == None:
+                _log.debug("Device in MOCK mode, \"sending config\"... *hihi*")
                 return
-            if t_state == 1:
-                _log.debug("Device.edit_config in progress transaction, storing config")
-                again = True
-                return
-            t_state = 1
-            if _is_writable_running():
-                client.edit_config(xml_conf, _on_conf)
-            else:
-                client.edit_config(xml_conf, _on_conf, datastore="candidate")
+            if client is not None:
+                _log.debug("Device.edit_config Sending config...")
+                xml_conf = intended_conf.to_xmlstr(pretty=False)
+                if xml_conf == "":
+                    # Cisco IOS XRd doesn't like empty <edit-config>, returns error
+                    _log.debug("Device.edit_config Config is empty, noop")
+                    return
+                if txn_state == IN_TRANSACTION:
+                    _log.debug("Device.edit_config in progress transaction, storing config")
+                    again = True
+                    return
+                txn_state = IN_TRANSACTION
+                if _is_writable_running():
+                    client.edit_config(xml_conf, _on_conf)
+                else:
+                    client.edit_config(xml_conf, _on_conf, datastore="candidate")
 
     def _on_conf(c, r):
         if r is not None:
@@ -276,8 +312,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                 # We edit-config'd candidate, now commit
                 c.commit(_on_commit)
             else:
-                t_state = 0
-                _conf_again()
+                _transaction_done()
         else:
             _log.debug("Device._on_conf went to shit")
 
@@ -289,15 +324,13 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                 # TODO: what if the device does this (:rollback-on-error)?!
                 c.discard_changes(_on_discard_changes)
             else:
-                t_state = 0
-                _conf_again()
+                _transaction_done()
         else:
             _log.debug("Device._on_commit went to shit")
 
     def _on_discard_changes(c, r):
         if r is not None:
             _log.debug("Device._on_discard_changes", {"r": r.encode()})
-            t_state = 0
-            _conf_again()
+            _transaction_done()
         else:
             _log.debug("Device._on_discard_changes went to shit")

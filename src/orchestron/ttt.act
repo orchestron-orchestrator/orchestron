@@ -270,4 +270,4 @@ class TTTDeviceConfig(TTTNode):
                 dev = self.dev_mgr.get(name)
                 dev_config = yang.gdata.Root(dev_config_cntr.children)
                 self._log.debug("TTTDeviceConfig.configure output", {"name": name, "config": dev_config.to_xmlstr()})
-                dev.edit_config(dev_config)
+                dev.configure(dev_config)
