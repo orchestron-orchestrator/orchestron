@@ -1,8 +1,11 @@
 import file
+import re
 import yang
 import yang.schema
 import orchestron.ttt_gen as ttt_gen
 import orchestron.yang as oyang
+import transform_unions
+import yang.parser
 
 
 class SysSpec(object):
@@ -89,6 +92,58 @@ class SysSpec(object):
         await async wf_appttt.write(tttsrc.encode())
         await async wf_appttt.close()
 
+class SchemaTransformChain:
+    """SchemaTransform chain to be applied to a YANG module
+
+    Use the SchemaTransformChain to apply a series of schema transforms to a
+    YANG module. Note that this is a temporary solution until we come up with a
+    better design for SysSpec using a build graph.
+
+    The module_pattern attribute is a regex pattern that may match multiple
+    modules. The input module names must end in .yang.orig and be placed in the
+    search directory. After transforming the outputs are saved in a module
+    without the .orig suffix.
+    """
+    def __init__(self, module_pattern: str, transforms: list[SchemaTransform]):
+        self.module_pattern = module_pattern
+        self.transforms = transforms
+
+    def apply(self, yang_text: str) -> str:
+        for t in self.transforms:
+            yang_text = t.apply(yang_text)
+        return yang_text
+
+    def matches(self, module: str) -> bool:
+        m = re.match(self.module_pattern, module)
+        return True if m is not None else False
+
+class SchemaTransform:
+    """SchemaTransform to be applied to a YANG module
+    """
+    name: str
+
+    # The apply method effect is incorrecty inferred as mut. It is true that
+    # the implementations call mut functions, but these effects do not leak
+    # outside of the apply() method.
+    def apply(self, yang_text: str) -> str:
+        raise NotImplementedError()
+
+class SchemaTransformNoComments(SchemaTransform):
+    def __init__(self):
+        self.name = "no_comments"
+
+    def apply(self, yang_text: str) -> str:
+        y = yang.parser.parse(yang_text)
+        return y.pryang()
+
+class SchemaTransformUnions(SchemaTransform):
+    def __init__(self):
+        self.name = "rewrite_unions"
+
+    def apply(self, yang_text: str) -> str:
+        n = yang.schema_from_src(yang_text)
+        transform_unions.rewrite_unions(n)
+        return n.to_statement().pryang()
 
 class Layer(object):
     """Orchestration System layer definition
@@ -99,6 +154,37 @@ class Layer(object):
         self.models = models
         self.name = name
 
+def apply_schema_transforms_to_dir(fc: file.FileCap, dir: str, transforms: list[SchemaTransformChain]=[]) -> None:
+    """Apply schema transformations to YANG files in a directory.
+
+    This function processes files in the specified directory using the provided
+    transform chains. Files that match a transform chain's pattern will be
+    processed and the transformed output will be written back to the same
+    directory without the .orig suffix.
+    """
+    rfc = file.ReadFileCap(fc)
+    wfc = file.WriteFileCap(fc)
+    fs = file.FS(fc)
+
+    for in_name in fs.listdir(dir):
+        yang_text = None
+        for tc in transforms:
+            if not tc.matches(in_name):
+                continue
+            if yang_text is None:
+                rf = file.ReadFile(rfc, file.join_path([dir, in_name]))
+                yang_text = rf.read().decode()
+            if yang_text is not None:
+                for t in tc.transforms:
+                    print("Applying transform %s to %s" % (t.name, in_name))
+                    yang_text = t.apply(yang_text)
+        if yang_text is not None:
+            # Remove the .orig suffix
+            out_name = in_name[:-5]
+            print("Writing %s" % out_name)
+            wf = file.WriteFile(wfc, file.join_path([dir, out_name]))
+            await async wf.write(yang_text.encode())
+
 class DeviceType(object):
     def __init__(self, name: str, models: list[str]):
         self.name = name
@@ -106,9 +192,15 @@ class DeviceType(object):
 
     @staticmethod
     def from_dir(fc: file.FileCap, name: str, dir: str) -> DeviceType:
+        """Create a DeviceType DTO from YANG models in a directory
+
+        This method simply loads all .yang files from the specified directory
+        to create a DeviceType.
+        """
         rfc = file.ReadFileCap(fc)
-        models = []
         fs = file.FS(fc)
+        models = []
+
         for f in fs.listdir(dir):
             if f.endswith(".yang"):
                 rf = file.ReadFile(rfc, "%s/%s" % (dir, f))
