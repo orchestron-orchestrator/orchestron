@@ -1,4 +1,5 @@
 import file
+import process
 import re
 import yang
 import yang.schema
@@ -162,7 +163,7 @@ class DeviceType(object):
         self.transforms = transforms
 
     @staticmethod
-    def from_dir(fc: file.FileCap, name: str, dir: str, transforms: list[SchemaTransformChain]=[]) -> DeviceType:
+    def from_dir(fc: file.FileCap, pc: process.ProcessCap, name: str, dir: str, transforms: list[SchemaTransformChain]=[]) -> DeviceType:
         rfc = file.ReadFileCap(fc)
         wfc = file.WriteFileCap(fc)
         models = []
@@ -187,8 +188,54 @@ class DeviceType(object):
                 wf = file.WriteFile(wfc, file.join_path([dir, out_name]))
                 await async wf.write(yang_text.encode())
 
+                # Use pyang to print out the tree
+                # TODO: *acton-yang* should be able to do this
+                out_tree_name = out_name.replace(".yang", ".txt")
+                cmd = ["pyang", "--ignore-error", "MODULE_NOT_FOUND", "--ignore-error", "PREFIX_NOT_DEFINED", "-f", "tree", out_name]
+                pyang = RunProcessSync(pc, cmd, dir)
+                while True:
+                    done = await async pyang.is_done()
+                    if done:
+                        break
+                exit_code, stdout, stderr = pyang.result()
+                if exit_code != 0:
+                    print("pyang failed: %s" % str(stderr), err=True)
+                else:
+                    print("Writing %s" % out_tree_name)
+                    wg = file.WriteFile(wfc, file.join_path([dir, out_tree_name]))
+                    await async wg.write(stdout)
+
         for f in fs.listdir(dir):
             if f.endswith(".yang"):
                 rf = file.ReadFile(rfc, "%s/%s" % (dir, f))
                 models.append(rf.read().decode())
         return DeviceType(name, models)
+
+actor RunProcessSync(cap: process.ProcessCap,
+                     cmd: list[str],
+                     workdir: ?str):
+    """Run a process and wait for it to finish
+    """
+    var done = False
+    var _out_buf = b""
+    var _err_buf = b""
+    var _exit_code = 0
+
+    def _on_exit(p, exit_code, signal, out_buf, err_buf):
+        done = True
+        _exit_code = exit_code
+        _out_buf = out_buf
+        _err_buf = err_buf
+
+    def _on_error(p, error):
+        done = True
+        _exit_code = 1
+        _err_buf = error
+
+    _p = process.RunProcess(cap, cmd, _on_exit, _on_error, workdir)
+
+    def result():
+        return _exit_code, _out_buf, _err_buf
+
+    def is_done():
+        return done
