@@ -57,7 +57,7 @@ out1_2 = gdata.Container({
 })
 
 class TransF(ttx.TransformWrapper):
-    def transform_gdata(self, cfg):
+    def transform_gdata(self, cfg, key_ctx):
         if isinstance(cfg, gdata.ListElement):
             return gdata.Container({
                 'devices': gdata.List(["id"], [
@@ -159,7 +159,7 @@ out3 = gdata.Container({
 })
 
 class WriteDev(ttx.TransformWrapper):
-    def transform_gdata(self, cfg: gdata.Node):
+    def transform_gdata(self, cfg: gdata.Node, key_ctx):
         i = cfg.get_int("a")
         return gdata.Container({
             'devices': gdata.List(["id"], [
@@ -197,7 +197,7 @@ cfg4 = gdata.Container({
 })
 
 class ServiceMap(ttx.TransformWrapper):
-    def transform_gdata(self, cfg):
+    def transform_gdata(self, cfg, key_ctx):
         ll = cfg.get_int("ll")
         rr = cfg.get_int("rr")
         return gdata.Container({
