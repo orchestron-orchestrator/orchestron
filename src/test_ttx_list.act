@@ -53,7 +53,7 @@ merge_1_2 = gdata.List(["name"], [
     })
 ])
 
-class PassThrough(ttx.TransformWrapper):
+class PassThrough(ttx.TransformFunction):
     pass
 
 

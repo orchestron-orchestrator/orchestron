@@ -62,7 +62,7 @@ merge_1_2 = gdata.Container({
     })
 })
 
-class Identity(ttx.TransformWrapper):
+class Identity(ttx.TransformFunction):
     pass
 
 

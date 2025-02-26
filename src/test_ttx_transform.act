@@ -89,7 +89,7 @@ merge_y1_y2 = gdata.Container({
     "d": gdata.LeafList(["a", "b", "c"])
 })
 
-class PassThrough(ttx.TransformWrapper):
+class PassThrough(ttx.TransformFunction):
     pass
 
 

@@ -1,5 +1,7 @@
+import yang.adata
 #import orchestron.gdata as gdata
 import yang.gdata as gdata
+import orchestron.device as odev
 import xml, logging
 
 def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
@@ -350,10 +352,10 @@ class _DeviceSession(_Session):
 
 ############## Containers ##################
 
-def Container(elems):
+def Container(elems={}):
     return Node(_Container(elems))
 
-def ContainerTemplate(elems):
+def ContainerTemplate(elems={}):
     return lambda: Node(_Container(elems))
 
 class _Container(_Node):
@@ -613,29 +615,51 @@ def ListTransaction(liststate:ListState):
 
 ################# Transforms ####################
 
-class TransformWrapper():
-    transform_gdata: mut(gdata.Node, list[str]) -> gdata.Node
-    transform_xml: mut(xml.Node, list[str]) -> gdata.Node
+class TransformFunction(object):
+    transform_gdata: mut(gdata.Node) -> gdata.Node
+    transform_xml: mut(xml.Node) -> gdata.Node
+    logger: logging.Logger
+    key_ctx: list[str]
 
-    def __init__(self, log_handler: ?logging.Handler=None):
-        self._log = logging.Logger(log_handler)
+    def __init__(self, logger: logging.Logger, key_ctx: list[str]):
+        self.logger = logger
+        self.key_ctx = key_ctx
 
-    def transform_gdata(self, cfg, key_ctx):
+    def transform_gdata(self, cfg):
         return cfg
 
-    def transform_xml(self, cfg, key_ctx):
+    def transform_xml(self, cfg):
         return gdata.Absent()
 
+class RFSFunction(TransformFunction):
+    device_name: str
+    device_modules: dict[str, odev.ModCap]
 
-def Transform(wrapper):
-    return Node(_Transform(wrapper))
+    def __init__(self, dev_mgr: odev.DeviceManager, logger: logging.Logger, key_ctx: list[str]):
+        TransformFunction.__init__(self, logger, key_ctx)
+        if len(key_ctx) < 2:
+            raise ValueError("RFSTransform key_ctx length < 2")
+        dev_name = key_ctx[-2]
+        dev = dev_mgr.get(dev_name)
+        self.device_name = dev_name
+        self.device_modules = dev.get_modules()
 
-def TransformTemplate(wrapper):
-    return lambda: Node(_Transform(wrapper))
+#def RFSTransform(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+#    return Node(_Transform(lambda logger, keys: function(dev_mgr, logger, keys), log_handler))
+
+#def RFSTransformTemplate(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+#    return lambda: Node(_Transform(lambda logger, keys: function(dev_mgr, logger, keys), log_handler))
+
+
+def Transform(function, log_handler: ?logging.Handler=None):
+    return Node(_Transform(function, log_handler))
+
+def TransformTemplate(function, log_handler: ?logging.Handler=None):
+    return lambda: Node(_Transform(function, log_handler))
 
 class _Transform(_Node):
-    def __init__(self, wrapper):
-        self.transaction = TransformTransaction(wrapper)
+    def __init__(self, function, log_handler):
+        self.transaction = TransformTransaction(function, logging.Logger(log_handler))
 
     def newtrans(self):
         return self.transaction
@@ -643,12 +667,14 @@ class _Transform(_Node):
     def get(self):
         return self.transaction.get()
 
-def TransformTransaction(wrapper):
-    return Transaction(_TransformTransaction(wrapper))
+def TransformTransaction(function, log_handler):
+    return Transaction(_TransformTransaction(function, log_handler))
 
 class _TransformTransaction(_Transaction):
     @property
-    wrapper: TransformWrapper
+    logger: logging.Logger
+    @property
+    function: mut(logging.Logger, list[str]) -> TransformFunction
 
     inputs: dict[str, dict[str, gdata.Node]]
     key_ctx: dict[str, list[str]]
@@ -659,8 +685,9 @@ class _TransformTransaction(_Transaction):
     pending: list[(Transaction, str, Session, action(value)->None)]
     me: str
 
-    def __init__(self, wrapper):
-        self.wrapper = wrapper()
+    def __init__(self, function, logger):
+        self.function = function
+        self.logger = logger
         self.inputs = {}
         self.key_ctx = {}
         self.config = {}
@@ -702,7 +729,8 @@ class _TransformTransaction(_Transaction):
                 #print('   # (Transform) FAILURE', tid, self.me, e)
                 return e
             else:
-                newout = self.wrapper.transform_gdata(merged, key_ctx)
+                fun = self.function(self.logger, key_ctx)
+                newout = fun.transform_gdata(merged)
                 self.candidates[tid] = (newconf, newout)
                 res = difference(self.output, newout)
                 out.configure(tid, {self.me: res})
