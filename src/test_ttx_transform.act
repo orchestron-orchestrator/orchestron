@@ -167,6 +167,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
 
     def cont1(_r: value):
         t1.commit("1", True)
+        r = t1.get()
         t2.configure("2", {'srcB': y2}, out)
 
         def cont2(_r: value):
@@ -592,4 +593,4 @@ def _test_spurious_config(done, logger: logging.Handler):
 
 
 actor main(env):
-    empty_lock_tester2(lambda s,e: env.exit(0))
+    basic_commit_tester(lambda s,e: env.exit(0))

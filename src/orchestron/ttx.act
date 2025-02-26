@@ -644,11 +644,11 @@ class RFSFunction(TransformFunction):
         self.device_name = dev_name
         self.device_modules = dev.get_modules()
 
-#def RFSTransform(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
-#    return Node(_Transform(lambda logger, keys: function(dev_mgr, logger, keys), log_handler))
+def RFSTransform(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return Node(_Transform(lambda logger, keys: function(dev_mgr, logger, keys), log_handler))
 
-#def RFSTransformTemplate(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
-#    return lambda: Node(_Transform(lambda logger, keys: function(dev_mgr, logger, keys), log_handler))
+def RFSTransformTemplate(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return lambda: Node(_Transform(lambda logger, keys: function(dev_mgr, logger, keys), log_handler))
 
 
 def Transform(function, log_handler: ?logging.Handler=None):
@@ -674,7 +674,7 @@ class _TransformTransaction(_Transaction):
     @property
     logger: logging.Logger
     @property
-    function: mut(logging.Logger, list[str]) -> TransformFunction
+    function: proc(logging.Logger, list[str]) -> TransformFunction
 
     inputs: dict[str, dict[str, gdata.Node]]
     key_ctx: dict[str, list[str]]
