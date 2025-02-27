@@ -2,6 +2,7 @@ import yang.adata
 #import orchestron.gdata as gdata
 import yang.gdata as gdata
 import orchestron.device as odev
+from orchestron.device_meta_config import orchestron_rfs__device_entry as DeviceMetaConfig
 import xml, logging
 
 def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
@@ -192,10 +193,10 @@ class _Layer(_GenLayer):
         return LayerSession(self.root, self.lower)
 
 
-def Devices():
-    return GenLayer(_Devices(DeviceSession()))
+def Sink():
+    return GenLayer(_Sink(SinkSession()))
 
-class _Devices(_GenLayer):
+class _Sink(_GenLayer):
     session: Session
 
     def __init__(self, session):
@@ -297,10 +298,10 @@ class _LayerSession(_Session):
         return self.lower
 
 
-def DeviceSession():
-    return Session(_DeviceSession())
+def SinkSession():
+    return Session(_SinkSession())
 
-class _DeviceSession(_Session):
+class _SinkSession(_Session):
     buf: dict[str, dict[str,gdata.Node]]
     cfg: dict[str,gdata.Node]
 
@@ -317,13 +318,13 @@ class _DeviceSession(_Session):
 
     def configure(self, tid: str, diff_per_source: dict[str,gdata.Node]):
         #for s,c in diff_per_source.items():
-            #print('#### (Device) configure', tid, 'source', s, ':', c.prsrc())
+            #print('#### (Sink) configure', tid, 'source', s, ':', c.prsrc())
         if tid not in self.buf:
             self.buf[tid] = {}
         self.buf[tid].update(diff_per_source.items())
 
     def apply(self, tid):
-        #print('#### (Device) apply', tid)
+        #print('#### (Sink) apply', tid)
         self.cfg = patch(self.cfg, self.buf[tid])
         del self.buf[tid]
         return 'Ok'
@@ -339,7 +340,7 @@ class _DeviceSession(_Session):
         pass
 
     def commit(self, tid, ok):
-        #print('#### (Device) commit', tid)
+        #print('#### (Sink) commit', tid)
         pass
 
     def get(self):

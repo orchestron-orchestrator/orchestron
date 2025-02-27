@@ -60,7 +60,7 @@ class PassThrough(ttx.TransformFunction):
 ########################
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Devices()
+    devices = ttx.Sink()
     out = devices.newsession()
     router = ttx.TransformTemplate(PassThrough)
     tlist = ttx.List(router)
@@ -82,7 +82,7 @@ def _test_basic_commit(done, logger: logging.Handler):
 ########################
 
 actor basic_delete_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Devices()
+    devices = ttx.Sink()
     out = devices.newsession()
     router = ttx.TransformTemplate(PassThrough)
     tlist = ttx.List(router)
@@ -129,7 +129,7 @@ list1 = gdata.List(["name"], [
 ])
 
 actor simultaneous_create_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Devices()
+    devices = ttx.Sink()
     out = devices.newsession()
     router = ttx.TransformTemplate(PassThrough)
     tlist = ttx.List(router)
@@ -156,7 +156,7 @@ def _test_simultaneous_create(done, logger: logging.Handler):
 ########################
 
 actor aborted_create_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Devices()
+    devices = ttx.Sink()
     out = devices.newsession()
     router = ttx.TransformTemplate(PassThrough)
     tlist = ttx.List(router)
@@ -201,7 +201,7 @@ y2b = gdata.List(["name"], [
 ])
 
 actor aborted_create_tester2(done: action(?bool, ?Exception)->None):
-    devices = ttx.Devices()
+    devices = ttx.Sink()
     out = devices.newsession()
     router = ttx.TransformTemplate(PassThrough)
     tlist = ttx.List(router)

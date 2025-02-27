@@ -71,7 +71,7 @@ class TransF(ttx.TransformFunction):
 ########################
 
 actor basic_output_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Devices()
+    devices = ttx.Sink()
     out = devices.newsession()
     router = ttx.TransformTemplate(TransF)
     tlist = ttx.List(router)
@@ -97,7 +97,7 @@ def _test_basic_output(done, logger: logging.Handler):
 
 actor layered_commit_tester(done: action(?bool, ?Exception)->None):
     stack = ttx.Layer(ttx.List(ttx.TransformTemplate(TransF)),
-                      ttx.Devices())
+                      ttx.Sink())
 
     sess = stack.newsession()
 
@@ -116,7 +116,7 @@ def _test_layered_commit(done, logger: logging.Handler):
 ########################
 
 actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer(ttx.List(ttx.TransformTemplate(TransF)), ttx.Devices())
+    stack = ttx.Layer(ttx.List(ttx.TransformTemplate(TransF)), ttx.Sink())
     
     sess1 = stack.newsession()
     sess2 = stack.newsession()
@@ -175,7 +175,7 @@ actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
             "left": ttx.Transform(WriteDev),
             "right": ttx.Transform(WriteDev)
         }),
-        ttx.Devices())
+        ttx.Sink())
 
     sess = stack.newsession()
 
@@ -217,7 +217,7 @@ actor multi_layer_tester(done: action(?bool, ?Exception)->None):
                         "left": ttx.Transform(WriteDev),
                         "right": ttx.Transform(WriteDev)
                     }),
-                    ttx.Devices()))
+                    ttx.Sink()))
 
     sess = stack.newsession()
 
