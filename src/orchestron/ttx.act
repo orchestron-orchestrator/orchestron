@@ -259,7 +259,7 @@ class _LayerSession(_Session):
         if not isinstance(res, Exception):
             res = self.lower.apply(tid)
         rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
-        #print('   # (Layer) PREPARE', tid, 'RESULT', rr)
+        #print('   # (Layer) APPLY', tid, 'RESULT', rr)
         return rr
 
     # yield action
@@ -393,7 +393,8 @@ class _ContainerTransaction(_Transaction):
         msgs = {}
         for child,subdiff in diff_by_child.items():
             #print('   # (Container) CONFIGURE CHILD', child)
-            msgs[child] = async self.elems[child].configure(tid, subdiff, out, key_ctx)
+            if child in self.elems:
+                msgs[child] = async self.elems[child].configure(tid, subdiff, out, key_ctx)
         results = {}
         for child,msg in msgs.items():
             results[child] = await msg
@@ -640,7 +641,7 @@ class _TransformTransactionBase(_Transaction):
         self.me = '(src_' + str(self)[-10:-1] + ')'
 
     def configure(self, tid, diff, out, key_ctx):
-        #print('#### (Transform) configure', tid, self.me)
+        #print('#### (Transform) configure', tid, self.me, key_ctx)
         if tid in self.inputs:
             self.inputs[tid].update(diff.items())
         else:
@@ -776,7 +777,7 @@ class TransformFunction(object):
         self.logger = logging.Logger(log_handler)
 
     def transform_wrapper(self, cfg):
-        return cfg
+        return gdata.Absent()
 
     def transform_xml(self, cfg):
         return gdata.Absent()
@@ -853,7 +854,7 @@ class RFSFunction(object):
         self.logger = logging.Logger(log_handler)
 
     def transform_wrapper(self, cfg, di):
-        return cfg
+        return gdata.Absent()
 
     def transform_xml(self, cfg, di):
         return gdata.Absent()

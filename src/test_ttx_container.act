@@ -63,7 +63,8 @@ merge_1_2 = gdata.Container({
 })
 
 class Identity(ttx.TransformFunction):
-    pass
+    def transform_wrapper(self, cfg):
+        return cfg
 
 
 ########################
