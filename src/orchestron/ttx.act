@@ -614,7 +614,7 @@ def ListTransaction(liststate:ListState):
     return Transaction(_ListTransaction(liststate))
 
 
-################# Transforms ####################
+################# Transform #####################
 
 class _TransformTransactionBase(_Transaction):
     inputs: dict[str, dict[str, gdata.Node]]
@@ -626,8 +626,8 @@ class _TransformTransactionBase(_Transaction):
     pending: list[(Transaction, str, Session, action(value)->None)]
     me: str
 
-    execute : proc(tid: str, merged: gdata.Node, out: Session, key_ctx: list[str]) -> gdata.Node
-    finalize : proc(config: dict[str, gdata.Node], output: ?gdata.Node) -> None
+    compute : proc(tid: str, merged: gdata.Node, out: Session, key_ctx: list[str]) -> gdata.Node
+    finalize : proc() -> None
 
     def __init__(self):
         self.inputs = {}
@@ -671,7 +671,7 @@ class _TransformTransactionBase(_Transaction):
                 #print('   # (Transform) FAILURE', tid, self.me, e)
                 return e
             else:
-                newout = self.execute(tid, merged, out, key_ctx)
+                newout = self.compute(tid, merged, out, key_ctx)
                 self.candidates[tid] = (newconf, newout)
                 #print('   # (Transform) OUTPUT', tid, self.me)
                 return 'Ok'
@@ -709,9 +709,11 @@ class _TransformTransactionBase(_Transaction):
         if tid == self.locker:
             if ok and tid in self.candidates:
                 config, output = self.candidates[tid]
+                self.config = config
+                self.output = output
                 self.candidates = {}
                 #print('   # (Transform) COMMITTING', tid, self.me)
-                self.finalize(config, output)
+                self.finalize()
             else:
                 #print('   # (Transform) ABORTING', tid, self.me)
                 self.candidates.pop(tid)
@@ -724,9 +726,8 @@ class _TransformTransactionBase(_Transaction):
             #print('   # (Transform) IGNORING', tid, self.me)
             self.candidates.pop(tid)
 
-    def finalize(self, config, output):
-        self.config = config
-        self.output = output
+    def finalize(self):
+        pass
 
     def get(self):
         if self.config:
@@ -760,7 +761,7 @@ class _TransformTransaction(_TransformTransactionBase):
         _TransformTransactionBase.__init__(self)
         self.function = function(logger)
 
-    def execute(self, tid, merged, out, key_ctx):
+    def compute(self, tid, merged, out, key_ctx):
         newout = self.function.transform_gdata(merged)
         res = difference(self.output, newout)
         out.configure(tid, {self.me: res})
@@ -781,8 +782,7 @@ class TransformFunction(object):
         return gdata.Absent()
 
 
-
-
+################# RFSTransform ###################
 
 def RFSTransform(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
     return Node(_RFSTransform(function, dev_mgr, log_handler))
@@ -812,7 +812,7 @@ class _RFSTransaction(_TransformTransactionBase):
         self.function = function(logger)
         self.dev_mgr = dev_mgr
 
-    def execute(self, tid, merged, out, key_ctx):
+    def compute(self, tid, merged, out, key_ctx):
         if len(key_ctx) < 2:
             raise ValueError("RFSTransform key_ctx length < 2")
         devname = key_ctx[-2]
@@ -857,3 +857,85 @@ class RFSFunction(object):
 
     def transform_xml(self, cfg, di):
         return gdata.Absent()
+
+
+################# Device #####################
+
+def Device(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return lambda: Node(_Device(dev_mgr, log_handler))
+
+def DeviceTemplate(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return lambda: Node(_Device(dev_mgr, log_handler))
+
+class _Device(_Node):
+    def __init__(self, dev_mgr, log_handler):
+        self.transaction = DeviceTransaction(dev_mgr, logging.Logger(log_handler))
+
+    def newtrans(self):
+        return self.transaction
+
+    def get(self):
+        return self.transaction.get()
+
+def DeviceTransaction(dev_mgr, log_handler):
+    return Transaction(_DeviceTransaction(dev_mgr, log_handler))
+
+class _DeviceTransaction(_TransformTransactionBase):
+    dev_mgr: odev.DeviceManager
+
+    def __init__(self, dev_mgr: odev.DeviceManager, logger):
+        _TransformTransactionBase.__init__(self)
+        self.dev_mgr = dev_mgr
+
+    def compute(self, tid, merged, out, key_ctx):
+        return merged
+
+    def finalize(self):
+        config = self.output
+        if config is not None:
+            dmc = DeviceMetaConfig.from_gdata(config)
+            dev = self.dev_mgr.get(dmc.name)
+            dev.set_meta_config(dmc)
+
+
+################# DeviceConfig #####################
+
+def DeviceConfig(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return lambda: Node(_DeviceConfig(dev_mgr, log_handler))
+
+def DeviceConfigTemplate(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return lambda: Node(_DeviceConfig(dev_mgr, log_handler))
+
+class _DeviceConfig(_Node):
+    def __init__(self, dev_mgr, log_handler):
+        self.transaction = DeviceConfigTransaction(dev_mgr, logging.Logger(log_handler))
+
+    def newtrans(self):
+        return self.transaction
+
+    def get(self):
+        return self.transaction.get()
+
+def DeviceConfigTransaction(dev_mgr, log_handler):
+    return Transaction(_DeviceConfigTransaction(dev_mgr, log_handler))
+
+class _DeviceConfigTransaction(_TransformTransactionBase):
+    dev_mgr: odev.DeviceManager
+
+    def __init__(self, dev_mgr: odev.DeviceManager, logger):
+        _TransformTransactionBase.__init__(self)
+        self.dev_mgr = dev_mgr
+
+    def compute(self, tid, merged, out, key_ctx):
+        return merged
+
+    def finalize(self):
+        tree = self.output
+        if tree is not None:
+            if isinstance(tree, gdata.ListElement):
+                name = tree.key_str()
+                config = tree.children["config"]
+                if isinstance(config, gdata.Container):
+                    dev = self.dev_mgr.get(name)
+                    dev_config = gdata.Root(config.children)
+                    dev.edit_config(dev_config)
