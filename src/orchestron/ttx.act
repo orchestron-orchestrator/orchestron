@@ -615,67 +615,7 @@ def ListTransaction(liststate:ListState):
 
 ################# Transforms ####################
 
-class TransformFunction(object):
-    transform_gdata: mut(gdata.Node) -> gdata.Node
-    transform_xml: mut(xml.Node) -> gdata.Node
-    logger: logging.Logger
-    key_ctx: list[str]
-
-    def __init__(self, logger: logging.Logger, key_ctx: list[str]):
-        self.logger = logger
-        self.key_ctx = key_ctx
-
-    def transform_gdata(self, cfg):
-        return cfg
-
-    def transform_xml(self, cfg):
-        return gdata.Absent()
-
-class RFSFunction(TransformFunction):
-    device_name: str
-    device_modules: dict[str, odev.ModCap]
-
-    def __init__(self, dev_mgr: odev.DeviceManager, logger: logging.Logger, key_ctx: list[str]):
-        TransformFunction.__init__(self, logger, key_ctx)
-        if len(key_ctx) < 2:
-            raise ValueError("RFSTransform key_ctx length < 2")
-        dev_name = key_ctx[-2]
-        dev = dev_mgr.get(dev_name)
-        self.device_name = dev_name
-        self.device_modules = dev.get_modules()
-
-def RFSTransform(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
-    return Node(_Transform(lambda logger, keys: function(dev_mgr, logger, keys), log_handler))
-
-def RFSTransformTemplate(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
-    return lambda: Node(_Transform(lambda logger, keys: function(dev_mgr, logger, keys), log_handler))
-
-
-def Transform(function, log_handler: ?logging.Handler=None):
-    return Node(_Transform(function, log_handler))
-
-def TransformTemplate(function, log_handler: ?logging.Handler=None):
-    return lambda: Node(_Transform(function, log_handler))
-
-class _Transform(_Node):
-    def __init__(self, function, log_handler):
-        self.transaction = TransformTransaction(function, logging.Logger(log_handler))
-
-    def newtrans(self):
-        return self.transaction
-
-    def get(self):
-        return self.transaction.get()
-
-def TransformTransaction(function, log_handler):
-    return Transaction(_TransformTransaction(function, log_handler))
-
-class _TransformTransaction(_Transaction):
-    @property
-    logger: logging.Logger
-    @property
-    function: proc(logging.Logger, list[str]) -> TransformFunction
-
+class _TransformTransactionBase(_Transaction):
     inputs: dict[str, dict[str, gdata.Node]]
     key_ctx: dict[str, list[str]]
     config: dict[str, gdata.Node]
@@ -685,9 +625,10 @@ class _TransformTransaction(_Transaction):
     pending: list[(Transaction, str, Session, action(value)->None)]
     me: str
 
-    def __init__(self, function, logger):
-        self.function = function
-        self.logger = logger
+    execute : proc(tid: str, merged: gdata.Node, out: Session, key_ctx: list[str]) -> gdata.Node
+    finalize : proc(config: dict[str, gdata.Node], output: ?gdata.Node) -> None
+
+    def __init__(self):
         self.inputs = {}
         self.key_ctx = {}
         self.config = {}
@@ -729,11 +670,8 @@ class _TransformTransaction(_Transaction):
                 #print('   # (Transform) FAILURE', tid, self.me, e)
                 return e
             else:
-                fun = self.function(self.logger, key_ctx)
-                newout = fun.transform_gdata(merged)
+                newout = self.execute(tid, merged, out, key_ctx)
                 self.candidates[tid] = (newconf, newout)
-                res = difference(self.output, newout)
-                out.configure(tid, {self.me: res})
                 #print('   # (Transform) OUTPUT', tid, self.me)
                 return 'Ok'
         return 'Ok'
@@ -770,10 +708,9 @@ class _TransformTransaction(_Transaction):
         if tid == self.locker:
             if ok and tid in self.candidates:
                 config, output = self.candidates[tid]
-                #print('   # (Transform) COMMITTING', tid, self.me)
-                self.config = config
-                self.output = output
                 self.candidates = {}
+                #print('   # (Transform) COMMITTING', tid, self.me)
+                self.finalize(config, output)
             else:
                 #print('   # (Transform) ABORTING', tid, self.me)
                 self.candidates.pop(tid)
@@ -786,8 +723,136 @@ class _TransformTransaction(_Transaction):
             #print('   # (Transform) IGNORING', tid, self.me)
             self.candidates.pop(tid)
 
+    def finalize(self, config, output):
+        self.config = config
+        self.output = output
+
     def get(self):
         if self.config:
             return merge(self.config)
         else:
             return gdata.Absent()
+
+def Transform(function, log_handler: ?logging.Handler=None):
+    return Node(_Transform(function, log_handler))
+
+def TransformTemplate(function, log_handler: ?logging.Handler=None):
+    return lambda: Node(_Transform(function, log_handler))
+
+class _Transform(_Node):
+    def __init__(self, function, log_handler):
+        self.transaction = TransformTransaction(function, logging.Logger(log_handler))
+
+    def newtrans(self):
+        return self.transaction
+
+    def get(self):
+        return self.transaction.get()
+
+def TransformTransaction(function, log_handler):
+    return Transaction(_TransformTransaction(function, log_handler))
+
+class _TransformTransaction(_TransformTransactionBase):
+    function: TransformFunction
+
+    def __init__(self, function: proc(logging.Logger) -> TransformFunction, logger):
+        _TransformTransactionBase.__init__(self)
+        self.function = function(logger)
+
+    def execute(self, tid, merged, out, key_ctx):
+        newout = self.function.transform_gdata(merged)
+        res = difference(self.output, newout)
+        out.configure(tid, {self.me: res})
+        return newout
+
+class TransformFunction(object):
+    transform_gdata: mut(gdata.Node) -> gdata.Node
+    transform_xml: mut(xml.Node) -> gdata.Node
+    logger: logging.Logger
+
+    def __init__(self, logger: logging.Logger):
+        self.logger = logger
+
+    def transform_gdata(self, cfg):
+        return cfg
+
+    def transform_xml(self, cfg):
+        return gdata.Absent()
+
+
+
+
+
+def RFSTransform(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return Node(_RFSTransform(function, dev_mgr, log_handler))
+
+def RFSTransformTemplate(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return lambda: Node(_RFSTransform(function, dev_mgr, log_handler))
+
+class _RFSTransform(_Node):
+    def __init__(self, function, dev_mgr, log_handler):
+        self.transaction = RFSTransaction(function, dev_mgr, logging.Logger(log_handler))
+
+    def newtrans(self):
+        return self.transaction
+
+    def get(self):
+        return self.transaction.get()
+
+def RFSTransaction(function, dev_mgr, log_handler):
+    return Transaction(_RFSTransaction(function, dev_mgr, log_handler))
+
+class _RFSTransaction(_TransformTransactionBase):
+    function: RFSFunction
+    dev_mgr: odev.DeviceManager
+
+    def __init__(self, function: proc(logging.Logger) -> RFSFunction, dev_mgr: odev.DeviceManager, logger):
+        _TransformTransactionBase.__init__(self)
+        self.function = function(logger)
+        self.dev_mgr = dev_mgr
+
+    def execute(self, tid, merged, out, key_ctx):
+        if len(key_ctx) < 2:
+            raise ValueError("RFSTransform key_ctx length < 2")
+        devname = key_ctx[-2]
+        dev = self.dev_mgr.get(devname)
+        modcap = dev.get_modules()
+        newout = self.function.transform_gdata(merged, DeviceInfo(devname, modcap))
+        res = difference(self.output, newout)
+
+        if isinstance(res, gdata.Root):
+            embedded_res = gdata.Module({
+                "devices": gdata.Container({
+                    "device": gdata.List(["name"], [
+                        gdata.ListElement([devname], {
+                            "name": gdata.Leaf("str", devname),
+                            "config": gdata.Container(res.children)
+                        })
+                    ])
+                })
+            }, ns="http://orchestron.org/yang/orchestron-device.yang")
+            out.configure(tid, {self.me: embedded_res})
+
+        return newout
+
+class DeviceInfo(object):
+    name: str
+    modules: dict[str, odev.ModCap]
+
+    def __init__(self, name: str, modules: dict[str, odev.ModCap] = {}):
+        self.name = name
+        self.modules = modules
+
+class RFSFunction(object):
+    transform_gdata: mut(gdata.Node, DeviceInfo) -> gdata.Node
+    transform_xml: mut(xml.Node, DeviceInfo) -> gdata.Node
+    logger: logging.Logger
+
+    def __init__(self, logger):
+        self.logger = logger
+
+    def transform_gdata(self, cfg, di):
+        return cfg
+
+    def transform_xml(self, cfg, di):
+        return gdata.Absent()
