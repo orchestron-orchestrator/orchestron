@@ -743,7 +743,7 @@ def TransformTemplate(function, log_handler: ?logging.Handler=None):
 
 class _Transform(_Node):
     def __init__(self, function, log_handler):
-        self.transaction = TransformTransaction(function, logging.Logger(log_handler))
+        self.transaction = TransformTransaction(function, log_handler)
 
     def newtrans(self):
         return self.transaction
@@ -757,25 +757,25 @@ def TransformTransaction(function, log_handler):
 class _TransformTransaction(_TransformTransactionBase):
     function: TransformFunction
 
-    def __init__(self, function: proc(logging.Logger) -> TransformFunction, logger):
+    def __init__(self, function: proc(?logging.Handler) -> TransformFunction, log_handler):
         _TransformTransactionBase.__init__(self)
-        self.function = function(logger)
+        self.function = function(log_handler)
 
     def compute(self, tid, merged, out, key_ctx):
-        newout = self.function.transform_gdata(merged)
+        newout = self.function.transform_wrapper(merged)
         res = difference(self.output, newout)
         out.configure(tid, {self.me: res})
         return newout
 
 class TransformFunction(object):
-    transform_gdata: mut(gdata.Node) -> gdata.Node
+    transform_wrapper: mut(gdata.Node) -> gdata.Node
     transform_xml: mut(xml.Node) -> gdata.Node
     logger: logging.Logger
 
-    def __init__(self, logger: logging.Logger):
-        self.logger = logger
+    def __init__(self, log_handler: ?logging.Handler=None):
+        self.logger = logging.Logger(log_handler)
 
-    def transform_gdata(self, cfg):
+    def transform_wrapper(self, cfg):
         return cfg
 
     def transform_xml(self, cfg):
@@ -792,7 +792,7 @@ def RFSTransformTemplate(function, dev_mgr: odev.DeviceManager, log_handler: ?lo
 
 class _RFSTransform(_Node):
     def __init__(self, function, dev_mgr, log_handler):
-        self.transaction = RFSTransaction(function, dev_mgr, logging.Logger(log_handler))
+        self.transaction = RFSTransaction(function, dev_mgr, log_handler)
 
     def newtrans(self):
         return self.transaction
@@ -807,9 +807,9 @@ class _RFSTransaction(_TransformTransactionBase):
     function: RFSFunction
     dev_mgr: odev.DeviceManager
 
-    def __init__(self, function: proc(logging.Logger) -> RFSFunction, dev_mgr: odev.DeviceManager, logger):
+    def __init__(self, function: proc(?logging.Handler) -> RFSFunction, dev_mgr: odev.DeviceManager, log_handler):
         _TransformTransactionBase.__init__(self)
-        self.function = function(logger)
+        self.function = function(log_handler)
         self.dev_mgr = dev_mgr
 
     def compute(self, tid, merged, out, key_ctx):
@@ -818,7 +818,7 @@ class _RFSTransaction(_TransformTransactionBase):
         devname = key_ctx[-2]
         dev = self.dev_mgr.get(devname)
         modcap = dev.get_modules()
-        newout = self.function.transform_gdata(merged, DeviceInfo(devname, modcap))
+        newout = self.function.transform_wrapper(merged, DeviceInfo(devname, modcap))
         res = difference(self.output, newout)
 
         if isinstance(res, gdata.Root):
@@ -845,14 +845,14 @@ class DeviceInfo(object):
         self.modules = modules
 
 class RFSFunction(object):
-    transform_gdata: mut(gdata.Node, DeviceInfo) -> gdata.Node
+    transform_wrapper: mut(gdata.Node, DeviceInfo) -> gdata.Node
     transform_xml: mut(xml.Node, DeviceInfo) -> gdata.Node
     logger: logging.Logger
 
-    def __init__(self, logger):
-        self.logger = logger
+    def __init__(self, log_handler: ?logging.Handler=None):
+        self.logger = logging.Logger(log_handler)
 
-    def transform_gdata(self, cfg, di):
+    def transform_wrapper(self, cfg, di):
         return cfg
 
     def transform_xml(self, cfg, di):
@@ -869,7 +869,7 @@ def DeviceTemplate(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=No
 
 class _Device(_Node):
     def __init__(self, dev_mgr, log_handler):
-        self.transaction = DeviceTransaction(dev_mgr, logging.Logger(log_handler))
+        self.transaction = DeviceTransaction(dev_mgr, log_handler)
 
     def newtrans(self):
         return self.transaction
@@ -882,10 +882,12 @@ def DeviceTransaction(dev_mgr, log_handler):
 
 class _DeviceTransaction(_TransformTransactionBase):
     dev_mgr: odev.DeviceManager
+    logger: logging.Logger
 
-    def __init__(self, dev_mgr: odev.DeviceManager, logger):
+    def __init__(self, dev_mgr: odev.DeviceManager, log_handler):
         _TransformTransactionBase.__init__(self)
         self.dev_mgr = dev_mgr
+        self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out, key_ctx):
         return merged
@@ -908,7 +910,7 @@ def DeviceConfigTemplate(dev_mgr: odev.DeviceManager, log_handler: ?logging.Hand
 
 class _DeviceConfig(_Node):
     def __init__(self, dev_mgr, log_handler):
-        self.transaction = DeviceConfigTransaction(dev_mgr, logging.Logger(log_handler))
+        self.transaction = DeviceConfigTransaction(dev_mgr, log_handler)
 
     def newtrans(self):
         return self.transaction
@@ -921,10 +923,12 @@ def DeviceConfigTransaction(dev_mgr, log_handler):
 
 class _DeviceConfigTransaction(_TransformTransactionBase):
     dev_mgr: odev.DeviceManager
+    logger: logging.Logger
 
-    def __init__(self, dev_mgr: odev.DeviceManager, logger):
+    def __init__(self, dev_mgr: odev.DeviceManager, log_handler):
         _TransformTransactionBase.__init__(self)
         self.dev_mgr = dev_mgr
+        self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out, key_ctx):
         return merged
