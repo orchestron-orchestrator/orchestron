@@ -96,8 +96,7 @@ def _test_basic_output(done, logger: logging.Handler):
 ########################
 
 actor layered_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer(ttx.List(ttx.TransformTemplate(TransF)),
-                      ttx.Sink())
+    stack = ttx.Layer("top", ttx.List(ttx.TransformTemplate(TransF)), ttx.Sink())
 
     sess = stack.newsession()
 
@@ -116,7 +115,7 @@ def _test_layered_commit(done, logger: logging.Handler):
 ########################
 
 actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer(ttx.List(ttx.TransformTemplate(TransF)), ttx.Sink())
+    stack = ttx.Layer("top", ttx.List(ttx.TransformTemplate(TransF)), ttx.Sink())
     
     sess1 = stack.newsession()
     sess2 = stack.newsession()
@@ -170,7 +169,7 @@ class WriteDev(ttx.TransformFunction):
         })
 
 actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer(
+    stack = ttx.Layer("top",
         ttx.Container({
             "left": ttx.Transform(WriteDev),
             "right": ttx.Transform(WriteDev)
@@ -210,9 +209,9 @@ class ServiceMap(ttx.TransformFunction):
         })
 
 actor multi_layer_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer(
+    stack = ttx.Layer("top",
                 ttx.Transform(ServiceMap),
-                ttx.Layer(
+                ttx.Layer("bottom",
                     ttx.Container({
                         "left": ttx.Transform(WriteDev),
                         "right": ttx.Transform(WriteDev)

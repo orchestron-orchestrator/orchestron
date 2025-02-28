@@ -178,19 +178,21 @@ class _Session(object):
 
 
 
-def Layer(root: Node, lower: GenLayer):
-    return GenLayer(_Layer(root, lower))
+def Layer(name: str, root: Node, lower: GenLayer):
+    return GenLayer(_Layer(name, root, lower))
 
 class _Layer(_GenLayer):
+    name: str
     root: Node
     lower: GenLayer
 
-    def __init__(self, root: Node, lower: GenLayer):
+    def __init__(self, name, root: Node, lower: GenLayer):
+        self.name = name
         self.root = root
         self.lower = lower
 
     def newsession(self):
-        return LayerSession(self.root, self.lower)
+        return LayerSession(self.name, self.root, self.lower)
 
 
 def Sink():
@@ -206,8 +208,8 @@ class _Sink(_GenLayer):
         return self.session
 
 
-def LayerSession(rootnode: Node, lowerlayer: GenLayer):
-    return Session(_LayerSession(rootnode.newtrans(), lowerlayer.newsession()))
+def LayerSession(name: str, rootnode: Node, lowerlayer: GenLayer):
+    return Session(_LayerSession(name, rootnode.newtrans(), lowerlayer.newsession()))
 
 class _LayerSession(_Session):
     root: Transaction
@@ -217,7 +219,8 @@ class _LayerSession(_Session):
     fin_cont: ?action(value)->None
     tid: ?str
 
-    def __init__(self, root: Transaction, lower: Session):
+    def __init__(self, name: str, root: Transaction, lower: Session):
+        self.name = name
         self.root = root
         self.lower = lower
         self.buf = {}
@@ -228,7 +231,7 @@ class _LayerSession(_Session):
     # yield action
     def edit_config(self, actself, diff: gdata.Node, done):
         tid = 'tr_' + str(self)[-10:-1]
-        #print('#### (Layer) edit_config', tid)
+        print('#### (Layer)', self.name, 'edit_config', tid)
         self.exe_cont = done
         self.configure(tid, {'_': diff})
         res = self.apply(tid)
@@ -239,7 +242,7 @@ class _LayerSession(_Session):
     def edit_config_cont(self, res: value):
         exe_cont = self.exe_cont
         tid = self.tid
-        #print('#### (Layer) edit_config_cont', tid)
+        print('#### (Layer)', self.name, 'edit_config_cont', tid)
         if exe_cont is not None and tid is not None:
             self.commit(tid, isinstance(res, str) and res == 'Ok')
             #print('   # (Layer) EXECUTE', tid, 'DONE', res)
@@ -253,7 +256,7 @@ class _LayerSession(_Session):
         self.buf[tid].update(diff_per_source.items())
 
     def apply(self, tid):
-        #print('#### (Layer) apply', tid)
+        print('#### (Layer)', self.name, 'apply', tid)
         res = self.root.configure(tid, self.buf[tid], self.lower)
         del self.buf[tid]
         if not isinstance(res, Exception):
@@ -264,21 +267,21 @@ class _LayerSession(_Session):
 
     # yield action
     def lock(self, actself, tid: str, done: action(value) -> None):
-        #print('#### (Layer) lock', tid)
+        print('#### (Layer)', self.name, 'lock', tid)
         self.tid = tid
         self.fin_cont = done
         self.root.lock(tid, self.lower, actself.lock_cont1)     # yield await
 
     def lock_cont1(self, actself, res: value):
         tid = self.tid
-        #print('#### (Layer) lock_cont1', tid)
+        print('#### (Layer)', self.name, 'lock_cont1', tid)
         if tid is not None:
             if not isinstance(res, Exception):
                 #print('   # (Layer) FINALIZE LOWER', tid)
                 self.lower.lock(tid, actself.lock_cont2)        # yield await
 
     def lock_cont2(self, res: value):
-        #print('#### (Layer) lock_cont2')
+        print('#### (Layer)', self.name, 'lock_cont2')
         fin_cont = self.fin_cont
         if fin_cont is not None:
             self.fin_cont = None
@@ -287,7 +290,7 @@ class _LayerSession(_Session):
             fin_cont(rr)
 
     def commit(self, tid, ok):
-        #print('#### (Layer) commit', tid)
+        print('#### (Layer)', self.name, 'commit', tid)
         self.root.commit(tid, ok)
         self.lower.commit(tid, ok)
 
@@ -539,9 +542,7 @@ class _ListTransaction(_Transaction):
         msgs = {}
         for key,subdiff in diff_by_key.items():
             #print('   # (List) CONFIGURE ELEMENT', key)
-            key_ctx.append(key)
-            msgs[key] = async self.elems[key].configure(tid, subdiff, out, key_ctx)
-            key_ctx.pop()
+            msgs[key] = async self.elems[key].configure(tid, subdiff, out, key_ctx + [key])
         results = {}
         for key,msg in msgs.items():
             results[key] = await msg
@@ -641,7 +642,7 @@ class _TransformTransactionBase(_Transaction):
         self.me = '(src_' + str(self)[-10:-1] + ')'
 
     def configure(self, tid, diff, out, key_ctx):
-        #print('#### (Transform) configure', tid, self.me, key_ctx)
+        print('#### (Transform) configure', tid, self.me, key_ctx)
         if tid in self.inputs:
             self.inputs[tid].update(diff.items())
         else:
@@ -891,6 +892,10 @@ class _DeviceTransaction(_TransformTransactionBase):
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out, key_ctx):
+        dmc = DeviceMetaConfig.from_gdata(merged)
+        dev = self.dev_mgr.get(dmc.name)
+        print("Setting device", key_ctx, "meta-config in 'compute'")
+        dev.set_meta_config(dmc)
         return merged
 
     def finalize(self):
@@ -898,6 +903,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         if config is not None:
             dmc = DeviceMetaConfig.from_gdata(config)
             dev = self.dev_mgr.get(dmc.name)
+            print("Setting device meta-config in 'finalize'")
             dev.set_meta_config(dmc)
 
 
