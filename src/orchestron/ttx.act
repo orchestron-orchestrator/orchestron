@@ -231,7 +231,7 @@ class _LayerSession(_Session):
     # yield action
     def edit_config(self, actself, diff: gdata.Node, done):
         tid = 'tr_' + str(self)[-10:-1]
-        print('#### (Layer)', self.name, 'edit_config', tid)
+        #print('#### (Layer)', self.name, 'edit_config', tid)
         self.exe_cont = done
         self.configure(tid, {'_': diff})
         res = self.apply(tid)
@@ -242,7 +242,7 @@ class _LayerSession(_Session):
     def edit_config_cont(self, res: value):
         exe_cont = self.exe_cont
         tid = self.tid
-        print('#### (Layer)', self.name, 'edit_config_cont', tid)
+        #print('#### (Layer)', self.name, 'edit_config_cont', tid)
         if exe_cont is not None and tid is not None:
             self.commit(tid, isinstance(res, str) and res == 'Ok')
             #print('   # (Layer) EXECUTE', tid, 'DONE', res)
@@ -256,7 +256,7 @@ class _LayerSession(_Session):
         self.buf[tid].update(diff_per_source.items())
 
     def apply(self, tid):
-        print('#### (Layer)', self.name, 'apply', tid)
+        #print('#### (Layer)', self.name, 'apply', tid)
         res = self.root.configure(tid, self.buf[tid], self.lower)
         del self.buf[tid]
         if not isinstance(res, Exception):
@@ -267,21 +267,21 @@ class _LayerSession(_Session):
 
     # yield action
     def lock(self, actself, tid: str, done: action(value) -> None):
-        print('#### (Layer)', self.name, 'lock', tid)
+        #print('#### (Layer)', self.name, 'lock', tid)
         self.tid = tid
         self.fin_cont = done
         self.root.lock(tid, self.lower, actself.lock_cont1)     # yield await
 
     def lock_cont1(self, actself, res: value):
         tid = self.tid
-        print('#### (Layer)', self.name, 'lock_cont1', tid)
+        #print('#### (Layer)', self.name, 'lock_cont1', tid)
         if tid is not None:
             if not isinstance(res, Exception):
                 #print('   # (Layer) FINALIZE LOWER', tid)
                 self.lower.lock(tid, actself.lock_cont2)        # yield await
 
     def lock_cont2(self, res: value):
-        print('#### (Layer)', self.name, 'lock_cont2')
+        #print('#### (Layer)', self.name, 'lock_cont2')
         fin_cont = self.fin_cont
         if fin_cont is not None:
             self.fin_cont = None
@@ -290,7 +290,7 @@ class _LayerSession(_Session):
             fin_cont(rr)
 
     def commit(self, tid, ok):
-        print('#### (Layer)', self.name, 'commit', tid)
+        #print('#### (Layer)', self.name, 'commit', tid)
         self.root.commit(tid, ok)
         self.lower.commit(tid, ok)
 
@@ -320,16 +320,16 @@ class _SinkSession(_Session):
         pass
 
     def configure(self, tid: str, diff_per_source: dict[str,gdata.Node]):
-        #for s,c in diff_per_source.items():
-            #print('#### (Sink) configure', tid, 'source', s, ':', c.prsrc())
+        #print('#### (Sink) configure', tid, 'sources', list(diff_per_source.keys()))
         if tid not in self.buf:
             self.buf[tid] = {}
         self.buf[tid].update(diff_per_source.items())
 
     def apply(self, tid):
         #print('#### (Sink) apply', tid)
-        self.cfg = patch(self.cfg, self.buf[tid])
-        del self.buf[tid]
+        if tid in self.buf:
+            self.cfg = patch(self.cfg, self.buf[tid])
+            del self.buf[tid]
         return 'Ok'
 
     # yield action
@@ -489,21 +489,21 @@ actor ListState(template: proc() -> Node):
     def acquire(tid: str, keys: set[str]):
         active[tid] = keys
         new = keys - set(elems.keys())
+        #print("==== acquire", tid, "keys:", keys, "new:", new, "provisional:", provisional)
         for k in new:
             elems[k] = template()
         provisional |= new
-        #print("==== acquire", tid, "keys:", keys, "new:", new, "provisional:", provisional)
         result = {}
         for k in keys:
             result[k] = elems[k]
         return result
 
     def release(tid: str, ok: bool, deletes: set[str]):
+        #print("==== release", tid, ok, "deletes:", deletes, "provisional:", provisional)
         if ok:
             provisional -= active[tid]
             provisional |= deletes
         del active[tid]
-        #print("==== release", tid, ok, "deletes:", deletes, "provisional:", provisional)
         if not active:
             #print("==== delete", provisional)
             for k in provisional:
@@ -642,7 +642,7 @@ class _TransformTransactionBase(_Transaction):
         self.me = '(src_' + str(self)[-10:-1] + ')'
 
     def configure(self, tid, diff, out, key_ctx):
-        print('#### (Transform) configure', tid, self.me, key_ctx)
+        #print('#### (Transform) configure', tid, self.me, key_ctx)
         if tid in self.inputs:
             self.inputs[tid].update(diff.items())
         else:
@@ -894,17 +894,13 @@ class _DeviceTransaction(_TransformTransactionBase):
     def compute(self, tid, merged, out, key_ctx):
         dmc = DeviceMetaConfig.from_gdata(merged)
         dev = self.dev_mgr.get(dmc.name)
-        print("Setting device", key_ctx, "meta-config in 'compute'")
+        #print("Setting device meta-config", key_ctx)
         dev.set_meta_config(dmc)
         return merged
 
     def finalize(self):
         config = self.output
-        if config is not None:
-            dmc = DeviceMetaConfig.from_gdata(config)
-            dev = self.dev_mgr.get(dmc.name)
-            print("Setting device meta-config in 'finalize'")
-            dev.set_meta_config(dmc)
+        pass
 
 
 ################# DeviceConfig #####################
