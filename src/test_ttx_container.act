@@ -72,12 +72,10 @@ class Identity(ttx.TransformFunction):
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, out)
@@ -98,12 +96,10 @@ def _test_basic_commit(done, logger: logging.Handler):
 actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -134,12 +130,10 @@ def _test_overlapping_commit(done, logger: logging.Handler):
 actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -170,12 +164,10 @@ def _test_overlapping_commit2(done, logger: logging.Handler):
 actor modified_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, out)
@@ -197,12 +189,10 @@ def _test_modified_commit(done, logger: logging.Handler):
 actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, out)
@@ -237,12 +227,10 @@ tree0 = gdata.Container({
 actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -301,12 +289,10 @@ a0b1 = gdata.Container({
 actor config_failure_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -336,12 +322,10 @@ def _test_config_failure(done, logger: logging.Handler):
 actor config_abort_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -368,12 +352,10 @@ def _test_config_abort(done, logger: logging.Handler):
 actor multi_lock_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, out)
@@ -408,12 +390,10 @@ tree3 = gdata.Container({
 actor empty_lock_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -440,12 +420,10 @@ def _test_empty_lock(done, logger: logging.Handler):
 actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -474,12 +452,10 @@ def _test_empty_lock2(done, logger: logging.Handler):
 actor no_lock_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -504,12 +480,10 @@ def _test_no_lock(done, logger: logging.Handler):
 actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -533,12 +507,10 @@ def _test_spurious_commit(done, logger: logging.Handler):
 actor spurious_config_tester(done: action(?bool, ?Exception)->None):
     devices = ttx.Sink()
     out = devices.newsession()
-    router_l = ttx.Transform(Identity)
-    router_r = ttx.Transform(Identity)
     container = ttx.Container({
-        'left': router_l,
-        'right': router_r
-    })
+        'left': ttx.Transform(Identity),
+        'right': ttx.Transform(Identity)
+    }) ()
     t1 = container.newtrans()
     t2 = container.newtrans()
 
