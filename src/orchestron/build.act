@@ -8,6 +8,19 @@ import transform_unions
 import yang.parser
 
 
+def _maybe_write_file(fc: file.FileCap, name: str, content: str) -> bool:
+    """Write new content to a file if the content is different from existing content"""
+    rfc = file.ReadFileCap(fc)
+    wfc = file.WriteFileCap(fc)
+    rf = file.ReadFile(rfc, name)
+    old_content = rf.read().decode()
+    if old_content != content:
+        wf = file.WriteFile(wfc, name)
+        await async wf.write(content.encode())
+        await async wf.close()
+        return True
+    return False
+
 class SysSpec(object):
     """Orchestration System specification
 
@@ -20,7 +33,7 @@ class SysSpec(object):
         self.layers = layers + [Layer([oyang.device])]
         self.dev_types = device_types
 
-    def gen_app(self, wfc: file.WriteFileCap, output_dir: str):
+    def gen_app(self, fc: file.FileCap, output_dir: str):
         tttsrc = "# WARNING WARNING WARNING WARNING WARNING\n"
         tttsrc += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
         tttsrc += "# WARNING WARNING WARNING WARNING WARNING\n\n"
@@ -42,10 +55,12 @@ class SysSpec(object):
     #        elif idx == len(layers) - 1:
     #            name = "src/y_rfs.act"
 
-            wf_l = file.WriteFile(wfc, name)
             layer_src = yang.compile(layer.models)
-            await async wf_l.write(layer_src.prdaclass().encode())
-            await async wf_l.close()
+            layer_adata = layer_src.prdaclass()
+            if _maybe_write_file(fc, name, layer_adata):
+                print("+ Layer %d adata changed" % idx)
+            else:
+                print("+ Layer %d adata unchanged" % idx)
 
             tttsrc += "import %s.layers.t_%d\n" % (self.name, idx)
             print("Generating base & TTT for layer %d" % idx)
@@ -58,39 +73,46 @@ class SysSpec(object):
             tttl = ttt_gen.ttt_prsrc(layer_src, modname, out_layer_modname)
 
             base_name = "%s/%s/layers/base_%d.act" % (output_dir, self.name, idx)
-            wf_bl = file.WriteFile(wfc, base_name)
-            await async wf_bl.write(tttl.base.encode())
-            await async wf_bl.close()
+            if _maybe_write_file(fc, base_name, tttl.base):
+                print("+ Layer %d base changed" % idx)
+            else:
+                print("+ Layer %d base unchanged" % idx)
 
             t_name = "%s/%s/layers/t_%d.act" % (output_dir, self.name, idx)
-            wf_tl = file.WriteFile(wfc, t_name)
-            await async wf_tl.write(tttl.ttt.encode())
-            await async wf_tl.close()
+            if _maybe_write_file(fc, t_name, tttl.ttt):
+                print("+ Layer %d TTT changed" % idx)
+            else:
+                print("+ Layer %d TTT unchanged" % idx)
 
             tttsrc_getlayers += "    res.append(%s.layers.t_%d.get_ttt(dev_mgr, log_handler))\n" % (self.name, idx)
 
             if idx > 0:
                 loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)
-                wf_ll = file.WriteFile(wfc, loose_name)
-                await async wf_ll.write(layer_src.prdaclass(loose=True).encode())
-                await async wf_ll.close()
+                if _maybe_write_file(fc, loose_name, layer_src.prdaclass(loose=True)):
+                    print("+ Layer %d loose adata changed" % idx)
+                else:
+                    print("+ Layer %d loose adata unchanged" % idx)
 
         for dev_type in self.dev_types:
             print("Generating device type %s" % dev_type.name)
             for idx, model in enumerate(dev_type.models):
                 print("Generating model %d" % idx)
             dev_tree = yang.compile(dev_type.models)
+            dev_tree_adata = dev_tree.prdaclass(gen_json=False)
             name = "%s/%s/devices/%s.act" % (output_dir, self.name, dev_type.name)
-            wf_dt = file.WriteFile(wfc, name)
-            await async wf_dt.write(dev_tree.prdaclass(gen_json=False).encode())
-            await async wf_dt.close()
+            if _maybe_write_file(fc, name, dev_tree_adata):
+                print("+ Device type %s adata changed" % dev_type.name)
+            else:
+                print("+ Device type %s adata unchanged" % dev_type.name)
 
+        print("Generating app layers.act")
         tttsrc_getlayers += "    return res\n"
         tttsrc += "\n".join(list(set(imports))) + "\n\n"
         tttsrc += tttsrc_getlayers
-        wf_appttt = file.WriteFile(wfc, "%s/%s/layers.act" % (output_dir, self.name))
-        await async wf_appttt.write(tttsrc.encode())
-        await async wf_appttt.close()
+        if _maybe_write_file(fc, "%s/%s/layers.act" % (output_dir, self.name), tttsrc):
+            print("+ App layers.act changed")
+        else:
+            print("+ App layers.act unchanged")
 
 class SchemaTransformChain:
     """SchemaTransform chain to be applied to a YANG module
