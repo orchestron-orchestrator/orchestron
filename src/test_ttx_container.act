@@ -75,7 +75,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, out)
@@ -99,7 +99,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -133,7 +133,7 @@ actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -167,7 +167,7 @@ actor modified_commit_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, out)
@@ -192,7 +192,7 @@ actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, out)
@@ -230,7 +230,7 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -292,7 +292,7 @@ actor config_failure_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -325,7 +325,7 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -355,7 +355,7 @@ actor multi_lock_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, out)
@@ -393,7 +393,7 @@ actor empty_lock_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -423,7 +423,7 @@ actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -455,7 +455,7 @@ actor no_lock_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -483,7 +483,7 @@ actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -510,7 +510,7 @@ actor spurious_config_tester(done: action(?bool, ?Exception)->None):
     container = ttx.Container({
         'left': ttx.Transform(Identity),
         'right': ttx.Transform(Identity)
-    }) ()
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 

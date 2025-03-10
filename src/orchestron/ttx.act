@@ -91,13 +91,14 @@ actor Node(impl: _Node):
         return impl.get()
 
 class _Node(object):
+    path: list[str]
     newtrans: proc() -> Transaction
     get: proc() -> gdata.Node
 
 
 actor Transaction(impl: _Transaction):
-    def configure(tid, diff, out, path=[]):
-        return impl.configure(tid, diff, out, path)
+    def configure(tid, diff, out):
+        return impl.configure(tid, diff, out)
 
     # yield action
     def lock(tid, out, done):
@@ -113,7 +114,8 @@ actor Transaction(impl: _Transaction):
         return impl.get()
 
 class _Transaction(object):
-    configure:  proc(tid: str, diff: dict[str,gdata.Node], out: Session, path: list[str]) -> value
+    path: list[str]
+    configure:  proc(tid: str, diff: dict[str,gdata.Node], out: Session) -> value
     # yield action
     lock : proc(actself: Transaction, tid: str, out: Session, done: action(value) -> None) -> None
     lock_cont : proc(actself: Transaction, res: value) -> None
@@ -178,7 +180,7 @@ class _Session(object):
 
 
 
-def Layer(name: str, root: proc()->Node, lower: GenLayer):
+def Layer(name: str, root: proc(list[str])->Node, lower: GenLayer):
     return GenLayer(_Layer(name, root, lower))
 
 class _Layer(_GenLayer):
@@ -186,9 +188,9 @@ class _Layer(_GenLayer):
     root: Node
     lower: GenLayer
 
-    def __init__(self, name, root: proc()->Node, lower: GenLayer):
+    def __init__(self, name, root: proc(list[str])->Node, lower: GenLayer):
         self.name = name
-        self.root = root()
+        self.root = root([])
         self.lower = lower
 
     def newsession(self):
@@ -358,19 +360,20 @@ class _SinkSession(_Session):
 
 ############## Containers ##################
 
-def Container(elems={}):
-    return lambda: Node(_Container(elems))
+def Container(template={}):
+    return lambda path: Node(_Container(path, template))
 
 class _Container(_Node):
     elems: dict[str, Node]
 
-    def __init__(self, template: dict[str, proc()->Node]):
+    def __init__(self, path, template: dict[str, proc(list[str])->Node]):
+        self.path = path
         self.elems = {}
         for key,templ in template.items():
-            self.elems[key] = templ()
+            self.elems[key] = templ(path+[key])
 
     def newtrans(self):
-        return ContainerTransaction(self.elems)
+        return ContainerTransaction(self.path, self.elems)
 
     def get(self):
         res = {}
@@ -378,29 +381,30 @@ class _Container(_Node):
             res[tag] = node.get()
         return gdata.Container(res)
 
-def ContainerTransaction(contents):
-    return Transaction(_ContainerTransaction(contents))
+def ContainerTransaction(path, contents):
+    return Transaction(_ContainerTransaction(path, contents))
 
 class _ContainerTransaction(_Transaction):
     elems : dict[str, Transaction]
     accum : dict[str, value]
     state : ?YieldState
 
-    def __init__(self, contents):
+    def __init__(self, path, contents):
+        self.path = path
         self.elems = {}
         self.accum = {}
         self.state = None
         for key,node in contents.items():
             self.elems[key] = node.newtrans()
 
-    def configure(self, tid, diff, out, path):
-        #print('#### (Container)', path, 'configure', tid)
+    def configure(self, tid, diff, out):
+        #print('#### (Container)', self.path, 'configure', tid)
         diff_by_child = transpose(diff)
         msgs = {}
         for child,subdiff in diff_by_child.items():
             if child in self.elems:
-                #print('   # (Container)', path, 'CONFIGURE CHILD', child)
-                msgs[child] = async self.elems[child].configure(tid, subdiff, out, path + [child])
+                #print('   # (Container)', self.path, 'CONFIGURE CHILD', child)
+                msgs[child] = async self.elems[child].configure(tid, subdiff, out)
         results = {}
         for child,msg in msgs.items():
             results[child] = await msg
@@ -467,21 +471,22 @@ class _ContainerTransaction(_Transaction):
 ################# Lists ####################
 
 def List(template):
-    return lambda: Node(_List(template))
+    return lambda path: Node(_List(path, template))
 
 class _List(_Node):
     liststate: ListState
 
-    def __init__(self, template):
-        self.liststate = ListState(template)
+    def __init__(self, path, template):
+        self.path = path
+        self.liststate = ListState(path, template)
 
     def newtrans(self):
-        return ListTransaction(self.liststate)
+        return ListTransaction(self.path, self.liststate)
 
     def get(self):
         return self.liststate.get()
 
-actor ListState(template: proc() -> Node):
+actor ListState(path, template: proc(list[str]) -> Node):
     var elems = {}
     var active = {}
     var provisional = set()
@@ -491,7 +496,7 @@ actor ListState(template: proc() -> Node):
         new = keys - set(elems.keys())
         #print("==== acquire", tid, "keys:", keys, "new:", new, "provisional:", provisional)
         for k in new:
-            elems[k] = template()
+            elems[k] = template(path+[k])
         provisional |= new
         result = {}
         for k in keys:
@@ -527,22 +532,23 @@ class _ListTransaction(_Transaction):
     accum : dict[str, value]
     state : ?YieldState
 
-    def __init__(self, liststate):
+    def __init__(self, path, liststate):
+        self.path = path
         self.liststate = liststate
         self.elems = {}
         self.accum = {}
         self.state = None
 
-    def configure(self, tid, diff, out, path):
-        #print('#### (List)', path, 'configure', tid)
+    def configure(self, tid, diff, out):
+        #print('#### (List)', self.path, 'configure', tid)
         diff_by_key = transpose(diff)
         keys = set(diff_by_key.keys())
         for key,node in self.liststate.acquire(tid, keys).items():
             self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():
-            #print('   # (List)', path, 'CONFIGURE ELEMENT', key)
-            msgs[key] = async self.elems[key].configure(tid, subdiff, out, path + [key])
+            #print('   # (List)', self.path, 'CONFIGURE ELEMENT', key)
+            msgs[key] = async self.elems[key].configure(tid, subdiff, out)
         results = {}
         for key,msg in msgs.items():
             results[key] = await msg
@@ -612,15 +618,14 @@ class _ListTransaction(_Transaction):
     proc def get(self):
         return self.liststate.get()
 
-def ListTransaction(liststate:ListState):
-    return Transaction(_ListTransaction(liststate))
+def ListTransaction(path, liststate:ListState):
+    return Transaction(_ListTransaction(path, liststate))
 
 
 ################# Transform #####################
 
 class _TransformTransactionBase(_Transaction):
     inputs: dict[str, dict[str, gdata.Node]]
-    path: dict[str, list[str]]
     config: dict[str, gdata.Node]
     candidates: dict[str, (dict[str,gdata.Node], ?gdata.Node)]
     output: ?gdata.Node
@@ -628,12 +633,12 @@ class _TransformTransactionBase(_Transaction):
     pending: list[(Transaction, str, Session, action(value)->None)]
     me: str
 
-    compute : proc(tid: str, merged: gdata.Node, out: Session, path: list[str]) -> gdata.Node
+    compute : proc(tid: str, merged: gdata.Node, out: Session) -> gdata.Node
     finalize : proc() -> None
 
-    def __init__(self):
+    def __init__(self, path):
+        self.path = path
         self.inputs = {}
-        self.path = {}
         self.config = {}
         self.candidates = {}
         self.output = None
@@ -641,41 +646,40 @@ class _TransformTransactionBase(_Transaction):
         self.pending = []
         self.me = '(src_' + str(self)[-10:-1] + ')'
 
-    def configure(self, tid, diff, out, path):
-        #print('#### (Transform)', path, 'configure', tid, "src:", self.me)
+    def configure(self, tid, diff, out):
+        #print('#### (Transform)', self.path, 'configure', tid, "src:", self.me)
         if tid in self.inputs:
             self.inputs[tid].update(diff.items())
         else:
             self.inputs[tid] = diff
-        self.path[tid] = path
         inp = self.inputs[tid]
         newconf = patch(self.config, inp)
         #for s,c in inp.items():
-        #    print("# INPUT", path, tid, s, ":", c.prsrc())
+        #    print("# INPUT", self.path, tid, s, ":", c.prsrc())
         #for s,c in self.config.items():
-        #    print("   # CURRENT", path, tid, s, ":", c.prsrc())
+        #    print("   # CURRENT", self.path, tid, s, ":", c.prsrc())
         #for s,c in newconf.items():
-        #    print("   # NEWCONF", path, tid, s, ":", c.prsrc())
+        #    print("   # NEWCONF", self.path, tid, s, ":", c.prsrc())
         if newconf == self.config:
             self.candidates[tid] = (self.config, self.output)
-            #print('   # (Transform) NO CHANGE', path, tid)
+            #print('   # (Transform) NO CHANGE', self.path, tid)
             return 'Ok'
         elif newconf == {}:
             self.candidates[tid] = ({}, None)
-            #print('   # (Transform) EMPTY RESULT', path, tid)
+            #print('   # (Transform) EMPTY RESULT', self.path, tid)
             return 'Empty'
         else:
             try:
                 merged = assert_complete(merge(newconf))
-                #print('   # (Transform)', path, tid, 'MERGED', merged.prsrc())
+                #print('   # (Transform)', self.path, tid, 'MERGED', merged.prsrc())
 #                assert self.validate(merged)
             except Exception as e:
-                #print('   # (Transform) FAILURE', path, tid, e)
+                #print('   # (Transform) FAILURE', self.path, tid, e)
                 return e
             else:
-                newout = self.compute(tid, merged, out, path)
+                newout = self.compute(tid, merged, out)
                 self.candidates[tid] = (newconf, newout)
-                #print('   # (Transform)', path, tid, 'OUTPUT', newout.prsrc())
+                #print('   # (Transform)', self.path, tid, 'OUTPUT', newout.prsrc())
                 return 'Ok'
         return 'Ok'
 
@@ -694,9 +698,8 @@ class _TransformTransactionBase(_Transaction):
         self.locker = tid
         if tid not in self.candidates:
             inp = self.inputs.get_def(tid, {})
-            path = self.path.get_def(tid, [])
             #print('   # (Transform) RE-CONFIGURING', tid, self.me)
-            res = self.configure(tid, inp, out, path)
+            res = self.configure(tid, inp, out)
             done(res)
         else:
             #print('   # (Transform) LOCKING', tid, self.me)
@@ -738,11 +741,12 @@ class _TransformTransactionBase(_Transaction):
             return gdata.Absent()
 
 def Transform(function, log_handler: ?logging.Handler=None):
-    return lambda: Node(_Transform(function, log_handler))
+    return lambda path: Node(_Transform(path, function, log_handler))
 
 class _Transform(_Node):
-    def __init__(self, function, log_handler):
-        self.transaction = TransformTransaction(function, log_handler)
+    def __init__(self, path, function, log_handler):
+        self.path = path
+        self.transaction = TransformTransaction(path, function, log_handler)
 
     def newtrans(self):
         return self.transaction
@@ -750,17 +754,17 @@ class _Transform(_Node):
     def get(self):
         return self.transaction.get()
 
-def TransformTransaction(function, log_handler):
-    return Transaction(_TransformTransaction(function, log_handler))
+def TransformTransaction(path, function, log_handler):
+    return Transaction(_TransformTransaction(path, function, log_handler))
 
 class _TransformTransaction(_TransformTransactionBase):
     function: TransformFunction
 
-    def __init__(self, function: proc(?logging.Handler) -> TransformFunction, log_handler):
-        _TransformTransactionBase.__init__(self)
+    def __init__(self, path, function: proc(?logging.Handler) -> TransformFunction, log_handler):
+        _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
 
-    def compute(self, tid, merged, out, path):
+    def compute(self, tid, merged, out):
         newout = self.function.transform_wrapper(merged)
         res = difference(self.output, newout)
         out.configure(tid, {self.me: res})
@@ -784,11 +788,12 @@ class TransformFunction(object):
 ################# RFSTransform ###################
 
 def RFSTransform(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
-    return lambda: Node(_RFSTransform(function, dev_mgr, log_handler))
+    return lambda path: Node(_RFSTransform(path, function, dev_mgr, log_handler))
 
 class _RFSTransform(_Node):
-    def __init__(self, function, dev_mgr, log_handler):
-        self.transaction = RFSTransaction(function, dev_mgr, log_handler)
+    def __init__(self, path, function, dev_mgr, log_handler):
+        self.path = path
+        self.transaction = RFSTransaction(path, function, dev_mgr, log_handler)
 
     def newtrans(self):
         return self.transaction
@@ -796,22 +801,22 @@ class _RFSTransform(_Node):
     def get(self):
         return self.transaction.get()
 
-def RFSTransaction(function, dev_mgr, log_handler):
-    return Transaction(_RFSTransaction(function, dev_mgr, log_handler))
+def RFSTransaction(path, function, dev_mgr, log_handler):
+    return Transaction(_RFSTransaction(path, function, dev_mgr, log_handler))
 
 class _RFSTransaction(_TransformTransactionBase):
     function: RFSFunction
     dev_mgr: odev.DeviceManager
 
-    def __init__(self, function: proc(?logging.Handler) -> RFSFunction, dev_mgr: odev.DeviceManager, log_handler):
-        _TransformTransactionBase.__init__(self)
+    def __init__(self, path, function: proc(?logging.Handler) -> RFSFunction, dev_mgr: odev.DeviceManager, log_handler):
+        _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
         self.dev_mgr = dev_mgr
 
-    def compute(self, tid, merged, out, path):
-        if len(path) < 3:
+    def compute(self, tid, merged, out):
+        if len(self.path) < 3:
             raise ValueError("RFSTransform path length < 2")
-        devname = path[-3]
+        devname = self.path[-3]
         dev = self.dev_mgr.get(devname)
         modcap = dev.get_modules()
         if len(modcap) > 0:
@@ -862,11 +867,12 @@ class RFSFunction(object):
 ################# Device #####################
 
 def Device(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
-    return lambda: Node(_Device(dev_mgr, log_handler))
+    return lambda path: Node(_Device(path, dev_mgr, log_handler))
 
 class _Device(_Node):
-    def __init__(self, dev_mgr, log_handler):
-        self.transaction = DeviceTransaction(dev_mgr, log_handler)
+    def __init__(self, path, dev_mgr, log_handler):
+        self.path = path
+        self.transaction = DeviceTransaction(path, dev_mgr, log_handler)
 
     def newtrans(self):
         return self.transaction
@@ -874,22 +880,22 @@ class _Device(_Node):
     def get(self):
         return self.transaction.get()
 
-def DeviceTransaction(dev_mgr, log_handler):
-    return Transaction(_DeviceTransaction(dev_mgr, log_handler))
+def DeviceTransaction(path, dev_mgr, log_handler):
+    return Transaction(_DeviceTransaction(path, dev_mgr, log_handler))
 
 class _DeviceTransaction(_TransformTransactionBase):
     dev_mgr: odev.DeviceManager
     logger: logging.Logger
 
-    def __init__(self, dev_mgr: odev.DeviceManager, log_handler):
-        _TransformTransactionBase.__init__(self)
+    def __init__(self, path, dev_mgr: odev.DeviceManager, log_handler):
+        _TransformTransactionBase.__init__(self, path)
         self.dev_mgr = dev_mgr
         self.logger = logging.Logger(log_handler)
 
-    def compute(self, tid, merged, out, path):
+    def compute(self, tid, merged, out):
         dmc = DeviceMetaConfig.from_gdata(merged)
         dev = self.dev_mgr.get(dmc.name)
-        #print("Setting device meta-config in 'compute'", path)
+        #print("Setting device meta-config in 'compute'")
         dev.set_meta_config(dmc)
         return merged
 
@@ -905,11 +911,12 @@ class _DeviceTransaction(_TransformTransactionBase):
 ################# DeviceConfig #####################
 
 def DeviceConfig(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
-    return lambda: Node(_DeviceConfig(dev_mgr, log_handler))
+    return lambda path: Node(_DeviceConfig(path, dev_mgr, log_handler))
 
 class _DeviceConfig(_Node):
-    def __init__(self, dev_mgr, log_handler):
-        self.transaction = DeviceConfigTransaction(dev_mgr, log_handler)
+    def __init__(self, path, dev_mgr, log_handler):
+        self.path = path
+        self.transaction = DeviceConfigTransaction(path, dev_mgr, log_handler)
 
     def newtrans(self):
         return self.transaction
@@ -917,19 +924,19 @@ class _DeviceConfig(_Node):
     def get(self):
         return self.transaction.get()
 
-def DeviceConfigTransaction(dev_mgr, log_handler):
-    return Transaction(_DeviceConfigTransaction(dev_mgr, log_handler))
+def DeviceConfigTransaction(path, dev_mgr, log_handler):
+    return Transaction(_DeviceConfigTransaction(path, dev_mgr, log_handler))
 
 class _DeviceConfigTransaction(_TransformTransactionBase):
     dev_mgr: odev.DeviceManager
     logger: logging.Logger
 
-    def __init__(self, dev_mgr: odev.DeviceManager, log_handler):
-        _TransformTransactionBase.__init__(self)
+    def __init__(self, path, dev_mgr: odev.DeviceManager, log_handler):
+        _TransformTransactionBase.__init__(self, path)
         self.dev_mgr = dev_mgr
         self.logger = logging.Logger(log_handler)
 
-    def compute(self, tid, merged, out, path):
+    def compute(self, tid, merged, out):
         return merged
 
     def finalize(self):
