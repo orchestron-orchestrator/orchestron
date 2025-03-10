@@ -62,7 +62,7 @@ class PassThrough(ttx.TransformFunction):
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
     out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(PassThrough)) ()
+    tlist = ttx.List(ttx.Transform(PassThrough)) ([])
     t1 = tlist.newtrans()
 
     t1.configure("1", {'srcA': tree1}, out)
@@ -82,7 +82,7 @@ def _test_basic_commit(done, logger: logging.Handler):
 
 actor basic_delete_tester(done: action(?bool, ?Exception)->None):
     out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(PassThrough)) ()
+    tlist = ttx.List(ttx.Transform(PassThrough)) ([])
     t1 = tlist.newtrans()
 
     def cont2(_r: value):
@@ -127,7 +127,7 @@ list1 = gdata.List(["name"], [
 
 actor simultaneous_create_tester(done: action(?bool, ?Exception)->None):
     out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(PassThrough)) ()
+    tlist = ttx.List(ttx.Transform(PassThrough)) ([])
     t1 = tlist.newtrans()
     t2 = tlist.newtrans()
 
@@ -152,7 +152,7 @@ def _test_simultaneous_create(done, logger: logging.Handler):
 
 actor aborted_create_tester(done: action(?bool, ?Exception)->None):
     out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(PassThrough)) ()
+    tlist = ttx.List(ttx.Transform(PassThrough)) ([])
     t1 = tlist.newtrans()
 
     def cont1(_r: value):
@@ -195,7 +195,7 @@ y2b = gdata.List(["name"], [
 
 actor aborted_create_tester2(done: action(?bool, ?Exception)->None):
     out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(PassThrough)) ()
+    tlist = ttx.List(ttx.Transform(PassThrough)) ([])
     t1 = tlist.newtrans()
     t2 = tlist.newtrans()
 

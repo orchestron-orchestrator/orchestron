@@ -72,7 +72,7 @@ class TransF(ttx.TransformFunction):
 
 actor basic_output_tester(done: action(?bool, ?Exception)->None):
     out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(TransF)) ()
+    tlist = ttx.List(ttx.Transform(TransF)) ([])
     t1 = tlist.newtrans()
 
     t1.configure("1", {'srcA': cfg1}, out)
