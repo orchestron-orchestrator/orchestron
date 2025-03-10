@@ -1,0 +1,236 @@
+import testing
+import logging
+
+import orchestron.ttx as ttx
+#import orchestron.gdata as gdata
+import yang.gdata as gdata
+
+
+cfg1 = gdata.List(["name"], [
+    gdata.ListElement(["k1"], {
+        "n1": gdata.Leaf("int", 1),
+        "n2": gdata.Leaf("int", 2)
+    }),
+    gdata.ListElement(["k4"], {
+        "n1": gdata.Leaf("int", 4)
+    })
+])
+
+cfg2 = gdata.List(["name"], [
+    gdata.ListElement(["k1"], {
+        "n2": gdata.Leaf("int", 2),
+        "n3": gdata.Leaf("int", 3)
+    }),
+    gdata.ListElement(["k2"], {
+        "n1": gdata.Leaf("int", 1),
+        "n3": gdata.Leaf("int", 3)
+    })
+])
+
+out1 = gdata.Container({
+    'devices': gdata.List(["id"], [
+        gdata.ListElement(["k1"], {
+            "n1": gdata.Leaf("int", 1),
+            "n2": gdata.Leaf("int", 2)
+        }),
+        gdata.ListElement(["k4"], {
+            "n1": gdata.Leaf("int", 4)
+        })
+    ])
+})
+
+out1_2 = gdata.Container({
+    'devices': gdata.List(["id"], [
+        gdata.ListElement(["k1"], {
+            "n1": gdata.Leaf("int", 1),
+            "n2": gdata.Leaf("int", 2),
+            "n3": gdata.Leaf("int", 3)
+        }),
+        gdata.ListElement(["k2"], {
+            "n1": gdata.Leaf("int", 1),
+            "n3": gdata.Leaf("int", 3)
+        }),
+        gdata.ListElement(["k4"], {
+            "n1": gdata.Leaf("int", 4)
+        })
+    ])
+})
+
+class TransF(ttx.TransformFunction):
+    def transform_wrapper(self, cfg):
+        if isinstance(cfg, gdata.ListElement):
+            return gdata.Container({
+                'devices': gdata.List(["id"], [
+                    cfg
+                ])
+            })
+        else:
+            return gdata.Container({})
+
+
+########################
+
+actor basic_output_tester(done: action(?bool, ?Exception)->None):
+    out = ttx.Sink().newsession()
+    tlist = ttx.List(ttx.Transform(TransF)) ()
+    t1 = tlist.newtrans()
+
+    t1.configure("1", {'srcA': cfg1}, out)
+
+    def cont1(_r: value):
+        t1.commit("1", True)
+        t1.get()
+        out.apply("1")
+        out.commit("1", True)
+        r = out.get()
+        testing.assertEqual(r, out1)
+        done(True, None)
+
+    t1.lock("1", out, cont1)
+
+def _test_basic_output(done, logger: logging.Handler):
+    c = basic_output_tester(done)
+
+########################
+
+actor layered_commit_tester(done: action(?bool, ?Exception)->None):
+    stack = ttx.Layer("top", ttx.List(ttx.Transform(TransF)), ttx.Sink())
+
+    sess = stack.newsession()
+
+    def cont1(_r: value):
+        r0 = sess.get()
+        testing.assertEqual(r0, cfg1)
+        r1 = sess.below().get()
+        testing.assertEqual(r1, out1)
+        done(True, None)
+
+    sess.edit_config(cfg1, cont1)
+
+def _test_layered_commit(done, logger: logging.Handler):
+    c = layered_commit_tester(done)
+
+########################
+
+actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
+    stack = ttx.Layer("top", ttx.List(ttx.Transform(TransF)), ttx.Sink())
+    
+    sess1 = stack.newsession()
+    sess2 = stack.newsession()
+
+    var acks = 0
+    
+    def cont(_r: value):
+        acks += 1
+        if acks == 2:
+            r = sess1.below().get()
+            testing.assertEqual(r, out1_2)
+            done(True, None)
+
+    sess1.edit_config(cfg1, cont)
+    sess2.edit_config(cfg2, cont)
+
+def _test_simultaneous_commit(done, logger: logging.Handler):
+    c = simultaneous_commit_tester(done)
+
+########################
+
+cfg3 = gdata.Container({
+    "left": gdata.Container({
+        "a": gdata.Leaf("int", 1)
+    }),
+    "right": gdata.Container({
+        "a": gdata.Leaf("int", 2)
+    })
+})
+
+out3 = gdata.Container({
+    'devices': gdata.List(["id"], [
+        gdata.ListElement(["1"], {
+            "val": gdata.Leaf("int", 1)
+        }),
+        gdata.ListElement(["2"], {
+            "val": gdata.Leaf("int", 2)
+        })
+    ])
+})
+
+class WriteDev(ttx.TransformFunction):
+    def transform_wrapper(self, cfg: gdata.Node):
+        i = cfg.get_int("a")
+        return gdata.Container({
+            'devices': gdata.List(["id"], [
+                gdata.ListElement([str(i)], {
+                    "val": gdata.Leaf("int", i)
+                })
+            ])
+        })
+
+actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
+    stack = ttx.Layer("top",
+        ttx.Container({
+            "left": ttx.Transform(WriteDev),
+            "right": ttx.Transform(WriteDev)
+        }),
+        ttx.Sink())
+
+    sess = stack.newsession()
+
+    def cont(_r: value):
+        r = sess.below().get()
+        testing.assertEqual(r, out3)
+        done(True, None)
+
+    sess.edit_config(cfg3, cont)
+
+def _test_diamond_commit(done, logger: logging.Handler):
+    c = diamond_commit_tester(done)
+
+########################
+
+cfg4 = gdata.Container({
+    "ll": gdata.Leaf("int", 1),
+    "rr": gdata.Leaf("int", 2)
+})
+
+class ServiceMap(ttx.TransformFunction):
+    def transform_wrapper(self, cfg):
+        ll = cfg.get_int("ll")
+        rr = cfg.get_int("rr")
+        return gdata.Container({
+            "left": gdata.Container({
+                "a": gdata.Leaf("int", ll)
+            }),
+            "right": gdata.Container({
+                "a": gdata.Leaf("int", rr)
+            })
+        })
+
+actor multi_layer_tester(done: action(?bool, ?Exception)->None):
+    stack = ttx.Layer("top",
+                ttx.Transform(ServiceMap),
+                ttx.Layer("bottom",
+                    ttx.Container({
+                        "left": ttx.Transform(WriteDev),
+                        "right": ttx.Transform(WriteDev)
+                    }),
+                    ttx.Sink()))
+
+    sess = stack.newsession()
+
+    def cont(_r: value):
+        r1 = sess.below().get()
+        testing.assertEqual(r1, cfg3)
+        r2 = sess.below().below().get()
+        testing.assertEqual(r2, out3)
+        done(True, None)
+
+    sess.edit_config(cfg4, cont)
+
+def _test_multi_layer(done, logger: logging.Handler):
+    c = multi_layer_tester(done)
+
+########################
+
+actor main(env):
+    multi_layer_tester(lambda s,e: env.exit(0))
