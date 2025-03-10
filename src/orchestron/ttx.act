@@ -408,57 +408,57 @@ class _ContainerTransaction(_Transaction):
         results = {}
         for child,msg in msgs.items():
             results[child] = await msg
-            #print('   # (Container) RESULT CHILD', child, ':', results[child])
+            #print('   # (Container), self.path, 'RESULT CHILD', child, ':', results[child])
         return self._analyze(results)
 
     def _analyze(self, results):
         self.accum.update(results.items())
         for r in results.values():
             if isinstance(r, Exception):
-                #print('   # (Container) RESULT:', r)
+                #print('   # (Container)', self.path, 'RESULT:', r)
                 return r
-        #print('   # (Container) RESULT:', 'Ok')
+        #print('   # (Container)', self.path, 'RESULT:', 'Ok')
         return 'Ok'
 
     # yield action
     def lock(self, actself, tid, out, done):
-        #print('#### (Container) lock', tid)
+        #print('#### (Container)', self.path, 'lock', tid)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
-            #print('   # (Container) LOCK CHILD', key)
+            #print('   # (Container)', self.path, 'LOCK CHILD', key)
             tr.lock(tid, out, actself.lock_cont)                    # yield await
         except StopIteration:
-            #print('   # (Container) LOCK IMMEDIATELY DONE')
+            #print('   # (Container)', self.path, 'LOCK IMMEDIATELY DONE')
             done('Ok')
 
     proc def lock_cont (self, actself, res):
         state = self.state
         if state is not None:
-            #print('   # (Container) LOCK', state.tid, 'CHILD', state.key, 'RESULT:', res)
+            #print('   # (Container)', self.path, 'LOCK', state.tid, 'CHILD', state.key, 'RESULT:', res)
             state.results[state.key] = res
             try:
                 key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
-                #print('   # (Container) LOCK CHILD', key)
+                #print('   # (Container)', self.path, 'LOCK CHILD', key)
                 tr.lock(state.tid, state.out, actself.lock_cont)
             except StopIteration:
                 self.state = None
-                #print('   # (Container) LOCK DONE')
+                #print('   # (Container)', self.path, 'LOCK DONE')
                 state.done(self._analyze(state.results))
         else:
-            #print('#### (Container) lock_cont empty state!!!')
+            #print('#### (Container)', self.path, 'lock_cont empty state!!!')
             pass
 
     proc def commit(self, tid, ok):
-        #print('#### (Container) commit', tid)
+        #print('#### (Container)', self.path, 'commit', tid)
         for child in self.accum.keys():
-            #print('   # (Container) COMMIT CHILD', child)
+            #print('   # (Container)', self.path, 'COMMIT CHILD', child)
             self.elems[child].commit(tid, ok)
-        #print('   # (Container) COMMIT DONE')
+        #print('   # (Container)', self.path, 'COMMIT DONE')
         self.accum = {}
 
     def get(self):
@@ -494,7 +494,7 @@ actor ListState(path, template: proc(list[str]) -> Node):
     def acquire(tid: str, keys: set[str]):
         active[tid] = keys
         new = keys - set(elems.keys())
-        #print("==== acquire", tid, "keys:", keys, "new:", new, "provisional:", provisional)
+        #print("==== acquire", path, tid, "keys:", keys, "new:", new, "provisional:", provisional)
         for k in new:
             elems[k] = template(path+[k])
         provisional |= new
@@ -504,13 +504,13 @@ actor ListState(path, template: proc(list[str]) -> Node):
         return result
 
     def release(tid: str, ok: bool, deletes: set[str]):
-        #print("==== release", tid, ok, "deletes:", deletes, "provisional:", provisional)
+        #print("==== release", path, tid, ok, "deletes:", deletes, "provisional:", provisional)
         if ok:
             provisional -= active[tid]
             provisional |= deletes
         del active[tid]
         if not active:
-            #print("==== delete", tid, provisional)
+            #print("==== delete", path, tid, provisional)
             for k in provisional:
                 del elems[k]
             provisional = set()
@@ -553,7 +553,7 @@ class _ListTransaction(_Transaction):
         for key,msg in msgs.items():
             results[key] = await msg
             v = results[key]
-            #print('   # (List) RESULT ELEMENT', key, ':', v)
+            #print('   # (List)', self.path, 'RESULT ELEMENT', key, ':', v)
         return self._analyze(results)
 
     def _analyze(self, results: dict[str,value]):
@@ -561,55 +561,55 @@ class _ListTransaction(_Transaction):
         res = 'Empty'
         for key,r in results.items():
             if isinstance(r, Exception):
-                #print('   # (List) RESULT:', r)
+                #print('   # (List)', self.path, 'RESULT:', r)
                 return r
             if isinstance(r, str) and r == 'Ok':
                 res = r
-        #print('   # (List) RESULT:', res)
+        #print('   # (List)', self.path, 'RESULT:', res)
         return res
 
     # yield action
     def lock(self, actself, tid, out, done):
-        #print('#### (List) lock', tid)
+        #print('#### (List)', self.path, 'lock', tid)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
-            #print('   # (List) LOCK ELEMENT', key)
+            #print('   # (List)', self.path, 'LOCK ELEMENT', key)
             tr.lock(tid, out, actself.lock_cont)                        # yield await
         except StopIteration:
-            #print('   # (List) LOCK IMMEDIATELY DONE')
+            #print('   # (List)', self.path, 'LOCK IMMEDIATELY DONE')
             done('Ok')
 
     proc def lock_cont (self, actself, res):
         state = self.state
         if state is not None:
-            #print('   # (List) LOCK', state.tid, 'ELEMENT', state.key, 'RESULT:', res)
+            #print('   # (List)', self.path, 'LOCK', state.tid, 'ELEMENT', state.key, 'RESULT:', res)
             state.results[state.key] = res
             try:
                 key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
-                #print('   # (List) LOCK ELEMENT', key)
+                #print('   # (List)', self.path, 'LOCK ELEMENT', key)
                 tr.lock(state.tid, state.out, actself.lock_cont)
             except StopIteration:
                 self.state = None
-                #print('   # (List) LOCK DONE')
+                #print('   # (List)', self.path, 'LOCK DONE')
                 state.done(self._analyze(state.results))
         else:
             pass
-            #print('#### (List) lock_cont empty state!!!')
+            #print('#### (List)', self.path, 'lock_cont empty state!!!')
 
     proc def commit(self, tid, ok):
-        #print('#### (List) commit', tid)
+        #print('#### (List)', self.path, 'commit', tid)
         for key,tr in self.elems.items():
-            #print('   # (List) COMMIT ELEMENT', key)
+            #print('   # (List)', self.path, 'COMMIT ELEMENT', key)
             tr.commit(tid, ok)
         deletes = set()
         for key,res in self.accum.items():
             if isinstance(res, str) and res == 'Empty':
-                #print('   # (List) DELETE ELEMENT', key)
+                #print('   # (List)', self.path, 'DELETE ELEMENT', key)
                 deletes.add(key)
         self.liststate.release(tid, ok, deletes)
         self.elems = {}
@@ -685,31 +685,31 @@ class _TransformTransactionBase(_Transaction):
 
     # yield action
     def lock(self, actself, tid, out, done):                            # yield await
-        #print("#### (Transform) lock", tid, self.me)
+        #print("#### (Transform)", self.path, "lock", tid)
         locker = self.locker
         if locker is not None:
             if locker == tid:
-                #print('   # (Transform) REDUNDANT LOCK', tid, self.me)
+                #print('   # (Transform)', self.path, 'REDUNDANT LOCK', tid)
                 done('Ok')
             else:
-                #print('   # (Transform) SUSPENDING', tid, self.me)
+                #print('   # (Transform)', self.path, 'SUSPENDING', tid)
                 self.pending.append((actself, tid, out, done))          # suspend
             return
         self.locker = tid
         if tid not in self.candidates:
             inp = self.inputs.get_def(tid, {})
-            #print('   # (Transform) RE-CONFIGURING', tid, self.me)
+            #print('   # (Transform)', self.path, 'RE-CONFIGURING', tid)
             res = self.configure(tid, inp, out)
             done(res)
         else:
-            #print('   # (Transform) LOCKING', tid, self.me)
+            #print('   # (Transform)', self.path, 'LOCKING', tid)
             done('Ok' if self.candidates[tid].0 else 'Empty')
 
     def lock_cont (self, actself, res):
         pass
 
     def commit(self, tid, ok):
-        #print("#### (Transform) commit", tid, self.me)
+        #print("#### (Transform)', self.path, 'commit", tid)
         self.inputs.pop(tid)
         if tid == self.locker:
             if ok and tid in self.candidates:
@@ -717,18 +717,18 @@ class _TransformTransactionBase(_Transaction):
                 self.config = config
                 self.output = output
                 self.candidates = {}
-                #print('   # (Transform) COMMITTING', tid, self.me)
+                #print('   # (Transform)', self.path, 'COMMITTING', tid)
                 self.finalize()
             else:
-                #print('   # (Transform) ABORTING', tid, self.me)
+                #print('   # (Transform)', self.path, 'ABORTING', tid)
                 self.candidates.pop(tid)
             self.locker = None
             if self.pending:
                 (actself, tid2, out, done) = self.pending.pop(0)
-                #print("   # (Transform) RESUMING", tid2, self.me)
+                #print("   # (Transform)', self.path, 'RESUMING", tid2)
                 self.lock(actself, tid2, out, done)                     # resume
         else:
-            #print('   # (Transform) IGNORING', tid, self.me)
+            #print('   # (Transform)', self.path, 'IGNORING', tid)
             self.candidates.pop(tid)
 
     def finalize(self):
@@ -815,7 +815,7 @@ class _RFSTransaction(_TransformTransactionBase):
 
     def compute(self, tid, merged, out):
         if len(self.path) < 3:
-            raise ValueError("RFSTransform path length < 2")
+            raise ValueError("RFSTransform " + str(self.path) + ": path length < 3")
         devname = self.path[-3]
         dev = self.dev_mgr.get(devname)
         modcap = dev.get_modules()
@@ -895,7 +895,7 @@ class _DeviceTransaction(_TransformTransactionBase):
     def compute(self, tid, merged, out):
         dmc = DeviceMetaConfig.from_gdata(merged)
         dev = self.dev_mgr.get(dmc.name)
-        #print("Setting device meta-config in 'compute'")
+        #print("Setting device meta-config in 'compute'", self.path)
         dev.set_meta_config(dmc)
         return merged
 
@@ -904,7 +904,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         if config is not None:
             dmc = DeviceMetaConfig.from_gdata(config)
             dev = self.dev_mgr.get(dmc.name)
-            #print("Setting device meta-config in 'finalize'", path)
+            #print("Setting device meta-config in 'finalize'", self.path)
             dev.set_meta_config(dmc)
 
 
