@@ -887,6 +887,10 @@ class _DeviceTransaction(_TransformTransactionBase):
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out, path):
+        dmc = DeviceMetaConfig.from_gdata(merged)
+        dev = self.dev_mgr.get(dmc.name)
+        #print("Setting device meta-config in 'compute'", path)
+        dev.set_meta_config(dmc)
         return merged
 
     def finalize(self):
@@ -894,7 +898,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         if config is not None:
             dmc = DeviceMetaConfig.from_gdata(config)
             dev = self.dev_mgr.get(dmc.name)
-            #print("Setting device meta-config", path)
+            #print("Setting device meta-config in 'finalize'", path)
             dev.set_meta_config(dmc)
 
 
