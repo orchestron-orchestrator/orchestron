@@ -18,6 +18,11 @@ def o_root():
 class Foobar(ttt.TTTTransform):
     transform: mut(foo__c1__foo__bar_entry) -> yang.adata.MNode
 
+    @staticmethod
+    def input_type():
+        """Return the modeled input type for this transform"""
+        return foo__c1__foo__bar_entry
+
     mut def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
         """Wrap the user provided transform method to convert from gdata to
         modeled input and back to gdata

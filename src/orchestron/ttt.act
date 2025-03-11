@@ -107,6 +107,9 @@ class TTTList(TTTNode):
 #    pass
 
 class TTTTransform(TTTNode):
+    transform_wrapper: mut(yang.gdata.Node) -> yang.gdata.Node
+    transform_xml: mut(xml.Node) -> yang.gdata.Node
+
     def __init__(self, log_handler: ?logging.Handler=None):
         #self.state = TTTTransformState(self)
         self._log = logging.Logger(log_handler)
@@ -135,6 +138,9 @@ class DeviceInfo(object):
 class TTTRFSTransform(TTTNode):
     dev_mgr: odev.DeviceManager
     dev: ?odev.Device
+
+    transform_wrapper: mut(yang.gdata.Node, DeviceInfo) -> yang.gdata.Node
+    transform_xml: mut(xml.Node, DeviceInfo) -> yang.gdata.Node
 
     def __init__(self, dev_mgr: odev.DeviceManager, log_handler: logging.Handler):
         self.dev_mgr = dev_mgr
