@@ -27,7 +27,7 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
     name must always return the same Device instance.
     """
     var devices = {}
-    var reconf_cb: ?action() -> None = None
+    var reconf_cb: ?action(str) -> None = None
 
     def get(name: str) -> Device:
         if name not in devices:
@@ -35,11 +35,11 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
         dev = devices[name]
         return dev
 
-    def on_reconf(on_reconf: action() -> None):
+    def on_reconf(on_reconf: action(str) -> None):
         reconf_cb = on_reconf
 
 
-actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action() -> None=None):
+actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action(str) -> None=None):
     """NETCONF Device
 
     Some day this will be the base class for all devices and we'll support all
@@ -87,7 +87,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         if not modcap_eq(modset, new_modset):
             modset = new_modset
             if on_reconf is not None:
-                on_reconf()
+                on_reconf(name)
 
         _send_config()
 
@@ -333,3 +333,4 @@ def _test_parse_cap_xr_hostname():
     testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg")
     testing.assertEqual(mod.revision, "2021-04-21")
     testing.assertEqual(mod.feature, [])
+
