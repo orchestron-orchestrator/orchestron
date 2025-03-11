@@ -90,10 +90,14 @@ actor Node(impl: _Node):
     def get():
         return impl.get()
 
+    def notify(path):
+        impl.notify(path)
+
 class _Node(object):
     path: list[str]
     newtrans: proc() -> Transaction
     get: proc() -> gdata.Node
+    notify: proc(list[str]) -> None
 
 
 actor Transaction(impl: _Transaction):
@@ -130,8 +134,17 @@ actor GenLayer(impl: _GenLayer):
     def newsession():
         return impl.newsession()
 
+    def below():
+        return impl.below()
+
+    def notify(path):
+        impl.notify(path)
+
+
 class _GenLayer(object):
     newsession: proc() -> Session
+    below: proc() -> GenLayer
+    notify: proc(list[str]) -> None
 
 
 actor Session(impl: _Session):
@@ -196,6 +209,12 @@ class _Layer(_GenLayer):
     def newsession(self):
         return LayerSession(self.name, self.root, self.lower)
 
+    def below(self):
+        return self.lower
+
+    def notify(self, path):
+        self.root.notify(path)
+
 
 def Sink():
     return GenLayer(_Sink(SinkSession()))
@@ -208,6 +227,12 @@ class _Sink(_GenLayer):
 
     def newsession(self):
         return self.session
+
+    def below(self):
+        return GenLayer(self)
+
+    def notify(self, path):
+        pass
 
 
 def LayerSession(name: str, rootnode: Node, lowerlayer: GenLayer):
@@ -237,7 +262,7 @@ class _LayerSession(_Session):
         self.exe_cont = done
         self.configure(tid, {'_': diff})
         res = self.apply(tid)
-        #print('   # (Layer) EXECUTE', tid, 'PREP RESULT', res)
+        #print('   # (Layer)', self.name, 'EXECUTE', tid, 'PREP RESULT', res)
         if isinstance(res, str) and res == 'Ok':
             self.lock(actself, tid, actself.edit_config_cont)       # yield await
 
@@ -247,7 +272,7 @@ class _LayerSession(_Session):
         #print('#### (Layer)', self.name, 'edit_config_cont', tid)
         if exe_cont is not None and tid is not None:
             self.commit(tid, isinstance(res, str) and res == 'Ok')
-            #print('   # (Layer) EXECUTE', tid, 'DONE', res)
+            #print('   # (Layer)', self.name, 'EXECUTE', tid, 'DONE', res)
             exe_cont(res)
         self.exe_cont = None
         self.tid = None
@@ -266,7 +291,7 @@ class _LayerSession(_Session):
         if not isinstance(res, Exception):
             res = self.lower.apply(tid)
         rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
-        #print('   # (Layer) APPLY', tid, 'RESULT', rr)
+        #print('   # (Layer)', self.name, 'APPLY', tid, 'RESULT', rr)
         return rr
 
     # yield action
@@ -281,7 +306,7 @@ class _LayerSession(_Session):
         #print('#### (Layer)', self.name, 'lock_cont1', tid)
         if tid is not None:
             if not isinstance(res, Exception):
-                #print('   # (Layer) FINALIZE LOWER', tid)
+                #print('   # (Layer)', self.name, 'FINALIZE LOWER', tid)
                 self.lower.lock(tid, actself.lock_cont2)        # yield await
 
     def lock_cont2(self, res: value):
@@ -290,11 +315,11 @@ class _LayerSession(_Session):
         if fin_cont is not None:
             self.fin_cont = None
             rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
-            #print('   # (Layer) FINALIZE RESULT', rr)
+            #print('   # (Layer)', self.name, 'FINALIZE RESULT', rr)
             fin_cont(rr)
 
     def commit(self, tid, ok):
-        #print('#### (Layer)', self.name, 'commit', tid)
+        #print('#### (Layer)', self.name, 'commit', tid, ok)
         self.root.commit(tid, ok)
         self.lower.commit(tid, ok)
 
@@ -347,7 +372,7 @@ class _SinkSession(_Session):
         pass
 
     def commit(self, tid, ok):
-        #print('#### (Sink) commit', tid)
+        #print('#### (Sink) commit', tid, ok)
         pass
 
     def get(self):
@@ -380,6 +405,15 @@ class _Container(_Node):
         for tag,node in self.elems.items():
             res[tag] = node.get()
         return gdata.Container(res)
+
+    def notify(self, path):
+        if len(path) == 0:
+            for elem in self.elems.values():
+                elem.notify([])
+        else:
+            elem = self.elems.get(path[0])
+            if elem is not None:
+                elem.notify(path[1:])
 
 def ContainerTransaction(path, contents):
     return Transaction(_ContainerTransaction(path, contents))
@@ -454,7 +488,7 @@ class _ContainerTransaction(_Transaction):
             pass
 
     proc def commit(self, tid, ok):
-        #print('#### (Container)', self.path, 'commit', tid)
+        #print('#### (Container)', self.path, 'commit', tid, ok)
         for child in self.accum.keys():
             #print('   # (Container)', self.path, 'COMMIT CHILD', child)
             self.elems[child].commit(tid, ok)
@@ -485,6 +519,10 @@ class _List(_Node):
 
     def get(self):
         return self.liststate.get()
+
+    def notify(self, path):
+        self.liststate.notify(path)
+
 
 actor ListState(path, template: proc(list[str]) -> Node):
     var elems = {}
@@ -524,6 +562,15 @@ actor ListState(path, template: proc(list[str]) -> Node):
             elif isinstance(r, gdata.Inner):
                 res.append(gdata.ListElement([key], r.children))
         return gdata.List(["name"], res)
+
+    def notify(path):
+        if len(path) == 0:
+            for elem in elems.values():
+                elem.notify([])
+        else:
+            elem = elems.get(path[0])
+            if elem is not None:
+                elem.notify(path[1:])
 
 
 class _ListTransaction(_Transaction):
@@ -602,7 +649,7 @@ class _ListTransaction(_Transaction):
             #print('#### (List)', self.path, 'lock_cont empty state!!!')
 
     proc def commit(self, tid, ok):
-        #print('#### (List)', self.path, 'commit', tid)
+        #print('#### (List)', self.path, 'commit', tid, ok)
         for key,tr in self.elems.items():
             #print('   # (List)', self.path, 'COMMIT ELEMENT', key)
             tr.commit(tid, ok)
@@ -685,7 +732,7 @@ class _TransformTransactionBase(_Transaction):
 
     # yield action
     def lock(self, actself, tid, out, done):                            # yield await
-        #print("#### (Transform)", self.path, "lock", tid)
+        #print('#### (Transform)', self.path, 'lock', tid)
         locker = self.locker
         if locker is not None:
             if locker == tid:
@@ -709,7 +756,7 @@ class _TransformTransactionBase(_Transaction):
         pass
 
     def commit(self, tid, ok):
-        #print("#### (Transform)', self.path, 'commit", tid)
+        #print('#### (Transform)', self.path, 'commit', tid, ok)
         self.inputs.pop(tid)
         if tid == self.locker:
             if ok and tid in self.candidates:
@@ -740,6 +787,10 @@ class _TransformTransactionBase(_Transaction):
         else:
             return gdata.Absent()
 
+    def notify(self, path):
+        pass
+
+
 def Transform(function, log_handler: ?logging.Handler=None):
     return lambda path: Node(_Transform(path, function, log_handler))
 
@@ -753,6 +804,11 @@ class _Transform(_Node):
 
     def get(self):
         return self.transaction.get()
+
+    def notify(self, path):
+#        self.transaction.notify(path)
+        pass
+
 
 def TransformTransaction(path, function, log_handler):
     return Transaction(_TransformTransaction(path, function, log_handler))
@@ -800,6 +856,9 @@ class _RFSTransform(_Node):
 
     def get(self):
         return self.transaction.get()
+
+    def notify(self, path):
+        pass
 
 def RFSTransaction(path, function, dev_mgr, log_handler):
     return Transaction(_RFSTransaction(path, function, dev_mgr, log_handler))
@@ -880,6 +939,9 @@ class _Device(_Node):
     def get(self):
         return self.transaction.get()
 
+    def notify(self, path):
+        pass
+
 def DeviceTransaction(path, dev_mgr, log_handler):
     return Transaction(_DeviceTransaction(path, dev_mgr, log_handler))
 
@@ -923,6 +985,9 @@ class _DeviceConfig(_Node):
 
     def get(self):
         return self.transaction.get()
+
+    def notify(self, path):
+        pass
 
 def DeviceConfigTransaction(path, dev_mgr, log_handler):
     return Transaction(_DeviceConfigTransaction(path, dev_mgr, log_handler))

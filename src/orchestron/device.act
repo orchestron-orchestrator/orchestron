@@ -18,7 +18,7 @@ class EmptyConfig(yang.adata.MNode):
 
 actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
     var devices = {}
-    var reconf_cb: ?action() -> None = None
+    var reconf_cb: ?action(str) -> None = None
 
     def get(name: str) -> Device:
         if name not in devices:
@@ -26,7 +26,7 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
         dev = devices[name]
         return dev
 
-    def on_reconf(on_reconf: action() -> None):
+    def on_reconf(on_reconf: action(str) -> None):
         reconf_cb = on_reconf
 
 class ModCap(object):
@@ -109,7 +109,7 @@ def _test_parse_cap_xr_hostname():
 
 # State machine
 # connect
-actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action() -> None=None):
+actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action(str) -> None=None):
     """NETCONF Device
 
     Some day this will be the base class for all devices and we'll support all
@@ -142,7 +142,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         if not modcap_eq(modset, new_modset):
             modset = new_modset
             if on_reconf != None:
-                on_reconf()
+                on_reconf(name)
 
         if conf != None:
             _log.debug("Sending config")
