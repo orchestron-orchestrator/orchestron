@@ -117,6 +117,12 @@ actor Transaction(impl: _Transaction):
     def get():
         return impl.get()
 
+    # Notifying a transaction isn't really a meaningful operation in general. The following method
+    # is only intended for Transforms (which double as their own transactions), and only exists
+    # because of our current inability to have multiple actors implement a common interface.
+    def notify(path):
+        impl.notify(path)
+
 class _Transaction(object):
     path: list[str]
     configure:  proc(tid: str, diff: dict[str,gdata.Node], out: Session) -> value
@@ -125,6 +131,10 @@ class _Transaction(object):
     lock_cont : proc(actself: Transaction, res: value) -> None
     commit: proc(tid: str, ok: bool) -> None
     get: proc() -> gdata.Node
+    notify: proc(list[str]) -> None
+
+    def notify(self, path):
+        pass
 
 
 ####################### Layer ########################
@@ -681,7 +691,7 @@ class _TransformTransactionBase(_Transaction):
     me: str
 
     compute : proc(tid: str, merged: gdata.Node, out: Session) -> gdata.Node
-    finalize : proc() -> None
+    finalize : proc(tid: str) -> None
 
     def __init__(self, path):
         self.path = path
@@ -765,7 +775,7 @@ class _TransformTransactionBase(_Transaction):
                 self.output = output
                 self.candidates = {}
                 #print('   # (Transform)', self.path, 'COMMITTING', tid)
-                self.finalize()
+                self.finalize(tid)
             else:
                 #print('   # (Transform)', self.path, 'ABORTING', tid)
                 self.candidates.pop(tid)
@@ -778,7 +788,7 @@ class _TransformTransactionBase(_Transaction):
             #print('   # (Transform)', self.path, 'IGNORING', tid)
             self.candidates.pop(tid)
 
-    def finalize(self):
+    def finalize(self, tid):
         pass
 
     def get(self):
@@ -788,7 +798,8 @@ class _TransformTransactionBase(_Transaction):
             return gdata.Absent()
 
     def notify(self, path):
-        pass
+        print('#### (Transform)', self.path, 'notify')
+        # ...
 
 
 def Transform(function, log_handler: ?logging.Handler=None):
@@ -806,8 +817,7 @@ class _Transform(_Node):
         return self.transaction.get()
 
     def notify(self, path):
-#        self.transaction.notify(path)
-        pass
+        self.transaction.notify(path)
 
 
 def TransformTransaction(path, function, log_handler):
@@ -873,6 +883,7 @@ class _RFSTransaction(_TransformTransactionBase):
         self.dev_mgr = dev_mgr
 
     def compute(self, tid, merged, out):
+        print('#### (RFSTransform)', self.path, 'compute', tid)
         if len(self.path) < 3:
             raise ValueError("RFSTransform " + str(self.path) + ": path length < 3")
         devname = self.path[-3]
@@ -955,18 +966,14 @@ class _DeviceTransaction(_TransformTransactionBase):
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
-        dmc = DeviceMetaConfig.from_gdata(merged)
-        dev = self.dev_mgr.get(dmc.name)
-        #print("Setting device meta-config in 'compute'", self.path)
-        dev.set_meta_config(dmc)
         return merged
 
-    def finalize(self):
+    def finalize(self, tid):
+        print('#### (Device)', self.path, 'finalize', tid)
         config = self.output
         if config is not None:
             dmc = DeviceMetaConfig.from_gdata(config)
             dev = self.dev_mgr.get(dmc.name)
-            #print("Setting device meta-config in 'finalize'", self.path)
             dev.set_meta_config(dmc)
 
 
@@ -1004,7 +1011,8 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
     def compute(self, tid, merged, out):
         return merged
 
-    def finalize(self):
+    def finalize(self, tid):
+        print('#### (DeviceConfig)', self.path, 'finalize', tid)
         tree = self.output
         if tree is not None:
             if isinstance(tree, gdata.ListElement):
