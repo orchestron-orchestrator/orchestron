@@ -48,6 +48,8 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     # Orchestron's intended configuration, that we want on the device. Note how
     # this is NOT the NMDA-speak "intended configuration" of the device itself
     var intended_conf: ?yang.gdata.Node = None
+    var tids: set[str] = set()
+
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
     var running_conf: ?yang.gdata.Node = None
@@ -98,7 +100,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def _on_notif(c, n):
         _log.debug("Notification from device")
 
-    def set_meta_config(conf: DeviceMetaConfig):
+    def set_meta_config(conf: DeviceMetaConfig, tid: ?str = None):
         _log.debug("Device.set_meta_config")
 
         if wcap == None:
@@ -127,6 +129,9 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                     m = ModCap(mock_cap.name, mock_cap.namespace, mock_cap.revision, mock_cap.feature)
                     _log.debug("Adding mock cap", {"cap": m.name})
                     modset[m.name] = m
+            if on_reconf is not None:
+                _log.info("Device modset changed, triggering reconfiguration", {"device": name})
+                on_reconf(name)
             return
 
         if conn_state == CONNECTED:
@@ -163,11 +168,11 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             client = c
         dmc = conf
 
-    def edit_config(new_conf: yang.gdata.Node):
+    def edit_config(new_conf: yang.gdata.Node, tid: ?str=None):
         # TODO: remove this, and use configure instead
-        return configure(new_conf)
+        return configure(new_conf, tid)
 
-    def configure(new_conf: yang.gdata.Node):
+    def configure(new_conf: yang.gdata.Node, tid: ?str=None):
         if intended_conf == new_conf:
             _log.debug("Ignoring new configuration identical to current intended configuration")
         else:
