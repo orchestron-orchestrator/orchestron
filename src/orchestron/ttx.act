@@ -97,8 +97,8 @@ class _Node(object):
 
 
 actor Transaction(impl: _Transaction):
-    def configure(tid, diff, out):
-        return impl.configure(tid, diff, out)
+    def configure(tid, diff, out, force=False):
+        return impl.configure(tid, diff, out, force)
 
     # yield action
     def lock(tid, out, done):
@@ -115,7 +115,7 @@ actor Transaction(impl: _Transaction):
 
 class _Transaction(object):
     path: list[str]
-    configure:  proc(tid: str, diff: dict[str,gdata.Node], out: Session) -> value
+    configure:  proc(tid: str, diff: dict[str,gdata.Node], out: Session, force: ?bool) -> value
     # yield action
     lock : proc(actself: Transaction, tid: str, out: Session, done: action(value) -> None) -> None
     lock_cont : proc(actself: Transaction, res: value) -> None
@@ -133,16 +133,22 @@ actor GenLayer(impl: _GenLayer):
     def below():
         return impl.below()
 
+    def edit_config(diff, done=None, force=False):
+        newsession().edit_config(diff, done, force)
+
+    def get():
+        return impl.get()
 
 class _GenLayer(object):
     newsession: proc() -> Session
     below: proc() -> GenLayer
+    get: proc() -> gdata.Node
 
 
 actor Session(impl: _Session):
     # yield action
-    def edit_config(diff, done):
-        impl.edit_config(self, diff, done)
+    def edit_config(diff, done=None, force=False):
+        impl.edit_config(self, diff, done, force)
 
     def edit_config_cont(res):
         impl.edit_config_cont(res)
@@ -150,8 +156,8 @@ actor Session(impl: _Session):
     def configure(tid, diff_per_source):
         impl.configure(tid, diff_per_source)
 
-    def apply(tid):
-        return impl.apply(tid)
+    def apply(tid, force=False):
+        return impl.apply(tid, force)
 
     def lock(tid, done):
         impl.lock(self, tid, done)
@@ -172,10 +178,10 @@ actor Session(impl: _Session):
         return impl.below(self)
 
 class _Session(object):
-    edit_config:        proc(actself: Session, diff: gdata.Node, done: action(value)->None) -> None
+    edit_config:        proc(actself: Session, diff: gdata.Node, done: ?action(value)->None, force: ?bool) -> None
     edit_config_cont:   proc(res: value) -> None
     configure:          proc(tid: str, diff_per_source: dict[str,gdata.Node]) -> None
-    apply:              proc(tid: str) -> value
+    apply:              proc(tid: str, force: ?bool) -> value
     lock:               proc(actself: Session, tid: str, done: action(value)->None) -> None
     lock_cont1:         proc(actself: Session, res: value) -> None
     lock_cont2:         proc(res: value) -> None
@@ -203,6 +209,9 @@ class _Layer(_GenLayer):
     def below(self):
         return self.lower
 
+    def get(self):
+        return self.root.get()
+
 
 def Sink():
     return GenLayer(_Sink(SinkSession()))
@@ -218,6 +227,9 @@ class _Sink(_GenLayer):
 
     def below(self):
         return GenLayer(self)
+
+    def get(self):
+        return gdata.Container()
 
 
 def LayerSession(name: str, rootnode: Node, lowerlayer: GenLayer):
@@ -241,12 +253,12 @@ class _LayerSession(_Session):
         self.tid = None
 
     # yield action
-    def edit_config(self, actself, diff: gdata.Node, done):
+    def edit_config(self, actself, diff: gdata.Node, done, force=False):
         tid = 'tr_' + str(self)[-10:-1]
         #print('#### (Layer)', self.name, 'edit_config', tid)
         self.exe_cont = done
         self.configure(tid, {'_': diff})
-        res = self.apply(tid)
+        res = self.apply(tid, force)
         #print('   # (Layer)', self.name, 'EXECUTE', tid, 'PREP RESULT', res)
         if isinstance(res, str) and res == 'Ok':
             self.lock(actself, tid, actself.edit_config_cont)       # yield await
@@ -255,10 +267,11 @@ class _LayerSession(_Session):
         exe_cont = self.exe_cont
         tid = self.tid
         #print('#### (Layer)', self.name, 'edit_config_cont', tid)
-        if exe_cont is not None and tid is not None:
+        if tid is not None:
             self.commit(tid, isinstance(res, str) and res == 'Ok')
-            #print('   # (Layer)', self.name, 'EXECUTE', tid, 'DONE', res)
-            exe_cont(res)
+            if exe_cont is not None:
+                #print('   # (Layer)', self.name, 'EXECUTE', tid, 'DONE', res)
+                exe_cont(res)
         self.exe_cont = None
         self.tid = None
 
@@ -267,12 +280,13 @@ class _LayerSession(_Session):
             self.buf[tid] = {}
         self.buf[tid].update(diff_per_source.items())
 
-    def apply(self, tid):
+    def apply(self, tid, force=False):
         #print('#### (Layer)', self.name, 'apply', tid)
-        #for src,tree in self.buf[tid].items():
-        #    print('   # (Layer)', self.name, 'APPLY', src, ':\n', tree.prsrc())
-        res = self.root.configure(tid, self.buf[tid], self.lower)
-        del self.buf[tid]
+        buf = self.buf.get_def(tid, {})
+        #for src,tree in buf.items():
+        #    print('   # (Layer)', self.name, 'APPLY', src, ':', tree.prsrc())
+        res = self.root.configure(tid, buf, self.lower, force)
+        self.buf.pop(tid)
         if not isinstance(res, Exception):
             res = self.lower.apply(tid)
         rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
@@ -327,8 +341,9 @@ class _SinkSession(_Session):
         self.cfg = {}
 
     # yield action
-    def edit_config(self, actself, diff: gdata.Node, done):
-        done('Ok')      # For now...
+    def edit_config(self, actself, diff: gdata.Node, done, force=False):
+        if done is not None:
+            done('Ok')      # For now...
 
     def edit_config_cont(self, res: value):
         pass
@@ -339,7 +354,7 @@ class _SinkSession(_Session):
             self.buf[tid] = {}
         self.buf[tid].update(diff_per_source.items())
 
-    def apply(self, tid):
+    def apply(self, tid, force=False):
         #print('#### (Sink) apply', tid)
         if tid in self.buf:
             self.cfg = patch(self.cfg, self.buf[tid])
@@ -408,14 +423,17 @@ class _ContainerTransaction(_Transaction):
         for key,node in contents.items():
             self.elems[key] = node.newtrans()
 
-    def configure(self, tid, diff, out):
-        #print('#### (Container)', self.path, 'configure', tid)
+    def configure(self, tid, diff, out, force=False):
+        #print('#### (Container)', self.path, 'configure', tid, force)
         diff_by_child = transpose(diff)
+        if len(diff_by_child) == 0 and force:
+            for k in self.elems.keys():
+                diff_by_child[k] = {}
         msgs = {}
         for child,subdiff in diff_by_child.items():
             if child in self.elems:
                 #print('   # (Container)', self.path, 'CONFIGURE CHILD', child)
-                msgs[child] = async self.elems[child].configure(tid, subdiff, out)
+                msgs[child] = async self.elems[child].configure(tid, subdiff, out, force)
         results = {}
         for child,msg in msgs.items():
             results[child] = await msg
@@ -495,7 +513,12 @@ class _List(_Node):
         return ListTransaction(self.path, self.liststate)
 
     def get(self):
-        return self.liststate.get()
+        res = []
+        for key,node in self.liststate.all().items():
+            r = node.get()
+            if isinstance(r, gdata.ListElement):
+                res.append(r)
+        return gdata.List(["name"], res)
 
 
 actor ListState(path, template: proc(list[str]) -> Node):
@@ -503,15 +526,19 @@ actor ListState(path, template: proc(list[str]) -> Node):
     var active = {}
     var provisional = set()
 
-    def acquire(tid: str, keys: set[str]):
-        active[tid] = keys
-        new = keys - set(elems.keys())
+    def acquire(tid: str, keys: ?set[str]):
         #print("==== acquire", path, tid, "keys:", keys, "new:", new, "provisional:", provisional)
-        for k in new:
-            elems[k] = template(path+[k])
-        provisional |= new
         result = {}
-        for k in keys:
+        if keys is not None:
+            keys1 = keys
+            new = keys - set(elems.keys())
+            for k in new:
+                elems[k] = template(path+[k])
+            provisional |= new
+        else:
+            keys1 = set(elems.keys())
+        active[tid] = keys1
+        for k in keys1:
             result[k] = elems[k]
         return result
 
@@ -527,15 +554,8 @@ actor ListState(path, template: proc(list[str]) -> Node):
                 del elems[k]
             provisional = set()
 
-    def get():
-        res = []
-        for key,node in elems.items():
-            r = node.get()
-            if isinstance(r, gdata.ListElement):
-                res.append(r)
-            elif isinstance(r, gdata.Inner):
-                res.append(gdata.ListElement([key], r.children))
-        return gdata.List(["name"], res)
+    def all():
+        return dict(elems.items())
 
 
 class _ListTransaction(_Transaction):
@@ -551,16 +571,19 @@ class _ListTransaction(_Transaction):
         self.accum = {}
         self.state = None
 
-    def configure(self, tid, diff, out):
+    def configure(self, tid, diff, out, force=False):
         #print('#### (List)', self.path, 'configure', tid)
         diff_by_key = transpose(diff)
+        if len(diff_by_key) == 0 and force:
+            for k in self.liststate.acquire(tid, None).keys():
+                diff_by_key[k] = {}
         keys = set(diff_by_key.keys())
         for key,node in self.liststate.acquire(tid, keys).items():
             self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():
             #print('   # (List)', self.path, 'CONFIGURE ELEMENT', key)
-            msgs[key] = async self.elems[key].configure(tid, subdiff, out)
+            msgs[key] = async self.elems[key].configure(tid, subdiff, out, force)
         results = {}
         for key,msg in msgs.items():
             results[key] = await msg
@@ -594,7 +617,7 @@ class _ListTransaction(_Transaction):
             #print('   # (List)', self.path, 'LOCK IMMEDIATELY DONE')
             done('Ok')
 
-    proc def lock_cont (self, actself, res):
+    def lock_cont (self, actself, res):
         state = self.state
         if state is not None:
             #print('   # (List)', self.path, 'LOCK', state.tid, 'ELEMENT', state.key, 'RESULT:', res)
@@ -613,7 +636,7 @@ class _ListTransaction(_Transaction):
             pass
             #print('#### (List)', self.path, 'lock_cont empty state!!!')
 
-    proc def commit(self, tid, ok):
+    def commit(self, tid, ok):
         #print('#### (List)', self.path, 'commit', tid, ok)
         for key,tr in self.elems.items():
             #print('   # (List)', self.path, 'COMMIT ELEMENT', key)
@@ -627,8 +650,13 @@ class _ListTransaction(_Transaction):
         self.elems = {}
         self.accum = {}
 
-    proc def get(self):
-        return self.liststate.get()
+    def get(self):
+        res = []
+        for key,node in self.liststate.all().items():
+            r = node.get()
+            if isinstance(r, gdata.ListElement):
+                res.append(r)
+        return gdata.List(["name"], res)
 
 def ListTransaction(path, liststate:ListState):
     return Transaction(_ListTransaction(path, liststate))
@@ -668,7 +696,7 @@ class _TransformTransactionBase(_Transaction):
         self.pending = []
         self.me = '(src_' + str(self)[-10:-1] + ')'
 
-    def configure(self, tid, diff, out):
+    def configure(self, tid, diff, out, force=False):
         #print('#### (Transform)', self.path, 'configure', tid, "src:", self.me)
         if tid in self.inputs:
             self.inputs[tid].update(diff.items())
@@ -682,7 +710,7 @@ class _TransformTransactionBase(_Transaction):
         #    print("   # CURRENT", self.path, tid, s, ":", c.prsrc())
         #for s,c in newconf.items():
         #    print("   # NEWCONF", self.path, tid, s, ":", c.prsrc())
-        if newconf == self.config:
+        if newconf == self.config and not force:
             self.candidates[tid] = (self.config, self.output)
             #print('   # (Transform) NO CHANGE', self.path, tid)
             return 'Ok'
@@ -826,7 +854,7 @@ class _RFSTransaction(_TransformTransactionBase):
         self.dev_mgr = dev_mgr
 
     def compute(self, tid, merged, out):
-        print('#### (RFSTransform)', self.path, 'compute', tid)
+        #print('#### (RFSTransform)', self.path, 'compute', tid)
         if len(self.path) < 3:
             raise ValueError("RFSTransform " + str(self.path) + ": path length < 3")
         devname = self.path[-3]
@@ -835,8 +863,8 @@ class _RFSTransaction(_TransformTransactionBase):
         if len(modcap) > 0:
             newout = self.function.transform_wrapper(merged, DeviceInfo(devname, modcap))
         else:
-            print("No device capabilities, skipping RFS transform for", devname)
-            newout = gdata.Container({})
+            #print("No device capabilities, skipping RFS transform for", devname)
+            newout = gdata.Root({})
         res = difference(self.output, newout)
 
         if isinstance(res, gdata.Inner):
@@ -903,7 +931,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         return merged
 
     def finalize(self, tid):
-        print('#### (Device)', self.path, 'finalize', tid)
+        #print('#### (Device)', self.path, 'finalize', tid)
         config = self.output
         if config is not None:
             meta_config = DeviceMetaConfig.from_gdata(config)
@@ -937,7 +965,7 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
         return merged
 
     def finalize(self, tid):
-        print('#### (DeviceConfig)', self.path, 'finalize', tid)
+        #print('#### (DeviceConfig)', self.path, 'finalize', tid)
         tree = self.output
         if tree is not None:
             if isinstance(tree, gdata.ListElement):
