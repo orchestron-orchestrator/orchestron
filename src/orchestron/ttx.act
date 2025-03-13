@@ -90,14 +90,10 @@ actor Node(impl: _Node):
     def get():
         return impl.get()
 
-    def notify(path):
-        impl.notify(path)
-
 class _Node(object):
     path: list[str]
     newtrans: proc() -> Transaction
     get: proc() -> gdata.Node
-    notify: proc(list[str]) -> None
 
 
 actor Transaction(impl: _Transaction):
@@ -117,12 +113,6 @@ actor Transaction(impl: _Transaction):
     def get():
         return impl.get()
 
-    # Notifying a transaction isn't really a meaningful operation in general. The following method
-    # is only intended for Transforms (which double as their own transactions), and only exists
-    # because of our current inability to have multiple actors implement a common interface.
-    def notify(path):
-        impl.notify(path)
-
 class _Transaction(object):
     path: list[str]
     configure:  proc(tid: str, diff: dict[str,gdata.Node], out: Session) -> value
@@ -131,10 +121,6 @@ class _Transaction(object):
     lock_cont : proc(actself: Transaction, res: value) -> None
     commit: proc(tid: str, ok: bool) -> None
     get: proc() -> gdata.Node
-    notify: proc(list[str]) -> None
-
-    def notify(self, path):
-        pass
 
 
 ####################### Layer ########################
@@ -147,14 +133,10 @@ actor GenLayer(impl: _GenLayer):
     def below():
         return impl.below()
 
-    def notify(path):
-        impl.notify(path)
-
 
 class _GenLayer(object):
     newsession: proc() -> Session
     below: proc() -> GenLayer
-    notify: proc(list[str]) -> None
 
 
 actor Session(impl: _Session):
@@ -202,7 +184,6 @@ class _Session(object):
     below:              proc(actself: Session) -> Session
 
 
-
 def Layer(name: str, root: proc(list[str])->Node, lower: GenLayer):
     return GenLayer(_Layer(name, root, lower))
 
@@ -222,9 +203,6 @@ class _Layer(_GenLayer):
     def below(self):
         return self.lower
 
-    def notify(self, path):
-        self.root.notify(path)
-
 
 def Sink():
     return GenLayer(_Sink(SinkSession()))
@@ -240,9 +218,6 @@ class _Sink(_GenLayer):
 
     def below(self):
         return GenLayer(self)
-
-    def notify(self, path):
-        pass
 
 
 def LayerSession(name: str, rootnode: Node, lowerlayer: GenLayer):
@@ -416,14 +391,6 @@ class _Container(_Node):
             res[tag] = node.get()
         return gdata.Container(res)
 
-    def notify(self, path):
-        if len(path) == 0:
-            for elem in self.elems.values():
-                elem.notify([])
-        else:
-            elem = self.elems.get(path[0])
-            if elem is not None:
-                elem.notify(path[1:])
 
 def ContainerTransaction(path, contents):
     return Transaction(_ContainerTransaction(path, contents))
@@ -530,9 +497,6 @@ class _List(_Node):
     def get(self):
         return self.liststate.get()
 
-    def notify(self, path):
-        self.liststate.notify(path)
-
 
 actor ListState(path, template: proc(list[str]) -> Node):
     var elems = {}
@@ -572,15 +536,6 @@ actor ListState(path, template: proc(list[str]) -> Node):
             elif isinstance(r, gdata.Inner):
                 res.append(gdata.ListElement([key], r.children))
         return gdata.List(["name"], res)
-
-    def notify(path):
-        if len(path) == 0:
-            for elem in elems.values():
-                elem.notify([])
-        else:
-            elem = elems.get(path[0])
-            if elem is not None:
-                elem.notify(path[1:])
 
 
 class _ListTransaction(_Transaction):
@@ -680,6 +635,16 @@ def ListTransaction(path, liststate:ListState):
 
 
 ################# Transform #####################
+
+class _TransformBase(_Node):
+    transaction: Transaction
+
+    def newtrans(self):
+        return self.transaction
+
+    def get(self):
+        return self.transaction.get()
+
 
 class _TransformTransactionBase(_Transaction):
     inputs: dict[str, dict[str, gdata.Node]]
@@ -797,27 +762,14 @@ class _TransformTransactionBase(_Transaction):
         else:
             return gdata.Absent()
 
-    def notify(self, path):
-        print('#### (Transform)', self.path, 'notify')
-        # ...
-
 
 def Transform(function, log_handler: ?logging.Handler=None):
     return lambda path: Node(_Transform(path, function, log_handler))
 
-class _Transform(_Node):
+class _Transform(_TransformBase):
     def __init__(self, path, function, log_handler):
         self.path = path
         self.transaction = TransformTransaction(path, function, log_handler)
-
-    def newtrans(self):
-        return self.transaction
-
-    def get(self):
-        return self.transaction.get()
-
-    def notify(self, path):
-        self.transaction.notify(path)
 
 
 def TransformTransaction(path, function, log_handler):
@@ -856,19 +808,10 @@ class TransformFunction(object):
 def RFSTransform(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
     return lambda path: Node(_RFSTransform(path, function, dev_mgr, log_handler))
 
-class _RFSTransform(_Node):
+class _RFSTransform(_TransformBase):
     def __init__(self, path, function, dev_mgr, log_handler):
         self.path = path
         self.transaction = RFSTransaction(path, function, dev_mgr, log_handler)
-
-    def newtrans(self):
-        return self.transaction
-
-    def get(self):
-        return self.transaction.get()
-
-    def notify(self, path):
-        pass
 
 def RFSTransaction(path, function, dev_mgr, log_handler):
     return Transaction(_RFSTransaction(path, function, dev_mgr, log_handler))
@@ -939,19 +882,10 @@ class RFSFunction(object):
 def Device(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
     return lambda path: Node(_Device(path, dev_mgr, log_handler))
 
-class _Device(_Node):
+class _Device(_TransformBase):
     def __init__(self, path, dev_mgr, log_handler):
         self.path = path
         self.transaction = DeviceTransaction(path, dev_mgr, log_handler)
-
-    def newtrans(self):
-        return self.transaction
-
-    def get(self):
-        return self.transaction.get()
-
-    def notify(self, path):
-        pass
 
 def DeviceTransaction(path, dev_mgr, log_handler):
     return Transaction(_DeviceTransaction(path, dev_mgr, log_handler))
@@ -972,9 +906,9 @@ class _DeviceTransaction(_TransformTransactionBase):
         print('#### (Device)', self.path, 'finalize', tid)
         config = self.output
         if config is not None:
-            dmc = DeviceMetaConfig.from_gdata(config)
-            dev = self.dev_mgr.get(dmc.name)
-            dev.set_meta_config(dmc)
+            meta_config = DeviceMetaConfig.from_gdata(config)
+            dev = self.dev_mgr.get(meta_config.name)
+            dev.set_meta_config(meta_config, tid)
 
 
 ################# DeviceConfig #####################
@@ -982,19 +916,10 @@ class _DeviceTransaction(_TransformTransactionBase):
 def DeviceConfig(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
     return lambda path: Node(_DeviceConfig(path, dev_mgr, log_handler))
 
-class _DeviceConfig(_Node):
+class _DeviceConfig(_TransformBase):
     def __init__(self, path, dev_mgr, log_handler):
         self.path = path
         self.transaction = DeviceConfigTransaction(path, dev_mgr, log_handler)
-
-    def newtrans(self):
-        return self.transaction
-
-    def get(self):
-        return self.transaction.get()
-
-    def notify(self, path):
-        pass
 
 def DeviceConfigTransaction(path, dev_mgr, log_handler):
     return Transaction(_DeviceConfigTransaction(path, dev_mgr, log_handler))
@@ -1021,4 +946,4 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
                 if isinstance(config, gdata.Container):
                     dev = self.dev_mgr.get(name)
                     dev_config = gdata.Root(config.children)
-                    dev.edit_config(dev_config)
+                    dev.edit_config(dev_config, tid)
