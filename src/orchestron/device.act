@@ -117,7 +117,8 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     """
     var dmc: ?DeviceMetaConfig = None
     var client: ?netconf.Client = None
-    var conf: ?yang.gdata.Node = None
+    var current_conf: ?yang.gdata.Node = None
+    var tids: set[str] = set()
     var again = False
     var state = 0
     var t_state = 0
@@ -144,9 +145,9 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             if on_reconf != None:
                 on_reconf(name)
 
-        if conf != None:
+        if current_conf != None:
             _log.debug("Sending config")
-            edit_config(conf)
+            _edit_config(current_conf)
         else:
             _log.debug("No config to send")
 
@@ -157,7 +158,8 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def _on_notif(c, n):
         _log.debug("Notification from device")
 
-    def set_meta_config(conf: DeviceMetaConfig):
+    def set_meta_config(conf: DeviceMetaConfig, tid: ?str = None):
+        print("Device", name, "setting meta-config")
         _log.debug("Device.set_meta_config")
 
         if wcap == None:
@@ -186,6 +188,9 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                     m = ModCap(mock_cap.name, mock_cap.namespace, mock_cap.revision, mock_cap.feature)
                     _log.debug("Adding mock cap", {"cap": m.name})
                     modset[m.name] = m
+            if on_reconf != None:
+                print("Device", name, "triggering reconfiguration")
+                on_reconf(name)
             return
 
         if state > 0:
@@ -237,18 +242,19 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         if again:
             _log.debug("Device._conf_again")
             again = False
-            if conf is not None:
-                _edit_config(conf)
+            if current_conf is not None:
+                edit_config(current_conf)
 
-    def edit_config(new_conf: yang.gdata.Node):
+    def edit_config(new_conf: yang.gdata.Node, tid: ?str = None):
+        print("Device", name, "edit-config")
         _log.debug("Device.edit_config")
-        if conf == new_conf:
+        if current_conf == new_conf:
             _log.debug("Device.edit_config config is same as current, noop")
             return
-        _edit_config(new_conf)
+        _edit_config(new_conf, tid)
 
-    def _edit_config(new_conf: yang.gdata.Node):
-        conf = new_conf
+    def _edit_config(new_conf: yang.gdata.Node, tid: ?str = None):
+        current_conf = new_conf
         if state != 2:
             _log.debug("Device.edit_config not connected yet, storing config")
             return
