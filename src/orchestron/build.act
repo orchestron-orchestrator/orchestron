@@ -176,6 +176,23 @@ class Layer(object):
         self.models = models
         self.name = name
 
+    @staticmethod
+    def from_dir(fc: file.FileCap, dir: str, name: ?str=None) -> Layer:
+        """Create a Layer from YANG models in a directory
+
+        This method simply loads all .yang files from the specified directory
+        to create a Layer.
+        """
+        rfc = file.ReadFileCap(fc)
+        fs = file.FS(fc)
+        models = []
+
+        for f in fs.listdir(dir):
+            if f.endswith(".yang"):
+                rf = file.ReadFile(rfc, "%s/%s" % (dir, f))
+                models.append(rf.read().decode())
+        return Layer(models, name)
+
 def apply_schema_transforms_to_dir(fc: file.FileCap, dir: str, transforms: list[SchemaTransformChain]=[]) -> None:
     """Apply schema transformations to YANG files in a directory.
 
