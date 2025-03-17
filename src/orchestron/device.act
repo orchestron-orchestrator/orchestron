@@ -8,15 +8,24 @@ from orchestron.device_meta_config import orchestron_rfs__device_entry as Device
 
 import netconf
 
+NO_TRANSACTION = 0
+IN_TRANSACTION = 1
+
+NOT_CONNECTED = 0
+CONNECTING = 1
+CONNECTED = 2
+
 class UnsupportedDevice(Exception):
     pass
 
-class EmptyConfig(yang.adata.MNode):
-    def to_gdata(self) -> yang.gdata.Node:
-        return yang.gdata.Root()
-
 
 actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
+    """Device Manager keeps track of all devices and hands out references to
+    them based on name.
+
+    There must only be a single Device instance per device, i.e. the same device
+    name must always return the same Device instance.
+    """
     var devices = {}
     var reconf_cb: ?action() -> None = None
 
@@ -28,6 +37,226 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
 
     def on_reconf(on_reconf: action() -> None):
         reconf_cb = on_reconf
+
+
+actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action() -> None=None):
+    """NETCONF Device
+
+    Some day this will be the base class for all devices and we'll support all
+    kinds of device types and protocols but for now we are just doing NETCONF.
+    """
+    # Orchestron's intended configuration, that we want on the device. Note how
+    # this is NOT the NMDA-speak "intended configuration" of the device itself
+    var intended_conf: ?yang.gdata.Node = None
+    # The currently running configuration on the device (which in NMDA lingo is
+    # the "intended configuration" of the device)
+    var running_conf: ?yang.gdata.Node = None
+
+    # The device's meta configuration, like address, credentials, etc.
+    var dmc: ?DeviceMetaConfig = None
+
+    # The NETCONF client connection to the device
+    var client: ?netconf.Client = None
+
+    # If we need to push configuration again after a transaction is done. This
+    # happens when the configuration changes while we have an outstanding
+    # in-progress transaction to the device.
+    var again = False
+
+    var conn_state = NOT_CONNECTED
+    var txn_state = NO_TRANSACTION
+
+    var modset: dict[str, ModCap] = {}
+    var subs = []
+
+    _log = logging.Logger(log_handler)
+    _log.name = "Device " + name
+
+    def _on_connect(c):
+        _log.info("Connected to device")
+        conn_state = CONNECTED
+
+        # TODO: actonc bug - try uncommenting this
+        # for cap in c.get_capabilities():
+        caps = c.get_capabilities()
+        new_modset: dict[str, ModCap] = {}
+        for cap in caps:
+            m = parse_cap(cap)
+            new_modset[m.name] = m
+
+        if not modcap_eq(modset, new_modset):
+            modset = new_modset
+            if on_reconf is not None:
+                on_reconf()
+
+        _send_config()
+
+    def _on_error(c, error):
+        modset = {}
+        _log.debug("Error connecting to device")
+
+    def _on_notif(c, n):
+        _log.debug("Notification from device")
+
+    def set_meta_config(conf: DeviceMetaConfig):
+        _log.debug("Device.set_meta_config")
+
+        if wcap == None:
+            _log.debug("Device in MOCK mode, pretending to connect to device...")
+            state = CONNECTED
+
+            preset_caps = []
+            if "cisco-ios-xr" in conf.mock.preset:
+                preset_caps.extend([
+                    "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21",
+                    "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&revision=2022-07-11",
+                    "http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&revision=2022-07-11",
+                ])
+            if "juniper-junos" in conf.mock.preset:
+                preset_caps.extend([
+                    "http://xml.juniper.net/netconf/junos/1.0",
+                    "http://xml.juniper.net/dmi/system/1.0",
+                ])
+            for cap in preset_caps:
+                m = parse_cap(cap)
+                modset[m.name] = m
+                _log.debug("Adding preset cap", {"cap": m.name})
+
+            if len(conf.mock.module.elements) > 0:
+                for mock_cap in conf.mock.module.elements:
+                    m = ModCap(mock_cap.name, mock_cap.namespace, mock_cap.revision, mock_cap.feature)
+                    _log.debug("Adding mock cap", {"cap": m.name})
+                    modset[m.name] = m
+            return
+
+        if conn_state == CONNECTED:
+            _log.debug("Device already connected, ignoring new config")
+            return
+
+#        if dmc is not None:
+#            # TODO: should compare existing dmc with new conf
+#            if dmc.to_gdata() == conf.to_gdata():
+#                _log.debug("Device Meta Config already set to same value")
+#                return
+
+        #_log.debug(conf.to_gdata().to_xmlstr())
+
+        if not len(conf.address.elements) > 0:
+            _log.debug("Not enough addressess :/")
+            return
+
+        addr = conf.address.elements[0]
+        address = addr.address
+        addr_port = addr.port
+        port = int(addr_port) if addr_port is not None else 830
+        username = conf.credentials.username
+        password = conf.credentials.password
+
+        if wcap is not None and username is not None and password is not None:
+            conn_state = CONNECTING
+            _log.debug("Setting up NETCONF client... %s %d %s %s" % (address, port, username, password))
+            c = netconf.Client(wcap, address, port, username, password,
+                               on_connect=_on_connect,
+                               on_error=_on_error,
+                               on_notif=_on_notif,
+                               log_handler=log_handler)
+            client = c
+        dmc = conf
+
+    def edit_config(new_conf: yang.gdata.Node):
+        # TODO: remove this, and use configure instead
+        return configure(new_conf)
+
+    def configure(new_conf: yang.gdata.Node):
+        if intended_conf == new_conf:
+            _log.debug("Ignoring new configuration identical to current intended configuration")
+        else:
+            intended_conf = new_conf
+            _send_config()
+
+    def get_capabilities():
+        if client is not None:
+            return client.get_capabilities()
+        return []
+
+    def get_modules():
+        return modset
+
+    def _is_writable_running():
+        return ":writable-running" in modset
+
+    def _transaction_done(success: bool):
+        """Internal function called when transaction is done
+        """
+        txn_state = NO_TRANSACTION
+
+        if again:
+            _log.debug("Configuration changed during in-progress transaction, running again...")
+            again = False
+            _send_config()
+
+    def _send_config():
+        """Attempt to send the intended configuration to the device"""
+        if intended_conf is None:
+            _log.debug("Device has no intended configuration")
+            return
+        if conn_state != CONNECTED:
+            _log.debug("Device not connected, cannot send configuration")
+            return
+        if intended_conf is not None:
+            if wcap == None:
+                _log.debug("Device in MOCK mode, \"sending config\"... *hihi*")
+                return
+            if client is not None:
+                _log.debug("Device.edit_config Sending config...")
+                xml_conf = intended_conf.to_xmlstr(pretty=False)
+                if xml_conf == "":
+                    # Cisco IOS XRd doesn't like empty <edit-config>, returns error
+                    _log.debug("Device.edit_config Config is empty, noop")
+                    return
+                if txn_state == IN_TRANSACTION:
+                    _log.debug("Device.edit_config in progress transaction, storing config")
+                    again = True
+                    return
+                txn_state = IN_TRANSACTION
+                if _is_writable_running():
+                    client.edit_config(xml_conf, _on_conf)
+                else:
+                    client.edit_config(xml_conf, _on_conf, datastore="candidate")
+
+    def _on_conf(c, r):
+        if r is not None:
+            _log.debug("Device._on_conf", {"r": r.encode()})
+            if not _is_writable_running():
+                # We edit-config'd candidate, now commit
+                c.commit(_on_commit)
+            else:
+                _transaction_done(True)
+        else:
+            _log.debug("Device._on_conf: Device disconnected")
+            _transaction_done(False)
+
+    def _on_commit(c, r):
+        if r is not None:
+            _log.debug("Device._on_commit", {"r": r.encode()})
+            if any(filter(lambda c: c.tag == "rpc-error", r.children)) and not _is_writable_running():
+                # We commit'ed candidate, but got an error, now discard-changes
+                # TODO: what if the device does this (:rollback-on-error)?!
+                c.discard_changes(_on_discard_changes)
+            else:
+                _transaction_done(True)
+        else:
+            _log.debug("Device._on_commit: Device disconnected")
+            _transaction_done(False)
+
+    def _on_discard_changes(c, r):
+        if r is not None:
+            _log.debug("Device._on_discard_changes", {"r": r.encode()})
+            _transaction_done(False)
+        else:
+            _log.debug("Device._on_discard_changes: Device disconnected")
+            _transaction_done(False)
+
 
 class ModCap(object):
     name: str
@@ -45,7 +274,7 @@ extension ModCap(Eq):
     def __eq__(self, other: ModCap) -> bool:
         self_revision = self.revision
         other_revision = other.revision
-        revision_eq = (self_revision == None and other_revision == None) or (self_revision != None and other_revision != None and self_revision == other_revision)
+        revision_eq = (self_revision == None and other_revision == None) or (self_revision is not None and other_revision is not None and self_revision == other_revision)
         return self.name == other.name and self.namespace == other.namespace and revision_eq and self.feature == other.feature
 
 def modcap_eq(a: dict[str, ModCap], b: dict[str, ModCap]) -> bool:
@@ -104,203 +333,3 @@ def _test_parse_cap_xr_hostname():
     testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg")
     testing.assertEqual(mod.revision, "2021-04-21")
     testing.assertEqual(mod.feature, [])
-
-
-
-# State machine
-# connect
-actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action() -> None=None):
-    """NETCONF Device
-
-    Some day this will be the base class for all devices and we'll support all
-    kinds of device types and protocols but for now we are just doing NETCONF.
-    """
-    var dmc: ?DeviceMetaConfig = None
-    var client: ?netconf.Client = None
-    var conf: ?yang.gdata.Node = None
-    var again = False
-    var state = 0
-    var t_state = 0
-    var modset: dict[str, ModCap] = {}
-    var subs = []
-
-    _log = logging.Logger(log_handler)
-    _log.name = "Device " + name
-
-    def _on_connect(c):
-        _log.info("Connected to device")
-        state = 2
-
-        # TODO: actonc bug - try uncommenting this
-        # for cap in c.get_capabilities():
-        caps = c.get_capabilities()
-        new_modset: dict[str, ModCap] = {}
-        for cap in caps:
-            m = parse_cap(cap)
-            new_modset[m.name] = m
-
-        if not modcap_eq(modset, new_modset):
-            modset = new_modset
-            if on_reconf != None:
-                on_reconf()
-
-        if conf != None:
-            _log.debug("Sending config")
-            edit_config(conf)
-        else:
-            _log.debug("No config to send")
-
-    def _on_error(c, error):
-        modset = {}
-        _log.debug("Error connecting to device")
-
-    def _on_notif(c, n):
-        _log.debug("Notification from device")
-
-    def set_meta_config(conf: DeviceMetaConfig):
-        _log.debug("Device.set_meta_config")
-
-        if wcap == None:
-            _log.debug("Device in MOCK mode, pretending to connect to device...")
-            state = 2
-
-            preset_caps = []
-            if "cisco-ios-xr" in conf.mock.preset:
-                preset_caps.extend([
-                    "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21",
-                    "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&revision=2022-07-11",
-                    "http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&revision=2022-07-11",
-                ])
-            if "juniper-junos" in conf.mock.preset:
-                preset_caps.extend([
-                    "http://xml.juniper.net/netconf/junos/1.0",
-                    "http://xml.juniper.net/dmi/system/1.0",
-                ])
-            for cap in preset_caps:
-                m = parse_cap(cap)
-                modset[m.name] = m
-                _log.debug("Adding preset cap", {"cap": m.name})
-
-            if len(conf.mock.module.elements) > 0:
-                for mock_cap in conf.mock.module.elements:
-                    m = ModCap(mock_cap.name, mock_cap.namespace, mock_cap.revision, mock_cap.feature)
-                    _log.debug("Adding mock cap", {"cap": m.name})
-                    modset[m.name] = m
-            return
-
-        if state > 0:
-            _log.debug("Device already connected, ignoring new config")
-            return
-
-#        if dmc is not None:
-#            # TODO: should compare existing dmc with new conf
-#            if dmc.to_gdata() == conf.to_gdata():
-#                _log.debug("Device Meta Config already set to same value")
-#                return
-
-        #_log.debug(conf.to_gdata().to_xmlstr())
-
-        if not len(conf.address.elements) > 0:
-            _log.debug("Not enough addressess :/")
-            return
-
-        addr = conf.address.elements[0]
-        address = addr.address
-        addr_port = addr.port
-        port = int(addr_port) if addr_port != None else 830
-        username = conf.credentials.username
-        password = conf.credentials.password
-
-        if wcap != None and username != None and password != None:
-            state = 1
-            _log.debug("Setting up NETCONF client... %s %d %s %s" % (address, port, username, password))
-            c = netconf.Client(wcap, address, port, username, password,
-                               on_connect=_on_connect,
-                               on_error=_on_error,
-                               on_notif=_on_notif,
-                               log_handler=log_handler)
-            client = c
-        dmc = conf
-
-    def get_capabilities():
-        if client != None:
-            return client.get_capabilities()
-        return []
-
-    def get_modules():
-        return modset
-
-    def _is_writable_running():
-        return ":writable-running" in modset
-
-    def _conf_again():
-        if again:
-            _log.debug("Device._conf_again")
-            again = False
-            if conf is not None:
-                _edit_config(conf)
-
-    def edit_config(new_conf: yang.gdata.Node):
-        _log.debug("Device.edit_config")
-        if conf == new_conf:
-            _log.debug("Device.edit_config config is same as current, noop")
-            return
-        _edit_config(new_conf)
-
-    def _edit_config(new_conf: yang.gdata.Node):
-        conf = new_conf
-        if state != 2:
-            _log.debug("Device.edit_config not connected yet, storing config")
-            return
-        if wcap == None:
-            _log.debug("Device in MOCK mode, \"sending config\"... *hihi*")
-            return
-        if client is not None:
-            _log.debug("Device.edit_config Sending config...")
-            xml_conf = new_conf.to_xmlstr(pretty=False)
-            if xml_conf == "":
-                # Cisco IOS XRd doesn't like empty <edit-config>, returns error
-                _log.debug("Device.edit_config Config is empty, noop")
-                return
-            if t_state == 1:
-                _log.debug("Device.edit_config in progress transaction, storing config")
-                again = True
-                return
-            t_state = 1
-            if _is_writable_running():
-                client.edit_config(xml_conf, _on_conf)
-            else:
-                client.edit_config(xml_conf, _on_conf, datastore="candidate")
-
-    def _on_conf(c, r):
-        if r is not None:
-            _log.debug("Device._on_conf", {"r": r.encode()})
-            if not _is_writable_running():
-                # We edit-config'd candidate, now commit
-                c.commit(_on_commit)
-            else:
-                t_state = 0
-                _conf_again()
-        else:
-            _log.debug("Device._on_conf went to shit")
-
-    def _on_commit(c, r):
-        if r is not None:
-            _log.debug("Device._on_commit", {"r": r.encode()})
-            if any(filter(lambda c: c.tag == "rpc-error", r.children)) and not _is_writable_running():
-                # We commit'ed candidate, but got an error, now discard-changes
-                # TODO: what if the device does this (:rollback-on-error)?!
-                c.discard_changes(_on_discard_changes)
-            else:
-                t_state = 0
-                _conf_again()
-        else:
-            _log.debug("Device._on_commit went to shit")
-
-    def _on_discard_changes(c, r):
-        if r is not None:
-            _log.debug("Device._on_discard_changes", {"r": r.encode()})
-            t_state = 0
-            _conf_again()
-        else:
-            _log.debug("Device._on_discard_changes went to shit")
