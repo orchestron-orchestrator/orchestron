@@ -12,8 +12,12 @@ def _maybe_write_file(fc: file.FileCap, name: str, content: str) -> bool:
     """Write new content to a file if the content is different from existing content"""
     rfc = file.ReadFileCap(fc)
     wfc = file.WriteFileCap(fc)
-    rf = file.ReadFile(rfc, name)
-    old_content = rf.read().decode()
+    old_content = ""
+    try:
+        rf = file.ReadFile(rfc, name)
+        old_content = rf.read().decode()
+    except FileNotFoundError:
+        pass
     if old_content != content:
         wf = file.WriteFile(wfc, name)
         await async wf.write(content.encode())
