@@ -185,7 +185,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def _is_writable_running():
         return ":writable-running" in modset
 
-    def _transaction_done():
+    def _transaction_done(success: bool):
         """Internal function called when transaction is done
         """
         txn_state = NO_TRANSACTION
@@ -231,9 +231,10 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                 # We edit-config'd candidate, now commit
                 c.commit(_on_commit)
             else:
-                _transaction_done()
+                _transaction_done(True)
         else:
-            _log.debug("Device._on_conf went to shit")
+            _log.debug("Device._on_conf: Device disconnected")
+            _transaction_done(False)
 
     def _on_commit(c, r):
         if r is not None:
@@ -243,16 +244,18 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                 # TODO: what if the device does this (:rollback-on-error)?!
                 c.discard_changes(_on_discard_changes)
             else:
-                _transaction_done()
+                _transaction_done(True)
         else:
-            _log.debug("Device._on_commit went to shit")
+            _log.debug("Device._on_commit: Device disconnected")
+            _transaction_done(False)
 
     def _on_discard_changes(c, r):
         if r is not None:
             _log.debug("Device._on_discard_changes", {"r": r.encode()})
-            _transaction_done()
+            _transaction_done(False)
         else:
-            _log.debug("Device._on_discard_changes went to shit")
+            _log.debug("Device._on_discard_changes: Device disconnected")
+            _transaction_done(False)
 
 
 class ModCap(object):
