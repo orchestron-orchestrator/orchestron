@@ -35,7 +35,9 @@ class SysSpec(object):
     def __init__(self, name: str, layers: list[Layer], device_types: list[DeviceType]):
         self.name = name
         self.layers = layers + [Layer([oyang.device])]
-        self.dev_types = device_types
+        self.dev_types = {}
+        for dev_type in device_types:
+            self.dev_types[dev_type.name] = dev_type
 
     def gen_app(self, fc: file.FileCap, output_dir: str):
         tttsrc = "# WARNING WARNING WARNING WARNING WARNING\n"
@@ -100,7 +102,9 @@ class SysSpec(object):
             else:
                 print("+ Layer %d loose adata unchanged" % idx)
 
-        for dev_type in self.dev_types:
+        syssrc = ""
+        syssrc_devtypes = ""
+        for dev_type in self.dev_types.values():
             print("Generating device type %s" % dev_type.name)
             for idx, model in enumerate(dev_type.models):
                 print("Generating model %d" % idx)
@@ -111,6 +115,16 @@ class SysSpec(object):
                 print("+ Device type %s adata changed" % dev_type.name)
             else:
                 print("+ Device type %s adata unchanged" % dev_type.name)
+
+            syssrc += "import %s.devices.%s\n" % (self.name, dev_type.name)
+            syssrc_devtypes += "    \"%s\": %s.devices.%s\n" % (dev_type.name, self.name, dev_type.name)
+        syssrc += "device_types = {\n"
+        syssrc += syssrc_devtypes
+        syssrc += "}\n"
+        if _maybe_write_file(fc, "%s/%s/sysspec.act" % (output_dir, self.name), syssrc):
+            print("+ Sys spec changed")
+        else:
+            print("+ Sys spec unchanged")
 
         print("Generating app layers.act")
         tttsrc_getlayers += "          None%s\n    return res\n" % (")" * len(self.layers))
