@@ -239,8 +239,8 @@ class _LayerSession(_Session):
     root: Transaction
     lower: Session
     buf: dict[str, dict[str,gdata.Node]]
-    exe_cont: ?action(value)->None
-    fin_cont: ?action(value)->None
+    lock_cont: ?action(value)->None
+    done_cont: ?action(value)->None
     tid: ?str
 
     def __init__(self, name: str, root: Transaction, lower: Session):
@@ -248,15 +248,15 @@ class _LayerSession(_Session):
         self.root = root
         self.lower = lower
         self.buf = {}
-        self.exe_cont = None
-        self.fin_cont = None
+        self.lock_cont = None
+        self.done_cont = None
         self.tid = None
 
     # yield action
     def edit_config(self, actself, diff: gdata.Node, done, force=False):
         tid = 'tr_' + str(self)[-10:-1]
         #print('#### (Layer)', self.name, 'edit_config', tid)
-        self.exe_cont = done
+        self.done_cont = done
         self.configure(tid, {'_': diff})
         res = self.apply(tid, force)
         #print('   # (Layer)', self.name, 'EXECUTE', tid, 'PREP RESULT', res)
@@ -264,15 +264,15 @@ class _LayerSession(_Session):
             self.lock(actself, tid, actself.edit_config_cont)       # yield await
 
     def edit_config_cont(self, res: value):
-        exe_cont = self.exe_cont
+        done_cont = self.done_cont
         tid = self.tid
         #print('#### (Layer)', self.name, 'edit_config_cont', tid)
         if tid is not None:
             self.commit(tid, isinstance(res, str) and res == 'Ok')
-            if exe_cont is not None:
+            if done_cont is not None:
                 #print('   # (Layer)', self.name, 'EXECUTE', tid, 'DONE', res)
-                exe_cont(res)
-        self.exe_cont = None
+                done_cont(res)
+        self.done_cont = None
         self.tid = None
 
     def configure(self, tid: str, diff_per_source: dict[str,gdata.Node]):
@@ -297,7 +297,7 @@ class _LayerSession(_Session):
     def lock(self, actself, tid: str, done: action(value) -> None):
         #print('#### (Layer)', self.name, 'lock', tid)
         self.tid = tid
-        self.fin_cont = done
+        self.lock_cont = done
         self.root.lock(tid, self.lower, actself.lock_cont1)     # yield await
 
     def lock_cont1(self, actself, res: value):
@@ -310,12 +310,12 @@ class _LayerSession(_Session):
 
     def lock_cont2(self, res: value):
         #print('#### (Layer)', self.name, 'lock_cont2')
-        fin_cont = self.fin_cont
-        if fin_cont is not None:
-            self.fin_cont = None
+        lock_cont = self.lock_cont
+        if lock_cont is not None:
+            self.lock_cont = None
             rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
             #print('   # (Layer)', self.name, 'FINALIZE RESULT', rr)
-            fin_cont(rr)
+            lock_cont(rr)
 
     def commit(self, tid, ok):
         #print('#### (Layer)', self.name, 'commit', tid, ok)
@@ -864,7 +864,7 @@ class _RFSTransaction(_TransformTransactionBase):
             newout = self.function.transform_wrapper(merged, DeviceInfo(devname, modcap))
         else:
             #print("No device capabilities, skipping RFS transform for", devname)
-            newout = gdata.Root({})
+            return gdata.Root({})
         res = difference(self.output, newout)
 
         if isinstance(res, gdata.Inner):
