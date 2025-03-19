@@ -100,7 +100,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def _on_notif(c, n):
         _log.debug("Notification from device")
 
-    def set_meta_config(conf: DeviceMetaConfig, tid: ?str = None):
+    def set_meta_config(conf: DeviceMetaConfig):
         _log.debug("Device.set_meta_config")
 
         if wcap == None:
@@ -338,4 +338,3 @@ def _test_parse_cap_xr_hostname():
     testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg")
     testing.assertEqual(mod.revision, "2021-04-21")
     testing.assertEqual(mod.feature, [])
-
