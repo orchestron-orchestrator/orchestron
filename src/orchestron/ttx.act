@@ -265,15 +265,17 @@ class _LayerSession(_Session):
         self.tid = None
 
     # yield action
-    def edit_config(self, actself, diff: gdata.Node, done, force=False):
+    def edit_config(self, actself, diff: gdata.Node, done: ?action(value)->None, force=False):
         tid = 'tr_' + str(self)[-10:-1]
         #print('#### (Layer)', self.name, 'edit_config', tid)
         self.done_cont = done
-        self.configure(tid, {'_': diff})
         res = self.apply(tid, force)
         #print('   # (Layer)', self.name, 'EXECUTE', tid, 'PREP RESULT', res)
         if isinstance(res, str) and res == 'Ok':
+            self.configure(tid, {'_': diff})
             self.lock(actself, tid, actself.edit_config_cont)       # yield await
+        elif done is not None:
+            done(res)
 
     def edit_config_cont(self, res: value):
         done_cont = self.done_cont
@@ -319,6 +321,8 @@ class _LayerSession(_Session):
             if not isinstance(res, Exception):
                 #print('   # (Layer)', self.name, 'FINALIZE LOWER', tid)
                 self.lower.lock(tid, actself.lock_cont2)        # yield await
+            else:
+                self.lock_cont2(res)
 
     def lock_cont2(self, res: value):
         #print('#### (Layer)', self.name, 'lock_cont2')
@@ -1071,7 +1075,7 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
                 config = device.children["config"]
                 if isinstance(config, gdata.Container):
                     cfg = gdata.Root(config.children)
-                    self.dev.edit_config(cfg, tid)
+                    self.dev.configure(cfg, tid)
 
     def on_completion(self, actself, tid, out, done):                            # (yield await)
         print('#### (DeviceConfig)', self.path, 'on_completion', tid)
