@@ -268,11 +268,11 @@ class _LayerSession(_Session):
     def edit_config(self, actself, diff: gdata.Node, done: ?action(value)->None, force=False):
         tid = 'tr_' + str(self)[-10:-1]
         #print('#### (Layer)', self.name, 'edit_config', tid)
-        self.done_cont = done
+        self.configure(tid, {'_': diff})
         res = self.apply(tid, force)
         #print('   # (Layer)', self.name, 'EXECUTE', tid, 'PREP RESULT', res)
         if isinstance(res, str) and res == 'Ok':
-            self.configure(tid, {'_': diff})
+            self.done_cont = done
             self.lock(actself, tid, actself.edit_config_cont)       # yield await
         elif done is not None:
             done(res)
