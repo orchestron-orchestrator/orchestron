@@ -110,6 +110,12 @@ actor Transaction(impl: _Transaction):
     def commit(tid, ok):
         impl.commit(tid, ok)
 
+    def on_completion(tid, out, done):
+        impl.on_completion(self, tid, out, done)
+
+    def on_completion_cont(res):
+        impl.on_completion_cont(self, res)
+
     def get():
         return impl.get()
 
@@ -120,6 +126,8 @@ class _Transaction(object):
     lock : proc(actself: Transaction, tid: str, out: Session, done: action(value) -> None) -> None
     lock_cont : proc(actself: Transaction, res: value) -> None
     commit: proc(tid: str, ok: bool) -> None
+    on_completion: proc(actself: Transaction, tid: str, out: Session, done: action(value) -> None) -> None
+    on_completion_cont : proc(actself: Transaction, res: value) -> None
     get: proc() -> gdata.Node
 
 
@@ -171,6 +179,9 @@ actor Session(impl: _Session):
     def commit(tid, ok):
         impl.commit(tid, ok)
 
+    def on_completion(done):
+        impl.on_completion(done)
+
     def get():
         return impl.get()
 
@@ -186,6 +197,7 @@ class _Session(object):
     lock_cont1:         proc(actself: Session, res: value) -> None
     lock_cont2:         proc(res: value) -> None
     commit:             proc(tid: str, ok: bool) -> None
+    on_completion:      proc(done: action(value)->None) -> None
     get:                proc() -> gdata.Node
     below:              proc(actself: Session) -> Session
 
@@ -200,7 +212,7 @@ class _Layer(_GenLayer):
 
     def __init__(self, name, root: proc(list[str])->Node, lower: GenLayer):
         self.name = name
-        self.root = root([])
+        self.root = root(["("+name+")"])
         self.lower = lower
 
     def newsession(self):
@@ -322,6 +334,12 @@ class _LayerSession(_Session):
         self.root.commit(tid, ok)
         self.lower.commit(tid, ok)
 
+    def on_completion(self, done):
+        #print('#### (Layer)', self.name, 'on_completion', self.tid)
+        tid = self.tid
+        if tid is not None:
+            self.root.on_completion(tid, self.lower, done)
+
     def get(self):
         return self.root.get()
 
@@ -374,6 +392,9 @@ class _SinkSession(_Session):
     def commit(self, tid, ok):
         #print('#### (Sink) commit', tid, ok)
         pass
+
+    def on_completion(self, done):
+        done('Ok')
 
     def get(self):
         merged = merge(self.cfg)
@@ -490,6 +511,39 @@ class _ContainerTransaction(_Transaction):
         #print('   # (Container)', self.path, 'COMMIT DONE')
         self.accum = {}
 
+    # yield action
+    def on_completion(self, actself, tid, out, done):
+        #print('#### (Container)', self.path, 'on_completion', tid, list(self.accum.keys()))
+        it = iter(sorted(self.elems.keys()))
+        try:
+            key = next(it)
+            self.state = YieldState(it, key, tid, out, done)
+            tr = self.elems[key]
+            #print('   # (Container)', self.path, 'COMPLETE CHILD', key)
+            tr.on_completion(tid, out, actself.on_completion_cont)             # yield await
+        except StopIteration:
+            #print('   # (Container)', self.path, 'COMPLETION IMMEDIATELY DONE')
+            done('Ok')
+
+    proc def on_completion_cont (self, actself, res):
+        state = self.state
+        if state is not None:
+            #print('   # (Container)', self.path, 'COMPLETE', state.tid, 'CHILD', state.key, 'RESULT:', res)
+            state.results[state.key] = res
+            try:
+                key = next(state.it)
+                state.key = key
+                tr = self.elems[key]
+                #print('   # (Container)', self.path, 'COMPLETE CHILD', key)
+                tr.on_completion(state.tid, state.out, actself.on_completion_cont)
+            except StopIteration:
+                self.state = None
+                #print('   # (Container)', self.path, 'COMPLETION DONE')
+                state.done(self._analyze(state.results))
+        else:
+            #print('#### (Container)', self.path, 'on_completion_cont empty state!!!')
+            pass
+
     def get(self):
         res = {}
         for tag,node in self.elems.items():
@@ -563,6 +617,7 @@ class _ListTransaction(_Transaction):
     elems : dict[str, Transaction]
     accum : dict[str, value]
     state : ?YieldState
+    reset: bool
 
     def __init__(self, path, liststate):
         self.path = path
@@ -570,9 +625,14 @@ class _ListTransaction(_Transaction):
         self.elems = {}
         self.accum = {}
         self.state = None
+        self.reset = False
 
     def configure(self, tid, diff, out, force=False):
         #print('#### (List)', self.path, 'configure', tid)
+        if self.reset:
+            self.elems = {}
+            self.accum = {}
+            self.reset = False
         diff_by_key = transpose(diff)
         if len(diff_by_key) == 0 and force:
             for k in self.liststate.acquire(tid, None).keys():
@@ -647,8 +707,40 @@ class _ListTransaction(_Transaction):
                 #print('   # (List)', self.path, 'DELETE ELEMENT', key)
                 deletes.add(key)
         self.liststate.release(tid, ok, deletes)
-        self.elems = {}
-        self.accum = {}
+        self.reset = True       # Defer resetting accum, for the benefit of 'on_completion'
+
+    # yield action
+    def on_completion(self, actself, tid, out, done):
+        #print('#### (List)', self.path, 'on_completion', tid, list(self.accum.keys()))
+        it = iter(sorted(self.accum.keys()))
+        try:
+            key = next(it)
+            self.state = YieldState(it, key, tid, out, done)
+            tr = self.elems[key]
+            #print('   # (List)', self.path, 'COMPLETE ELEMENT', key)
+            tr.on_completion(tid, out, actself.on_completion_cont)               # yield await
+        except StopIteration:
+            #print('   # (List)', self.path, 'COMPLETION IMMEDIATELY DONE')
+            done('Ok')
+
+    def on_completion_cont (self, actself, res):
+        state = self.state
+        if state is not None:
+            #print('   # (List)', self.path, 'COMPLETE', state.tid, 'ELEMENT', state.key, 'RESULT:', res)
+            state.results[state.key] = res
+            try:
+                key = next(state.it)
+                state.key = key
+                tr = self.elems[key]
+                #print('   # (List)', self.path, 'COMPLETE ELEMENT', key)
+                tr.on_completion(state.tid, state.out, actself.on_completion_cont)
+            except StopIteration:
+                self.state = None
+                #print('   # (List)', self.path, 'COMPLETION DONE')
+                state.done(self._analyze(state.results))
+        else:
+            pass
+            #print('#### (List)', self.path, 'on_completion_cont empty state!!!')
 
     def get(self):
         res = []
@@ -784,6 +876,13 @@ class _TransformTransactionBase(_Transaction):
     def finalize(self, tid):
         pass
 
+    def on_completion(self, actself, tid, out, done):                            # (yield await)
+        #print('#### (Transform)', self.path, 'on_completion', tid)
+        done('Ok')
+
+    def on_completion_cont (self, actself, res):
+        pass
+
     def get(self):
         if self.config:
             return merge(self.config)
@@ -846,33 +945,33 @@ def RFSTransaction(path, function, dev_mgr, log_handler):
 
 class _RFSTransaction(_TransformTransactionBase):
     function: RFSFunction
-    dev_mgr: odev.DeviceManager
+    devname: str
+    dev: odev.Device
 
     def __init__(self, path, function: proc(?logging.Handler) -> RFSFunction, dev_mgr: odev.DeviceManager, log_handler):
         _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
-        self.dev_mgr = dev_mgr
+        if len(path) < 3:
+            raise ValueError("RFSTransform " + str(path) + ": path length < 3")
+        self.devname = path[-3]
+        self.dev = dev_mgr.get(self.devname)
 
     def compute(self, tid, merged, out):
         #print('#### (RFSTransform)', self.path, 'compute', tid)
-        if len(self.path) < 3:
-            raise ValueError("RFSTransform " + str(self.path) + ": path length < 3")
-        devname = self.path[-3]
-        dev = self.dev_mgr.get(devname)
-        modcap = dev.get_modules()
+        modcap = self.dev.get_modules()
         if len(modcap) > 0:
-            newout = self.function.transform_wrapper(merged, DeviceInfo(devname, modcap))
+            newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modcap))
         else:
             #print("No device capabilities, skipping RFS transform for", devname)
-            return gdata.Root({})
+            newout = gdata.Root({})
         res = difference(self.output, newout)
 
         if isinstance(res, gdata.Inner):
             embedded_res = gdata.Module({
                 "devices": gdata.Container({
                     "device": gdata.List(["name"], [
-                        gdata.ListElement([devname], {
-                            "name": gdata.Leaf("str", devname),
+                        gdata.ListElement([self.devname], {
+                            "name": gdata.Leaf("str", self.devname),
                             "config": gdata.Container(res.children)
                         })
                     ])
@@ -881,6 +980,7 @@ class _RFSTransaction(_TransformTransactionBase):
             out.configure(tid, {self.me: embedded_res})
 
         return newout
+
 
 class DeviceInfo(object):
     name: str
@@ -919,12 +1019,12 @@ def DeviceTransaction(path, dev_mgr, log_handler):
     return Transaction(_DeviceTransaction(path, dev_mgr, log_handler))
 
 class _DeviceTransaction(_TransformTransactionBase):
-    dev_mgr: odev.DeviceManager
+    dev: odev.Device
     logger: logging.Logger
 
     def __init__(self, path, dev_mgr: odev.DeviceManager, log_handler):
         _TransformTransactionBase.__init__(self, path)
-        self.dev_mgr = dev_mgr
+        self.dev = dev_mgr.get(path[-1])
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
@@ -935,8 +1035,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         config = self.output
         if config is not None:
             meta_config = DeviceMetaConfig.from_gdata(config)
-            dev = self.dev_mgr.get(meta_config.name)
-            dev.set_meta_config(meta_config, tid)
+            self.dev.set_meta_config(meta_config, tid)
 
 
 ################# DeviceConfig #####################
@@ -953,12 +1052,12 @@ def DeviceConfigTransaction(path, dev_mgr, log_handler):
     return Transaction(_DeviceConfigTransaction(path, dev_mgr, log_handler))
 
 class _DeviceConfigTransaction(_TransformTransactionBase):
-    dev_mgr: odev.DeviceManager
+    dev: odev.Device
     logger: logging.Logger
 
     def __init__(self, path, dev_mgr: odev.DeviceManager, log_handler):
         _TransformTransactionBase.__init__(self, path)
-        self.dev_mgr = dev_mgr
+        self.dev = dev_mgr.get(path[-1])
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
@@ -966,12 +1065,14 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
 
     def finalize(self, tid):
         #print('#### (DeviceConfig)', self.path, 'finalize', tid)
-        tree = self.output
-        if tree is not None:
-            if isinstance(tree, gdata.ListElement):
-                name = tree.key_str()
-                config = tree.children["config"]
+        device = self.output
+        if device is not None:
+            if isinstance(device, gdata.ListElement):
+                config = device.children["config"]
                 if isinstance(config, gdata.Container):
-                    dev = self.dev_mgr.get(name)
-                    dev_config = gdata.Root(config.children)
-                    dev.edit_config(dev_config, tid)
+                    cfg = gdata.Root(config.children)
+                    self.dev.edit_config(cfg, tid)
+
+    def on_completion(self, actself, tid, out, done):                            # (yield await)
+        print('#### (DeviceConfig)', self.path, 'on_completion', tid)
+        done('Ok')
