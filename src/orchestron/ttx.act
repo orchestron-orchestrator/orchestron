@@ -110,8 +110,8 @@ actor Transaction(impl: _Transaction):
     def commit(tid, ok):
         impl.commit(tid, ok)
 
-    def wait_complete(tid, out, done):
-        impl.wait_complete(self, tid, out, done)
+    def wait_complete(tid, done):
+        impl.wait_complete(self, tid, done)
 
     def wait_complete_cont(res):
         impl.wait_complete_cont(self, res)
@@ -126,7 +126,7 @@ class _Transaction(object):
     lock : proc(actself: Transaction, tid: str, out: ?Session, done: action(value) -> None) -> None
     lock_cont : proc(actself: Transaction, res: value) -> None
     commit: proc(tid: str, ok: bool) -> None
-    wait_complete: proc(actself: Transaction, tid: str, out: ?Session, done: action(value) -> None) -> None
+    wait_complete: proc(actself: Transaction, tid: str, done: action(value) -> None) -> None
     wait_complete_cont : proc(actself: Transaction, res: value) -> None
     get: proc() -> gdata.Node
 
@@ -161,8 +161,8 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
 
     # yield action
     def edit_config(diff, done:?action(value)->None=None, complete:?action(value)->None=None, force=False):
-        tid = 'tr_' + actorid()
-        #print('#### (Layer)', name, 'edit_config', tid)
+        tid = 'tr' + actorid()
+        print('#### (Layer)', name, 'edit_config', tid)
         configure(tid, {'_': diff})
         res = apply(tid, force)
         #print('   # (Layer)', name, 'EDIT_CONFIG', tid, 'PREP RESULT', res)
@@ -239,10 +239,11 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
 
     def wait_complete(done:action(value)->None):
         #print('#### (Layer)', name, 'wait_complete', tid_state)
-        if lower is not None:
-            lower.wait_complete(done)
-        elif tid_state is not None:
-            root.wait_complete(tid_state, lower, done)
+        if tid_state is not None:
+            if lower is not None:
+                lower.wait_complete(done)
+            else:
+                root.wait_complete(tid_state, done)
 
     def get():
         return root.get()
@@ -359,15 +360,15 @@ class _ContainerTransaction(_Transaction):
         self.accum = {}
 
     # yield action
-    def wait_complete(self, actself, tid, out: ?Session, done):
+    def wait_complete(self, actself, tid, done):
         #print('#### (Container)', self.path, 'wait_complete', tid, list(self.accum.keys()))
         it = iter(sorted(self.elems.keys()))
         try:
             key = next(it)
-            self.state = YieldState(it, key, tid, out, done)
+            self.state = YieldState(it, key, tid, None, done)
             tr = self.elems[key]
             #print('   # (Container)', self.path, 'COMPLETE CHILD', key)
-            tr.wait_complete(tid, out, actself.wait_complete_cont)             # yield await
+            tr.wait_complete(tid, actself.wait_complete_cont)               # yield await
         except StopIteration:
             #print('   # (Container)', self.path, 'COMPLETION IMMEDIATELY DONE')
             done('Ok')
@@ -382,7 +383,7 @@ class _ContainerTransaction(_Transaction):
                 state.key = key
                 tr = self.elems[key]
                 #print('   # (Container)', self.path, 'COMPLETE CHILD', key)
-                tr.wait_complete(state.tid, state.out, actself.wait_complete_cont)
+                tr.wait_complete(state.tid, actself.wait_complete_cont)
             except StopIteration:
                 self.state = None
                 #print('   # (Container)', self.path, 'COMPLETION DONE')
@@ -557,15 +558,15 @@ class _ListTransaction(_Transaction):
         self.reset = True       # Defer resetting accum, for the benefit of 'wait_complete'
 
     # yield action
-    def wait_complete(self, actself, tid, out: ?Session, done):
+    def wait_complete(self, actself, tid, done):
         #print('#### (List)', self.path, 'wait_complete', tid, list(self.accum.keys()))
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
-            self.state = YieldState(it, key, tid, out, done)
+            self.state = YieldState(it, key, tid, None, done)
             tr = self.elems[key]
             #print('   # (List)', self.path, 'COMPLETE ELEMENT', key)
-            tr.wait_complete(tid, out, actself.wait_complete_cont)               # yield await
+            tr.wait_complete(tid, actself.wait_complete_cont)                   # yield await
         except StopIteration:
             #print('   # (List)', self.path, 'COMPLETION IMMEDIATELY DONE')
             done('Ok')
@@ -580,7 +581,7 @@ class _ListTransaction(_Transaction):
                 state.key = key
                 tr = self.elems[key]
                 #print('   # (List)', self.path, 'COMPLETE ELEMENT', key)
-                tr.wait_complete(state.tid, state.out, actself.wait_complete_cont)
+                tr.wait_complete(state.tid, actself.wait_complete_cont)
             except StopIteration:
                 self.state = None
                 #print('   # (List)', self.path, 'COMPLETION DONE')
@@ -723,7 +724,7 @@ class _TransformTransactionBase(_Transaction):
     def finalize(self, tid):
         pass
 
-    def wait_complete(self, actself, tid, out, done):                            # (yield await)
+    def wait_complete(self, actself, tid, done):                                # (yield await)
         #print('#### (Transform)', self.path, 'wait_complete', tid)
         done('Ok')
 
@@ -921,7 +922,7 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
                     cfg = gdata.Root(config.children)
                     self.dev.configure(cfg, tid)
 
-    def wait_complete(self, actself, tid, out, done):                            # (yield await)
+    def wait_complete(self, actself, tid, done):                                # (yield await)
         print('#### (DeviceConfig)', self.path, 'wait_complete', tid)
         done('Ok')
 
