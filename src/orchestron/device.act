@@ -60,6 +60,9 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     # The NETCONF client connection to the device
     var client: ?netconf.Client = None
 
+    # The transaction ids representing the configuration in transit
+    var transactions = set()
+
     # If we need to push configuration again after a transaction is done. This
     # happens when the configuration changes while we have an outstanding
     # in-progress transaction to the device.
@@ -168,11 +171,11 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             client = c
         dmc = conf
 
-    def edit_config(new_conf: yang.gdata.Node, tid: ?str=None):
+    def edit_config(new_conf: yang.gdata.Node, tid: str = "0"):
         # TODO: remove this, and use configure instead
         return configure(new_conf, tid)
 
-    def configure(new_conf: yang.gdata.Node, tid: ?str=None):
+    def configure(new_conf: yang.gdata.Node, tid: str):
         if intended_conf == new_conf:
             _log.debug("Ignoring new configuration identical to current intended configuration")
         else:
@@ -211,6 +214,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         if intended_conf is not None:
             if wcap == None:
                 _log.debug("Device in MOCK mode, \"sending config\"... *hihi*")
+                _transaction_done(True)
                 return
             if client is not None:
                 _log.debug("Device.edit_config Sending config...")

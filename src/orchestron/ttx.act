@@ -69,7 +69,7 @@ class YieldState(object):
     it: Iterator[str]
     key: str
     tid: str
-    out: Session
+    out: ?Session
     results: dict[str,value]
     @property
     done: action(value) -> None
@@ -121,291 +121,125 @@ actor Transaction(impl: _Transaction):
 
 class _Transaction(object):
     path: list[str]
-    configure:  proc(tid: str, diff: dict[str,gdata.Node], out: Session, force: ?bool) -> value
+    configure:  proc(tid: str, diff: dict[str,gdata.Node], out: ?Session, force: ?bool) -> value
     # yield action
-    lock : proc(actself: Transaction, tid: str, out: Session, done: action(value) -> None) -> None
+    lock : proc(actself: Transaction, tid: str, out: ?Session, done: action(value) -> None) -> None
     lock_cont : proc(actself: Transaction, res: value) -> None
     commit: proc(tid: str, ok: bool) -> None
-    on_completion: proc(actself: Transaction, tid: str, out: Session, done: action(value) -> None) -> None
+    on_completion: proc(actself: Transaction, tid: str, out: ?Session, done: action(value) -> None) -> None
     on_completion_cont : proc(actself: Transaction, res: value) -> None
     get: proc() -> gdata.Node
 
 
 ####################### Layer ########################
 
-actor GenLayer(impl: _GenLayer):
+actor Layer(name: str, rootgen: proc(list[str])->Node, lower: ?Layer):
+    root = rootgen(["("+name+")"])
 
     def newsession():
-        return impl.newsession()
+        return Session(name, root, lower)
 
     def below():
-        return impl.below()
+        return lower if lower is not None else self
 
     def edit_config(diff, done=None, force=False):
         newsession().edit_config(diff, done, force)
 
     def get():
-        return impl.get()
-
-class _GenLayer(object):
-    newsession: proc() -> Session
-    below: proc() -> GenLayer
-    get: proc() -> gdata.Node
+        return root.get()
 
 
-actor Session(impl: _Session):
-    # yield action
-    def edit_config(diff, done=None, force=False):
-        impl.edit_config(self, diff, done, force)
+actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
+    root: Transaction = rootnode.newtrans()
+    lower: ?Session = lowerlayer.newsession() if lowerlayer is not None else None
 
-    def edit_config_cont(res):
-        impl.edit_config_cont(res)
-
-    def configure(tid, diff_per_source):
-        impl.configure(tid, diff_per_source)
-
-    def apply(tid, force=False):
-        return impl.apply(tid, force)
-
-    def lock(tid, done):
-        impl.lock(self, tid, done)
-
-    def lock_cont1(res):
-        impl.lock_cont1(self, res)
-
-    def lock_cont2(res):
-        impl.lock_cont2(res)
-
-    def commit(tid, ok):
-        impl.commit(tid, ok)
-
-    def on_completion(done):
-        impl.on_completion(done)
-
-    def get():
-        return impl.get()
-
-    def below():
-        return impl.below(self)
-
-class _Session(object):
-    edit_config:        proc(actself: Session, diff: gdata.Node, done: ?action(value)->None, force: ?bool) -> None
-    edit_config_cont:   proc(res: value) -> None
-    configure:          proc(tid: str, diff_per_source: dict[str,gdata.Node]) -> None
-    apply:              proc(tid: str, force: ?bool) -> value
-    lock:               proc(actself: Session, tid: str, done: action(value)->None) -> None
-    lock_cont1:         proc(actself: Session, res: value) -> None
-    lock_cont2:         proc(res: value) -> None
-    commit:             proc(tid: str, ok: bool) -> None
-    on_completion:      proc(done: action(value)->None) -> None
-    get:                proc() -> gdata.Node
-    below:              proc(actself: Session) -> Session
-
-
-def Layer(name: str, root: proc(list[str])->Node, lower: GenLayer):
-    return GenLayer(_Layer(name, root, lower))
-
-class _Layer(_GenLayer):
-    name: str
-    root: Node
-    lower: GenLayer
-
-    def __init__(self, name, root: proc(list[str])->Node, lower: GenLayer):
-        self.name = name
-        self.root = root(["("+name+")"])
-        self.lower = lower
-
-    def newsession(self):
-        return LayerSession(self.name, self.root, self.lower)
-
-    def below(self):
-        return self.lower
-
-    def get(self):
-        return self.root.get()
-
-
-def Sink():
-    return GenLayer(_Sink(SinkSession()))
-
-class _Sink(_GenLayer):
-    session: Session
-
-    def __init__(self, session):
-        self.session = session
-
-    def newsession(self):
-        return self.session
-
-    def below(self):
-        return GenLayer(self)
-
-    def get(self):
-        return gdata.Container()
-
-
-def LayerSession(name: str, rootnode: Node, lowerlayer: GenLayer):
-    return Session(_LayerSession(name, rootnode.newtrans(), lowerlayer.newsession()))
-
-class _LayerSession(_Session):
-    root: Transaction
-    lower: Session
-    buf: dict[str, dict[str,gdata.Node]]
-    lock_cont: ?action(value)->None
-    done_cont: ?action(value)->None
-    tid: ?str
-
-    def __init__(self, name: str, root: Transaction, lower: Session):
-        self.name = name
-        self.root = root
-        self.lower = lower
-        self.buf = {}
-        self.lock_cont = None
-        self.done_cont = None
-        self.tid = None
+    var buf: dict[str, dict[str,gdata.Node]] = {}
+    var lock_cont: ?action(value)->None = None
+    var done_cont: ?action(value)->None = None
+    var tid_state = None
 
     # yield action
-    def edit_config(self, actself, diff: gdata.Node, done: ?action(value)->None, force=False):
-        tid = 'tr_' + str(self)[-10:-1]
-        #print('#### (Layer)', self.name, 'edit_config', tid)
-        self.configure(tid, {'_': diff})
-        res = self.apply(tid, force)
-        #print('   # (Layer)', self.name, 'EXECUTE', tid, 'PREP RESULT', res)
+    def edit_config(diff, done:?action(value)->None=None, force=False):
+        tid = 'tr_' + actorid()
+        #print('#### (Layer)', name, 'edit_config', tid)
+        configure(tid, {'_': diff})
+        res = apply(tid, force)
+        #print('   # (Layer)', name, 'EXECUTE', tid, 'PREP RESULT', res)
         if isinstance(res, str) and res == 'Ok':
-            self.done_cont = done
-            self.lock(actself, tid, actself.edit_config_cont)       # yield await
+            done_cont = done
+            lock(tid, edit_config_cont)                                     # yield await
         elif done is not None:
             done(res)
 
-    def edit_config_cont(self, res: value):
-        done_cont = self.done_cont
-        tid = self.tid
-        #print('#### (Layer)', self.name, 'edit_config_cont', tid)
-        if tid is not None:
-            self.commit(tid, isinstance(res, str) and res == 'Ok')
+    def edit_config_cont(res):
+        #print('#### (Layer)', name, 'edit_config_cont', tid_state)
+        if tid_state is not None:
+            commit(tid_state, isinstance(res, str) and res == 'Ok')
             if done_cont is not None:
-                #print('   # (Layer)', self.name, 'EXECUTE', tid, 'DONE', res)
+                #print('   # (Layer)', name, 'EXECUTE', tid, 'DONE', res)
                 done_cont(res)
-        self.done_cont = None
-        self.tid = None
+        done_cont = None
+        tid_state = None
 
-    def configure(self, tid: str, diff_per_source: dict[str,gdata.Node]):
-        if tid not in self.buf:
-            self.buf[tid] = {}
-        self.buf[tid].update(diff_per_source.items())
+    def configure(tid, diff_per_source):
+        #print('#### (Layer)', name, 'configure', tid, list(diff_per_source.keys()))
+        if tid not in buf:
+            buf[tid] = {}
+        buf[tid].update(diff_per_source.items())
 
-    def apply(self, tid, force=False):
-        #print('#### (Layer)', self.name, 'apply', tid)
-        buf = self.buf.get_def(tid, {})
-        #for src,tree in buf.items():
-        #    print('   # (Layer)', self.name, 'APPLY', src, ':', tree.prsrc())
-        res = self.root.configure(tid, buf, self.lower, force)
-        self.buf.pop(tid)
-        if not isinstance(res, Exception):
-            res = self.lower.apply(tid)
+    def apply(tid, force=False):
+        #print('#### (Layer)', name, 'apply', tid)
+        diff = buf.get_def(tid, {})
+        #for src,tree in diff.items():
+        #    print('   # (Layer)', name, 'APPLY', src, ':', tree.prsrc())
+        res = root.configure(tid, diff, lower, force)
+        buf.pop(tid)
+        if not isinstance(res, Exception) and lower is not None:
+            res = lower.apply(tid, force=False)
         rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
-        #print('   # (Layer)', self.name, 'APPLY', tid, 'RESULT', rr)
+        #print('   # (Layer)', name, 'APPLY', tid, 'RESULT', rr)
         return rr
 
     # yield action
-    def lock(self, actself, tid: str, done: action(value) -> None):
-        #print('#### (Layer)', self.name, 'lock', tid)
-        self.tid = tid
-        self.lock_cont = done
-        self.root.lock(tid, self.lower, actself.lock_cont1)     # yield await
+    def lock(tid, done:?action(value)->None):
+        #print('#### (Layer)', name, 'lock', tid)
+        tid_state = tid
+        lock_cont = done
+        root.lock(tid, lower, lock_cont1)                                   # yield await
 
-    def lock_cont1(self, actself, res: value):
-        tid = self.tid
-        #print('#### (Layer)', self.name, 'lock_cont1', tid)
-        if tid is not None:
-            if not isinstance(res, Exception):
-                #print('   # (Layer)', self.name, 'FINALIZE LOWER', tid)
-                self.lower.lock(tid, actself.lock_cont2)        # yield await
+    def lock_cont1(res):
+        #print('#### (Layer)', name, 'lock_cont1', tid_state)
+        if tid_state is not None:
+            if not isinstance(res, Exception) and lower is not None:
+                #print('   # (Layer)', name, 'FINALIZE LOWER', tid)
+                lower.lock(tid_state, lock_cont2)                           # yield await
             else:
-                self.lock_cont2(res)
+                lock_cont2(res)
 
-    def lock_cont2(self, res: value):
-        #print('#### (Layer)', self.name, 'lock_cont2')
-        lock_cont = self.lock_cont
+    def lock_cont2(res):
+        #print('#### (Layer)', name, 'lock_cont2')
         if lock_cont is not None:
-            self.lock_cont = None
             rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
-            #print('   # (Layer)', self.name, 'FINALIZE RESULT', rr)
+            #print('   # (Layer)', name, 'FINALIZE RESULT', rr)
             lock_cont(rr)
+        lock_cont = None
 
-    def commit(self, tid, ok):
-        #print('#### (Layer)', self.name, 'commit', tid, ok)
-        self.root.commit(tid, ok)
-        self.lower.commit(tid, ok)
+    def commit(tid, ok):
+        #print('#### (Layer)', name, 'commit', tid, ok)
+        root.commit(tid, ok)
+        if lower is not None:
+            lower.commit(tid, ok)
 
-    def on_completion(self, done):
-        #print('#### (Layer)', self.name, 'on_completion', self.tid)
-        tid = self.tid
-        if tid is not None:
-            self.root.on_completion(tid, self.lower, done)
+    def on_completion(done:action(value)->None):
+        #print('#### (Layer)', name, 'on_completion', tid_state)
+        if tid_state is not None:
+            root.on_completion(tid_state, lower, done)
 
-    def get(self):
-        return self.root.get()
+    def get():
+        return root.get()
 
-    def below(self, actself):
-        return self.lower
-
-
-def SinkSession():
-    return Session(_SinkSession())
-
-class _SinkSession(_Session):
-    buf: dict[str, dict[str,gdata.Node]]
-    cfg: dict[str,gdata.Node]
-
-    def __init__(self):
-        self.buf = {}
-        self.cfg = {}
-
-    # yield action
-    def edit_config(self, actself, diff: gdata.Node, done, force=False):
-        if done is not None:
-            done('Ok')      # For now...
-
-    def edit_config_cont(self, res: value):
-        pass
-
-    def configure(self, tid: str, diff_per_source: dict[str,gdata.Node]):
-        #print('#### (Sink) configure', tid, 'sources', list(diff_per_source.keys()))
-        if tid not in self.buf:
-            self.buf[tid] = {}
-        self.buf[tid].update(diff_per_source.items())
-
-    def apply(self, tid, force=False):
-        #print('#### (Sink) apply', tid)
-        if tid in self.buf:
-            self.cfg = patch(self.cfg, self.buf[tid])
-            del self.buf[tid]
-        return 'Ok'
-
-    # yield action
-    def lock(self, actself, tid: str, done: action(value) -> None):
-        done('Ok')      # For now...
-
-    def lock_cont1(self, actself, res: value):
-        pass
-
-    def lock_cont2(self, res: value):
-        pass
-
-    def commit(self, tid, ok):
-        #print('#### (Sink) commit', tid, ok)
-        pass
-
-    def on_completion(self, done):
-        done('Ok')
-
-    def get(self):
-        merged = merge(self.cfg)
-        return merged
-
-    def below(self, actself):
-        return actself
+    def below():
+        return lower if lower is not None else self
 
 
 ############## Containers ##################
@@ -475,7 +309,7 @@ class _ContainerTransaction(_Transaction):
         return 'Ok'
 
     # yield action
-    def lock(self, actself, tid, out, done):
+    def lock(self, actself, tid, out: ?Session, done):
         #print('#### (Container)', self.path, 'lock', tid)
         it = iter(sorted(self.accum.keys()))
         try:
@@ -516,7 +350,7 @@ class _ContainerTransaction(_Transaction):
         self.accum = {}
 
     # yield action
-    def on_completion(self, actself, tid, out, done):
+    def on_completion(self, actself, tid, out: ?Session, done):
         #print('#### (Container)', self.path, 'on_completion', tid, list(self.accum.keys()))
         it = iter(sorted(self.elems.keys()))
         try:
@@ -668,7 +502,7 @@ class _ListTransaction(_Transaction):
         return res
 
     # yield action
-    def lock(self, actself, tid, out, done):
+    def lock(self, actself, tid, out: ?Session, done):
         #print('#### (List)', self.path, 'lock', tid)
         it = iter(sorted(self.accum.keys()))
         try:
@@ -714,7 +548,7 @@ class _ListTransaction(_Transaction):
         self.reset = True       # Defer resetting accum, for the benefit of 'on_completion'
 
     # yield action
-    def on_completion(self, actself, tid, out, done):
+    def on_completion(self, actself, tid, out: ?Session, done):
         #print('#### (List)', self.path, 'on_completion', tid, list(self.accum.keys()))
         it = iter(sorted(self.accum.keys()))
         try:
@@ -776,10 +610,10 @@ class _TransformTransactionBase(_Transaction):
     candidates: dict[str, (dict[str,gdata.Node], ?gdata.Node)]
     output: ?gdata.Node
     locker: ?str
-    pending: list[(Transaction, str, Session, action(value)->None)]
+    pending: list[(Transaction, str, ?Session, action(value)->None)]
     me: str
 
-    compute : proc(tid: str, merged: gdata.Node, out: Session) -> gdata.Node
+    compute : proc(tid: str, merged: gdata.Node, out: ?Session) -> gdata.Node
     finalize : proc(tid: str) -> None
 
     def __init__(self, path):
@@ -830,7 +664,7 @@ class _TransformTransactionBase(_Transaction):
         return 'Ok'
 
     # yield action
-    def lock(self, actself, tid, out, done):                            # yield await
+    def lock(self, actself, tid, out: ?Session, done):                         # yield await
         #print('#### (Transform)', self.path, 'lock', tid)
         locker = self.locker
         if locker is not None:
@@ -916,7 +750,8 @@ class _TransformTransaction(_TransformTransactionBase):
     def compute(self, tid, merged, out):
         newout = self.function.transform_wrapper(merged)
         res = difference(self.output, newout)
-        out.configure(tid, {self.me: res})
+        if out is not None:
+            out.configure(tid, {self.me: res})
         return newout
 
 class TransformFunction(object):
@@ -970,7 +805,7 @@ class _RFSTransaction(_TransformTransactionBase):
             newout = gdata.Root({})
         res = difference(self.output, newout)
 
-        if isinstance(res, gdata.Inner):
+        if isinstance(res, gdata.Inner) and out is not None:
             embedded_res = gdata.Module({
                 "devices": gdata.Container({
                     "device": gdata.List(["name"], [
@@ -1080,3 +915,13 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
     def on_completion(self, actself, tid, out, done):                            # (yield await)
         print('#### (DeviceConfig)', self.path, 'on_completion', tid)
         done('Ok')
+
+
+################# Trivials #####################
+
+class PassThrough(TransformFunction):
+    def transform_wrapper(self, cfg):
+        return cfg
+
+def Sink():
+    return Layer('sink', Transform(PassThrough), None)
