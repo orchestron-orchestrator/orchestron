@@ -89,10 +89,6 @@ merge_y1_y2 = gdata.Container({
     "d": gdata.LeafList(["a", "b", "c"])
 })
 
-class PassThrough(ttx.TransformFunction):
-    def transform_wrapper(self, cfg):
-        return cfg
-
 
 ########################
 
@@ -157,18 +153,17 @@ def _test_patch():
 ########################
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
     t3 = router.newtrans()
 
-    t1.configure("1", {'srcA': y1}, out)
+    t1.configure("1", {'srcA': y1}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
         r = t1.get()
-        t2.configure("2", {'srcB': y2}, out)
+        t2.configure("2", {'srcB': y2}, None)
 
         def cont2(_r: value):
             t2.commit("2", True)
@@ -181,7 +176,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
                     'b': gdata.Absent(),
                     'd': gdata.LeafList(['a','c'])
                 })
-            }, out)
+            }, None)
 
             def cont3(_r: value):
                 t3.commit("3", True)
@@ -203,11 +198,11 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
                 testing.assertEqual(r, expected)
                 done(True, None)
 
-            t3.lock("3", out, cont3)
+            t3.lock("3", None, cont3)
 
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_basic_commit(done, logger: logging.Handler):
     c = basic_commit_tester(done)
@@ -215,19 +210,18 @@ def _test_basic_commit(done, logger: logging.Handler):
 ########################
 
 actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
-    t1.configure("1", {'srcA': y1}, out)
-    t2.configure("2", {'srcB': y2}, out)
+    t1.configure("1", {'srcA': y1}, None)
+    t2.configure("2", {'srcB': y2}, None)
 
     def cont1(_r: value):
         r = t1.get()
         testing.assertEqual(r, gdata.Absent())
         t1.commit("1", True)
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
 
     def cont2(_r: value):
         r = t2.get()
@@ -237,7 +231,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, merge_y1_y2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_overlapping_commit(done, logger: logging.Handler):
     c = overlapping_commit_tester(done)
@@ -245,12 +239,11 @@ def _test_overlapping_commit(done, logger: logging.Handler):
 ########################
 
 actor modified_commit_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
 
-    t1.configure("1", {'srcA': y1}, out)
-    t1.configure("1", {'srcA': y2}, out)
+    t1.configure("1", {'srcA': y1}, None)
+    t1.configure("1", {'srcA': y2}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
@@ -258,7 +251,7 @@ actor modified_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, y2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_modified_commit(done, logger: logging.Handler):
     c = modified_commit_tester(done)
@@ -266,20 +259,19 @@ def _test_modified_commit(done, logger: logging.Handler):
 ########################
 
 actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
 
-    t1.configure("1", {'srcA': y1}, out)
+    t1.configure("1", {'srcA': y1}, None)
 
     def cont1(_r: value):
-        t1.configure("1", {'srcA': y2}, out)
+        t1.configure("1", {'srcA': y2}, None)
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r, y2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_modified_commit2(done, logger: logging.Handler):
     c = modified_commit_tester2(done)
@@ -297,18 +289,17 @@ y0 = gdata.Container({
 })
 
 actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
-    t1.configure("1", {'srcA': y0}, out)
-    t2.configure("2", {'srcB': y2}, out)
+    t1.configure("1", {'srcA': y0}, None)
+    t2.configure("2", {'srcB': y2}, None)
 
     def cont1(_r: value):
-        t1.configure("1", {'srcA': y1}, out)
+        t1.configure("1", {'srcA': y1}, None)
         t1.commit("1", True)
-        t1.lock("2", out, cont2)
+        t1.lock("2", None, cont2)
 
     def cont2(_r: value):
         t2.commit("2", True)
@@ -316,7 +307,7 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, merge_y1_y2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_modified_overlapping_commit(done, logger: logging.Handler):
     c = modified_overlapping_commit_tester(done)
@@ -329,26 +320,25 @@ y3 = gdata.Container({
 })
 
 actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
-    t1.configure("1", {'srcA': y1}, out)
-    t2.configure("2", {'srcB': y3}, out)
+    t1.configure("1", {'srcA': y1}, None)
+    t2.configure("2", {'srcB': y3}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
 
     def cont2(_r: value):
-        t2.configure("2", {'srcB': y2}, out)
+        t2.configure("2", {'srcB': y2}, None)
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, merge_y1_y2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_modified_overlapping_commit2(done, logger: logging.Handler):
     c = modified_overlapping_commit_tester2(done)
@@ -373,28 +363,27 @@ a0b1 = gdata.Container({
 })
 
 actor config_failure_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
-    t1.configure("1", {'srcA': a0}, out)
-    t2.configure("2", {'srcB': a1}, out)
+    t1.configure("1", {'srcA': a0}, None)
+    t2.configure("2", {'srcB': a1}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
 
         def cont2(_r: value):
             if isinstance(_r, Exception):
-                t2.configure("2", {'srcB': b1}, out)
+                t2.configure("2", {'srcB': b1}, None)
             t2.commit("2", True)
             r = t2.get()
             testing.assertEqual(r, a0b1)
             done(True, None)
 
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_config_failure(done, logger: logging.Handler):
     c = config_failure_tester(done)
@@ -402,17 +391,16 @@ def _test_config_failure(done, logger: logging.Handler):
 ########################
 
 actor config_abort_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
-    t1.configure("1", {'srcA': a0}, out)
-    t2.configure("2", {'srcB': a1}, out)
+    t1.configure("1", {'srcA': a0}, None)
+    t2.configure("2", {'srcB': a1}, None)
 
     def cont1(_r: value):
         t1.commit("1", False)
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
 
     def cont2(_r: value):
         t2.commit("2", True)
@@ -420,7 +408,7 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, a1)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_config_abort(done, logger: logging.Handler):
     c = config_abort_tester(done)
@@ -428,24 +416,23 @@ def _test_config_abort(done, logger: logging.Handler):
 ########################
 
 actor multi_lock_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
 
-    t1.configure("1", {'srcA': y1}, out)
+    t1.configure("1", {'srcA': y1}, None)
 
     def cont1(_r: value):
 
         def cont2(_r: value):
-            t1.configure("1", {'srcA': y2}, out)
+            t1.configure("1", {'srcA': y2}, None)
             t1.commit("1", True)
             r = t1.get()
             testing.assertEqual(r, y2)
             done(True, None)
 
-        t1.lock("1", out, cont2)
+        t1.lock("1", None, cont2)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_multi_lock(done, logger: logging.Handler):
     c = multi_lock_tester(done)
@@ -453,25 +440,24 @@ def _test_multi_lock(done, logger: logging.Handler):
 ########################
 
 actor empty_lock_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
-    t2.configure("2", {'srcB': y3}, out)
+    t2.configure("2", {'srcB': y3}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
 
     def cont2(_r: value):
-        t2.configure("2", {'srcB': y2}, out)
+        t2.configure("2", {'srcB': y2}, None)
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, y2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_empty_lock(done, logger: logging.Handler):
     c = empty_lock_tester(done)
@@ -479,12 +465,11 @@ def _test_empty_lock(done, logger: logging.Handler):
 ########################
 
 actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
-    t2.configure("2", {'srcB': y3}, out)
+    t2.configure("2", {'srcB': y3}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
@@ -495,11 +480,11 @@ actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
         done(True, None)
 
     def cont2(_r: value):
-        t2.configure("2", {'srcB': y2}, out)
+        t2.configure("2", {'srcB': y2}, None)
         t2.commit("2", True)
-        t1.lock("1", out, cont1)
+        t1.lock("1", None, cont1)
 
-    t2.lock("2", out, cont2)
+    t2.lock("2", None, cont2)
 
 def _test_empty_lock2(done, logger: logging.Handler):
     c = empty_lock_tester2(done)
@@ -507,23 +492,22 @@ def _test_empty_lock2(done, logger: logging.Handler):
 ########################
 
 actor no_lock_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
-    t1.configure("1", {'srcA': y1}, out)
-    t2.configure("2", {'srcB': y3}, out)
+    t1.configure("1", {'srcA': y1}, None)
+    t2.configure("2", {'srcB': y3}, None)
 
     def cont2(_r: value):
         t1.commit("1", True)
-        t2.configure("2", {'srcB': y2}, out)
+        t2.configure("2", {'srcB': y2}, None)
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, y2)
         done(True, None)
 
-    t2.lock("2", out, cont2)
+    t2.lock("2", None, cont2)
 
 def _test_no_lock(done, logger: logging.Handler):
     c = no_lock_tester(done)
@@ -531,12 +515,11 @@ def _test_no_lock(done, logger: logging.Handler):
 ########################
 
 actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
-    t1.configure("1", {'srcA': y1}, out)
+    t1.configure("1", {'srcA': y1}, None)
 
     def cont1(_r: value):
         t2.commit("2", True)
@@ -546,7 +529,7 @@ actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, y1)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_spurious_commit(done, logger: logging.Handler):
     c = spurious_commit_tester(done)
@@ -554,16 +537,15 @@ def _test_spurious_commit(done, logger: logging.Handler):
 ########################
 
 actor spurious_config_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    router = ttx.Transform(PassThrough) ([])
+    router = ttx.Transform(ttx.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
-    t1.configure("1", {'srcA': y1}, out)
-    t2.configure("2", {'srcB': y2}, out)
+    t1.configure("1", {'srcA': y1}, None)
+    t2.configure("2", {'srcB': y2}, None)
 
     def cont1(_r: value):
-        t2.configure("2", {'srcB': y3}, out)
+        t2.configure("2", {'srcB': y3}, None)
         t2.commit("2", True)
 
         t1.commit("1", True)
@@ -571,7 +553,7 @@ actor spurious_config_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, y1)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_spurious_config(done, logger: logging.Handler):
     c = spurious_config_tester(done)

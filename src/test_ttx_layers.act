@@ -77,12 +77,16 @@ actor basic_output_tester(done: action(?bool, ?Exception)->None):
 
     t1.configure("1", {'srcA': cfg1}, out)
 
-    def cont1(_r: value):
+    def cont1(res: value):
         t1.commit("1", True)
         t1.get()
         out.apply("1")
+        out.lock("1", cont2)
+
+    def cont2(res: value):
         out.commit("1", True)
         r = out.get()
+        print(r.prsrc())
         testing.assertEqual(r, out1)
         done(True, None)
 
@@ -233,4 +237,4 @@ def _test_multi_layer(done, logger: logging.Handler):
 ########################
 
 actor main(env):
-    multi_layer_tester(lambda s,e: env.exit(0))
+    basic_output_tester(lambda s,e: env.exit(0))
