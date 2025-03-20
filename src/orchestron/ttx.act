@@ -162,7 +162,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
     # yield action
     def edit_config(diff, done:?action(value)->None=None, complete:?action(value)->None=None, force=False):
         tid = 'tr' + actorid()
-        print('#### (Layer)', name, 'edit_config', tid)
+        #print('#### (Layer)', name, 'edit_config', tid)
         configure(tid, {'_': diff})
         res = apply(tid, force)
         #print('   # (Layer)', name, 'EDIT_CONFIG', tid, 'PREP RESULT', res)
@@ -880,7 +880,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         return merged
 
     def finalize(self, tid):
-        #print('#### (Device)', self.path, 'finalize', tid)
+        #print('#### (DeviceMeta)', self.path, 'finalize', tid)
         config = self.output
         if config is not None:
             meta_config = DeviceMetaConfig.from_gdata(config)
@@ -923,8 +923,8 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
                     self.dev.configure(cfg, tid)
 
     def wait_complete(self, actself, tid, done):                                # (yield await)
-        print('#### (DeviceConfig)', self.path, 'wait_complete', tid)
-        done('Ok')
+        #print('#### (DeviceConfig)', self.path, 'wait_complete', tid)
+        self.dev.wait_complete(tid, done)
 
 
 ################# Trivials #####################
