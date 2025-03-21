@@ -237,4 +237,4 @@ def _test_multi_layer(done, logger: logging.Handler):
 ########################
 
 actor main(env):
-    basic_output_tester(lambda s,e: env.exit(0))
+    simultaneous_commit_tester(lambda s,e: env.exit(0))
