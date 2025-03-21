@@ -102,7 +102,7 @@ class SysSpec(object):
             for idx, model in enumerate(dev_type.models):
                 print("Generating model %d" % idx)
             dev_tree = yang.compile(dev_type.models)
-            dev_tree_adata = dev_tree.prdaclass(gen_json=False)
+            dev_tree_adata = dev_tree.prdaclass(gen_json=False, loose=True)
             name = "%s/%s/devices/%s.act" % (output_dir, self.name, dev_type.name)
             if _maybe_write_file(fc, name, dev_tree_adata):
                 print("+ Device type %s adata changed" % dev_type.name)
