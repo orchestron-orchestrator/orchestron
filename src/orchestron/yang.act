@@ -23,6 +23,10 @@ rfs = """module orchestron-rfs {
       type string;
     }
 
+    leaf type {
+      type string;
+    }
+
     list address {
       key name;
       leaf name {

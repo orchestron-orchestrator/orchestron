@@ -13,6 +13,9 @@ mut def from_json_orchestron_rfs__device__name(val: value) -> yang.gdata.Leaf:
 mut def from_json_orchestron_rfs__device__description(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf("string", val)
 
+mut def from_json_orchestron_rfs__device__type(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf("string", val)
+
 mut def from_json_orchestron_rfs__device__address__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf("string", val)
 
@@ -541,15 +544,17 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
 class orchestron_rfs__device_entry(yang.adata.MNode):
     name: str
     description: ?str
+    type: ?str
     address: orchestron_rfs__device__address
     credentials: orchestron_rfs__device__credentials
     initial_credentials: orchestron_rfs__device__initial_credentials
     mock: orchestron_rfs__device__mock
 
-    mut def __init__(self, name: str, credentials: orchestron_rfs__device__credentials, description: ?str, address: list[orchestron_rfs__device__address_entry]=[], initial_credentials: list[orchestron_rfs__device__initial_credentials_entry]=[], mock: ?orchestron_rfs__device__mock=None):
+    mut def __init__(self, name: str, credentials: orchestron_rfs__device__credentials, description: ?str, type: ?str, address: list[orchestron_rfs__device__address_entry]=[], initial_credentials: list[orchestron_rfs__device__initial_credentials_entry]=[], mock: ?orchestron_rfs__device__mock=None):
         self._ns = "http://orchestron.org/yang/orchestron-rfs.yang"
         self.name = name
         self.description = description
+        self.type = type
         self.address = orchestron_rfs__device__address(elements=address)
         self.address._parent = self
         self.credentials = credentials
@@ -568,6 +573,7 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         children = {}
         _name = self.name
         _description = self.description
+        _type = self.type
         _address = self.address
         _credentials = self.credentials
         _initial_credentials = self.initial_credentials
@@ -576,6 +582,8 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
             children['name'] = yang.gdata.Leaf('string', _name)
         if _description is not None:
             children['description'] = yang.gdata.Leaf('string', _description)
+        if _type is not None:
+            children['type'] = yang.gdata.Leaf('string', _type)
         if _address is not None:
             children['address'] = _address.to_gdata()
         if _credentials is not None:
@@ -588,11 +596,11 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device_entry:
-        return orchestron_rfs__device_entry(name=n.get_str("name"), description=n.get_opt_str("description"), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list("address")), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_container("credentials")), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list("initial-credentials")), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_container("mock")))
+        return orchestron_rfs__device_entry(name=n.get_str("name"), description=n.get_opt_str("description"), type=n.get_opt_str("type"), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list("address")), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_container("credentials")), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list("initial-credentials")), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_container("mock")))
 
     @staticmethod
     mut def from_xml(n: xml.Node) -> orchestron_rfs__device_entry:
-        return orchestron_rfs__device_entry(name=yang.gdata.from_xml_str(n, "name"), description=yang.gdata.from_xml_opt_str(n, "description"), address=orchestron_rfs__device__address.from_xml(yang.gdata.get_xml_children(n, "address")), credentials=orchestron_rfs__device__credentials.from_xml(yang.gdata.get_xml_child(n, "credentials")), initial_credentials=orchestron_rfs__device__initial_credentials.from_xml(yang.gdata.get_xml_children(n, "initial-credentials")), mock=orchestron_rfs__device__mock.from_xml(yang.gdata.get_xml_opt_child(n, "mock")))
+        return orchestron_rfs__device_entry(name=yang.gdata.from_xml_str(n, "name"), description=yang.gdata.from_xml_opt_str(n, "description"), type=yang.gdata.from_xml_opt_str(n, "type"), address=orchestron_rfs__device__address.from_xml(yang.gdata.get_xml_children(n, "address")), credentials=orchestron_rfs__device__credentials.from_xml(yang.gdata.get_xml_child(n, "credentials")), initial_credentials=orchestron_rfs__device__initial_credentials.from_xml(yang.gdata.get_xml_children(n, "initial-credentials")), mock=orchestron_rfs__device__mock.from_xml(yang.gdata.get_xml_opt_child(n, "mock")))
 
 class orchestron_rfs__device(yang.adata.MNode):
     elements: list[orchestron_rfs__device_entry]
