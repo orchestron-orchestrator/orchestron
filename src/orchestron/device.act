@@ -175,11 +175,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             client = c
         dmc = conf
 
-    def edit_config(new_conf: yang.gdata.Node, tid: str = "0"):
-        # TODO: remove this, and use configure instead
-        return configure(new_conf, tid)
-
-    def configure(new_conf: yang.gdata.Node, tid: str):
+    def configure(new_conf: yang.gdata.Node, tid: str="0"):
         pending_transactions.add(tid)
         if intended_conf == new_conf:
             current_transactions.add(tid)     # In case intended_conf is already in transit
