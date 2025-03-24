@@ -5,15 +5,13 @@
 import logging
 
 import orchestron.device as odev
-import orchestron.ttt as ttt
+import orchestron.ttx as ttx
 import yang.adata
 import yang.gdata
 
 
 
 
-def get_ttt(dev_mgr: odev.DeviceManager, log_handler: logging.Handler) -> ttt.TTTNode:
-
-
-    r = ttt.TTTContainer({"devices": ttt.TTTContainer({"device": ttt.TTTList(lambda: ttt.TTTDeviceConfig(dev_mgr, log_handler), log_handler)}, log_handler)}, log_handler)
+def get_ttx(dev_mgr: odev.DeviceManager, log_handler: logging.Handler) -> proc(list[str])->ttx.Node:
+    r = ttx.Container({"devices": ttx.Container({"device": ttx.List(ttx.DeviceConfig(dev_mgr, log_handler))})})
     return r
