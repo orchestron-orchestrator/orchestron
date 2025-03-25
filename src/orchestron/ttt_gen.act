@@ -34,7 +34,7 @@ def children_to_tttsrc(sn: schema.DNodeInner) -> TTTSrc:
     for child in sn.children:
         if isinstance(child, schema.DLeaf):
             continue
-        res = dschema_to_tttsrc(child)
+        res = dschema_to_tttsrc(child, set_ns=child.namespace!=sn.namespace)
         input_classes.extend(res.input_classes)
         imports.extend(res.imports)
         defs.extend(res.defs)
@@ -43,7 +43,7 @@ def children_to_tttsrc(sn: schema.DNodeInner) -> TTTSrc:
     children_src = ", ".join(elems)
     return TTTSrc(src=children_src, input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
 
-def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> TTTSrc:
+def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
     input_classes = []
     imports = []
     defs = []
@@ -131,7 +131,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> TTTSrc:
         imports.extend(children_res.imports)
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
-        return TTTSrc(src="ttx.List(ttx.Container({%s}))" % children_res.src, input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
+        ns = (", ns='" + sn.namespace + "'") if set_ns else ""
+        return TTTSrc(src="ttx.List(ttx.Container({%s}%s))" % (children_res.src, ns), input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
 
     elif isinstance(sn, schema.DNodeInner):
         sn_children = sn.children
@@ -140,7 +141,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0) -> TTTSrc:
         imports.extend(children_res.imports)
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
-        return TTTSrc(src="ttx.Container({%s})" % children_res.src, input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
+        ns = (", ns='" + sn.namespace + "'") if set_ns else ""
+        return TTTSrc(src="ttx.Container({%s}%s)" % (children_res.src, ns), input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
 
     raise NotImplementedError("Unhandled schema type: %s" % str(type(sn)))
 

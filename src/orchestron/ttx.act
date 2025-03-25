@@ -254,41 +254,49 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
 
 ############## Containers ##################
 
-def Container(template={}):
-    return lambda path: Node(_Container(path, template))
+def Container(template={}, ns:?str=None):
+    return lambda path: Node(_Container(path, template, ns))
 
 class _Container(_Node):
     elems: dict[str, Node]
+    ns: ?str
 
-    def __init__(self, path, template: dict[str, proc(list[str])->Node]):
+    def __init__(self, path, template: dict[str, proc(list[str])->Node], ns):
         self.path = path
         self.elems = {}
+        self.ns = ns
         for key,templ in template.items():
             self.elems[key] = templ(path+[key])
 
     def newtrans(self):
-        return ContainerTransaction(self.path, self.elems)
+        return ContainerTransaction(self.path, self.elems, self.ns)
 
     def get(self):
         res = {}
         for tag,node in self.elems.items():
             res[tag] = node.get()
-        return gdata.Container(res)
+        ns = self.ns
+        if len(self.path) <= 1 and ns is not None:
+            return gdata.Module(res, ns=ns)
+        else:
+            return gdata.Container(res, ns=self.ns)
 
 
-def ContainerTransaction(path, contents):
-    return Transaction(_ContainerTransaction(path, contents))
+def ContainerTransaction(path, contents, ns:?str=None):
+    return Transaction(_ContainerTransaction(path, contents, ns))
 
 class _ContainerTransaction(_Transaction):
     elems : dict[str, Transaction]
     accum : dict[str, value]
     state : ?YieldState
+    ns: ?str
 
-    def __init__(self, path, contents):
+    def __init__(self, path, contents, ns):
         self.path = path
         self.elems = {}
         self.accum = {}
         self.state = None
+        self.ns = ns
         for key,node in contents.items():
             self.elems[key] = node.newtrans()
 
@@ -396,7 +404,11 @@ class _ContainerTransaction(_Transaction):
         res = {}
         for tag,node in self.elems.items():
             res[tag] = node.get()
-        return gdata.Container(res)
+        ns = self.ns
+        if len(self.path) <= 1 and ns is not None:
+            return gdata.Module(res, ns=ns)
+        else:
+            return gdata.Container(res, ns=self.ns)
 
 
 ################# Lists ####################
