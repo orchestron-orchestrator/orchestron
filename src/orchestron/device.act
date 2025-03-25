@@ -19,7 +19,7 @@ class UnsupportedDevice(Exception):
     pass
 
 
-actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
+actor DeviceManager(wcap: ?WorldCap=None, log_handler: ?logging.Handler=None):
     """Device Manager keeps track of all devices and hands out references to
     them based on name.
 
@@ -39,7 +39,7 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
         reconf_cb = on_reconf
 
 
-actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action(str) -> None=None):
+actor Device(wcap: ?WorldCap=None, name: str, log_handler: ?logging.Handler=None, on_reconf: ?action(str) -> None=None):
     """NETCONF Device
 
     Some day this will be the base class for all devices and we'll support all

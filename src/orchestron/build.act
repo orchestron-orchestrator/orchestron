@@ -47,7 +47,7 @@ class SysSpec(object):
         tttsrc += "import yang.adata\n"
         tttsrc += "import yang.gdata\n\n"
         imports = []
-        tttsrc_getlayers = "def get_layers(dev_mgr: odev.DeviceManager, log_handler: logging.Handler):\n    res = "
+        tttsrc_getlayers = "def get_layers(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):\n    res = "
         tttsrc_tojson = "def to_json(idx):\n    "
         for idx, layer in enumerate(self.layers):
             print("Generating layer %d" % idx)
