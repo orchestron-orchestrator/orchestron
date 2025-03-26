@@ -19,7 +19,7 @@ class UnsupportedDevice(Exception):
     pass
 
 
-actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
+actor DeviceManager(wcap: ?WorldCap=None, log_handler: ?logging.Handler=None):
     """Device Manager keeps track of all devices and hands out references to
     them based on name.
 
@@ -27,7 +27,7 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
     name must always return the same Device instance.
     """
     var devices = {}
-    var reconf_cb: ?action() -> None = None
+    var reconf_cb: ?action(str) -> None = None
 
     def get(name: str) -> Device:
         if name not in devices:
@@ -35,11 +35,11 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
         dev = devices[name]
         return dev
 
-    def on_reconf(on_reconf: action() -> None):
+    def on_reconf(on_reconf: action(str) -> None):
         reconf_cb = on_reconf
 
 
-actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action() -> None=None):
+actor Device(wcap: ?WorldCap=None, name: str, log_handler: ?logging.Handler=None, on_reconf: ?action(str) -> None=None):
     """NETCONF Device
 
     Some day this will be the base class for all devices and we'll support all
@@ -48,6 +48,8 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     # Orchestron's intended configuration, that we want on the device. Note how
     # this is NOT the NMDA-speak "intended configuration" of the device itself
     var intended_conf: ?yang.gdata.Node = None
+    var tids: set[str] = set()
+
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
     var running_conf: ?yang.gdata.Node = None
@@ -57,6 +59,12 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     # The NETCONF client connection to the device
     var client: ?netconf.Client = None
+
+    # The transaction ids representing the configuration in transit or pending
+    var current_transactions = set()
+    var pending_transactions = set()
+
+    var callbacks: dict[str, action(value)->None] = {}
 
     # If we need to push configuration again after a transaction is done. This
     # happens when the configuration changes while we have an outstanding
@@ -87,7 +95,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         if not modcap_eq(modset, new_modset):
             modset = new_modset
             if on_reconf is not None:
-                on_reconf()
+                on_reconf(name)
 
         _send_config()
 
@@ -103,7 +111,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
         if wcap == None:
             _log.debug("Device in MOCK mode, pretending to connect to device...")
-            state = CONNECTED
+            conn_state = CONNECTED
 
             preset_caps = []
             if "cisco-ios-xr" in conf.mock.preset:
@@ -127,6 +135,10 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                     m = ModCap(mock_cap.name, mock_cap.namespace, mock_cap.revision, mock_cap.feature)
                     _log.debug("Adding mock cap", {"cap": m.name})
                     modset[m.name] = m
+            if on_reconf is not None:
+                _log.info("Device modset changed, triggering reconfiguration", {"device": name})
+                on_reconf(name)
+            _send_config()
             return
 
         if conn_state == CONNECTED:
@@ -163,12 +175,10 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             client = c
         dmc = conf
 
-    def edit_config(new_conf: yang.gdata.Node):
-        # TODO: remove this, and use configure instead
-        return configure(new_conf)
-
-    def configure(new_conf: yang.gdata.Node):
+    def configure(new_conf: yang.gdata.Node, tid: str="0"):
+        pending_transactions.add(tid)
         if intended_conf == new_conf:
+            current_transactions.add(tid)     # In case intended_conf is already in transit
             _log.debug("Ignoring new configuration identical to current intended configuration")
         else:
             intended_conf = new_conf
@@ -189,7 +199,11 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         """Internal function called when transaction is done
         """
         txn_state = NO_TRANSACTION
-
+        for tid,callback in callbacks.items():
+            if tid in current_transactions:
+                callback(success)
+                del callbacks[tid]
+        current_transactions = set()
         if again:
             _log.debug("Configuration changed during in-progress transaction, running again...")
             again = False
@@ -204,20 +218,25 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             _log.debug("Device not connected, cannot send configuration")
             return
         if intended_conf is not None:
+            xml_conf = intended_conf.to_xmlstr(pretty=False)
+            if xml_conf == "":
+                # Cisco IOS XRd doesn't like empty <edit-config>, returns error
+                _log.debug("Device.edit_config Config is empty, noop")
+                return
             if wcap == None:
                 _log.debug("Device in MOCK mode, \"sending config\"... *hihi*")
+                current_transactions = pending_transactions
+                pending_transactions = set()
+                _transaction_done(True)
                 return
             if client is not None:
                 _log.debug("Device.edit_config Sending config...")
-                xml_conf = intended_conf.to_xmlstr(pretty=False)
-                if xml_conf == "":
-                    # Cisco IOS XRd doesn't like empty <edit-config>, returns error
-                    _log.debug("Device.edit_config Config is empty, noop")
-                    return
                 if txn_state == IN_TRANSACTION:
                     _log.debug("Device.edit_config in progress transaction, storing config")
                     again = True
                     return
+                current_transactions = pending_transactions
+                pending_transactions = set()
                 txn_state = IN_TRANSACTION
                 if _is_writable_running():
                     client.edit_config(xml_conf, _on_conf)
@@ -256,6 +275,12 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         else:
             _log.debug("Device._on_discard_changes: Device disconnected")
             _transaction_done(False)
+
+    def wait_complete(tid: str, done: action(value)->None):
+        if tid not in current_transactions | pending_transactions:
+            done(True)                                            # Assume tid is very old
+        else:
+            callbacks[tid] = done
 
 
 class ModCap(object):

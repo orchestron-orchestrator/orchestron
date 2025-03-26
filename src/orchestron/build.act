@@ -43,17 +43,19 @@ class SysSpec(object):
         tttsrc += "# WARNING WARNING WARNING WARNING WARNING\n\n"
         tttsrc += "import logging\n\n"
         tttsrc += "import orchestron.device as odev\n"
-        tttsrc += "import orchestron.ttt as ttt\n"
+        tttsrc += "import orchestron.ttx as ttx\n"
         tttsrc += "import yang.adata\n"
         tttsrc += "import yang.gdata\n\n"
         imports = []
-        tttsrc_getlayers = "def get_layers(dev_mgr: odev.DeviceManager, log_handler: logging.Handler):\n    res = []\n"
+        tttsrc_getlayers = "def get_layers(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):\n    res = "
+        tttsrc_tojson = "def to_json(idx):\n    "
         for idx, layer in enumerate(self.layers):
             print("Generating layer %d" % idx)
             layer_name = layer.name
             lname = layer_name if layer_name is not None else str(idx)
             name = "%s/%s/layers/y_%s.act" % (output_dir, self.name, lname)
             modname = "%s.layers.y_%s" % (self.name, lname)
+            tttsrc += "import %s\n" % modname
     #        if idx == 0:
     #            name = "src/y_cfs.act"
     #        elif idx == len(layers) - 1:
@@ -67,7 +69,7 @@ class SysSpec(object):
                 print("+ Layer %d adata unchanged" % idx)
 
             tttsrc += "import %s.layers.t_%d\n" % (self.name, idx)
-            print("Generating base & TTT for layer %d" % idx)
+            print("Generating base & TTX(?) for layer %d" % idx)
 
             # Not for the last layer
             out_layer_modname = None
@@ -84,11 +86,13 @@ class SysSpec(object):
 
             t_name = "%s/%s/layers/t_%d.act" % (output_dir, self.name, idx)
             if _maybe_write_file(fc, t_name, tttl.ttt):
-                print("+ Layer %d TTT changed" % idx)
+                print("+ Layer %d TTX(?) changed" % idx)
             else:
-                print("+ Layer %d TTT unchanged" % idx)
+                print("+ Layer %d TTX(?) unchanged" % idx)
 
-            tttsrc_getlayers += "    res.append(%s.layers.t_%d.get_ttt(dev_mgr, log_handler))\n" % (self.name, idx)
+            indent = "" if idx == 0 else "          "
+            tttsrc_getlayers += "%sttx.Layer('%s', %s.layers.t_%d.get_ttx(dev_mgr, log_handler),\n" % (indent, lname, self.name, idx)
+            tttsrc_tojson += "if idx == %d:\n        return %s.to_json\n    el" % (idx, modname)
 
             if idx > 0:
                 loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)
@@ -110,9 +114,10 @@ class SysSpec(object):
                 print("+ Device type %s adata unchanged" % dev_type.name)
 
         print("Generating app layers.act")
-        tttsrc_getlayers += "    return res\n"
+        tttsrc_getlayers += "          None%s\n    return res\n" % (")" * len(self.layers))
+        tttsrc_tojson += "se:\n        raise IndexError(idx)\n"
         tttsrc += "\n".join(list(set(imports))) + "\n\n"
-        tttsrc += tttsrc_getlayers
+        tttsrc += tttsrc_getlayers + "\n" + tttsrc_tojson
         if _maybe_write_file(fc, "%s/%s/layers.act" % (output_dir, self.name), tttsrc):
             print("+ App layers.act changed")
         else:

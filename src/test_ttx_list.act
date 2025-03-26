@@ -53,19 +53,14 @@ merge_1_2 = gdata.List(["name"], [
     })
 ])
 
-class PassThrough(ttx.TransformFunction):
-    def transform_wrapper(self, cfg):
-        return cfg
-
 
 ########################
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(PassThrough)) ()
+    tlist = ttx.List(ttx.Transform(ttx.PassThrough)) ([])
     t1 = tlist.newtrans()
 
-    t1.configure("1", {'srcA': tree1}, out)
+    t1.configure("1", {'srcA': tree1}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
@@ -73,7 +68,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, tree1)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_basic_commit(done, logger: logging.Handler):
     c = basic_commit_tester(done)
@@ -81,8 +76,7 @@ def _test_basic_commit(done, logger: logging.Handler):
 ########################
 
 actor basic_delete_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(PassThrough)) ()
+    tlist = ttx.List(ttx.Transform(ttx.PassThrough)) ([])
     t1 = tlist.newtrans()
 
     def cont2(_r: value):
@@ -95,11 +89,11 @@ actor basic_delete_tester(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r.prsrc(), tree1.prsrc())
-        t1.configure("1", {'srcA': tree1diff}, out)
-        t1.lock("1", out, cont2)
+        t1.configure("1", {'srcA': tree1diff}, None)
+        t1.lock("1", None, cont2)
 
-    t1.configure("1", {'srcA': tree1}, out)
-    t1.lock("1", out, cont1)
+    t1.configure("1", {'srcA': tree1}, None)
+    t1.lock("1", None, cont1)
 
 def _test_basic_delete(done, logger: logging.Handler):
     c = basic_delete_tester(done)
@@ -126,13 +120,12 @@ list1 = gdata.List(["name"], [
 ])
 
 actor simultaneous_create_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(PassThrough)) ()
+    tlist = ttx.List(ttx.Transform(ttx.PassThrough)) ([])
     t1 = tlist.newtrans()
     t2 = tlist.newtrans()
 
     def cont1(_r: value):
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
         t1.commit("1", True)
 
     def cont2(_r: value):
@@ -141,9 +134,9 @@ actor simultaneous_create_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, list1)
         done(True, None)
 
-    t1.configure("1", {'srcA': list1a}, out)
-    t2.configure("2", {'srcB': list1b}, out)
-    t1.lock("1", out, cont1)
+    t1.configure("1", {'srcA': list1a}, None)
+    t2.configure("2", {'srcB': list1b}, None)
+    t1.lock("1", None, cont1)
 
 def _test_simultaneous_create(done, logger: logging.Handler):
     c = simultaneous_create_tester(done)
@@ -151,8 +144,7 @@ def _test_simultaneous_create(done, logger: logging.Handler):
 ########################
 
 actor aborted_create_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(PassThrough)) ()
+    tlist = ttx.List(ttx.Transform(ttx.PassThrough)) ([])
     t1 = tlist.newtrans()
 
     def cont1(_r: value):
@@ -161,8 +153,8 @@ actor aborted_create_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, gdata.List(["name"], []))
         done(True, None)
 
-    t1.configure("1", {'srcA': list1a}, out)
-    t1.lock("1", out, cont1)
+    t1.configure("1", {'srcA': list1a}, None)
+    t1.lock("1", None, cont1)
 
 def _test_aborted_create(done, logger: logging.Handler):
     c = aborted_create_tester(done)
@@ -194,25 +186,24 @@ y2b = gdata.List(["name"], [
 ])
 
 actor aborted_create_tester2(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(PassThrough)) ()
+    tlist = ttx.List(ttx.Transform(ttx.PassThrough)) ([])
     t1 = tlist.newtrans()
     t2 = tlist.newtrans()
 
     def cont1(_r: value):
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
         t1.commit("1", False)
 
     def cont2(_r: value):
-        t2.configure("2", {'srcB': y2b}, out)
+        t2.configure("2", {'srcB': y2b}, None)
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r.prsrc(), y2b.prsrc())
         done(True, None)
 
-    t1.configure("1", {'srcA': y1}, out)
-    t2.configure("2", {'srcB': y2}, out)
-    t1.lock("1", out, cont1)
+    t1.configure("1", {'srcA': y1}, None)
+    t2.configure("2", {'srcB': y2}, None)
+    t1.lock("1", None, cont1)
 
 def _test_aborted_create2(done, logger: logging.Handler):
     c = aborted_create_tester2(done)

@@ -62,23 +62,17 @@ merge_1_2 = gdata.Container({
     })
 })
 
-class Identity(ttx.TransformFunction):
-    def transform_wrapper(self, cfg):
-        return cfg
-
 
 ########################
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
 
-    t1.configure("1", {'srcA': tree1}, out)
+    t1.configure("1", {'srcA': tree1}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
@@ -86,7 +80,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, tree1)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_basic_commit(done, logger: logging.Handler):
     c = basic_commit_tester(done)
@@ -94,20 +88,18 @@ def _test_basic_commit(done, logger: logging.Handler):
 ########################
 
 actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t1.configure("1", {'srcA': tree1}, out)
-    t2.configure("2", {'srcB': tree2}, out)
+    t1.configure("1", {'srcA': tree1}, None)
+    t2.configure("2", {'srcB': tree2}, None)
 
     def cont1(_r: value):
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
         t1.commit("1", True)
 
     def cont2(_r: value):
@@ -120,7 +112,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1, r2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_overlapping_commit(done, logger: logging.Handler):
     c = overlapping_commit_tester(done)
@@ -128,21 +120,19 @@ def _test_overlapping_commit(done, logger: logging.Handler):
 ########################
 
 actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t1.configure("1", {'srcA': tree1}, out)
-    t2.configure("2", {'srcB': tree2}, out)
+    t1.configure("1", {'srcA': tree1}, None)
+    t2.configure("2", {'srcB': tree2}, None)
 
     def cont2(_r: value):
         t2.commit("2", True)
-        t1.lock("1", out, cont1)
+        t1.lock("1", None, cont1)
 
     def cont1(_r: value):
         r2 = t2.get()
@@ -154,7 +144,7 @@ actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1, r2)
         done(True, None)
 
-    t2.lock("2", out, cont2)
+    t2.lock("2", None, cont2)
 
 def _test_overlapping_commit2(done, logger: logging.Handler):
     c = overlapping_commit_tester2(done)
@@ -162,16 +152,14 @@ def _test_overlapping_commit2(done, logger: logging.Handler):
 ########################
 
 actor modified_commit_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
 
-    t1.configure("1", {'srcA': tree1}, out)
-    t1.configure("1", {'srcA': tree2}, out)
+    t1.configure("1", {'srcA': tree1}, None)
+    t1.configure("1", {'srcA': tree2}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
@@ -179,7 +167,7 @@ actor modified_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1, tree2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_modified_commit(done, logger: logging.Handler):
     c = modified_commit_tester(done)
@@ -187,24 +175,22 @@ def _test_modified_commit(done, logger: logging.Handler):
 ########################
 
 actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
 
-    t1.configure("1", {'srcA': tree1}, out)
+    t1.configure("1", {'srcA': tree1}, None)
 
     def cont1(_r: value):
-        t1.configure("1", {'srcA': tree2}, out)
+        t1.configure("1", {'srcA': tree2}, None)
         t1.commit("1", True)
         r1 = t1.get()
         testing.assertEqual(r1, tree2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_modified_commit2(done, logger: logging.Handler):
     c = modified_commit_tester2(done)
@@ -225,21 +211,19 @@ tree0 = gdata.Container({
 })
 
 actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t1.configure("1", {'srcA': tree0}, out)
-    t2.configure("2", {'srcB': tree2}, out)
+    t1.configure("1", {'srcA': tree0}, None)
+    t2.configure("2", {'srcB': tree2}, None)
 
     def cont1(_r: value):
-        t2.lock("2", out, cont2)
-        t1.configure("1", {'srcA': tree1}, out)
+        t2.lock("2", None, cont2)
+        t1.configure("1", {'srcA': tree1}, None)
         t1.commit("1", True)
 
     def cont2(_r: value):
@@ -248,7 +232,7 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r2, merge_1_2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_modified_overlapping_commit(done, logger: logging.Handler):
     c = modified_overlapping_commit_tester(done)
@@ -287,32 +271,30 @@ a0b1 = gdata.Container({
 })
 
 actor config_failure_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t1.configure("1", {'srcA': a0}, out)
-    t2.configure("2", {'srcB': a1}, out)
+    t1.configure("1", {'srcA': a0}, None)
+    t2.configure("2", {'srcB': a1}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
 
         def cont2(_r: value):
             if isinstance(_r, Exception):
-                t2.configure("2", {'srcB': b1}, out)
+                t2.configure("2", {'srcB': b1}, None)
             t2.commit("2", True)
             r = t2.get()
             testing.assertEqual(r, a0b1)
             done(True, None)
 
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_config_failure(done, logger: logging.Handler):
     c = config_failure_tester(done)
@@ -320,20 +302,18 @@ def _test_config_failure(done, logger: logging.Handler):
 ########################
 
 actor config_abort_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t1.configure("1", {'srcA': a0}, out)
-    t2.configure("2", {'srcB': a1}, out)
+    t1.configure("1", {'srcA': a0}, None)
+    t2.configure("2", {'srcB': a1}, None)
 
     def cont2(_r: value):
-        t1.lock("1", out, cont1)
+        t1.lock("1", None, cont1)
         t2.commit("2", False)
 
     def cont1(_r: value):
@@ -342,7 +322,7 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r.prsrc(), a0.prsrc())
         done(True, None)
 
-    t2.lock("2", out, cont2)
+    t2.lock("2", None, cont2)
 
 def _test_config_abort(done, logger: logging.Handler):
     c = config_abort_tester(done)
@@ -350,28 +330,26 @@ def _test_config_abort(done, logger: logging.Handler):
 ########################
 
 actor multi_lock_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
 
-    t1.configure("1", {'srcA': tree1}, out)
+    t1.configure("1", {'srcA': tree1}, None)
 
     def cont1(_r: value):
 
         def cont2(_r: value):
-            t1.configure("1", {'srcA': tree2}, out)
+            t1.configure("1", {'srcA': tree2}, None)
             t1.commit("1", True)
             r = t1.get()
             testing.assertEqual(r, tree2)
             done(True, None)
 
-        t1.lock("1", out, cont2)
+        t1.lock("1", None, cont2)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_multi_lock(done, logger: logging.Handler):
     c = multi_lock_tester(done)
@@ -388,29 +366,27 @@ tree3 = gdata.Container({
 })
 
 actor empty_lock_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t2.configure("2", {'srcB': tree3}, out)
+    t2.configure("2", {'srcB': tree3}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
-        t2.lock("2", out, cont2)
+        t2.lock("2", None, cont2)
 
     def cont2(_r: value):
-        t2.configure("2", {'srcB': tree2}, out)
+        t2.configure("2", {'srcB': tree2}, None)
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, tree2)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_empty_lock(done, logger: logging.Handler):
     c = empty_lock_tester(done)
@@ -418,16 +394,14 @@ def _test_empty_lock(done, logger: logging.Handler):
 ########################
 
 actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t2.configure("2", {'srcB': tree3}, out)
+    t2.configure("2", {'srcB': tree3}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)    # Note: MAY happen before t2.commit!
@@ -438,11 +412,11 @@ actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
         done(True, None)
 
     def cont2(_r: value):
-        t2.configure("2", {'srcB': tree2}, out)
+        t2.configure("2", {'srcB': tree2}, None)
         t2.commit("2", True)
-        t1.lock("1", out, cont1)
+        t1.lock("1", None, cont1)
 
-    t2.lock("2", out, cont2)
+    t2.lock("2", None, cont2)
 
 def _test_empty_lock2(done, logger: logging.Handler):
     c = empty_lock_tester2(done)
@@ -450,27 +424,25 @@ def _test_empty_lock2(done, logger: logging.Handler):
 ########################
 
 actor no_lock_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t1.configure("1", {'srcA': tree1}, out)
-    t2.configure("2", {'srcB': tree3}, out)
+    t1.configure("1", {'srcA': tree1}, None)
+    t2.configure("2", {'srcB': tree3}, None)
 
     def cont2(_r: value):
         t1.commit("1", True)
-        t2.configure("2", {'srcB': tree2}, out)
+        t2.configure("2", {'srcB': tree2}, None)
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, tree2)
         done(True, None)
 
-    t2.lock("2", out, cont2)
+    t2.lock("2", None, cont2)
 
 def _test_no_lock(done, logger: logging.Handler):
     c = no_lock_tester(done)
@@ -478,16 +450,14 @@ def _test_no_lock(done, logger: logging.Handler):
 ########################
 
 actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t1.configure("1", {'srcA': tree1}, out)
+    t1.configure("1", {'srcA': tree1}, None)
 
     def cont1(_r: value):
         t2.commit("2", True)
@@ -497,7 +467,7 @@ actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, tree1)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_spurious_commit(done, logger: logging.Handler):
     c = spurious_commit_tester(done)
@@ -505,20 +475,18 @@ def _test_spurious_commit(done, logger: logging.Handler):
 ########################
 
 actor spurious_config_tester(done: action(?bool, ?Exception)->None):
-    devices = ttx.Sink()
-    out = devices.newsession()
     container = ttx.Container({
-        'left': ttx.Transform(Identity),
-        'right': ttx.Transform(Identity)
-    }) ()
+        'left': ttx.Transform(ttx.PassThrough),
+        'right': ttx.Transform(ttx.PassThrough)
+    }) ([])
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t1.configure("1", {'srcA': tree1}, out)
-    t2.configure("2", {'srcB': tree2}, out)
+    t1.configure("1", {'srcA': tree1}, None)
+    t2.configure("2", {'srcB': tree2}, None)
 
     def cont1(_r: value):
-        t2.configure("2", {'srcB': tree3}, out)
+        t2.configure("2", {'srcB': tree3}, None)
         t2.commit("2", True)
 
         t1.commit("1", True)
@@ -526,7 +494,7 @@ actor spurious_config_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r, tree1)
         done(True, None)
 
-    t1.lock("1", out, cont1)
+    t1.lock("1", None, cont1)
 
 def _test_spurious_config(done, logger: logging.Handler):
     c = spurious_config_tester(done)
