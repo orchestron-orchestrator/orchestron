@@ -127,8 +127,9 @@ actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
     def cont(_r: value):
         acks += 1
         if acks == 2:
-            r = sess1.below().get()
-            testing.assertEqual(r, out1_2)
+            r2 = sess2.below().get()
+            r1 = sess1.below().get()
+            testing.assertEqual(r1, out1_2)
             done(True, None)
 
     sess1.edit_config(cfg1, cont)
