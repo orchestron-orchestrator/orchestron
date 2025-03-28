@@ -94,12 +94,11 @@ class SysSpec(object):
             tttsrc_getlayers += "%sttx.Layer('%s', %s.layers.t_%d.get_ttx(dev_mgr, log_handler),\n" % (indent, lname, self.name, idx)
             tttsrc_tojson += "if idx == %d:\n        return %s.to_json\n    el" % (idx, modname)
 
-            if idx > 0:
-                loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)
-                if _maybe_write_file(fc, loose_name, layer_src.prdaclass(loose=True)):
-                    print("+ Layer %d loose adata changed" % idx)
-                else:
-                    print("+ Layer %d loose adata unchanged" % idx)
+            loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)
+            if _maybe_write_file(fc, loose_name, layer_src.prdaclass(loose=True)):
+                print("+ Layer %d loose adata changed" % idx)
+            else:
+                print("+ Layer %d loose adata unchanged" % idx)
 
         for dev_type in self.dev_types:
             print("Generating device type %s" % dev_type.name)
