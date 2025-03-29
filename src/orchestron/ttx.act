@@ -26,10 +26,9 @@ def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.N
 
     return cfg_per_key
 
-def difference(a: ?gdata.Node, b: gdata.Node) -> gdata.Node:
+def difference(a: ?gdata.Node, b: gdata.Node) -> ?gdata.Node:
     if a is not None:
-        d = gdata.diff(a, b)
-        return d if d is not None else gdata.Absent()
+        return gdata.diff(a, b)
     else:
         return b
 
@@ -772,7 +771,7 @@ class _TransformTransaction(_TransformTransactionBase):
     def compute(self, tid, merged, out):
         newout = self.function.transform_wrapper(merged)
         res = difference(self.output, newout)
-        if out is not None:
+        if out is not None and res is not None:
             out.configure(tid, {self.me: res})
         return newout
 
@@ -827,7 +826,7 @@ class _RFSTransaction(_TransformTransactionBase):
             newout = gdata.Root({})
         res = difference(self.output, newout)
 
-        if isinstance(res, gdata.Inner) and out is not None:
+        if isinstance(res, gdata.Inner) and out is not None and res is not None:
             embedded_res = gdata.Module({
                 "devices": gdata.Container({
                     "device": gdata.List(["name"], [
