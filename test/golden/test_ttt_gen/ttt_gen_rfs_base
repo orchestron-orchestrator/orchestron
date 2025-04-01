@@ -4,7 +4,7 @@
 
 import logging
 import xml
-import orchestron.ttx as ttx
+import orchestron.ttt as ttt
 import yang.adata
 import yang.gdata
 
@@ -15,22 +15,22 @@ def o_root():
     return output_root()
 
 
-class BBInterface(ttx.RFSFunction):
-    transform: mut(orchestron_rfs__rfs__backbone_interface_entry, ttx.DeviceInfo) -> yang.adata.MNode
+class BBInterface(ttt.RFSFunction):
+    transform: mut(orchestron_rfs__rfs__backbone_interface_entry, ttt.DeviceInfo) -> yang.adata.MNode
 
     @staticmethod
     def input_type():
         """Return the modeled input type for this transform"""
         return orchestron_rfs__rfs__backbone_interface_entry
 
-    mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttx.DeviceInfo) -> yang.gdata.Node:
+    mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttt.DeviceInfo) -> yang.gdata.Node:
         """Wrap the user provided transform method to convert from gdata to
         modeled input and back to gdata
         """
         modeled_input = orchestron_rfs__rfs__backbone_interface_entry.from_gdata(i)
         return self.transform(modeled_input, device_info).to_gdata()
 
-    mut def transform_xml(self, i: xml.Node, device_info: ttx.DeviceInfo) -> yang.gdata.Node:
+    mut def transform_xml(self, i: xml.Node, device_info: ttt.DeviceInfo) -> yang.gdata.Node:
         """Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         """

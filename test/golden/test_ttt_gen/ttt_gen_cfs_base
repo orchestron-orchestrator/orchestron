@@ -4,7 +4,7 @@
 
 import logging
 import xml
-import orchestron.ttx as ttx
+import orchestron.ttt as ttt
 import yang.adata
 import yang.gdata
 
@@ -15,7 +15,7 @@ def o_root():
     return output_root()
 
 
-class Foobar(ttx.TransformFunction):
+class Foobar(ttt.TransformFunction):
     transform: mut(foo__c1__foo__bar_entry) -> yang.adata.MNode
 
     @staticmethod
