@@ -1,7 +1,7 @@
 import testing
 import logging
 
-import orchestron.ttx as ttx
+import orchestron.ttt as ttt
 #import orchestron.gdata as gdata
 import yang.gdata as gdata
 
@@ -56,7 +56,7 @@ out1_2 = gdata.Container({
     ])
 })
 
-class TransF(ttx.TransformFunction):
+class TransF(ttt.TransformFunction):
     def transform_wrapper(self, cfg):
         if isinstance(cfg, gdata.ListElement):
             return gdata.Container({
@@ -71,8 +71,8 @@ class TransF(ttx.TransformFunction):
 ########################
 
 actor basic_output_tester(done: action(?bool, ?Exception)->None):
-    out = ttx.Sink().newsession()
-    tlist = ttx.List(ttx.Transform(TransF)) ([])
+    out = ttt.Sink().newsession()
+    tlist = ttt.List(ttt.Transform(TransF)) ([])
     t1 = tlist.newtrans()
 
     t1.configure("1", {'srcA': cfg1}, out)
@@ -98,7 +98,7 @@ def _test_basic_output(done, logger: logging.Handler):
 ########################
 
 actor layered_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer("top", ttx.List(ttx.Transform(TransF)), ttx.Sink())
+    stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF)), ttt.Sink())
 
     sess = stack.newsession()
 
@@ -117,7 +117,7 @@ def _test_layered_commit(done, logger: logging.Handler):
 ########################
 
 actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer("top", ttx.List(ttx.Transform(TransF)), ttx.Sink())
+    stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF)), ttt.Sink())
     
     sess1 = stack.newsession()
     sess2 = stack.newsession()
@@ -160,7 +160,7 @@ out3 = gdata.Container({
     ])
 })
 
-class WriteDev(ttx.TransformFunction):
+class WriteDev(ttt.TransformFunction):
     def transform_wrapper(self, cfg: gdata.Node):
         i = cfg.get_int("a")
         return gdata.Container({
@@ -172,12 +172,12 @@ class WriteDev(ttx.TransformFunction):
         })
 
 actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer("top",
-        ttx.Container({
-            "left": ttx.Transform(WriteDev),
-            "right": ttx.Transform(WriteDev)
+    stack = ttt.Layer("top",
+        ttt.Container({
+            "left": ttt.Transform(WriteDev),
+            "right": ttt.Transform(WriteDev)
         }),
-        ttx.Sink())
+        ttt.Sink())
 
     sess = stack.newsession()
 
@@ -198,7 +198,7 @@ cfg4 = gdata.Container({
     "rr": gdata.Leaf("int", 2)
 })
 
-class ServiceMap(ttx.TransformFunction):
+class ServiceMap(ttt.TransformFunction):
     def transform_wrapper(self, cfg):
         ll = cfg.get_int("ll")
         rr = cfg.get_int("rr")
@@ -212,14 +212,14 @@ class ServiceMap(ttx.TransformFunction):
         })
 
 actor multi_layer_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer("top",
-                ttx.Transform(ServiceMap),
-                ttx.Layer("bottom",
-                    ttx.Container({
-                        "left": ttx.Transform(WriteDev),
-                        "right": ttx.Transform(WriteDev)
+    stack = ttt.Layer("top",
+                ttt.Transform(ServiceMap),
+                ttt.Layer("bottom",
+                    ttt.Container({
+                        "left": ttt.Transform(WriteDev),
+                        "right": ttt.Transform(WriteDev)
                     }),
-                    ttx.Sink()))
+                    ttt.Sink()))
 
     sess = stack.newsession()
 
@@ -250,14 +250,14 @@ out5 = gdata.Container({
 })
 
 
-class WriteDevs(ttx.TransformFunction):
+class WriteDevs(ttt.TransformFunction):
     def transform_wrapper(self, cfg: gdata.Node):
         return out5
 
 actor nodiff_config_tester(done: action(?bool, ?Exception)->None):
-    stack = ttx.Layer("top",
-        ttx.Transform(WriteDevs),
-        ttx.Sink())
+    stack = ttt.Layer("top",
+        ttt.Transform(WriteDevs),
+        ttt.Sink())
 
     sess = stack.newsession()
 

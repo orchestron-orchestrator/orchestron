@@ -1,131 +1,846 @@
-
-import logging
-import xml
-
 import yang.adata
-import yang.gdata
+#import orchestron.gdata as gdata
+import yang.gdata as gdata
 import orchestron.device as odev
 from orchestron.device_meta_config import orchestron_rfs__device_entry as DeviceMetaConfig
+import xml, logging
 
-def transpose(cfg_per_src: dict[str, yang.gdata.Node]) -> dict[str, dict[str, yang.gdata.Node]]:
+def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
     cfg_per_key = {}
     for src, conf in cfg_per_src.items():
-        if isinstance(conf, yang.gdata.List):
+        if isinstance(conf, gdata.List):
             for le in conf.elements:
                 key = le.key_str()
                 if key in cfg_per_key:
                     cfg_per_key[key][src] = le
                 else:
                     cfg_per_key[key] = {src: le}
-        elif isinstance(conf, yang.gdata.Inner):
+        elif isinstance(conf, gdata.Inner):
             for key, subconf in conf.children.items():
                 if key in cfg_per_key:
                     cfg_per_key[key][src] = subconf
                 else:
                     cfg_per_key[key] = {src: subconf}
         else:
-            raise NotImplementedError("Unhandled configuration type" + str(type(conf)))
+            raise NotImplementedError("Cannot transpose configuration type" + str(type(conf)))
 
     return cfg_per_key
 
-# TTT - Transactional Transform Trees
+def difference(a: ?gdata.Node, b: gdata.Node) -> ?gdata.Node:
+    if a is not None:
+        return gdata.diff(a, b)
+    else:
+        return b
 
-class TTTNode(object):
-    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node], key_ctx: list[str]=[]):
-        raise NotImplementedError("TTTNode.configure not implemented")
+def patch(conf: dict[str,gdata.Node], diff: dict[str,gdata.Node]) -> dict[str,gdata.Node]:
+    res = {}
+    for s,d in diff.items():
+        if s in conf:
+            p = gdata.patch(conf[s], d)
+            if p is not None:
+                res[s] = p
+        else:
+            res[s] = d
+    for s,c in conf.items():
+        if s not in diff:
+            res[s] = c
+    return res
 
-class TTTContainer(TTTNode):
-    elems: dict[str, TTTNode]
+def assert_complete(conf: gdata.Node):
+    return conf
 
-    def __init__(self, elems: dict[str, TTTNode], log_handler: logging.Handler):
-        self.elems = elems
+def merge(cfg_per_src: dict[str,gdata.Node]):
+    acc = None
+    for conf in cfg_per_src.values():
+        if acc is not None:
+            acc = gdata.merge(acc, conf)
+        else:
+            acc = conf
+    if acc is not None:
+        return acc
+    else:
+        raise ValueError("Nothing to merge")
 
-    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node], key_ctx: list[str]=[]):
-        for path, subdiff in transpose(diff).items():
-            if path in self.elems:
-                elem = self.elems[path]
-                elem.configure(subdiff, output_tree, key_ctx)
 
-#actor TTTListState(template: proc() -> TTTNode):
-#    var _elems = {}
-#
-#    def get_elems(keys: list[str]=[]) -> dict[str, TTTNode]:
-#        res = {}
-#        for key in keys:
-#            res[key] = get_elem(key)
-#        return res
-#
-#    def get_elem(key: str) -> TTTNode:
-#        if key in _elems:
-#            return _elems[key]
-#        else:
-#            raise ValueError("TTTListState.get_elem: key not found: " + key)
-#            elem = _template()
-#            _elems[key] = elem
-#            return elem
+##################### Node & Transactions #####################
 
-class TTTListState(object):
+class YieldState(object):
+    it: Iterator[str]
+    key: str
+    tid: str
+    out: ?Session
+    results: dict[str,value]
+    @property
+    done: action(value) -> None
 
-    def __init__(self, template: mut() -> TTTNode):
-        self._elems = {}
-        self._template = template
+    def __init__(self, it, key, tid, out, done):
+        self.it = it
+        self.key = key
+        self.tid = tid
+        self.out = out
+        self.results = {}
+        self.done = done
 
-    def get_elems(self, keys: list[str]=[]) -> dict[str, TTTNode]:
+
+actor Node(impl: _Node):
+    def newtrans():
+        return impl.newtrans()
+
+    def get():
+        return impl.get()
+
+class _Node(object):
+    path: list[str]
+    newtrans: proc() -> Transaction
+    get: proc() -> gdata.Node
+
+
+actor Transaction(impl: _Transaction):
+    def configure(tid, diff, out, force=False):
+        return impl.configure(tid, diff, out, force)
+
+    # yield action
+    def lock(tid, out, done):
+        impl.lock(self, tid, out, done)
+
+    def lock_cont(res):
+        impl.lock_cont(self, res)
+
+    def commit(tid, ok):
+        impl.commit(tid, ok)
+
+    def wait_complete(tid, done):
+        impl.wait_complete(self, tid, done)
+
+    def wait_complete_cont(res):
+        impl.wait_complete_cont(self, res)
+
+    def get():
+        return impl.get()
+
+class _Transaction(object):
+    path: list[str]
+    configure:  proc(tid: str, diff: dict[str,gdata.Node], out: ?Session, force: ?bool) -> value
+    # yield action
+    lock : proc(actself: Transaction, tid: str, out: ?Session, done: action(value) -> None) -> None
+    lock_cont : proc(actself: Transaction, res: value) -> None
+    commit: proc(tid: str, ok: bool) -> None
+    wait_complete: proc(actself: Transaction, tid: str, done: action(value) -> None) -> None
+    wait_complete_cont : proc(actself: Transaction, res: value) -> None
+    get: proc() -> gdata.Node
+
+
+####################### Layer ########################
+
+actor Layer(name: str, rootgen: proc(list[str])->Node, lower: ?Layer):
+    root = rootgen(["("+name+")"])
+
+    def newsession():
+        return Session(name, root, lower)
+
+    def below():
+        return lower if lower is not None else self
+
+    def edit_config(diff, done=None, complete=None, force=False):
+        newsession().edit_config(diff, done, complete, force)
+
+    def get():
+        return root.get()
+
+
+actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
+    root: Transaction = rootnode.newtrans()
+    lower: ?Session = lowerlayer.newsession() if lowerlayer is not None else None
+
+    var buf: dict[str, dict[str,gdata.Node]] = {}
+    var lock_cont: ?action(value)->None = None
+    var done_cont: ?action(value)->None = None
+    var comp_cont: ?action(value)->None = None
+    var tid_state = None
+
+    # yield action
+    def edit_config(diff, done:?action(value)->None=None, complete:?action(value)->None=None, force=False):
+        tid = 'tr' + actorid()
+        #print('#### (Layer)', name, 'edit_config', tid)
+        configure(tid, {'_': diff})
+        res = apply(tid, force)
+        #print('   # (Layer)', name, 'EDIT_CONFIG', tid, 'PREP RESULT', res)
+        if isinstance(res, str) and res == 'Ok':
+            done_cont = done
+            comp_cont = complete
+            lock(tid, edit_config_cont)                                     # yield await
+        else:
+            if done is not None:
+                done(res)
+            if complete is not None:
+                complete(res)
+
+    def edit_config_cont(res):
+        #print('#### (Layer)', name, 'edit_config_cont', tid_state)
+        if tid_state is not None:
+            commit(tid_state, isinstance(res, str) and res == 'Ok')
+            if done_cont is not None:
+                #print('   # (Layer)', name, 'EDIT_CONFIG', tid, 'DONE', res)
+                done_cont(res)
+            if comp_cont is not None:
+                wait_complete(comp_cont)
+        done_cont = None
+        tid_state = None
+
+    def configure(tid, diff_per_source):
+        #print('#### (Layer)', name, 'configure', tid, list(diff_per_source.keys()))
+        if tid not in buf:
+            buf[tid] = {}
+        buf[tid].update(diff_per_source.items())
+
+    def apply(tid, force=False):
+        #print('#### (Layer)', name, 'apply', tid)
+        diff = buf.get_def(tid, {})
+        #for src,tree in diff.items():
+        #    print('   # (Layer)', name, 'APPLY', src, ':', tree.prsrc())
+        res = root.configure(tid, diff, lower, force)
+        buf.pop(tid)
+        if not isinstance(res, Exception) and lower is not None:
+            res = lower.apply(tid, force=False)
+        rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
+        #print('   # (Layer)', name, 'APPLY', tid, 'RESULT', rr)
+        return rr
+
+    # yield action
+    def lock(tid, done:?action(value)->None=None):
+        #print('#### (Layer)', name, 'lock', tid)
+        tid_state = tid
+        lock_cont = done
+        root.lock(tid, lower, lock_cont1)                                   # yield await
+
+    def lock_cont1(res):
+        #print('#### (Layer)', name, 'lock_cont1', tid_state)
+        if tid_state is not None:
+            if not isinstance(res, Exception) and lower is not None:
+                #print('   # (Layer)', name, 'LOCK LOWER', tid)
+                lower.lock(tid_state, lock_cont2)                           # yield await
+            else:
+                lock_cont2(res)
+
+    def lock_cont2(res):
+        #print('#### (Layer)', name, 'lock_cont2')
+        if lock_cont is not None:
+            rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
+            #print('   # (Layer)', name, 'LOCK RESULT', rr)
+            lock_cont(rr)
+        lock_cont = None
+
+    def commit(tid, ok):
+        #print('#### (Layer)', name, 'commit', tid, ok)
+        root.commit(tid, ok)
+        if lower is not None:
+            lower.commit(tid, ok)
+
+    def wait_complete(done:action(value)->None):
+        #print('#### (Layer)', name, 'wait_complete', tid_state)
+        if tid_state is not None:
+            if lower is not None:
+                lower.wait_complete(done)
+            else:
+                root.wait_complete(tid_state, done)
+
+    def get():
+        return root.get()
+
+    def below():
+        return lower if lower is not None else self
+
+
+############## Containers ##################
+
+def Container(template={}, ns:?str=None):
+    return lambda path: Node(_Container(path, template, ns))
+
+class _Container(_Node):
+    elems: dict[str, Node]
+    ns: ?str
+
+    def __init__(self, path, template: dict[str, proc(list[str])->Node], ns):
+        self.path = path
+        self.elems = {}
+        self.ns = ns
+        for key,templ in template.items():
+            self.elems[key] = templ(path+[key])
+
+    def newtrans(self):
+        return ContainerTransaction(self.path, self.elems, self.ns)
+
+    def get(self):
         res = {}
-        for key in keys:
-            res[key] = self.get_elem(key)
+        for tag,node in self.elems.items():
+            res[tag] = node.get()
+        ns = self.ns
+        if len(self.path) <= 1 and ns is not None:
+            return gdata.Module(res, ns=ns)
+        else:
+            return gdata.Container(res, ns=self.ns)
+
+
+def ContainerTransaction(path, contents, ns:?str=None):
+    return Transaction(_ContainerTransaction(path, contents, ns))
+
+class _ContainerTransaction(_Transaction):
+    elems : dict[str, Transaction]
+    accum : dict[str, value]
+    state : ?YieldState
+    ns: ?str
+
+    def __init__(self, path, contents, ns):
+        self.path = path
+        self.elems = {}
+        self.accum = {}
+        self.state = None
+        self.ns = ns
+        for key,node in contents.items():
+            self.elems[key] = node.newtrans()
+
+    def configure(self, tid, diff, out, force=False):
+        #print('#### (Container)', self.path, 'configure', tid, force)
+        diff_by_child = transpose(diff)
+        if len(diff_by_child) == 0 and force:
+            for k in self.elems.keys():
+                diff_by_child[k] = {}
+        msgs = {}
+        for child,subdiff in diff_by_child.items():
+            if child in self.elems:
+                #print('   # (Container)', self.path, 'CONFIGURE CHILD', child)
+                msgs[child] = async self.elems[child].configure(tid, subdiff, out, force)
+        results = {}
+        for child,msg in msgs.items():
+            results[child] = await msg
+            #print('   # (Container), self.path, 'RESULT CHILD', child, ':', results[child])
+        return self._analyze(results)
+
+    def _analyze(self, results):
+        self.accum.update(results.items())
+        for r in results.values():
+            if isinstance(r, Exception):
+                #print('   # (Container)', self.path, 'RESULT:', r)
+                return r
+        #print('   # (Container)', self.path, 'RESULT:', 'Ok')
+        return 'Ok'
+
+    # yield action
+    def lock(self, actself, tid, out: ?Session, done):
+        #print('#### (Container)', self.path, 'lock', tid)
+        it = iter(sorted(self.accum.keys()))
+        try:
+            key = next(it)
+            self.state = YieldState(it, key, tid, out, done)
+            tr = self.elems[key]
+            #print('   # (Container)', self.path, 'LOCK CHILD', key)
+            tr.lock(tid, out, actself.lock_cont)                    # yield await
+        except StopIteration:
+            #print('   # (Container)', self.path, 'LOCK IMMEDIATELY DONE')
+            done('Ok')
+
+    proc def lock_cont (self, actself, res):
+        state = self.state
+        if state is not None:
+            #print('   # (Container)', self.path, 'LOCK', state.tid, 'CHILD', state.key, 'RESULT:', res)
+            state.results[state.key] = res
+            try:
+                key = next(state.it)
+                state.key = key
+                tr = self.elems[key]
+                #print('   # (Container)', self.path, 'LOCK CHILD', key)
+                tr.lock(state.tid, state.out, actself.lock_cont)
+            except StopIteration:
+                self.state = None
+                #print('   # (Container)', self.path, 'LOCK DONE')
+                state.done(self._analyze(state.results))
+        else:
+            #print('#### (Container)', self.path, 'lock_cont empty state!!!')
+            pass
+
+    proc def commit(self, tid, ok):
+        #print('#### (Container)', self.path, 'commit', tid, ok)
+        for child in self.accum.keys():
+            #print('   # (Container)', self.path, 'COMMIT CHILD', child)
+            self.elems[child].commit(tid, ok)
+        #print('   # (Container)', self.path, 'COMMIT DONE')
+        self.accum = {}
+
+    # yield action
+    def wait_complete(self, actself, tid, done):
+        #print('#### (Container)', self.path, 'wait_complete', tid, list(self.accum.keys()))
+        it = iter(sorted(self.elems.keys()))
+        try:
+            key = next(it)
+            self.state = YieldState(it, key, tid, None, done)
+            tr = self.elems[key]
+            #print('   # (Container)', self.path, 'COMPLETE CHILD', key)
+            tr.wait_complete(tid, actself.wait_complete_cont)               # yield await
+        except StopIteration:
+            #print('   # (Container)', self.path, 'COMPLETION IMMEDIATELY DONE')
+            done('Ok')
+
+    proc def wait_complete_cont (self, actself, res):
+        state = self.state
+        if state is not None:
+            #print('   # (Container)', self.path, 'COMPLETE', state.tid, 'CHILD', state.key, 'RESULT:', res)
+            state.results[state.key] = res
+            try:
+                key = next(state.it)
+                state.key = key
+                tr = self.elems[key]
+                #print('   # (Container)', self.path, 'COMPLETE CHILD', key)
+                tr.wait_complete(state.tid, actself.wait_complete_cont)
+            except StopIteration:
+                self.state = None
+                #print('   # (Container)', self.path, 'COMPLETION DONE')
+                state.done(self._analyze(state.results))
+        else:
+            #print('#### (Container)', self.path, 'wait_complete_cont empty state!!!')
+            pass
+
+    def get(self):
+        res = {}
+        for tag,node in self.elems.items():
+            res[tag] = node.get()
+        ns = self.ns
+        if len(self.path) <= 1 and ns is not None:
+            return gdata.Module(res, ns=ns)
+        else:
+            return gdata.Container(res, ns=self.ns)
+
+
+################# Lists ####################
+
+def List(template):
+    return lambda path: Node(_List(path, template))
+
+class _List(_Node):
+    liststate: ListState
+
+    def __init__(self, path, template):
+        self.path = path
+        self.liststate = ListState(path, template)
+
+    def newtrans(self):
+        return ListTransaction(self.path, self.liststate)
+
+    def get(self):
+        res = []
+        for key,node in self.liststate.all().items():
+            r = node.get()
+            if isinstance(r, gdata.ListElement):
+                res.append(r)
+        return gdata.List(["name"], res)
+
+
+actor ListState(path, template: proc(list[str]) -> Node):
+    var elems = {}
+    var active = {}
+    var provisional = set()
+
+    def acquire(tid: str, keys: ?set[str]):
+        #print("==== acquire", path, tid, "keys:", keys, "new:", new, "provisional:", provisional)
+        result = {}
+        if keys is not None:
+            keys1 = keys
+            new = keys - set(elems.keys())
+            for k in new:
+                elems[k] = template(path+[k])
+            provisional |= new
+        else:
+            keys1 = set(elems.keys())
+        active[tid] = keys1
+        for k in keys1:
+            result[k] = elems[k]
+        return result
+
+    def release(tid: str, ok: bool, deletes: set[str]):
+        #print("==== release", path, tid, ok, "deletes:", deletes, "provisional:", provisional)
+        if ok:
+            provisional -= active[tid]
+            provisional |= deletes
+        del active[tid]
+        if not active:
+            #print("==== delete", path, tid, provisional)
+            for k in provisional:
+                del elems[k]
+            provisional = set()
+
+    def all():
+        return dict(elems.items())
+
+
+class _ListTransaction(_Transaction):
+    liststate : ListState
+    elems : dict[str, Transaction]
+    accum : dict[str, value]
+    state : ?YieldState
+    reset: bool
+
+    def __init__(self, path, liststate):
+        self.path = path
+        self.liststate = liststate
+        self.elems = {}
+        self.accum = {}
+        self.state = None
+        self.reset = False
+
+    def configure(self, tid, diff, out, force=False):
+        #print('#### (List)', self.path, 'configure', tid)
+        if self.reset:
+            self.elems = {}
+            self.accum = {}
+            self.reset = False
+        diff_by_key = transpose(diff)
+        if len(diff_by_key) == 0 and force:
+            for k in self.liststate.acquire(tid, None).keys():
+                diff_by_key[k] = {}
+        keys = set(diff_by_key.keys())
+        for key,node in self.liststate.acquire(tid, keys).items():
+            self.elems[key] = node.newtrans()
+        msgs = {}
+        for key,subdiff in diff_by_key.items():
+            #print('   # (List)', self.path, 'CONFIGURE ELEMENT', key)
+            msgs[key] = async self.elems[key].configure(tid, subdiff, out, force)
+        results = {}
+        for key,msg in msgs.items():
+            results[key] = await msg
+            v = results[key]
+            #print('   # (List)', self.path, 'RESULT ELEMENT', key, ':', v)
+        return self._analyze(results)
+
+    def _analyze(self, results: dict[str,value]):
+        self.accum.update(results.items())
+        res = 'Empty'
+        for key,r in results.items():
+            if isinstance(r, Exception):
+                #print('   # (List)', self.path, 'RESULT:', r)
+                return r
+            if isinstance(r, str) and r == 'Ok':
+                res = r
+        #print('   # (List)', self.path, 'RESULT:', res)
         return res
 
-    def get_elem(self, key: str) -> TTTNode:
-        if key in self._elems:
-            return self._elems[key]
+    # yield action
+    def lock(self, actself, tid, out: ?Session, done):
+        #print('#### (List)', self.path, 'lock', tid)
+        it = iter(sorted(self.accum.keys()))
+        try:
+            key = next(it)
+            self.state = YieldState(it, key, tid, out, done)
+            tr = self.elems[key]
+            #print('   # (List)', self.path, 'LOCK ELEMENT', key)
+            tr.lock(tid, out, actself.lock_cont)                        # yield await
+        except StopIteration:
+            #print('   # (List)', self.path, 'LOCK IMMEDIATELY DONE')
+            done('Ok')
+
+    def lock_cont (self, actself, res):
+        state = self.state
+        if state is not None:
+            #print('   # (List)', self.path, 'LOCK', state.tid, 'ELEMENT', state.key, 'RESULT:', res)
+            state.results[state.key] = res
+            try:
+                key = next(state.it)
+                state.key = key
+                tr = self.elems[key]
+                #print('   # (List)', self.path, 'LOCK ELEMENT', key)
+                tr.lock(state.tid, state.out, actself.lock_cont)
+            except StopIteration:
+                self.state = None
+                #print('   # (List)', self.path, 'LOCK DONE')
+                state.done(self._analyze(state.results))
         else:
-            elem = self._template()
-            self._elems[key] = elem
-            return elem
+            pass
+            #print('#### (List)', self.path, 'lock_cont empty state!!!')
+
+    def commit(self, tid, ok):
+        #print('#### (List)', self.path, 'commit', tid, ok)
+        for key,tr in self.elems.items():
+            #print('   # (List)', self.path, 'COMMIT ELEMENT', key)
+            tr.commit(tid, ok)
+        deletes = set()
+        for key,res in self.accum.items():
+            if isinstance(res, str) and res == 'Empty':
+                #print('   # (List)', self.path, 'DELETE ELEMENT', key)
+                deletes.add(key)
+        self.liststate.release(tid, ok, deletes)
+        self.reset = True       # Defer resetting accum, for the benefit of 'wait_complete'
+
+    # yield action
+    def wait_complete(self, actself, tid, done):
+        #print('#### (List)', self.path, 'wait_complete', tid, list(self.accum.keys()))
+        it = iter(sorted(self.accum.keys()))
+        try:
+            key = next(it)
+            self.state = YieldState(it, key, tid, None, done)
+            tr = self.elems[key]
+            #print('   # (List)', self.path, 'COMPLETE ELEMENT', key)
+            tr.wait_complete(tid, actself.wait_complete_cont)                   # yield await
+        except StopIteration:
+            #print('   # (List)', self.path, 'COMPLETION IMMEDIATELY DONE')
+            done('Ok')
+
+    def wait_complete_cont (self, actself, res):
+        state = self.state
+        if state is not None:
+            #print('   # (List)', self.path, 'COMPLETE', state.tid, 'ELEMENT', state.key, 'RESULT:', res)
+            state.results[state.key] = res
+            try:
+                key = next(state.it)
+                state.key = key
+                tr = self.elems[key]
+                #print('   # (List)', self.path, 'COMPLETE ELEMENT', key)
+                tr.wait_complete(state.tid, actself.wait_complete_cont)
+            except StopIteration:
+                self.state = None
+                #print('   # (List)', self.path, 'COMPLETION DONE')
+                state.done(self._analyze(state.results))
+        else:
+            pass
+            #print('#### (List)', self.path, 'wait_complete_cont empty state!!!')
+
+    def get(self):
+        res = []
+        for key,node in self.liststate.all().items():
+            r = node.get()
+            if isinstance(r, gdata.ListElement):
+                res.append(r)
+        return gdata.List(["name"], res)
+
+def ListTransaction(path, liststate:ListState):
+    return Transaction(_ListTransaction(path, liststate))
 
 
-class TTTList(TTTNode):
-    """We only support unordered lists
-    """
-    state: TTTListState
+################# Transform #####################
 
-    def __init__(self, template: mut() -> TTTNode, log_handler: logging.Handler):
-        self.state = TTTListState(template)
+class _TransformBase(_Node):
+    transaction: Transaction
 
-    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node], key_ctx: list[str]=[]):
-        transp = transpose(diff)
-        elems: dict[str, TTTNode] = self.state.get_elems(list(transp.keys()))
-        for key, subdiff in transp.items():
-            elem = elems[key]
-            key_ctx.append(key)
-            elem.configure(subdiff, output_tree, key_ctx)
-            key_ctx.pop()
+    def newtrans(self):
+        return self.transaction
+
+    def get(self):
+        return self.transaction.get()
 
 
-#actor TTTTransformState(transform):
-#    pass
+class _TransformTransactionBase(_Transaction):
+    inputs: dict[str, dict[str, gdata.Node]]
+    config: dict[str, gdata.Node]
+    candidates: dict[str, (dict[str,gdata.Node], ?gdata.Node)]
+    output: ?gdata.Node
+    locker: ?str
+    pending: list[(Transaction, str, ?Session, action(value)->None)]
+    me: str
 
-class TTTTransform(TTTNode):
-    transform_wrapper: mut(yang.gdata.Node) -> yang.gdata.Node
-    transform_xml: mut(xml.Node) -> yang.gdata.Node
+    compute : proc(tid: str, merged: gdata.Node, out: ?Session) -> gdata.Node
+    finalize : proc(tid: str) -> None
+
+    def __init__(self, path):
+        self.path = path
+        self.inputs = {}
+        self.config = {}
+        self.candidates = {}
+        self.output = None
+        self.locker = None
+        self.pending = []
+        self.me = '(src_' + str(self)[-10:-1] + ')'
+
+    def configure(self, tid, diff, out, force=False):
+        #print('#### (Transform)', self.path, 'configure', tid, "src:", self.me)
+        if tid in self.inputs:
+            self.inputs[tid].update(diff.items())
+        else:
+            self.inputs[tid] = diff
+        inp = self.inputs[tid]
+        newconf = patch(self.config, inp)
+        #for s,c in inp.items():
+        #    print("# INPUT", self.path, tid, s, ":", c.prsrc())
+        #for s,c in self.config.items():
+        #    print("   # CURRENT", self.path, tid, s, ":", c.prsrc())
+        #for s,c in newconf.items():
+        #    print("   # NEWCONF", self.path, tid, s, ":", c.prsrc())
+        if newconf == self.config and not force:
+            self.candidates[tid] = (self.config, self.output)
+            #print('   # (Transform) NO CHANGE', self.path, tid)
+            return 'Ok'
+        elif newconf == {}:
+            self.candidates[tid] = ({}, None)
+            #print('   # (Transform) EMPTY RESULT', self.path, tid)
+            return 'Empty'
+        else:
+            try:
+                merged = assert_complete(merge(newconf))
+                #print('   # (Transform)', self.path, tid, 'MERGED', merged.prsrc())
+#                assert self.validate(merged)
+            except Exception as e:
+                #print('   # (Transform) FAILURE', self.path, tid, e)
+                return e
+            else:
+                newout = self.compute(tid, merged, out)
+                self.candidates[tid] = (newconf, newout)
+                #print('   # (Transform)', self.path, tid, 'OUTPUT', newout.prsrc())
+                return 'Ok'
+        return 'Ok'
+
+    # yield action
+    def lock(self, actself, tid, out: ?Session, done):                         # yield await
+        #print('#### (Transform)', self.path, 'lock', tid)
+        locker = self.locker
+        if locker is not None:
+            if locker == tid:
+                #print('   # (Transform)', self.path, 'REDUNDANT LOCK', tid)
+                done('Ok')
+            else:
+                #print('   # (Transform)', self.path, 'SUSPENDING', tid)
+                self.pending.append((actself, tid, out, done))          # suspend
+            return
+        self.locker = tid
+        if tid not in self.candidates:
+            inp = self.inputs.get_def(tid, {})
+            #print('   # (Transform)', self.path, 'RE-CONFIGURING', tid)
+            res = self.configure(tid, inp, out)
+            done(res)
+        else:
+            #print('   # (Transform)', self.path, 'LOCKING', tid)
+            done('Ok' if self.candidates[tid].0 else 'Empty')
+
+    def lock_cont (self, actself, res):
+        pass
+
+    def commit(self, tid, ok):
+        #print('#### (Transform)', self.path, 'commit', tid, ok)
+        self.inputs.pop(tid)
+        if tid == self.locker:
+            if ok and tid in self.candidates:
+                config, output = self.candidates[tid]
+                self.config = config
+                self.output = output
+                self.candidates = {}
+                #print('   # (Transform)', self.path, 'COMMITTING', tid)
+                self.finalize(tid)
+            else:
+                #print('   # (Transform)', self.path, 'ABORTING', tid)
+                self.candidates.pop(tid)
+            self.locker = None
+            if self.pending:
+                (actself, tid2, out, done) = self.pending.pop(0)
+                #print("   # (Transform)', self.path, 'RESUMING", tid2)
+                self.lock(actself, tid2, out, done)                     # resume
+        else:
+            #print('   # (Transform)', self.path, 'IGNORING', tid)
+            self.candidates.pop(tid)
+
+    def finalize(self, tid):
+        pass
+
+    def wait_complete(self, actself, tid, done):                                # (yield await)
+        #print('#### (Transform)', self.path, 'wait_complete', tid)
+        done('Ok')
+
+    def wait_complete_cont (self, actself, res):
+        pass
+
+    def get(self):
+        if self.config:
+            return merge(self.config)
+        else:
+            return gdata.Absent()
+
+
+def Transform(function, log_handler: ?logging.Handler=None):
+    return lambda path: Node(_Transform(path, function, log_handler))
+
+class _Transform(_TransformBase):
+    def __init__(self, path, function, log_handler):
+        self.path = path
+        self.transaction = TransformTransaction(path, function, log_handler)
+
+
+def TransformTransaction(path, function, log_handler):
+    return Transaction(_TransformTransaction(path, function, log_handler))
+
+class _TransformTransaction(_TransformTransactionBase):
+    function: TransformFunction
+
+    def __init__(self, path, function: proc(?logging.Handler) -> TransformFunction, log_handler):
+        _TransformTransactionBase.__init__(self, path)
+        self.function = function(log_handler)
+
+    def compute(self, tid, merged, out):
+        newout = self.function.transform_wrapper(merged)
+        res = difference(self.output, newout)
+        if out is not None and res is not None:
+            out.configure(tid, {self.me: res})
+        return newout
+
+class TransformFunction(object):
+    transform_wrapper: mut(gdata.Node) -> gdata.Node
+    transform_xml: mut(xml.Node) -> gdata.Node
+    logger: logging.Logger
 
     def __init__(self, log_handler: ?logging.Handler=None):
-        #self.state = TTTTransformState(self)
-        self._log = logging.Logger(log_handler)
+        self.logger = logging.Logger(log_handler)
 
-    mut def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
-        raise NotImplementedError("TTTTransform.transform not implemented")
+    def transform_wrapper(self, cfg):
+        return gdata.Absent()
 
-    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node], key_ctx: list[str]=[]):
-        self._log.debug("TTTTransform.configure", {"transform": str(self)})
-        diffs = list(diff.values())
-        merged_config = diffs[0]
-        for d in diffs[1:]:
-            merged_config = yang.gdata.merge(merged_config, d)
-        output = self.transform_wrapper(merged_config)
-        output_tree[str(self)] = output
-        self._log.debug("TTTTransform.configure output", {"output": output.to_xmlstr()})
+    def transform_xml(self, cfg):
+        return gdata.Absent()
+
+
+################# RFSTransform ###################
+
+def RFSTransform(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return lambda path: Node(_RFSTransform(path, function, dev_mgr, log_handler))
+
+class _RFSTransform(_TransformBase):
+    def __init__(self, path, function, dev_mgr, log_handler):
+        self.path = path
+        self.transaction = RFSTransaction(path, function, dev_mgr, log_handler)
+
+def RFSTransaction(path, function, dev_mgr, log_handler):
+    return Transaction(_RFSTransaction(path, function, dev_mgr, log_handler))
+
+class _RFSTransaction(_TransformTransactionBase):
+    function: RFSFunction
+    devname: str
+    dev: odev.Device
+
+    def __init__(self, path, function: proc(?logging.Handler) -> RFSFunction, dev_mgr: odev.DeviceManager, log_handler):
+        _TransformTransactionBase.__init__(self, path)
+        self.function = function(log_handler)
+        if len(path) < 3:
+            raise ValueError("RFSTransform " + str(path) + ": path length < 3")
+        self.devname = path[-3]
+        self.dev = dev_mgr.get(self.devname)
+
+    def compute(self, tid, merged, out):
+        #print('#### (RFSTransform)', self.path, 'compute', tid)
+        modcap = self.dev.get_modules()
+        if len(modcap) > 0:
+            newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modcap))
+        else:
+            #print("No device capabilities, skipping RFS transform for", devname)
+            newout = gdata.Root({})
+        res = difference(self.output, newout)
+
+        if isinstance(res, gdata.Inner) and out is not None and res is not None:
+            embedded_res = gdata.Module({
+                "devices": gdata.Container({
+                    "device": gdata.List(["name"], [
+                        gdata.ListElement([self.devname], {
+                            "name": gdata.Leaf("str", self.devname),
+                            "config": gdata.Container(res.children)
+                        })
+                    ])
+                })
+            }, ns="http://orchestron.org/yang/orchestron-device.yang")
+            out.configure(tid, {self.me: embedded_res})
+
+        return newout
+
 
 class DeviceInfo(object):
     name: str
@@ -135,139 +850,99 @@ class DeviceInfo(object):
         self.name = name
         self.modules = modules
 
-class TTTRFSTransform(TTTNode):
-    dev_mgr: odev.DeviceManager
-    dev: ?odev.Device
+class RFSFunction(object):
+    transform_wrapper: mut(gdata.Node, DeviceInfo) -> gdata.Node
+    transform_xml: mut(xml.Node, DeviceInfo) -> gdata.Node
+    logger: logging.Logger
 
-    transform_wrapper: mut(yang.gdata.Node, DeviceInfo) -> yang.gdata.Node
-    transform_xml: mut(xml.Node, DeviceInfo) -> yang.gdata.Node
+    def __init__(self, log_handler: ?logging.Handler=None):
+        self.logger = logging.Logger(log_handler)
 
-    def __init__(self, dev_mgr: odev.DeviceManager, log_handler: logging.Handler):
-        self.dev_mgr = dev_mgr
-        self.dev = None
-        self._log = logging.Logger(log_handler)
-        #self.state = TTTTransformState(self)
+    def transform_wrapper(self, cfg, di):
+        return gdata.Absent()
 
-    mut def transform_wrapper(self, i: yang.gdata.Node, device_info: DeviceInfo) -> yang.gdata.Node:
-        raise NotImplementedError("TTTRFSTransform.transform not implemented")
-
-    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node], key_ctx: list[str]=[]):
-        self._log.debug("TTTRFSTransform.configure", {"transform": str(self)})
-        if len(key_ctx) < 2:
-            raise ValueError("RFSTransform key_ctx length < 2")
-        device_name = key_ctx[-2]
-        diffs = list(diff.values())
-        merged_config = diffs[0]
-        for d in diffs[1:]:
-            merged_config = yang.gdata.merge(merged_config, d)
-        # TODO: consider returning yang.gdata.Root instead of yang.gdata.Node from transform_wrapper()
-        self_dev = self.dev
-        dev = self_dev if self_dev is not None else self.dev_mgr.get(device_name)
-        if self_dev == None:
-            self.dev = dev
-        device_info = DeviceInfo(device_name, dev.get_modules())
-
-        output = yang.gdata.Root()
-        if len(device_info.modules) > 0:
-            try:
-                output = self.transform_wrapper(merged_config, device_info)
-            except odev.UnsupportedDevice:
-                self._log.warning("RFS transform unsupported device", {"transform": str(self)})
-                output = yang.gdata.Root()
-                # TODO: should we abort the transaction or something?
-        else:
-            # TODO: do logging..
-            self._log.info("No capabilities for device, skipping RFS transform", {"device": device_name})
-            pass
+    def transform_xml(self, cfg, di):
+        return gdata.Absent()
 
 
-        # The root of the output tree from an RFS transform is the config of one
-        # (1) device, while the combined output from all transforms on a TTT
-        # layer is expected to be one data tree. Clearly we want to support
-        # multiple devices, so we join the output trees of all RFS transforms
-        # into a single data tree by inserting the device config under a list
-        # keyed by device name. The device name is extracted from the parent
-        # list element of the diff. The way the RFS transforms are expected to
-        # be used is that they are always nested under a list keyed by device
-        # name, so this is safe, it should be verified at compile time.
+################# Device #####################
 
-        if isinstance(output, yang.gdata.Root):
-            rfs_output = yang.gdata.Module(
-                children={
-                    "devices": yang.gdata.Container(
-                        children={
-                            "device": yang.gdata.List(
-                                keys=["name"],
-                                elements=[
-                                    yang.gdata.ListElement(
-                                        [device_info.name],
-                                        children={
-                                            "name": yang.gdata.Leaf("str", device_info.name),
-                                            "config": yang.gdata.Container(children=output.children)
-                                        }
-                                    )
-                                ]
-                            )
-                        }
-                    )
-                },
-                ns="http://orchestron.org/yang/orchestron-device.yang"
-            )
-            output_tree[str(self)] = rfs_output
-        else:
-            raise NotImplementedError("TTTRFSTransform.configure: unsupported output type: " + str(type(output)))
-        self._log.debug("TTTRFSTransform.configure output", {"ttt": str(self), "output": output.to_xmlstr()})
+def Device(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return lambda path: Node(_Device(path, dev_mgr, log_handler))
 
-class TTTDevice(TTTNode):
-    """Device itself, this represents the device in itself, with the metadata
-    about the device, such as its address, credentials, etc.
+class _Device(_TransformBase):
+    def __init__(self, path, dev_mgr, log_handler):
+        self.path = path
+        self.transaction = DeviceTransaction(path, dev_mgr, log_handler)
 
-    Note how this does not include the configuration that we send to the device.
-    """
-    dev_mgr: odev.DeviceManager
-    dev: ?odev.Device
-    dev_conf: TTTDeviceConfig
+def DeviceTransaction(path, dev_mgr, log_handler):
+    return Transaction(_DeviceTransaction(path, dev_mgr, log_handler))
 
-    def __init__(self, dev_mgr: odev.DeviceManager, log_handler: logging.Handler):
-        #self.state = TTTTransformState(self)
-        self._log = logging.Logger(log_handler)
-        self.dev_mgr = dev_mgr
-        self.dev = None
+class _DeviceTransaction(_TransformTransactionBase):
+    dev: odev.Device
+    logger: logging.Logger
 
-    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node], key_ctx: list[str]=[]):
-        self._log.debug("TTTDevice.configure", {"ttt": str(self)})
-        diffs = list(diff.values())
-        merged_config = diffs[0]
-        for d in diffs[1:]:
-            merged_config = yang.gdata.merge(merged_config, d)
-        dmc = DeviceMetaConfig.from_gdata(merged_config)
-        dev = self.dev_mgr.get(dmc.name)
-        dev.set_meta_config(dmc)
-        self.dev = dev
+    def __init__(self, path, dev_mgr: odev.DeviceManager, log_handler):
+        _TransformTransactionBase.__init__(self, path)
+        self.dev = dev_mgr.get(path[-1])
+        self.logger = logging.Logger(log_handler)
+
+    def compute(self, tid, merged, out):
+        return merged
+
+    def finalize(self, tid):
+        #print('#### (DeviceMeta)', self.path, 'finalize', tid)
+        config = self.output
+        if config is not None:
+            meta_config = DeviceMetaConfig.from_gdata(config)
+            self.dev.set_meta_config(meta_config)
 
 
-class TTTDeviceConfig(TTTNode):
-    """The configuration that goes on a device, i.e. the last layer of the
-    system that is written to by RFS transforms
-    """
-    dev_mgr: odev.DeviceManager
+################# DeviceConfig #####################
 
-    def __init__(self, dev_mgr: odev.DeviceManager, log_handler: logging.Handler):
-        #self.state = TTTTransformState(self)
-        self._log = logging.Logger(log_handler)
-        self.dev_mgr = dev_mgr
+def DeviceConfig(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
+    return lambda path: Node(_DeviceConfig(path, dev_mgr, log_handler))
 
-    proc def configure(self, diff: dict[str, yang.gdata.Node], output_tree: dict[str, yang.gdata.Node], key_ctx: list[str]=[]):
-        self._log.debug("TTTDeviceConfig.configure", {"ttt": str(self)})
-        diffs = list(diff.values())
-        merged_config = diffs[0]
-        for d in diffs[1:]:
-            merged_config = yang.gdata.merge(merged_config, d)
-        if isinstance(merged_config, yang.gdata.ListElement):
-            name = merged_config.key_str()
-            dev_config_cntr = merged_config.children["config"]
-            if isinstance(dev_config_cntr, yang.gdata.Container):
-                dev = self.dev_mgr.get(name)
-                dev_config = yang.gdata.Root(dev_config_cntr.children)
-                self._log.debug("TTTDeviceConfig.configure output", {"name": name, "config": dev_config.to_xmlstr()})
-                dev.configure(dev_config)
+class _DeviceConfig(_TransformBase):
+    def __init__(self, path, dev_mgr, log_handler):
+        self.path = path
+        self.transaction = DeviceConfigTransaction(path, dev_mgr, log_handler)
+
+def DeviceConfigTransaction(path, dev_mgr, log_handler):
+    return Transaction(_DeviceConfigTransaction(path, dev_mgr, log_handler))
+
+class _DeviceConfigTransaction(_TransformTransactionBase):
+    dev: odev.Device
+    logger: logging.Logger
+
+    def __init__(self, path, dev_mgr: odev.DeviceManager, log_handler):
+        _TransformTransactionBase.__init__(self, path)
+        self.dev = dev_mgr.get(path[-1])
+        self.logger = logging.Logger(log_handler)
+
+    def compute(self, tid, merged, out):
+        return merged
+
+    def finalize(self, tid):
+        #print('#### (DeviceConfig)', self.path, 'finalize', tid)
+        device = self.output
+        if device is not None:
+            if isinstance(device, gdata.ListElement):
+                config = device.children["config"]
+                if isinstance(config, gdata.Container):
+                    cfg = gdata.Root(config.children)
+                    self.dev.configure(cfg, tid)
+
+    def wait_complete(self, actself, tid, done):                                # (yield await)
+        #print('#### (DeviceConfig)', self.path, 'wait_complete', tid)
+        self.dev.wait_complete(tid, done)
+
+
+################# Trivials #####################
+
+class PassThrough(TransformFunction):
+    def transform_wrapper(self, cfg):
+        return cfg
+
+def Sink():
+    return Layer('sink', Transform(PassThrough), None)

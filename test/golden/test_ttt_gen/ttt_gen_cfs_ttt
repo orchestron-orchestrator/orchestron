@@ -5,7 +5,7 @@
 import logging
 
 import orchestron.device as odev
-import orchestron.ttx as ttx
+import orchestron.ttt as ttt
 import yang.adata
 import yang.gdata
 
@@ -13,6 +13,6 @@ from respnet.layers.y_0 import foo__c1__foo__bar_entry
 
 import respnet.cfs
 
-def get_ttx(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str])->ttx.Node:
-    r = ttx.Container({"c1": ttx.Container({"foo": ttx.List(ttx.Container({"bar": ttx.List(ttx.Transform(respnet.cfs.Foobar, log_handler))}))}, ns='http://example.com/foo')}, ns='')
+def get_ttt(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str])->ttt.Node:
+    r = ttt.Container({"c1": ttt.Container({"foo": ttt.List(ttt.Container({"bar": ttt.List(ttt.Transform(respnet.cfs.Foobar, log_handler))}))}, ns='http://example.com/foo')}, ns='')
     return r

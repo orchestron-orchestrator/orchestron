@@ -1,7 +1,7 @@
 import testing
 import logging
 
-import orchestron.ttx as ttx
+import orchestron.ttt as ttt
 #import orchestron.gdata as gdata
 import yang.gdata as gdata
 
@@ -93,13 +93,13 @@ merge_y1_y2 = gdata.Container({
 ########################
 
 def _test_transpose():
-    transp0 = ttx.transpose({'src': y1})
+    transp0 = ttt.transpose({'src': y1})
     testing.assertEqual(transp0, y1_transp)
 
-    transp1 = ttx.transpose(transp0["l1"])
+    transp1 = ttt.transpose(transp0["l1"])
     testing.assertEqual(transp1, y1_transp_l1)
 
-    transp2 = ttx.transpose(transp1["k1"])
+    transp2 = ttt.transpose(transp1["k1"])
     testing.assertEqual(transp2, y1_transp_l1_k1)
 
 ########################
@@ -108,10 +108,10 @@ def _test_multi_merge():
     mrg = gdata.merge(y1, y2)
     testing.assertEqual(mrg, merge_y1_y2)
 
-    mrg1 = ttx.merge({'srcA': y1, 'srcB': y2})
+    mrg1 = ttt.merge({'srcA': y1, 'srcB': y2})
     testing.assertEqual(mrg1, merge_y1_y2)
 
-    mrg2: gdata.Node = ttx.merge({'srcB': y2})
+    mrg2: gdata.Node = ttt.merge({'srcB': y2})
     testing.assertEqual(mrg2, y2)
 
 ########################
@@ -133,7 +133,7 @@ def _test_patch():
             'd': gdata.Absent()
         })
     }
-    res = ttx.patch(fst, snd)
+    res = ttt.patch(fst, snd)
     exp = {
         'srcA': gdata.Container({
             'a': gdata.Leaf("int", 1)
@@ -153,7 +153,7 @@ def _test_patch():
 ########################
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
     t3 = router.newtrans()
@@ -210,7 +210,7 @@ def _test_basic_commit(done, logger: logging.Handler):
 ########################
 
 actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -239,7 +239,7 @@ def _test_overlapping_commit(done, logger: logging.Handler):
 ########################
 
 actor modified_commit_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
 
     t1.configure("1", {'srcA': y1}, None)
@@ -259,7 +259,7 @@ def _test_modified_commit(done, logger: logging.Handler):
 ########################
 
 actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
 
     t1.configure("1", {'srcA': y1}, None)
@@ -289,7 +289,7 @@ y0 = gdata.Container({
 })
 
 actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -320,7 +320,7 @@ y3 = gdata.Container({
 })
 
 actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -363,7 +363,7 @@ a0b1 = gdata.Container({
 })
 
 actor config_failure_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -391,7 +391,7 @@ def _test_config_failure(done, logger: logging.Handler):
 ########################
 
 actor config_abort_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -416,7 +416,7 @@ def _test_config_abort(done, logger: logging.Handler):
 ########################
 
 actor multi_lock_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
 
     t1.configure("1", {'srcA': y1}, None)
@@ -440,7 +440,7 @@ def _test_multi_lock(done, logger: logging.Handler):
 ########################
 
 actor empty_lock_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -465,7 +465,7 @@ def _test_empty_lock(done, logger: logging.Handler):
 ########################
 
 actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -492,7 +492,7 @@ def _test_empty_lock2(done, logger: logging.Handler):
 ########################
 
 actor no_lock_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -515,7 +515,7 @@ def _test_no_lock(done, logger: logging.Handler):
 ########################
 
 actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -537,7 +537,7 @@ def _test_spurious_commit(done, logger: logging.Handler):
 ########################
 
 actor spurious_config_tester(done: action(?bool, ?Exception)->None):
-    router = ttx.Transform(ttx.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([])
     t1 = router.newtrans()
     t2 = router.newtrans()
 
