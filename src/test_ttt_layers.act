@@ -7,58 +7,58 @@ import yang.gdata as gdata
 
 
 cfg1 = gdata.List(["name"], [
-    gdata.ListElement(["k1"], {
+    gdata.Container({
         "n1": gdata.Leaf("int", 1),
         "n2": gdata.Leaf("int", 2)
-    }),
-    gdata.ListElement(["k4"], {
+    }, ["k1"]),
+    gdata.Container({
         "n1": gdata.Leaf("int", 4)
-    })
+    }, ["k4"])
 ])
 
 cfg2 = gdata.List(["name"], [
-    gdata.ListElement(["k1"], {
+    gdata.Container({
         "n2": gdata.Leaf("int", 2),
         "n3": gdata.Leaf("int", 3)
-    }),
-    gdata.ListElement(["k2"], {
+    }, ["k1"]),
+    gdata.Container({
         "n1": gdata.Leaf("int", 1),
         "n3": gdata.Leaf("int", 3)
-    })
+    }, ["k2"])
 ])
 
 out1 = gdata.Container({
     'devices': gdata.List(["id"], [
-        gdata.ListElement(["k1"], {
+        gdata.Container({
             "n1": gdata.Leaf("int", 1),
             "n2": gdata.Leaf("int", 2)
-        }),
-        gdata.ListElement(["k4"], {
+        }, ["k1"]),
+        gdata.Container({
             "n1": gdata.Leaf("int", 4)
-        })
+        }, ["k4"])
     ])
 })
 
 out1_2 = gdata.Container({
     'devices': gdata.List(["id"], [
-        gdata.ListElement(["k1"], {
+        gdata.Container({
             "n1": gdata.Leaf("int", 1),
             "n2": gdata.Leaf("int", 2),
             "n3": gdata.Leaf("int", 3)
-        }),
-        gdata.ListElement(["k2"], {
+        }, ["k1"]),
+        gdata.Container({
             "n1": gdata.Leaf("int", 1),
             "n3": gdata.Leaf("int", 3)
-        }),
-        gdata.ListElement(["k4"], {
+        }, ["k2"]),
+        gdata.Container({
             "n1": gdata.Leaf("int", 4)
-        })
+        }, ["k4"])
     ])
 })
 
 class TransF(ttt.TransformFunction):
     def transform_wrapper(self, cfg):
-        if isinstance(cfg, gdata.ListElement):
+        if isinstance(cfg, gdata.Container):
             return gdata.Container({
                 'devices': gdata.List(["id"], [
                     cfg
@@ -151,12 +151,12 @@ cfg3 = gdata.Container({
 
 out3 = gdata.Container({
     'devices': gdata.List(["id"], [
-        gdata.ListElement(["1"], {
+        gdata.Container({
             "val": gdata.Leaf("int", 1)
-        }),
-        gdata.ListElement(["2"], {
+        }, ["1"]),
+        gdata.Container({
             "val": gdata.Leaf("int", 2)
-        })
+        }, ["2"])
     ])
 })
 
@@ -165,9 +165,9 @@ class WriteDev(ttt.TransformFunction):
         i = cfg.get_int("a")
         return gdata.Container({
             'devices': gdata.List(["id"], [
-                gdata.ListElement([str(i)], {
+                gdata.Container({
                     "val": gdata.Leaf("int", i)
-                })
+                }, [str(i)])
             ])
         })
 

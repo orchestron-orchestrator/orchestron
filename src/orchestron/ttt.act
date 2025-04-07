@@ -15,7 +15,7 @@ def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.N
                     cfg_per_key[key][src] = le
                 else:
                     cfg_per_key[key] = {src: le}
-        elif isinstance(conf, gdata.Inner):
+        elif isinstance(conf, gdata.Container):
             for key, subconf in conf.children.items():
                 if key in cfg_per_key:
                     cfg_per_key[key][src] = subconf
@@ -276,7 +276,7 @@ class _Container(_Node):
             res[tag] = node.get()
         ns = self.ns
         if len(self.path) <= 1 and ns is not None:
-            return gdata.Module(res, ns=ns)
+            return gdata.Container(res, ns=ns)
         else:
             return gdata.Container(res, ns=self.ns)
 
@@ -405,7 +405,7 @@ class _ContainerTransaction(_Transaction):
             res[tag] = node.get()
         ns = self.ns
         if len(self.path) <= 1 and ns is not None:
-            return gdata.Module(res, ns=ns)
+            return gdata.Container(res, ns=ns)
         else:
             return gdata.Container(res, ns=self.ns)
 
@@ -429,7 +429,7 @@ class _List(_Node):
         res = []
         for key,node in self.liststate.all().items():
             r = node.get()
-            if isinstance(r, gdata.ListElement):
+            if isinstance(r, gdata.Container):
                 res.append(r)
         return gdata.List(["name"], res)
 
@@ -605,11 +605,11 @@ class _ListTransaction(_Transaction):
         res = []
         for key,node in self.liststate.all().items():
             r = node.get()
-            if isinstance(r, gdata.ListElement):
+            if isinstance(r, gdata.Container):
                 res.append(r)
         return gdata.List(["name"], res)
 
-def ListTransaction(path, liststate:ListState):
+def ListTransaction(path, liststate: ListState):
     return Transaction(_ListTransaction(path, liststate))
 
 
@@ -823,17 +823,17 @@ class _RFSTransaction(_TransformTransactionBase):
             newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modcap))
         else:
             #print("No device capabilities, skipping RFS transform for", devname)
-            newout = gdata.Root({})
+            newout = gdata.Container({})
         res = difference(self.output, newout)
 
-        if isinstance(res, gdata.Inner) and out is not None and res is not None:
-            embedded_res = gdata.Module({
+        if isinstance(res, gdata.Container) and out is not None and res is not None:
+            embedded_res = gdata.Container({
                 "devices": gdata.Container({
                     "device": gdata.List(["name"], [
-                        gdata.ListElement([self.devname], {
+                        gdata.Container({
                             "name": gdata.Leaf("str", self.devname),
                             "config": gdata.Container(res.children)
-                        })
+                        }, [self.devname])
                     ])
                 })
             }, ns="http://orchestron.org/yang/orchestron-device.yang")
@@ -927,10 +927,10 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
         #print('#### (DeviceConfig)', self.path, 'finalize', tid)
         device = self.output
         if device is not None:
-            if isinstance(device, gdata.ListElement):
+            if isinstance(device, gdata.Container):
                 config = device.children["config"]
                 if isinstance(config, gdata.Container):
-                    cfg = gdata.Root(config.children)
+                    cfg = gdata.Container(config.children)
                     self.dev.configure(cfg, tid)
 
     def wait_complete(self, actself, tid, done):                                # (yield await)

@@ -9,13 +9,13 @@ import yang.gdata as gdata
 tree1 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
-            gdata.ListElement(["k1"], {
+            gdata.Container({
                 "n1": gdata.Leaf("int", 1),
                 "n2": gdata.Leaf("int", 2)
-            }),
-            gdata.ListElement(["k4"], {
+            }, ["k1"]),
+            gdata.Container({
                 "n4": gdata.Leaf("int", 4)
-            })
+            }, ["k4"])
         ])
     }),
     'right': gdata.Container({
@@ -26,13 +26,13 @@ tree1 = gdata.Container({
 tree2 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
-            gdata.ListElement(["k1"], {
+            gdata.Container({
                 "n2": gdata.Leaf("int", 2)
-            }),
-            gdata.ListElement(["k2"], {
+            }, ["k1"]),
+            gdata.Container({
                 "n1": gdata.Leaf("int", 1),
                 "n3": gdata.Leaf("int", 3)
-            })
+            }, ["k2"])
         ]),
     }),
     'right': gdata.Container({
@@ -43,17 +43,17 @@ tree2 = gdata.Container({
 merge_1_2 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
-            gdata.ListElement(["k1"], {
+            gdata.Container({
                 "n1": gdata.Leaf("int", 1),
                 "n2": gdata.Leaf("int", 2)
-            }),
-            gdata.ListElement(["k2"], {
+            }, ["k1"]),
+            gdata.Container({
                 "n1": gdata.Leaf("int", 1),
                 "n3": gdata.Leaf("int", 3)
-            }),
-            gdata.ListElement(["k4"], {
+            }, ["k2"]),
+            gdata.Container({
                 "n4": gdata.Leaf("int", 4)
-            })
+            }, ["k4"])
         ]),
     }),
     'right': gdata.Container({
@@ -200,9 +200,9 @@ def _test_modified_commit2(done, logger: logging.Handler):
 tree0 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
-            gdata.ListElement(["k4"], {
+            gdata.Container({
                 "n4": gdata.Leaf("int", 0)
-            })
+            }, ["k4"])
         ]),
     }),
     'right': gdata.Container({

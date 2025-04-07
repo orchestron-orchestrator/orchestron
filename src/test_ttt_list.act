@@ -7,50 +7,50 @@ import yang.gdata as gdata
 
 
 tree1 = gdata.List(["name"], [
-    gdata.ListElement(["k1"], {
+    gdata.Container({
         "n1": gdata.Leaf("int", 1),
         "n2": gdata.Leaf("int", 2)
-    }),
-    gdata.ListElement(["k4"], {
+    }, ["k1"]),
+    gdata.Container({
         "n4": gdata.Leaf("int", 4)
-    })
+    }, ["k4"])
 ])
 
 tree1diff = gdata.List(["name"], [
-    gdata.AbsentListElement(["k1"]),
-    gdata.ListElement(["k4"], {
+    gdata.Absent(["k1"]),
+    gdata.Container({
         "n4": gdata.Leaf("int", 0)
-    })
+    }, ["k4"])
 ])
 
 tree1pruned = gdata.List(["name"], [
-    gdata.ListElement(["k4"], {
+    gdata.Container({
         "n4": gdata.Leaf("int", 0)
-    })
+    }, ["k4"])
 ])
 
 tree2 = gdata.List(["name"], [
-    gdata.ListElement(["k1"], {
+    gdata.Container({
         "n2": gdata.Leaf("int", 2)
-    }),
-    gdata.ListElement(["k2"], {
+    }, ["k1"]),
+    gdata.Container({
         "n1": gdata.Leaf("int", 1),
         "n3": gdata.Leaf("int", 3)
-    })
+    }, ["k2"])
 ])
 
 merge_1_2 = gdata.List(["name"], [
-    gdata.ListElement(["k1"], {
+    gdata.Container({
         "n1": gdata.Leaf("int", 1),
         "n2": gdata.Leaf("int", 2)
-    }),
-    gdata.ListElement(["k2"], {
+    }, ["k1"]),
+    gdata.Container({
         "n1": gdata.Leaf("int", 1),
         "n3": gdata.Leaf("int", 3)
-    }),
-    gdata.ListElement(["k4"], {
+    }, ["k2"]),
+    gdata.Container({
         "n4": gdata.Leaf("int", 4)
-    })
+    }, ["k4"])
 ])
 
 
@@ -101,22 +101,22 @@ def _test_basic_delete(done, logger: logging.Handler):
 ########################
 
 list1a = gdata.List(["name"], [
-    gdata.ListElement(["key1"], {
+    gdata.Container({
         "a": gdata.Leaf("int", 0)
-    })
+    }, ["key1"])
 ])
 
 list1b = gdata.List(["name"], [
-    gdata.ListElement(["key1"], {
+    gdata.Container({
         "b": gdata.Leaf("int", 1)
-    })
+    }, ["key1"])
 ])
 
 list1 = gdata.List(["name"], [
-    gdata.ListElement(["key1"], {
+    gdata.Container({
         "a": gdata.Leaf("int", 0),
         "b": gdata.Leaf("int", 1)
-    })
+    }, ["key1"])
 ])
 
 actor simultaneous_create_tester(done: action(?bool, ?Exception)->None):
@@ -162,27 +162,27 @@ def _test_aborted_create(done, logger: logging.Handler):
 ########################
 
 y1 = gdata.List(["name"], [
-    gdata.ListElement(["key0"], {
+    gdata.Container({
         "a": gdata.Leaf("int", 0)
-    }),
-    gdata.ListElement(["key1"], {
+    }, ["key0"]),
+    gdata.Container({
         "a": gdata.Leaf("int", 1)
-    })
+    }, ["key1"])
 ])
 
 y2 = gdata.List(["name"], [
-    gdata.ListElement(["key1"], {
+    gdata.Container({
         "b": gdata.Leaf("int", 1)
-    }),
-    gdata.ListElement(["key2"], {
+    }, ["key1"]),
+    gdata.Container({
         "a": gdata.Leaf("int", 1)
-    })
+    }, ["key2"])
 ])
 
 y2b = gdata.List(["name"], [
-    gdata.ListElement(["key1"], {
+    gdata.Container({
         "b": gdata.Leaf("int", 1)
-    })
+    }, ["key1"])
 ])
 
 actor aborted_create_tester2(done: action(?bool, ?Exception)->None):
