@@ -895,7 +895,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         config = self.output
         if config is not None:
             meta_config = DeviceMetaConfig.from_gdata(config)
-            self.dev.set_meta_config(meta_config)
+            self.dev.set_dmc(meta_config)
 
 
 ################# DeviceConfig #####################

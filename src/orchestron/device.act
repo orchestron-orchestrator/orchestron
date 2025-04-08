@@ -66,6 +66,27 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     This is the Orchestron Device, it represents an abstract device in the
     system. Platform specific handling is implemented in the DeviceAdapter, i.e.
     in subclasses of DeviceAdapter, like NetconfDriver and MockAdapter.
+
+    Device is used for the Device-actor whereas 'device' denotes the actual
+    device that exists somewhere across the network.
+
+    The Device actor sits between the TTT transaction engine and devices out in
+    the real world. All changes from TTT are accepted, they are by definition
+    the intended configuration for the device, thus the TTT API is fairly
+    simple. Configuration is fed from TTT to Device asynchronously (nothing can
+    go wrong) together with a transaction id (tid). If a TTT transaction wants
+    to await the configuration to reach the device, that is possible via the
+    wait_complete(tid). The device configuration interaction is serial, which
+    means that we are either idling or have configuration in-transit to the
+    device. If new configuration is received from TTT while we have
+    configuration in-transit to the device, the new configuration is queued up
+    and the associated transactions added to pending_txids. Once acknowledgement
+    is received from the device, and thus the in-transit commit has concluded,
+    the pending transactions, represented by intended_conf, can be pushed to the
+    device.
+
+    The device interaction is entirely asynchronous.
+
     """
     _log_handler = logging.Handler(name)
     _log_handler.set_handler(log_handler)
@@ -73,7 +94,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     _log = logging.Logger(_log_handler)
 
     # Orchestron's intended configuration, that we want on the device. Note how
-    # this is NOT the NMDA-speak "intended configuration" of the device itself
+    # this is NOT the NMDA-speak "intended configuration" of the device itself.
     var intended_conf: ?yang.gdata.Node = None
 
     # The device's meta configuration, like address, credentials, etc.
@@ -81,23 +102,31 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     var adapter: DeviceAdapter = NoAdapter(self, _log_handler, wcap)
 
-    # The NETCONF client connection to the device
-    var client: ?netconf.Client = None
+    # The modules supported by the device.
     var modset: dict[str, ModCap] = {}
 
-    # The transaction ids representing the configuration in transit or pending
-    var current_transactions = set()
-    var pending_transactions = set()
+    # current_txids are the ids of the transactions that are currently
+    # in-transit, which also means that we can determine if we have an
+    # outstanding transaction by checking len(current_txids) > 0.
+    var current_txids = set()
+    # pending_txids are the ids of the transactions that are pending, which
+    # means these transactions arrived while we already had configuration
+    # in-transit to the device. When len(pending_txids) > 0, we need to
+    # send the latest configuration after the current transaction is done.
+    var pending_txids = set()
+    # Note how intended_conf always only reflects the very latest configuration
+    # that we received from the TTT transaction engine. When the device is ready
+    # to receive configuration (we are connected, have said hello, gotten
+    # capabilities, do not have an outstanding transaction), we will send the
+    # intended_conf. A snapshot is taken and sent to the device. We do not keep
+    # that particular version. If later the device failed to commit the
+    # configuration and we need to retry, we will retry with a new
+    # configuration.
 
+    # TTT transactions can optionally request, through wait_complete(tid, cb), to
+    # wait until configuration has been committed to the device. We keep track
+    # of those callbacks keyed by tid.
     var callbacks: dict[str, action(value)->None] = {}
-
-    # If we need to push configuration again after a transaction is done. This
-    # happens when the configuration changes while we have an outstanding
-    # in-progress transaction to the device.
-    var again = False
-
-    var conn_state = NOT_CONNECTED
-    var txn_state = NO_TRANSACTION
 
     def on_modset_update(new_modset: dict[str, ModCap]):
         _log.debug("Modset updated", {"new_modset": new_modset})
@@ -116,10 +145,6 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             _log.debug("Sending config")
             _send_config()
 
-    def set_meta_config(new_dmc: DeviceMetaConfig):
-        # TODO: remove this, and use set_dmc instead
-        return set_dmc(new_dmc)
-
     def set_dmc(new_dmc: DeviceMetaConfig) -> None:
         # TODO: compare new_dmc with old dmc to figure out if we need to switch adapter
         dmc = new_dmc
@@ -133,44 +158,40 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             _log.debug("DeviceMetaConfig has changed")
             adapter.set_dmc(new_dmc)
 
-    def edit_config(new_conf: yang.gdata.Node):
-        # TODO: remove this, and use configure instead
-        return configure(new_conf)
-
     def _transaction_done(success: bool):
         """Internal function called when transaction is done
         """
-        txn_state = NO_TRANSACTION
+        # TODO: got to honour success flag, config hasn't actually reached the device if False
         for tid,callback in callbacks.items():
-            if tid in current_transactions:
+            if tid in current_txids:
                 callback(success)
                 del callbacks[tid]
-        current_transactions = set()
-        if again:
+        current_txids = set()
+        if len(pending_txids) > 0:
             _log.debug("Configuration changed during in-progress transaction, running again...")
-            again = False
             _send_config()
 
     def _send_config():
-        txn_state = IN_TRANSACTION
-        if intended_conf is not None:
-            adapter.configure(_transaction_done, intended_conf)
+        if len(current_txids) > 0:
+            _log.debug("Device._send_config: there is currently an outstanding configuration, skipping")
         else:
-            _log.debug("_send_config: intended_conf not set")
+            _log.debug("Device._send_config: sending intended configuration")
+            if intended_conf is not None:
+                current_txids = pending_txids
+                pending_txids = set()
+                adapter.configure(_transaction_done, intended_conf)
+            else:
+                _log.debug("_send_config: intended_conf not set")
 
     def configure(new_conf: yang.gdata.Node, tid: str="0"):
-        pending_transactions.add(tid)
-        if intended_conf == new_conf:
-            current_transactions.add(tid)     # In case intended_conf is already in transit
-            _log.debug("Ignoring new configuration identical to current intended configuration")
-            return
-        else:
-            intended_conf = new_conf
-            _send_config()
+        _log.debug("Device.configure: got new configuration")
+        pending_txids.add(tid)
+        intended_conf = new_conf
+        _send_config()
 
     def wait_complete(tid: str, done: action(value)->None):
-        if tid not in current_transactions | pending_transactions:
-            done(True)                                            # Assume tid is very old
+        if tid not in current_txids | pending_txids:
+            done(True) # Assume tid is very old and has already completed, thus respond immediately
         else:
             callbacks[tid] = done
 
