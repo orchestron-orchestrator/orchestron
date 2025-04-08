@@ -43,7 +43,12 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
     name must always return the same Device instance.
     """
     var devices = {}
-    var reconf_cb: ?action(str) -> None = None
+
+    action def _dummy_reconf(name: str):
+        # Dummy reconf callback, used to avoid None
+        pass
+
+    var reconf_cb: action(str) -> None = _dummy_reconf
 
     def get(name: str) -> Device:
         if name not in devices:
@@ -55,7 +60,7 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
         reconf_cb = on_reconf
 
 
-actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: ?action(str) -> None=None):
+actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None):
     """Device
 
     This is the Orchestron Device, it represents an abstract device in the
@@ -96,8 +101,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     def on_modset_update(new_modset: dict[str, ModCap]):
         _log.debug("Modset updated", {"new_modset": new_modset})
-        if on_reconf is not None:
-            on_reconf(name)
+        on_reconf(name)
 
     def on_connect(new_modset: dict[str, ModCap]):
         _log.debug("Device connected", {"new_modset": new_modset})
@@ -106,8 +110,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         else:
             _log.debug("New supported modules, triggering RFS reconf")
             modset = new_modset
-            if on_reconf is not None:
-                on_reconf(name)
+            on_reconf(name)
 
         if modset != {}:
             _log.debug("Sending config")
@@ -264,9 +267,8 @@ class MockAdapter(DeviceAdapter):
 #                _log.debug("Adding mock cap", {"cap": m.name})
 #                self._modset[m.name] = m
 #        _log.debug("Device in MOCK mode, pretending to connect to device...")
-#        if on_reconf is not None:
-#            _log.info("Device modset changed, triggering reconfiguration", {"device": name})
-#            on_reconf(name)
+#        _log.info("Device modset changed, triggering reconfiguration", {"device": name})
+#        on_reconf(name)
 
     def configure(self, done, new_conf):
         self._log.debug("MockAdapter.configure", {"new_conf": new_conf.to_xmlstr()})
