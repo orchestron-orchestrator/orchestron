@@ -146,17 +146,13 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             _send_config()
 
     def set_dmc(new_dmc: DeviceMetaConfig) -> None:
-        # TODO: compare new_dmc with old dmc to figure out if we need to switch adapter
-        dmc = new_dmc
-        new_adapter = True
-        dmc_changed = True
-        if new_adapter:
-            _log.debug("Switching adapter to new device type")
+        old_type = str(dmc.type) if dmc is not None else str(None)
+        if old_type != str(new_dmc.type):
+            _log.debug("Device type has changed, using new adapter", {"old_type": old_type, "new_type": str(new_dmc.type)})
+            # TODO: map type fo adapter class
             adapter = NetconfAdapter(self, _log_handler, wcap)
-
-        if dmc_changed:
-            _log.debug("DeviceMetaConfig has changed")
-            adapter.set_dmc(new_dmc)
+        adapter.set_dmc(new_dmc)
+        dmc = new_dmc
 
     def _transaction_done(success: bool):
         """Internal function called when transaction is done
