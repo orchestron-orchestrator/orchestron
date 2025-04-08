@@ -198,14 +198,10 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             callbacks[tid] = done
 
     def get_capabilities():
-        if adapter is not None:
-            return adapter.get_capabilities()
-        return []
+        return adapter.get_capabilities()
 
     def get_modules() -> dict[str, ModCap]:
-        if adapter is not None:
-            return adapter.get_modules()
-        return {}
+        return adapter.get_modules()
 
 
 class DeviceAdapter(object):
@@ -263,7 +259,7 @@ class MockAdapter(DeviceAdapter):
         self._modset = {}
         self._dmc = None
 
-    def set_dmc(self, new_dmc: DeviceMetaConfig):
+    def set_dmc(self, new_dmc):
         self._dmc = new_dmc
         self._log.debug("MockAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_xmlstr()})
 
@@ -297,10 +293,10 @@ class MockAdapter(DeviceAdapter):
         self._log.debug("MockAdapter.configure", {"new_conf": new_conf.to_xmlstr()})
         done(True)
 
-    proc def get_capabilities(self) -> list[str]:
+    def get_capabilities(self):
         raise NotImplementedError("MockAdapter.get_capabilities() not implemented")
 
-    proc def get_modules(self) -> dict[str, ModCap]:
+    def get_modules(self):
         raise NotImplementedError("MockAdapter.get_modules() not implemented")
 
 class NetconfAdapter(DeviceAdapter):
@@ -353,6 +349,9 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     var modset: dict[str, ModCap] = {}
 
     def _on_connect(c):
+        if client is not None and c is not client:
+            _log.debug("Device._on_connect: ignoring connection from old client")
+            return
         _log.info("Connected to device")
         conn_state = CONNECTED
 
@@ -367,27 +366,26 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
         dev.on_connect(modset)
 
     def _on_error(c, error):
+        if client is not None and c is not client:
+            _log.debug("Device._on_connect: ignoring connection from old client")
+            return
         modset = {}
         _log.debug("Error connecting to device")
 
     def _on_notif(c, n):
+        if client is not None and c is not client:
+            _log.debug("Device._on_connect: ignoring connection from old client")
+            return
         _log.debug("Notification from device")
 
     def set_dmc(new_dmc: DeviceMetaConfig):
-        _log.debug("Device.set_meta_config")
-
-        if conn_state == CONNECTED:
-            # TODO: heh, obviously DO NOT DO THIS :P
-            _log.debug("Device already connected, ignoring new config")
-            return
-
-#        if dmc is not None:
-#            # TODO: should compare existing dmc with new_dmc
-#            if dmc.to_gdata() == new_dmc.to_gdata():
-#                _log.debug("Device Meta Config already set to same value")
-#                return
-
-        #_log.debug(new_dmc.to_gdata().to_xmlstr())
+        if dmc is not None and new_dmc is not None:
+            old_dmcg = dmc.to_gdata()
+            new_dmcg = new_dmc.to_gdata()
+            if old_dmcg is not None and new_dmcg is not None:
+                if yang.gdata.diff(old_dmcg, new_dmcg) != None:
+                    _log.debug("Device.set_meta_config: ignoring new device meta-config identical to current device meta-config")
+                    return
 
         if not len(new_dmc.address.elements) > 0:
             _log.debug("Not enough addressess :/")
@@ -399,6 +397,9 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
         port = int(addr_port) if addr_port is not None else 830
         username = new_dmc.credentials.username
         password = new_dmc.credentials.password
+
+        # TODO: we only need o use a new client if connection parameters have
+        # changed, other settings don't require a new client
 
         if wcap is not None and username is not None and password is not None:
             conn_state = CONNECTING
