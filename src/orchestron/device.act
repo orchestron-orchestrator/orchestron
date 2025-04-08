@@ -157,14 +157,20 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def _transaction_done(success: bool):
         """Internal function called when transaction is done
         """
-        # TODO: got to honour success flag, config hasn't actually reached the device if False
-        for tid,callback in callbacks.items():
-            if tid in current_txids:
-                callback(success)
-                del callbacks[tid]
-        current_txids = set()
-        if len(pending_txids) > 0:
-            _log.debug("Configuration changed during in-progress transaction, running again...")
+        if success:
+            _log.debug("Configuration successfully applied on device, calling callbacks...")
+            for tid,callback in callbacks.items():
+                if tid in current_txids:
+                    callback(success)
+                    del callbacks[tid]
+            current_txids = set()
+            if len(pending_txids) > 0:
+                _log.debug("Configuration changed during in-progress transaction, running again...")
+                _send_config()
+        else:
+            _log.debug("Configuration failed, retrying with latest config")
+            pending_txids.update(current_txids)
+            current_txids = set()
             _send_config()
 
     def _send_config():
