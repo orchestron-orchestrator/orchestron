@@ -15,6 +15,20 @@ NOT_CONNECTED = 0
 CONNECTING = 1
 CONNECTED = 2
 
+class DeviceError(Exception):
+    """Exception raised when the device configuration fails
+    """
+
+class NotConnectedError(DeviceError):
+    """The device is not connected
+    """
+
+class ConfigError(DeviceError):
+    """Configuration error, i.e. the device rejected the configuration
+
+    Retrying the same configuration typically does not help.
+    """
+
 class ModCap(object):
     name: str
     namespace: str
@@ -128,6 +142,8 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     # of those callbacks keyed by tid.
     var callbacks: dict[str, action(value)->None] = {}
 
+    _log.debug("Device starting up", {"name": name})
+
     def on_modset_update(new_modset: dict[str, ModCap]):
         _log.debug("Modset updated", {"new_modset": new_modset})
         on_reconf(name)
@@ -147,6 +163,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     def set_dmc(new_dmc: DeviceMetaConfig) -> None:
         old_type = str(dmc.type) if dmc is not None else str(None)
+        _log.debug("Device.set_dmc", {"old_type": old_type, "new_dmc": new_dmc.to_gdata().to_json()})
         if old_type != str(new_dmc.type):
             _log.debug("Device type has changed, using new adapter", {"old_type": old_type, "new_type": str(new_dmc.type)})
             # TODO: map type fo adapter class
@@ -154,39 +171,58 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         adapter.set_dmc(new_dmc)
         dmc = new_dmc
 
-    def _transaction_done(success: bool):
+    def _transaction_done(error: ?Exception):
         """Internal function called when transaction is done
         """
-        if success:
+        if error is not None:
+            if isinstance(error, NotConnectedError):
+                _log.debug("Device._transaction_done: Device not connected, backing off, waiting for reconnect")
+                pending_txids.update(current_txids)
+                current_txids = set()
+            else:
+                if isinstance(error, ConfigError):
+                    _log.debug("Device._transaction_done: Configuration failed, bad config", {"error": error})
+                else:
+                    _log.debug("Device._transaction_done: Unhandled error", {"error": error})
+
+                # TODO: should we signal failure to uptream transactions? or just retry in some way?
+                for tid,callback in callbacks.items():
+                    if tid in current_txids:
+                        callback(error)
+                        del callbacks[tid]
+
+                pending_txids.update(current_txids)
+                current_txids = set()
+                if len(pending_txids) > 0:
+                    _log.debug("New intended configuration available, retrying with latest config")
+                    _send_config()
+                else:
+                    _log.debug("No new intended configuration available, no point in retrying with same conf")
+        else:
             _log.debug("Configuration successfully applied on device, calling callbacks...")
             for tid,callback in callbacks.items():
                 if tid in current_txids:
-                    callback(success)
+                    callback(True)
                     del callbacks[tid]
             current_txids = set()
             if len(pending_txids) > 0:
                 _log.debug("Configuration changed during in-progress transaction, running again...")
                 _send_config()
-        else:
-            _log.debug("Configuration failed, retrying with latest config")
-            pending_txids.update(current_txids)
-            current_txids = set()
-            _send_config()
 
     def _send_config():
         if len(current_txids) > 0:
             _log.debug("Device._send_config: there is currently an outstanding configuration, skipping")
         else:
-            _log.debug("Device._send_config: sending intended configuration")
             if intended_conf is not None:
                 current_txids = pending_txids
                 pending_txids = set()
+                _log.debug("Device._send_config: sending intended configuration", {"txids": current_txids})
                 adapter.configure(_transaction_done, intended_conf)
             else:
                 _log.debug("_send_config: intended_conf not set")
 
     def configure(new_conf: yang.gdata.Node, tid: str="0"):
-        _log.debug("Device.configure: got new configuration")
+        _log.debug("Device.configure: received new intended configuration", {"tid": tid})
         pending_txids.add(tid)
         intended_conf = new_conf
         _send_config()
@@ -219,7 +255,7 @@ class DeviceAdapter(object):
     proc def set_dmc(self, new_dmc: DeviceMetaConfig):
         raise NotImplementedError("DeviceAdapter.set_dmc() not implemented")
 
-    proc def configure(self, done: action(bool) -> None, new_conf: yang.gdata.Node):
+    proc def configure(self, done: action(?Exception) -> None, new_conf: yang.gdata.Node):
         """Configure the device with the given configuration
 
         :param done: callback to call when the configuration is done
@@ -235,11 +271,11 @@ class DeviceAdapter(object):
 
 class NoAdapter(DeviceAdapter):
     def set_dmc(self, new_dmc):
-        pass
+        self._log.debug("NoAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_json()})
 
     def configure(self, done, new_conf):
         # The NoAdapter cannot configure anything, so we just call done() with False
-        done(False)
+        done(NotConnectedError())
 
     def get_capabilities(self):
         return []
@@ -291,7 +327,7 @@ class MockAdapter(DeviceAdapter):
 
     def configure(self, done, new_conf):
         self._log.debug("MockAdapter.configure", {"new_conf": new_conf.to_xmlstr()})
-        done(True)
+        done(None)
 
     def get_capabilities(self):
         raise NotImplementedError("MockAdapter.get_capabilities() not implemented")
@@ -306,9 +342,7 @@ class NetconfAdapter(DeviceAdapter):
         self._log_handler = log_handler
         self._wcap = wcap
         self._log = logging.Logger(self._log_handler)
-
         self.nc = NetconfDriver(self._dev, self._log_handler, self._wcap)
-        self._log.debug("NetconfAdapter starting")
 
     def set_dmc(self, new_dmc: DeviceMetaConfig):
         self.nc.set_dmc(new_dmc)
@@ -343,8 +377,8 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     var client: ?netconf.Client = None
 
     var conn_state: int = NOT_CONNECTED
-    var txn_state: int = NO_TRANSACTION
-    var on_done: ?action(bool) -> None = None
+    var error: ?Exception = None
+    var on_done: ?action(?Exception) -> None = None
 
     var modset: dict[str, ModCap] = {}
 
@@ -379,12 +413,13 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
         _log.debug("Notification from device")
 
     def set_dmc(new_dmc: DeviceMetaConfig):
+        _log.debug("Device.set_dmc", {"new_dmc": new_dmc.to_gdata().to_json()})
         if dmc is not None and new_dmc is not None:
             old_dmcg = dmc.to_gdata()
             new_dmcg = new_dmc.to_gdata()
             if old_dmcg is not None and new_dmcg is not None:
                 if yang.gdata.diff(old_dmcg, new_dmcg) != None:
-                    _log.debug("Device.set_meta_config: ignoring new device meta-config identical to current device meta-config")
+                    _log.debug("Device.set_dmc: ignoring new device meta-config identical to current device meta-config")
                     return
 
         if not len(new_dmc.address.elements) > 0:
@@ -412,19 +447,19 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
             client = c
         dmc = new_dmc
 
-    def configure(done: action(bool) -> None, new_conf: yang.gdata.Node):
+    def configure(done: action(?Exception) -> None, new_conf: yang.gdata.Node):
         if on_done is not None:
-            _log.debug("Device.configure: already in progress")
+            _log.debug("Device.configure: Already in transaction, cannot send configuration")
             return
 
         if intended_conf == new_conf:
             _log.debug("Device.configure: ignoring new configuration identical to current intended configuration")
-            done(True)
+            done()
         else:
             _log.debug("Device.configure: new configuration")
             if conn_state != CONNECTED:
                 _log.debug("Device.configure: device not connected, cannot send configuration")
-                done(False)
+                done(NotConnectedError())
                 return
 
             intended_conf = new_conf
@@ -432,21 +467,19 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
             if xml_conf == "":
                 # Cisco IOS XRd doesn't like empty <edit-config>, returns error
                 _log.debug("Device.edit_config Config is empty, noop")
-                done(True)
+                done()
                 return
 
             if client is not None:
-                _log.debug("Device.edit_config Sending config...")
                 on_done = done
-                if txn_state == IN_TRANSACTION:
-                    return
-                txn_state = IN_TRANSACTION
                 if _is_writable_running():
+                    _log.debug("Device.configure: edit_config on running datastore")
                     client.edit_config(xml_conf, _on_conf)
                 else:
+                    _log.debug("Device.configure: edit_config on candidate datastore")
                     client.edit_config(xml_conf, _on_conf, datastore="candidate")
             else:
-                _log.debug("Device.edit_config No client, cannot send config")
+                _log.debug("Device.configure: No client, cannot send config")
 
 
     def get_capabilities():
@@ -460,11 +493,12 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     def _is_writable_running():
         return ":writable-running" in modset
 
-    def _transaction_done(success: bool):
+    def _transaction_done(error: ?Exception=None):
         """Internal function called when transaction is done
         """
+        _log.debug("Device._transaction_done", {"error": str(error)})
         if on_done is not None:
-            on_done(success)
+            on_done(error)
         on_done = None
 
     def _on_conf(c, r):
@@ -474,10 +508,10 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
                 # We edit-config'd candidate, now commit
                 c.commit(_on_commit)
             else:
-                _transaction_done(True)
+                _transaction_done()
         else:
             _log.debug("Device._on_conf: Device disconnected")
-            _transaction_done(False)
+            _transaction_done(NotConnectedError())
 
     def _on_commit(c, r):
         if r is not None:
@@ -485,20 +519,20 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
             if any(filter(lambda c: c.tag == "rpc-error", r.children)) and not _is_writable_running():
                 # We commit'ed candidate, but got an error, now discard-changes
                 # TODO: what if the device does this (:rollback-on-error)?!
-                c.discard_changes(_on_discard_changes)
+                c.discard_changes(lambda c, r: _on_discard_changes(c, r, error=ConfigError("Commit failed")))
             else:
-                _transaction_done(True)
+                _transaction_done()
         else:
             _log.debug("Device._on_commit: Device disconnected")
-            _transaction_done(False)
+            _transaction_done(NotConnectedError())
 
-    def _on_discard_changes(c, r):
+    def _on_discard_changes(c, r, error=None):
         if r is not None:
             _log.debug("Device._on_discard_changes", {"r": r.encode()})
-            _transaction_done(False)
+            _transaction_done(error)
         else:
             _log.debug("Device._on_discard_changes: Device disconnected")
-            _transaction_done(False)
+            _transaction_done(NotConnectedError())
 
 
 
