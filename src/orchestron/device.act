@@ -114,7 +114,9 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     # The device's meta configuration, like address, credentials, etc.
     var dmc: ?DeviceMetaConfig = None
 
-    var adapter: DeviceAdapter = NoAdapter(self, _log_handler, wcap)
+    #var adapter: DeviceAdapter = NoAdapter(self, _log_handler, wcap)
+    # TODO: default to NoAdapter and extract adapter from dmc type
+    var adapter: DeviceAdapter = NetconfAdapter(self, _log_handler, wcap)
 
     # The modules supported by the device.
     var modset: dict[str, ModCap] = {}
@@ -166,7 +168,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         _log.debug("Device.set_dmc", {"old_type": old_type, "new_dmc": new_dmc.to_gdata().to_json()})
         if old_type != str(new_dmc.type):
             _log.debug("Device type has changed, using new adapter", {"old_type": old_type, "new_type": str(new_dmc.type)})
-            # TODO: map type fo adapter class
+            # TODO: map type from adapter class
             adapter = NetconfAdapter(self, _log_handler, wcap)
         adapter.set_dmc(new_dmc)
         dmc = new_dmc
@@ -472,12 +474,9 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
 
             if client is not None:
                 on_done = done
-                if _is_writable_running():
-                    _log.debug("Device.configure: edit_config on running datastore")
-                    client.edit_config(xml_conf, _on_conf)
-                else:
-                    _log.debug("Device.configure: edit_config on candidate datastore")
-                    client.edit_config(xml_conf, _on_conf, datastore="candidate")
+                target_datastore = "running" if _is_writable_running() else "candidate"
+                _log.debug("Device.configure: edit_config", {"datastore": target_datastore})
+                client.edit_config(xml_conf, _on_conf, datastore=target_datastore)
             else:
                 _log.debug("Device.configure: No client, cannot send config")
 
