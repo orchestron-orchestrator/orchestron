@@ -41,6 +41,9 @@ class ModCap(object):
         self.revision = revision
         self.feature = feature
 
+    def __str__(self) -> str:
+        return f"ModCap(name={self.name}, namespace={self.namespace}, revision={self.revision}, feature={self.feature})"
+
 extension ModCap(Eq):
     def __eq__(self, other: ModCap) -> bool:
         self_revision = self.revision
@@ -73,6 +76,12 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
     def on_reconf(on_reconf: action(str) -> None):
         reconf_cb = on_reconf
 
+def truncate_conf(conf):
+    sc = conf.to_json()
+    trunc_len = min([len(sc), 50])
+    if trunc_len < len(sc):
+        sc = sc[:trunc_len] + "..."
+    return sc
 
 actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None):
     """Device
@@ -107,6 +116,8 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     _log_handler.set_output_level(logging.DEBUG)
     _log = logging.Logger(_log_handler)
 
+    _log.debug("Device starting up", {"name": name})
+
     # Orchestron's intended configuration, that we want on the device. Note how
     # this is NOT the NMDA-speak "intended configuration" of the device itself.
     var intended_conf: ?yang.gdata.Node = None
@@ -116,10 +127,11 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     #var adapter: DeviceAdapter = NoAdapter(self, _log_handler, wcap)
     # TODO: default to NoAdapter and extract adapter from dmc type
-    var adapter: DeviceAdapter = NetconfAdapter(self, _log_handler, wcap)
+    var adapter: DeviceAdapter = NetconfAdapter(self, _log_handler, wcap) if wcap is not None else MockAdapter(self, _log_handler, wcap)
 
     # The modules supported by the device.
     var modset: dict[str, ModCap] = {}
+    var modset_id: ?str = None
 
     # current_txids are the ids of the transactions that are currently
     # in-transit, which also means that we can determine if we have an
@@ -144,24 +156,23 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     # of those callbacks keyed by tid.
     var callbacks: dict[str, action(value)->None] = {}
 
-    _log.debug("Device starting up", {"name": name})
-
     def on_modset_update(new_modset: dict[str, ModCap]):
         _log.debug("Modset updated", {"new_modset": new_modset})
         on_reconf(name)
 
     def on_connect(new_modset: dict[str, ModCap]):
         _log.debug("Device connected", {"new_modset": new_modset})
-        if modcap_eq(modset, new_modset):
+        if modset_eq(modset, new_modset):
             _log.debug("Supported modules unchanged")
+            if modset != {}:
+                _log.debug("Sending config")
+                _send_config()
         else:
-            _log.debug("New supported modules, triggering RFS reconf")
+            _log.debug("New supported modules, triggering RFS reconf", {"name": name})
             modset = new_modset
+            modset_id = hash_modset(modset)
             on_reconf(name)
-
-        if modset != {}:
-            _log.debug("Sending config")
-            _send_config()
+            return
 
     def set_dmc(new_dmc: DeviceMetaConfig) -> None:
         old_type = str(dmc.type) if dmc is not None else str(None)
@@ -201,7 +212,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                 else:
                     _log.debug("No new intended configuration available, no point in retrying with same conf")
         else:
-            _log.debug("Configuration successfully applied on device, calling callbacks...")
+            _log.debug("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids})
             for tid,callback in callbacks.items():
                 if tid in current_txids:
                     callback(True)
@@ -213,7 +224,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     def _send_config():
         if len(current_txids) > 0:
-            _log.debug("Device._send_config: there is currently an outstanding configuration, skipping")
+            _log.debug("Device._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
         else:
             if intended_conf is not None:
                 current_txids = pending_txids
@@ -223,23 +234,38 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             else:
                 _log.debug("_send_config: intended_conf not set")
 
-    def configure(new_conf: yang.gdata.Node, tid: str="0"):
-        _log.debug("Device.configure: received new intended configuration", {"tid": tid})
+    def configure(new_conf: ?yang.gdata.Node, conf_modset_id: ?str, tid: str="0"):
         pending_txids.add(tid)
-        intended_conf = new_conf
-        _send_config()
+        if new_conf is None and conf_modset_id is None:
+            _log.debug("Device.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
+            return
+
+        if modset_id is not None:
+            if conf_modset_id != modset_id:
+                _log.debug("Device.configure: modset_id mismatch, ignoring configuration", {"conf_modset_id": str(conf_modset_id), "modset_id": str(modset_id)})
+                return
+        else:
+            _log.debug("Device.configure: no modset_id set, ignoring configuration", {"conf_modset_id": str(conf_modset_id)})
+            return
+
+        if new_conf is not None:
+            _log.debug("Device.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
+            intended_conf = new_conf
+            _send_config()
 
     def wait_complete(tid: str, done: action(value)->None):
         if tid not in current_txids | pending_txids:
+            _log.debug("Device.wait_complete: transaction id not found, calling done", {"tid": tid})
             done(True) # Assume tid is very old and has already completed, thus respond immediately
         else:
+            _log.debug("Device.wait_complete: waiting for transaction to complete", {"tid": tid})
             callbacks[tid] = done
 
     def get_capabilities():
         return adapter.get_capabilities()
 
-    def get_modules() -> dict[str, ModCap]:
-        return adapter.get_modules()
+    def get_modules() -> (dict[str, ModCap], ?str):
+        return modset, modset_id
 
 
 class DeviceAdapter(object):
@@ -296,46 +322,84 @@ class MockAdapter(DeviceAdapter):
         self._log = logging.Logger(self._log_handler)
         self._modset = {}
         self._dmc = None
+        self._driver = MockDriver(self._dev, self._log_handler, self._wcap)
 
-    def set_dmc(self, new_dmc):
-        self._dmc = new_dmc
-        self._log.debug("MockAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_xmlstr()})
-
-#        preset_caps = []
-#        if "cisco-ios-xr" in new_dmc.mock.preset:
-#            preset_caps.extend([
-#                "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21",
-#                "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&revision=2022-07-11",
-#                "http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&revision=2022-07-11",
-#            ])
-#        if "juniper-junos" in new_dmc.mock.preset:
-#            preset_caps.extend([
-#                "http://xml.juniper.net/netconf/junos/1.0",
-#                "http://xml.juniper.net/dmi/system/1.0",
-#            ])
-#        for cap in preset_caps:
-#            m = parse_cap(cap)
-#            self._modset[m.name] = m
-#            _log.debug("Adding preset cap", {"cap": m.name})
-#
-#        if len(new_dmc.mock.module.elements) > 0:
-#            for mock_cap in new_dmc.mock.module.elements:
-#                m = ModCap(mock_cap.name, mock_cap.namespace, mock_cap.revision, mock_cap.feature)
-#                _log.debug("Adding mock cap", {"cap": m.name})
-#                self._modset[m.name] = m
-#        _log.debug("Device in MOCK mode, pretending to connect to device...")
-#        _log.info("Device modset changed, triggering reconfiguration", {"device": name})
-#        on_reconf(name)
+    def set_dmc(self, new_dmc: DeviceMetaConfig):
+        self._driver.set_dmc(new_dmc)
 
     def configure(self, done, new_conf):
-        self._log.debug("MockAdapter.configure", {"new_conf": new_conf.to_xmlstr()})
-        done(None)
+        return self._driver.configure(done, new_conf)
 
-    def get_capabilities(self):
-        raise NotImplementedError("MockAdapter.get_capabilities() not implemented")
+    def get_capabilities(self) -> list[str]:
+        return self._driver.get_capabilities()
 
-    def get_modules(self):
-        raise NotImplementedError("MockAdapter.get_modules() not implemented")
+    def get_modules(self) -> dict[str, ModCap]:
+        return self._driver.get_modules()
+
+actor MockDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
+    _log = logging.Logger(log_handler)
+    _log.info("MockDriver starting up")
+
+    var dmc: ?DeviceMetaConfig = None
+    var modset: dict[str, ModCap] = {}
+
+    var conn_state: int = NOT_CONNECTED
+
+    def set_dmc(new_dmc):
+        if dmc is not None and new_dmc is not None:
+            old_dmcg = dmc.to_gdata()
+            new_dmcg = new_dmc.to_gdata()
+            if old_dmcg is not None and new_dmcg is not None:
+                if yang.gdata.diff(old_dmcg, new_dmcg) != None:
+                    _log.debug("Device.set_dmc: ignoring new device meta-config identical to current device meta-config")
+                    return
+        _log.debug("MockAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_json()})
+        _dmc = new_dmc
+
+        preset_caps = []
+        if "cisco-ios-xr" in new_dmc.mock.preset:
+            preset_caps.extend([
+                "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21",
+                "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&revision=2022-07-11",
+                "http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&revision=2022-07-11",
+            ])
+        if "juniper-junos" in new_dmc.mock.preset:
+            preset_caps.extend([
+                "http://xml.juniper.net/netconf/junos/1.0",
+                "http://xml.juniper.net/dmi/system/1.0",
+            ])
+        for cap in preset_caps:
+            m = parse_cap(cap)
+            modset[m.name] = m
+            _log.debug("Adding preset cap", {"cap": m.name})
+#
+        if len(new_dmc.mock.module.elements) > 0:
+            for mock_cap in new_dmc.mock.module.elements:
+                m = ModCap(mock_cap.name, mock_cap.namespace, mock_cap.revision, mock_cap.feature)
+                _log.debug("Adding mock cap", {"cap": m.name})
+                modset[m.name] = m
+
+        if len(modset) > 0:
+            _log.debug("Mock capabilities set, \"connecting\"...")
+            conn_state = CONNECTED
+            dev.on_connect(modset)
+        else:
+            _log.debug("No mock capabilities set, idling as not connected")
+
+    def configure(done, new_conf):
+        if conn_state == CONNECTED:
+            _log.debug("MockAdapter.configure: device 'connected', responding done")
+            done(None)
+        else:
+            _log.debug("MockAdapter.configure: device not connected")
+            done(NotConnectedError())
+
+    def get_capabilities():
+        return []
+
+    def get_modules():
+        return modset
+
 
 class NetconfAdapter(DeviceAdapter):
 
@@ -344,19 +408,19 @@ class NetconfAdapter(DeviceAdapter):
         self._log_handler = log_handler
         self._wcap = wcap
         self._log = logging.Logger(self._log_handler)
-        self.nc = NetconfDriver(self._dev, self._log_handler, self._wcap)
+        self._driver = NetconfDriver(self._dev, self._log_handler, self._wcap)
 
     def set_dmc(self, new_dmc: DeviceMetaConfig):
-        self.nc.set_dmc(new_dmc)
+        self._driver.set_dmc(new_dmc)
 
     def configure(self, done, new_conf):
-        return self.nc.configure(done, new_conf)
+        return self._driver.configure(done, new_conf)
 
     def get_capabilities(self) -> list[str]:
-        return self.nc.get_capabilities()
+        return self._driver.get_capabilities()
 
     def get_modules(self) -> dict[str, ModCap]:
-        return self.nc.get_modules()
+        return self._driver.get_modules()
 
 actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     """NETCONF device adapter
@@ -396,7 +460,9 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
             m = parse_cap(cap)
             new_modset[m.name] = m
 
-        if not modcap_eq(modset, new_modset):
+        # TODO: check yang-library instead!!
+
+        if not modset_eq(modset, new_modset):
             modset = new_modset
 
         dev.on_connect(modset)
@@ -535,7 +601,15 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
 
 
 
-def modcap_eq(a: dict[str, ModCap], b: dict[str, ModCap]) -> bool:
+def hash_modset(modset: dict[str, ModCap]) -> str:
+    # TODO: use a better hash function
+    big_string = ""
+    for m in sorted(modset.keys()):
+        mod = modset[m]
+        big_string += str(mod)
+    return str(hash(big_string))
+
+def modset_eq(a: dict[str, ModCap], b: dict[str, ModCap]) -> bool:
     if len(a) != len(b):
         return False
     if set(a.keys()) != set(b.keys()):

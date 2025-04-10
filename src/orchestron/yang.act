@@ -143,6 +143,10 @@ device = """module orchestron-device {
         type string;
       }
 
+      leaf modset_id {
+        type string;
+      }
+
       //anydata config {
       //  description "Device configuration";
       //}

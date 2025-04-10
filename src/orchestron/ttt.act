@@ -818,23 +818,27 @@ class _RFSTransaction(_TransformTransactionBase):
 
     def compute(self, tid, merged, out):
         #print('#### (RFSTransform)', self.path, 'compute', tid, err=True)
-        modcap = self.dev.get_modules()
-        if len(modcap) > 0:
+        dev_content = {
+            "name": gdata.Leaf("str", self.devname),
+        }
+        modset, modset_id = self.dev.get_modules()
+        if modset_id is not None:
+            dev_content["modset_id"] = gdata.Leaf("str", modset_id)
+        if len(modset) > 0:
             #print("#### (RFSTransform)", self.path, 'compute', tid, self.devname, err=True)
-            newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modcap))
+            newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset))
+            res = difference(self.output, newout)
+            if isinstance(res, gdata.Container):
+                dev_content["config"] = gdata.Container(res.children)
         else:
             #print("#### (RFSTransform)", self.path, 'compute', tid, ": No device capabilities, skipping RFS transform for", self.devname, err=True)
             newout = gdata.Container({})
-        res = difference(self.output, newout)
 
-        if isinstance(res, gdata.Container) and out is not None and res is not None:
+        if out is not None:
             embedded_res = gdata.Container({
                 "devices": gdata.Container({
                     "device": gdata.List(["name"], [
-                        gdata.Container({
-                            "name": gdata.Leaf("str", self.devname),
-                            "config": gdata.Container(res.children)
-                        }, [self.devname])
+                        gdata.Container(dev_content, [self.devname])
                     ])
                 })
             }, ns="http://orchestron.org/yang/orchestron-device.yang")
@@ -929,10 +933,21 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
         device = self.output
         if device is not None:
             if isinstance(device, gdata.Container):
-                config = device.children["config"]
-                if isinstance(config, gdata.Container):
-                    cfg = gdata.Container(config.children)
-                    self.dev.configure(cfg, tid)
+                if "config" in device.children:
+                    config = device.children["config"]
+                    cfg_modset_id = None
+                    modset_id_leaf = device.children.get("modset_id")
+                    if isinstance(modset_id_leaf, gdata.Leaf):
+                        modset_id_val = modset_id_leaf.val
+                        if isinstance(modset_id_val, str):
+                            cfg_modset_id = modset_id_val
+                    if isinstance(config, gdata.Container):
+                        cfg = gdata.Container(config.children)
+                        self.dev.configure(cfg, cfg_modset_id, tid)
+                else:
+                    #print('   # (DeviceConfig)', self.path, "No config in device config, registering interest...", err=True)
+                    self.dev.configure(None, None, tid)
+
 
     def wait_complete(self, actself, tid, done):                                # (yield await)
         #print('#### (DeviceConfig)', self.path, 'wait_complete', tid, err=True)
