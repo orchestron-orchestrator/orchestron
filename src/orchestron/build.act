@@ -117,7 +117,7 @@ class SysSpec(object):
                 print("+ Device type %s adata unchanged" % dev_type.name)
 
             syssrc += "import %s.devices.%s\n" % (self.name, dev_type.name)
-            syssrc_devtypes += "    \"%s\": %s.devices.%s\n" % (dev_type.name, self.name, dev_type.name)
+            syssrc_devtypes += "    \"%s\": %s.devices.%s.schema_namespaces,\n" % (dev_type.name, self.name, dev_type.name)
         syssrc += "device_types = {\n"
         syssrc += syssrc_devtypes
         syssrc += "}\n"
