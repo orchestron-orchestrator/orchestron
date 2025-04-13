@@ -1,0 +1,138 @@
+import testing
+import logging
+
+import orchestron.ttt as ttt
+import yang.gdata as gdata
+import yang.adata
+import orchestron.device as odev
+from orchestron.device_meta_config import \
+    orchestron_rfs__device_entry as DeviceMetaConfig, \
+    orchestron_rfs__device__credentials as Credentials, \
+    orchestron_rfs__device__mock as Mock
+
+########################
+
+actor reconf_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
+    dev_mgr = odev.DeviceManager(None, log_handler)
+    
+    def reconf(dev):
+        #print("Reconfiguring", dev)
+        done(True, None)
+        
+    dmc = DeviceMetaConfig("k1", Credentials("admin", "admin"), mock=Mock(["cisco-ios-xr"]))
+    dev_mgr.on_reconf(reconf)
+    dev_mgr.get("k1").set_dmc(dmc)
+
+def _test_reconf(done, logger: logging.Handler):
+    c = reconf_tester(done, logger)
+
+########################
+
+cfg2 = gdata.List(["name"], [
+    gdata.Container({
+        "name": gdata.Leaf("str", "k1"),
+        "config": gdata.Container({
+            "val": gdata.Leaf("str", "one")
+        })
+    }, ["k1"]),
+    gdata.Container({
+        "name": gdata.Leaf("str", "k2"),
+        "config": gdata.Container({
+            "val": gdata.Leaf("str", "two")
+        })
+    }, ["k2"])
+])
+
+actor reconf2_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
+    dev_mgr = odev.DeviceManager(None, log_handler)
+    stack = ttt.Layer("devices", ttt.List(ttt.DeviceConfig(dev_mgr)), None)
+    
+    var devs = set()
+    
+    def reconf(dev):
+        devs.add(dev)
+        #print("Reconfiguring", dev)
+        if devs == {"k1", "k2"}:
+            done(True, None)
+        
+    dev_mgr.on_reconf(reconf)
+    sess = stack.newsession()
+    
+    def cont1(_r):
+        dmc = DeviceMetaConfig("k1", Credentials("admin", "admin"), mock=Mock(["cisco-ios-xr"]))
+        dev_mgr.get("k1").set_dmc(dmc)
+        dev_mgr.get("k2").set_dmc(dmc)
+    
+    sess.edit_config(cfg2, cont1)
+
+def _test_reconf2(done, logger: logging.Handler):
+    c = reconf2_tester(done, logger)
+
+########################
+
+class Fun(ttt.RFSFunction):
+    def transform_wrapper(self, cfg, device_info):
+        return gdata.Container(cfg.children)
+
+cfg3 = gdata.Container({
+    "rfs": gdata.List(["name"], [
+        gdata.Container({
+            "name": gdata.Leaf("str", "k1"),
+            "base": gdata.List(["id"], [
+                gdata.Container({
+                    "val": gdata.Leaf("str", "one")
+                }, ["A"])
+            ])
+        }, ["k1"]),
+        gdata.Container({
+            "name": gdata.Leaf("str", "k2"),
+            "base": gdata.List(["id"], [
+                gdata.Container({
+                    "val": gdata.Leaf("str", "two")
+                }, ["A"])
+            ])
+        }, ["k2"])
+    ])
+})
+
+def rfs_for_device(dev):
+    return gdata.Container({
+        'rfs': gdata.List(["name"], [
+            gdata.Container({}, [dev])
+        ])
+    })
+
+actor complete_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
+    dev_mgr = odev.DeviceManager(None, log_handler)
+    stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.List(ttt.Container({"base": ttt.List(ttt.RFSTransform(Fun, dev_mgr))}))}),
+            ttt.Layer("devices", ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_mgr))})}),
+            None))
+
+    def reconf(dev):
+        cfg = rfs_for_device(dev)
+        #print("Reconf", dev)
+        stack.edit_config(cfg, force=True)
+        
+    dev_mgr.on_reconf(reconf)
+    
+    def cont1(_r):
+        #print("Transaction done")
+        dmc = DeviceMetaConfig("k1", Credentials("admin", "admin"), mock=Mock(["cisco-ios-xr"]))
+        k1 = dev_mgr.get("k1").set_dmc(dmc)
+        k2 = dev_mgr.get("k2").set_dmc(dmc)
+    
+    def complete(_r):
+        #print("Transaction complete")
+        done(True, None)
+        
+    sess = stack.newsession()
+    sess.edit_config(cfg3, cont1, complete)
+
+def _test_complete(done, logger: logging.Handler):
+    c = complete_tester(done, logger)
+
+########################
+
+actor main(env):
+    log_handler = logging.Handler(None)
+    complete_tester(lambda s,e: env.exit(0), log_handler)
