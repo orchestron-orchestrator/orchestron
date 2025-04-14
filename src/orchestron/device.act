@@ -556,7 +556,7 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
         return modset
 
     def _is_writable_running():
-        return ":writable-running" in modset
+        return "urn:ietf:params:netconf:capability:writable-running:1.0" in modset
 
     def _transaction_done(error: ?Exception=None):
         """Internal function called when transaction is done
