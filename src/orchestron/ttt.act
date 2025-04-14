@@ -486,7 +486,7 @@ class _ListTransaction(_Transaction):
         self.state = None
         self.reset = False
 
-    def configure(self, tid, diff, out, force=False):
+    def configure(self, tid, diff, out: ?Session, force=False):
         #print('#### (List)', self.path, 'configure', tid, err=True)
         if self.reset:
             self.elems = {}
@@ -494,15 +494,19 @@ class _ListTransaction(_Transaction):
             self.reset = False
         diff_by_key = transpose(diff)
         if len(diff_by_key) == 0 and force:
-            for k in self.liststate.acquire(tid, None).keys():
-                diff_by_key[k] = {}
-        keys = set(diff_by_key.keys())
-        for key,node in self.liststate.acquire(tid, keys).items():
-            self.elems[key] = node.newtrans()
+            for key,node in self.liststate.acquire(tid, None).items():
+                diff_by_key[key] = {}
+                self.elems[key] = node.newtrans()
+        else:
+            for key,node in self.liststate.acquire(tid, set(diff_by_key.keys())).items():
+                self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():
             #print('   # (List)', self.path, 'CONFIGURE ELEMENT', key, err=True)
             msgs[key] = async self.elems[key].configure(tid, subdiff, out, force)
+        for key in self.accum.keys():
+            if key not in diff_by_key:
+                msgs[key] = async self.elems[key].configure(tid, {}, out, force)
         results = {}
         for key,msg in msgs.items():
             results[key] = await msg
@@ -649,12 +653,8 @@ class _TransformTransactionBase(_Transaction):
 
     def configure(self, tid, diff, out, force=False):
         #print('#### (Transform)', self.path, 'configure', tid, "src:", self.me, err=True)
-        if tid in self.inputs:
-            self.inputs[tid].update(diff.items())
-        else:
-            self.inputs[tid] = diff
-        inp = self.inputs[tid]
-        newconf = patch(self.config, inp)
+        self.inputs[tid] = diff
+        newconf = patch(self.config, diff)
         #for s,c in inp.items():
         #    print("# INPUT", self.path, tid, s, ":", c.prsrc(), err=True)
         #for s,c in self.config.items():
