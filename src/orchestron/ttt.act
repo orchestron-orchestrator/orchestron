@@ -487,7 +487,7 @@ class _ListTransaction(_Transaction):
         self.reset = False
 
     def configure(self, tid, diff, out: ?Session, force=False):
-        #print('#### (List)', self.path, 'configure', tid, err=True)
+        print('#### (List)', self.path, 'configure', tid, 'force:', force, err=True)
         if self.reset:
             self.elems = {}
             self.accum = {}
@@ -652,7 +652,7 @@ class _TransformTransactionBase(_Transaction):
         self.me = '(src_' + str(self)[-10:-1] + ')'
 
     def configure(self, tid, diff, out, force=False):
-        #print('#### (Transform)', self.path, 'configure', tid, "src:", self.me, err=True)
+        print('#### (Transform)', self.path, 'configure', tid, 'force:', force, err=True)
         self.inputs[tid] = diff
         newconf = patch(self.config, diff)
         #for s,c in inp.items():
