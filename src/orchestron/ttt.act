@@ -699,7 +699,7 @@ class _TransformTransactionBase(_Transaction):
         self.locker = tid
         if tid not in self.candidates:
             inp = self.inputs.get_def(tid, {})
-            #print('   # (Transform)', self.path, 'RE-CONFIGURING', tid, err=True)
+            print('   # (Transform)', self.path, 'RE-CONFIGURING', tid, err=True)
             res = self.configure(tid, inp, out)
             done(res)
         else:
@@ -825,13 +825,13 @@ class _RFSTransaction(_TransformTransactionBase):
         if modset_id is not None:
             dev_content["modset_id"] = gdata.Leaf("str", modset_id)
         if len(modset) > 0:
-            #print("#### (RFSTransform)", self.path, 'compute', tid, self.devname, err=True)
+            print("#### (RFSTransform)", self.path, 'compute', tid, self.devname, err=True)
             newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset))
             res = difference(self.output, newout)
             if isinstance(res, gdata.Container):
                 dev_content["config"] = gdata.Container(res.children)
         else:
-            #print("#### (RFSTransform)", self.path, 'compute', tid, ": No device capabilities, skipping RFS transform for", self.devname, err=True)
+            print("#### (RFSTransform)", self.path, 'compute', tid, ": No device capabilities, skipping RFS transform for", self.devname, err=True)
             newout = gdata.Container({})
 
         if out is not None:
