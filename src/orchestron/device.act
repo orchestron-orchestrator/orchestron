@@ -76,12 +76,16 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
     def on_reconf(on_reconf: action(str) -> None):
         reconf_cb = on_reconf
 
-def truncate_conf(conf):
-    sc = conf.to_json()
-    trunc_len = min([len(sc), 50])
-    if trunc_len < len(sc):
-        sc = sc[:trunc_len] + "..."
-    return sc
+def truncate_conf(conf: ?yang.gdata.Node) -> str:
+    """Truncate the configuration to a short string for logging
+    """
+    if conf is not None:
+        sc = conf.to_json()
+        trunc_len = min([len(sc), 50])
+        if trunc_len < len(sc):
+            sc = sc[:trunc_len] + "..."
+        return sc
+    return "{}"
 
 actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None):
     """Device
@@ -236,22 +240,18 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     def configure(new_conf: ?yang.gdata.Node, conf_modset_id: ?str, tid: str="0"):
         pending_txids.add(tid)
-        if new_conf is None and conf_modset_id is None:
-            _log.debug("Device.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
-            return
-
-        if modset_id is not None:
+        if new_conf is not None and conf_modset_id is not None:
             if conf_modset_id != modset_id:
                 _log.debug("Device.configure: modset_id mismatch, ignoring configuration", {"conf_modset_id": str(conf_modset_id), "modset_id": str(modset_id)})
                 return
-        else:
-            _log.debug("Device.configure: no modset_id set, ignoring configuration", {"conf_modset_id": str(conf_modset_id)})
-            return
-
-        if new_conf is not None:
             _log.debug("Device.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
             intended_conf = new_conf
             _send_config()
+        elif new_conf is None and conf_modset_id is None:
+            _log.debug("Device.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
+        else:
+            _log.debug("Device.configure: invalid input", {"conf_modset_id": str(conf_modset_id), "new_conf": truncate_conf(new_conf), "tid": tid})
+
 
     def wait_complete(tid: str, done: action(value)->None):
         if tid not in current_txids | pending_txids:
