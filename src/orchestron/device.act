@@ -212,8 +212,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                 else:
                     _log.debug("No new intended configuration available, no point in retrying with same conf")
         else:
-#            _log.debug("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids})
-            print("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids}, err=True)
+            _log.debug("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids})
             for tid,callback in callbacks.items():
                 if tid in current_txids:
                     callback(True)
@@ -251,8 +250,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
             return
 
         if new_conf is not None:
-#            _log.debug("Device.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
-            print("Device.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)}, err=True)
+            _log.debug("Device.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
             intended_conf = new_conf
             _send_config()
 
