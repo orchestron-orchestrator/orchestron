@@ -672,7 +672,7 @@ class _TransformTransactionBase(_Transaction):
         else:
             try:
                 merged = assert_complete(merge(newconf))
-                #print('   # (Transform)', self.path, tid, 'MERGED', merged.prsrc(), err=True)
+                print('   # (Transform)', self.path, tid, 'MERGED', merged.prsrc(), err=True)
 #                assert self.validate(merged)
             except Exception as e:
                 #print('   # (Transform) FAILURE', self.path, tid, e, err=True)
@@ -929,7 +929,7 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
         return merged
 
     def finalize(self, tid):
-        #print('#### (DeviceConfig)', self.path, 'finalize', tid, err=True)
+        print('#### (DeviceConfig)', self.path, 'finalize', tid, err=True)
         device = self.output
         if device is not None:
             if isinstance(device, gdata.Container):
@@ -945,12 +945,12 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
                         cfg = gdata.Container(config.children)
                         self.dev.configure(cfg, cfg_modset_id, tid)
                 else:
-                    #print('   # (DeviceConfig)', self.path, "No config in device config, registering interest...", err=True)
+                    print('   # (DeviceConfig)', self.path, "No config in device config, registering interest...", err=True)
                     self.dev.configure(None, None, tid)
 
 
     def wait_complete(self, actself, tid, done):                                # (yield await)
-        #print('#### (DeviceConfig)', self.path, 'wait_complete', tid, err=True)
+        print('#### (DeviceConfig)', self.path, 'wait_complete', tid, err=True)
         self.dev.wait_complete(tid, done)
 
 
