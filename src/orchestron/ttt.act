@@ -487,12 +487,12 @@ class _ListTransaction(_Transaction):
         self.reset = False
 
     def configure(self, tid, diff, out: ?Session, force=False):
-        print('#### (List)', self.path, 'configure', tid, 'force:', force, err=True)
         if self.reset:
             self.elems = {}
             self.accum = {}
             self.reset = False
         diff_by_key = transpose(diff)
+        print('#### (List)', self.path, 'configure', tid, 'force:', force, list(diff_by_key.keys()), err=True)
         if len(diff_by_key) == 0 and force:
             for key,node in self.liststate.acquire(tid, None).items():
                 diff_by_key[key] = {}
@@ -528,7 +528,7 @@ class _ListTransaction(_Transaction):
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
-        #print('#### (List)', self.path, 'lock', tid, err=True)
+        print('#### (List)', self.path, 'lock', tid, sorted(self.accum.keys()), err=True)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
@@ -560,7 +560,7 @@ class _ListTransaction(_Transaction):
             #print('#### (List)', self.path, 'lock_cont empty state!!!', err=True)
 
     def commit(self, tid, ok):
-        #print('#### (List)', self.path, 'commit', tid, ok, err=True)
+        print('#### (List)', self.path, 'commit', tid, ok, list(self.accum.keys()), err=True)
         for key,tr in self.elems.items():
             #print('   # (List)', self.path, 'COMMIT ELEMENT', key, err=True)
             tr.commit(tid, ok)
@@ -574,7 +574,7 @@ class _ListTransaction(_Transaction):
 
     # yield action
     def wait_complete(self, actself, tid, done):
-        #print('#### (List)', self.path, 'wait_complete', tid, list(self.accum.keys()), err=True)
+        print('#### (List)', self.path, 'wait_complete', tid, list(self.accum.keys()), err=True)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
