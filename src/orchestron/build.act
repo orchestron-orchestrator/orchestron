@@ -26,15 +26,33 @@ def _maybe_write_file(fc: file.FileCap, name: str, content: str) -> bool:
     return False
 
 class SysSpec(object):
+    def __init__(self, name: str, layers: list[Layer], device_types: list[DeviceType]):
+        self.name = name
+        self.layers = layers
+        self.device_types = device_types
+
+    def gen_app(self, fc: file.FileCap, output_dir: str):
+        return self.compile().gen_app(fc, output_dir)
+
+    def compile(self):
+        compiled_layers = []
+        for l in self.layers:
+            compiled_layers.append(CompiledLayer(yang.compile(l.models), l.name))
+        compiled_dev_types = []
+        for dev_type in self.device_types:
+            compiled_dev_types.append(CompiledDeviceType(yang.compile(dev_type.models), dev_type.name))
+        return CompiledSysSpec(self.name, compiled_layers, compiled_dev_types)
+
+class CompiledSysSpec(object):
     """Orchestration System specification
 
     This defines the core of the orchestration system, including the layers and
     supported device types
     """
-    layers: list[Layer]
-    def __init__(self, name: str, layers: list[Layer], device_types: list[DeviceType]):
+    layers: list[CompiledLayer]
+    def __init__(self, name: str, layers: list[CompiledLayer], device_types: list[CompiledDeviceType]):
         self.name = name
-        self.layers = layers + [Layer([oyang.device])]
+        self.layers = layers + [CompiledLayer(yang.compile([oyang.device]))]
         self.dev_types = {}
         for dev_type in device_types:
             self.dev_types[dev_type.name] = dev_type
@@ -63,8 +81,7 @@ class SysSpec(object):
     #        elif idx == len(layers) - 1:
     #            name = "src/y_rfs.act"
 
-            layer_src = yang.compile(layer.models)
-            layer_adata = layer_src.prdaclass()
+            layer_adata = layer.root.prdaclass()
             if _maybe_write_file(fc, name, layer_adata):
                 print("+ Layer %d adata changed" % idx)
             else:
@@ -78,7 +95,7 @@ class SysSpec(object):
             if idx < len(self.layers) - 1:
                 out_layer_modname = "%s.layers.y_%d_loose" % (self.name, idx+1)
 
-            tttl = ttt_gen.ttt_prsrc(layer_src, modname, out_layer_modname)
+            tttl = ttt_gen.ttt_prsrc(layer.root, modname, out_layer_modname)
 
             base_name = "%s/%s/layers/base_%d.act" % (output_dir, self.name, idx)
             if _maybe_write_file(fc, base_name, tttl.base):
@@ -97,7 +114,7 @@ class SysSpec(object):
             tttsrc_tojson += "if idx == %d:\n        return %s.to_json\n    el" % (idx, modname)
 
             loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)
-            if _maybe_write_file(fc, loose_name, layer_src.prdaclass(loose=True)):
+            if _maybe_write_file(fc, loose_name, layer.root.prdaclass(loose=True)):
                 print("+ Layer %d loose adata changed" % idx)
             else:
                 print("+ Layer %d loose adata unchanged" % idx)
@@ -106,10 +123,7 @@ class SysSpec(object):
         syssrc_devtypes = ""
         for dev_type in self.dev_types.values():
             print("Generating device type %s" % dev_type.name)
-            for idx, model in enumerate(dev_type.models):
-                print("Generating model %d" % idx)
-            dev_tree = yang.compile(dev_type.models)
-            dev_tree_adata = dev_tree.prdaclass(gen_json=False, loose=True)
+            dev_tree_adata = dev_type.root.prdaclass(gen_json=False, loose=True)
             name = "%s/%s/devices/%s.act" % (output_dir, self.name, dev_type.name)
             if _maybe_write_file(fc, name, dev_tree_adata):
                 print("+ Device type %s adata changed" % dev_type.name)
@@ -214,6 +228,19 @@ class Layer(object):
                 rf = file.ReadFile(rfc, "%s/%s" % (dir, f))
                 models.append(rf.read().decode())
         return Layer(models, name)
+
+class _CompiledLayerBase(object):
+    root: yang.schema.DRoot
+
+class CompiledLayer(_CompiledLayerBase):
+    def __init__(self, root: yang.schema.DRoot, name: ?str=None):
+        self.root = root
+        self.name = name
+
+class CompiledDeviceType(_CompiledLayerBase):
+    def __init__(self, root: yang.schema.DRoot, name: str):
+        self.root = root
+        self.name = name
 
 def apply_schema_transforms_to_dir(fc: file.FileCap, dir: str, transforms: list[SchemaTransformChain]=[]) -> None:
     """Apply schema transformations to YANG files in a directory.
