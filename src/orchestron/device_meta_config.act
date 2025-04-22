@@ -405,7 +405,7 @@ class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
         _revision = self.revision
         if _revision is not None:
             children['revision'] = yang.gdata.Leaf('string', _revision)
-        children['feature'] = yang.gdata.LeafList(self.feature)
+        children['feature'] = yang.gdata.LeafList('string', self.feature)
         return yang.gdata.Container(children, [yang.gdata.yang_str(self.name)])
 
     @staticmethod
@@ -471,7 +471,7 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
 
     mut def to_gdata(self) -> yang.gdata.Node:
         children = {}
-        children['preset'] = yang.gdata.LeafList(self.preset)
+        children['preset'] = yang.gdata.LeafList('enumeration', self.preset)
         _module = self.module
         if _module is not None:
             children['module'] = _module.to_gdata()
