@@ -19,7 +19,7 @@ tree1 = gdata.Container({
         ])
     }),
     'right': gdata.Container({
-        "a": gdata.LeafList([1,2,3])
+        "a": gdata.LeafList("int", [1,2,3])
     })
 })
 
@@ -57,7 +57,7 @@ merge_1_2 = gdata.Container({
         ]),
     }),
     'right': gdata.Container({
-        "a": gdata.LeafList([1,2,3]),
+        "a": gdata.LeafList("int", [1,2,3]),
         "b": gdata.Leaf("int", 1)
     })
 })
@@ -206,7 +206,7 @@ tree0 = gdata.Container({
         ]),
     }),
     'right': gdata.Container({
-        "a": gdata.LeafList([1,2,3])
+        "a": gdata.LeafList("int", [1,2,3])
     })
 })
 
