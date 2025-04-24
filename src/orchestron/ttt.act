@@ -161,7 +161,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
     # yield action
     def edit_config(diff, done:?action(value)->None=None, complete:?action(value)->None=None, force=False):
         tid = 'tr' + actorid()
-        #print('#### (Layer)', name, 'edit_config', tid, err=True)
+        print('#### (Layer)', name, 'edit_config', tid, err=True)
         configure(tid, {'_': diff})
         res = apply(tid, force)
         #print('   # (Layer)', name, 'EDIT_CONFIG', tid, 'PREP RESULT', res, err=True)

@@ -103,6 +103,7 @@ def rfs_for_device(dev):
     })
 
 actor complete_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
+    log = logging.Logger(log_handler)
     dev_mgr = odev.DeviceManager(None, log_handler)
     stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.List(ttt.Container({"base": ttt.List(ttt.RFSTransform(Fun, dev_mgr))}))}),
             ttt.Layer("devices", ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_mgr))})}),
@@ -110,19 +111,20 @@ actor complete_tester(done: action(?bool, ?Exception)->None, log_handler: loggin
 
     def reconf(dev):
         cfg = rfs_for_device(dev)
-        #print("Reconf", dev)
+        log.debug("Reconf", {"device": dev})
         stack.edit_config(cfg, force=True)
         
     dev_mgr.on_reconf(reconf)
     
     def cont1(_r):
-        #print("Transaction done")
-        dmc = DeviceMetaConfig("k1", Credentials("admin", "admin"), mock=Mock(["cisco-ios-xr"]))
-        k1 = dev_mgr.get("k1").set_dmc(dmc)
-        k2 = dev_mgr.get("k2").set_dmc(dmc)
+        log.debug("Transaction done")
+        dmc1 = DeviceMetaConfig("k1", Credentials("admin", "admin"), mock=Mock(["cisco-ios-xr"]))
+        dmc2 = DeviceMetaConfig("k2", Credentials("admin", "admin"), mock=Mock(["cisco-ios-xr"]))
+        k1 = dev_mgr.get("k1").set_dmc(dmc1)
+        k2 = dev_mgr.get("k2").set_dmc(dmc2)
     
     def complete(_r):
-        #print("Transaction complete")
+        log.debug("Transaction complete")
         done(True, None)
         
     sess = stack.newsession()
@@ -135,4 +137,5 @@ def _test_complete(done, logger: logging.Handler):
 
 actor main(env):
     log_handler = logging.Handler(None)
+    log_handler.add_sink(logging.StdoutSink())
     complete_tester(lambda s,e: env.exit(0), log_handler)
