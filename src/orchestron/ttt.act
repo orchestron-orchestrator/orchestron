@@ -837,7 +837,7 @@ class _RFSTransaction(_TransformTransactionBase):
                         gdata.Container(dev_content, [self.devname])
                     ])
                 })
-            }, ns="http://orchestron.org/yang/orchestron-device.yang")
+            }, ns="http://orchestron.org/yang/orchestron-device.yang", module="orchestron-device")
             out.configure(tid, {self.me: embedded_res})
 
         return newout
