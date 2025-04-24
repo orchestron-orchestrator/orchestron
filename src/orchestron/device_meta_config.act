@@ -540,7 +540,7 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_xml(n: xml.Node) -> orchestron_rfs__device_entry:
-        return orchestron_rfs__device_entry(name=yang.gdata.from_xml_str(n, 'name', 'http://orchestron.org/yang/orchestron-rfs.yang'), description=yang.gdata.from_xml_opt_str(n, 'description', 'http://orchestron.org/yang/orchestron-rfs.yang'), type=yang.gdata.from_xml_opt_str(n, 'type', 'http://orchestron.org/yang/orchestron-rfs.yang'), address=orchestron_rfs__device__address.from_xml(yang.gdata.get_xml_children(n, 'address', 'http://orchestron.org/yang/orchestron-rfs.yang')), credentials=orchestron_rfs__device__credentials.from_xml(yang.gdata.get_xml_child(n, 'credentials', 'http://orchestron.org/yang/orchestron-rfs.yang')), initial_credentials=orchestron_rfs__device__initial_credentials.from_xml(yang.gdata.get_xml_children(n, 'initial-credentials', 'http://orchestron.org/yang/orchestron-rfs.yang')), mock=orchestron_rfs__device__mock.from_xml(yang.gdata.get_xml_opt_child(n, 'mock', 'http://orchestron.org/yang/orchestron-rfs.yang')))
+        return orchestron_rfs__device_entry(name=yang.gdata.from_xml_str(n, 'name'), description=yang.gdata.from_xml_opt_str(n, 'description'), type=yang.gdata.from_xml_opt_str(n, 'type'), address=orchestron_rfs__device__address.from_xml(yang.gdata.get_xml_children(n, 'address')), credentials=orchestron_rfs__device__credentials.from_xml(yang.gdata.get_xml_child(n, 'credentials')), initial_credentials=orchestron_rfs__device__initial_credentials.from_xml(yang.gdata.get_xml_children(n, 'initial-credentials')), mock=orchestron_rfs__device__mock.from_xml(yang.gdata.get_xml_opt_child(n, 'mock')))
 
 class orchestron_rfs__device(yang.adata.MNode):
     elements: list[orchestron_rfs__device_entry]
@@ -568,7 +568,7 @@ class orchestron_rfs__device(yang.adata.MNode):
             e_gdata = e.to_gdata()
             if isinstance(e_gdata, yang.gdata.Container):
                 elements.append(e_gdata)
-        return yang.gdata.List(['name'], elements, ns='http://orchestron.org/yang/orchestron-rfs.yang')
+        return yang.gdata.List(['name'], elements, ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device_entry]:
