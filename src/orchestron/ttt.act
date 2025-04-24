@@ -652,7 +652,7 @@ class _TransformTransactionBase(_Transaction):
         self.me = '(src_' + str(self)[-10:-1] + ')'
 
     def configure(self, tid, diff, out, force=False):
-        #print('#### (Transform)', self.path, 'configure', tid, "src:", self.me, err=True)
+        print('#### (Transform)', self.path, actorid(), 'configure', tid, err=True)
         self.inputs[tid] = diff
         newconf = patch(self.config, diff)
         #for s,c in inp.items():
@@ -710,7 +710,7 @@ class _TransformTransactionBase(_Transaction):
         pass
 
     def commit(self, tid, ok):
-        #print('#### (Transform)', self.path, 'commit', tid, ok, err=True)
+        print('#### (Transform)', self.path, actorid(), 'commit', tid, ok, err=True)
         self.inputs.pop(tid)
         if tid == self.locker:
             if ok and tid in self.candidates:
@@ -817,7 +817,7 @@ class _RFSTransaction(_TransformTransactionBase):
         self.dev = dev_mgr.get(self.devname)
 
     def compute(self, tid, merged, out):
-        #print('#### (RFSTransform)', self.path, 'compute', tid, err=True)
+        print('#### (RFSTransform)', self.path, actorid(), 'compute', tid, err=True)
         dev_content = {
             "name": gdata.Leaf("str", self.devname),
         }
@@ -929,7 +929,7 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
         return merged
 
     def finalize(self, tid):
-        #print('#### (DeviceConfig)', self.path, 'finalize', tid, err=True)
+        print('#### (DeviceConfig)', self.path, actorid(), 'finalize', tid, err=True)
         device = self.output
         if device is not None:
             if isinstance(device, gdata.Container):
