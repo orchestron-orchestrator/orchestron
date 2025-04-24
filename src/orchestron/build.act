@@ -66,16 +66,13 @@ class CompiledSysSpec(object):
         tttsrc += "import orchestron.ttt as ttt\n"
         tttsrc += "import yang.adata\n"
         tttsrc += "import yang.gdata\n\n"
-        imports = []
         tttsrc_getlayers = "def get_layers(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):\n    res = "
-        tttsrc_tojson = "def to_json(idx):\n    "
         for idx, layer in enumerate(self.layers):
             print("Generating layer %d" % idx)
             layer_name = layer.name
             lname = layer_name if layer_name is not None else str(idx)
             name = "%s/%s/layers/y_%s.act" % (output_dir, self.name, lname)
             modname = "%s.layers.y_%s" % (self.name, lname)
-            tttsrc += "import %s\n" % modname
     #        if idx == 0:
     #            name = "src/y_cfs.act"
     #        elif idx == len(layers) - 1:
@@ -111,7 +108,6 @@ class CompiledSysSpec(object):
 
             indent = "" if idx == 0 else "          "
             tttsrc_getlayers += "%sttt.Layer('%s', %s.layers.t_%d.get_ttt(dev_mgr, log_handler),\n" % (indent, lname, self.name, idx)
-            tttsrc_tojson += "if idx == %d:\n        return %s.to_json\n    el" % (idx, modname)
 
             loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)
             if _maybe_write_file(fc, loose_name, layer.root.prdaclass(loose=True)):
@@ -142,9 +138,7 @@ class CompiledSysSpec(object):
 
         print("Generating app layers.act")
         tttsrc_getlayers += "          None%s\n    return res\n" % (")" * len(self.layers))
-        tttsrc_tojson += "se:\n        raise IndexError(idx)\n"
-        tttsrc += "\n".join(list(set(imports))) + "\n\n"
-        tttsrc += tttsrc_getlayers + "\n" + tttsrc_tojson
+        tttsrc += tttsrc_getlayers
         if _maybe_write_file(fc, "%s/%s/layers.act" % (output_dir, self.name), tttsrc):
             print("+ App layers.act changed")
         else:
