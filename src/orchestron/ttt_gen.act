@@ -203,8 +203,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
         act_defs.extend(children_res.act_defs)
-        ns = (", ns='{sn.namespace}'") if set_ns else ""
-        return TTTSrc(src=f"ttt.List(ttt.Container({{{children_res.src}}}{ns}), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+        nsq = (", ns='{sn.namespace}', module='{sn.module}'") if set_ns and sn.namespace != "" else ""
+        return TTTSrc(src="ttt.List(ttt.Container({{{children_res.src}}}{nsq}), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
     elif isinstance(sn, schema.DNodeInner):
         sn_children = sn.children
@@ -216,8 +216,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
         act_defs.extend(children_res.act_defs)
-        ns = (", ns='{sn.namespace}'") if set_ns else ""
-        return TTTSrc(src=f"ttt.Container({{{children_res.src}}}{ns})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+        nsq = (", ns='{sn.namespace}', module='{sn.module}'") if set_ns and sn.namespace != "" else ""
+        return TTTSrc(src="ttt.Container({{{children_res.src}}}{nsq})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
     raise NotImplementedError(f"Unhandled schema type: {type(sn)}")
 
