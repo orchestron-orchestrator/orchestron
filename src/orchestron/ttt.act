@@ -1033,7 +1033,7 @@ class _RFSTransaction(_TransformTransactionBase):
                     gdata.Container(dev_content)
                 ])
             })
-        }, ns="http://orchestron.org/yang/orchestron-device.yang")
+        }, ns="http://orchestron.org/yang/orchestron-device.yang", module="orchestron-device")
 
     def update_memory(self, newmem):
         self.memory = newmem
