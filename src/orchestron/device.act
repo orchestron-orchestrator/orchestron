@@ -172,7 +172,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 #                _log.debug("Sending config")
                 _send_config()
         else:
-            print("New supported modules, triggering RFS reconf", {"name": name}, err=True)
+            print(name, "New supported modules, triggering RFS reconf", {"name": name}, err=True)
             modset = new_modset
             modset_id = hash_modset(modset)
             on_reconf(name)
@@ -193,14 +193,14 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         """
         if error is not None:
             if isinstance(error, NotConnectedError):
-                print("Device._transaction_done: Device not connected, backing off, waiting for reconnect", err=True)
+                print(name, "Device._transaction_done: Device not connected, backing off, waiting for reconnect", err=True)
                 pending_txids.update(current_txids)
                 current_txids = set()
             else:
                 if isinstance(error, ConfigError):
-                    print("Device._transaction_done: Configuration failed, bad config", {"error": error}, err=True)
+                    print(name, "Device._transaction_done: Configuration failed, bad config", {"error": error}, err=True)
                 else:
-                    print("Device._transaction_done: Unhandled error", {"error": error}, err=True)
+                    print(name, "Device._transaction_done: Unhandled error", {"error": error}, err=True)
 
                 # TODO: should we signal failure to uptream transactions? or just retry in some way?
                 for tid,callback in callbacks.items():
@@ -211,19 +211,19 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                 pending_txids.update(current_txids)
                 current_txids = set()
                 if len(pending_txids) > 0:
-                    print("New intended configuration available, retrying with latest config", err=True)
+                    print(name, "New intended configuration available, retrying with latest config", err=True)
                     _send_config()
                 else:
-                    print("No new intended configuration available, no point in retrying with same conf", err=True)
+                    print(name, "No new intended configuration available, no point in retrying with same conf", err=True)
         else:
-            print("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids}, err=True)
+            print(name, "Configuration successfully applied on device, calling callbacks...", {"txids": current_txids}, err=True)
             for tid,callback in callbacks.items():
                 if tid in current_txids:
                     callback(True)
                     del callbacks[tid]
             current_txids = set()
             if len(pending_txids) > 0:
-                print("Configuration changed during in-progress transaction, running again...", err=True)
+                print(name, "Configuration changed during in-progress transaction, running again...", err=True)
                 _send_config()
 
     def _send_config():
@@ -244,23 +244,23 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
         pending_txids.add(tid)
         if new_conf is not None and conf_modset_id is not None:
             if conf_modset_id != modset_id:
-                print("Device.configure: modset_id mismatch, ignoring configuration", {"conf_modset_id": str(conf_modset_id), "modset_id": str(modset_id)}, err=True)
+                print(name, "Device.configure: modset_id mismatch, ignoring configuration", {"conf_modset_id": str(conf_modset_id), "modset_id": str(modset_id)}, err=True)
                 return
-            print("Device.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)}, err=True)
+            print(name, "Device.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)}, err=True)
             intended_conf = new_conf
             _send_config()
         elif new_conf is None and conf_modset_id is None:
-            print("Device.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid}, err=True)
+            print(name, "Device.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid}, err=True)
         else:
-            print("Device.configure: invalid input", {"conf_modset_id": str(conf_modset_id), "new_conf": truncate_conf(new_conf), "tid": tid}, err=True)
+            print(name, "Device.configure: invalid input", {"conf_modset_id": str(conf_modset_id), "new_conf": truncate_conf(new_conf), "tid": tid}, err=True)
 
 
     def wait_complete(tid: str, done: action(value)->None):
         if tid not in current_txids | pending_txids:
-            print("Device.wait_complete: transaction id not found, calling done", {"tid": tid}, err=True)
+            print(name, "Device.wait_complete: transaction id not found, calling done", {"tid": tid}, err=True)
             done(True) # Assume tid is very old and has already completed, thus respond immediately
         else:
-            print("Device.wait_complete: waiting for transaction to complete", {"tid": tid}, err=True)
+            print(name, "Device.wait_complete: waiting for transaction to complete", {"tid": tid}, err=True)
             callbacks[tid] = done
 
     def get_capabilities():
