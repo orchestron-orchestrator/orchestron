@@ -161,7 +161,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
     # yield action
     def edit_config(diff, done:?action(value)->None=None, complete:?action(value)->None=None, force=False):
         tid = 'tr' + actorid()
-        print('#### (Layer)', name, actorid(), 'edit_config', tid, err=True)
+        print('####', ti' (Layer)', name, actorid(), 'edit_config', tid, err=True)
         configure(tid, {'_': diff})
         res = apply(tid, force)
         #print('   # (Layer)', name, 'EDIT_CONFIG', tid, 'PREP RESULT', res, err=True)
@@ -487,7 +487,7 @@ class _ListTransaction(_Transaction):
         self.reset = False
 
     def configure(self, tid, diff, out: ?Session, force=False):
-        #print('#### (List)', self.path, 'configure', tid, err=True)
+        print('#### (List)', self.path, 'configure', tid, err=True)
         if self.reset:
             self.elems = {}
             self.accum = {}
@@ -528,7 +528,7 @@ class _ListTransaction(_Transaction):
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
-        #print('#### (List)', self.path, 'lock', tid, err=True)
+        print('#### (List)', self.path, 'lock', tid, err=True)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
@@ -543,7 +543,7 @@ class _ListTransaction(_Transaction):
     def lock_cont (self, actself, res):
         state = self.state
         if state is not None:
-            #print('   # (List)', self.path, 'LOCK', state.tid, 'ELEMENT', state.key, 'RESULT:', res, err=True)
+            print('   # (List)', self.path, 'LOCK', state.tid, 'ELEMENT', state.key, 'RESULT:', res, err=True)
             state.results[state.key] = res
             try:
                 key = next(state.it)
@@ -699,7 +699,7 @@ class _TransformTransactionBase(_Transaction):
         self.locker = tid
         if tid not in self.candidates:
             inp = self.inputs.get_def(tid, {})
-            #print('   # (Transform)', self.path, 'RE-CONFIGURING', tid, err=True)
+            print('   # (Transform)', self.path, 'RE-CONFIGURING', tid, err=True)
             res = self.configure(tid, inp, out)
             done(res)
         else:
@@ -710,7 +710,7 @@ class _TransformTransactionBase(_Transaction):
         pass
 
     def commit(self, tid, ok):
-        #print('#### (Transform)', self.path, actorid(), 'commit', tid, ok, err=True)
+        print('#### (Transform)', self.path, actorid(), 'commit', tid, ok, err=True)
         self.inputs.pop(tid)
         if tid == self.locker:
             if ok and tid in self.candidates:
@@ -718,10 +718,10 @@ class _TransformTransactionBase(_Transaction):
                 self.config = config
                 self.output = output
                 self.candidates = {}
-                #print('   # (Transform)', self.path, 'COMMITTING', tid, err=True)
+                print('   # (Transform)', self.path, 'COMMITTING', tid, err=True)
                 self.finalize(tid)
             else:
-                #print('   # (Transform)', self.path, 'ABORTING', tid, err=True)
+                print('   # (Transform)', self.path, 'ABORTING', tid, err=True)
                 self.candidates.pop(tid)
             self.locker = None
             if self.pending:
