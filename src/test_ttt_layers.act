@@ -8,60 +8,80 @@ import yang.gdata as gdata
 
 cfg1 = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "k1"),
         "n1": gdata.Leaf("int", 1),
         "n2": gdata.Leaf("int", 2)
-    }, ["k1"]),
+    }),
     gdata.Container({
+        "name": gdata.Leaf("string", "k2"),
         "n1": gdata.Leaf("int", 4)
-    }, ["k4"])
+    })
 ])
 
 cfg2 = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "k1"),
         "n2": gdata.Leaf("int", 2),
         "n3": gdata.Leaf("int", 3)
-    }, ["k1"]),
+    }),
     gdata.Container({
+        "name": gdata.Leaf("string", "k3"),
         "n1": gdata.Leaf("int", 1),
         "n3": gdata.Leaf("int", 3)
-    }, ["k2"])
+    })
 ])
 
 out1 = gdata.Container({
     'devices': gdata.List(["id"], [
         gdata.Container({
+            "id": gdata.Leaf("string", "k1"),
             "n1": gdata.Leaf("int", 1),
             "n2": gdata.Leaf("int", 2)
-        }, ["k1"]),
+        }),
         gdata.Container({
+            "id": gdata.Leaf("string", "k2"),
             "n1": gdata.Leaf("int", 4)
-        }, ["k4"])
+        })
     ])
 })
 
 out1_2 = gdata.Container({
     'devices': gdata.List(["id"], [
         gdata.Container({
+            "id": gdata.Leaf("string", "k1"),
             "n1": gdata.Leaf("int", 1),
             "n2": gdata.Leaf("int", 2),
             "n3": gdata.Leaf("int", 3)
-        }, ["k1"]),
+        }),
         gdata.Container({
+            "id": gdata.Leaf("string", "k3"),
             "n1": gdata.Leaf("int", 1),
             "n3": gdata.Leaf("int", 3)
-        }, ["k2"]),
+        }),
         gdata.Container({
+            "id": gdata.Leaf("string", "k2"),
             "n1": gdata.Leaf("int", 4)
-        }, ["k4"])
+        })
     ])
 })
 
 class TransF(ttt.TransformFunction):
     def transform_wrapper(self, cfg):
+        """Simple transform that copies inputs to ouputs (sans keys)
+
+        The input list layer is keyed on "name", the output on "id". This
+        transform copies all child elements to the next layer, while renaming
+        the key.
+        """
         if isinstance(cfg, gdata.Container):
+            # Copy all child nodes
+            out = gdata.Container(dict(cfg.children.items()))
+            # "Rename" the key leaf
+            out.children["id"] = gdata.Leaf("string", cfg.get_leaf("name").val)
+            del out.children["name"]
             return gdata.Container({
                 'devices': gdata.List(["id"], [
-                    cfg
+                    out
                 ])
             })
         else:
@@ -151,11 +171,13 @@ cfg3 = gdata.Container({
 out3 = gdata.Container({
     'devices': gdata.List(["id"], [
         gdata.Container({
+            "id": gdata.Leaf("int", 1),
             "val": gdata.Leaf("int", 1)
-        }, ["1"]),
+        }),
         gdata.Container({
+            "id": gdata.Leaf("int", 2),
             "val": gdata.Leaf("int", 2)
-        }, ["2"])
+        })
     ])
 })
 
@@ -165,8 +187,9 @@ class WriteDev(ttt.TransformFunction):
         return gdata.Container({
             'devices': gdata.List(["id"], [
                 gdata.Container({
+                    "id": gdata.Leaf("int", i),
                     "val": gdata.Leaf("int", i)
-                }, [str(i)])
+                })
             ])
         })
 
@@ -224,7 +247,7 @@ actor multi_layer_tester(done: action(?bool, ?Exception)->None):
 
     def cont(_r: value):
         r1 = sess.below().get()
-        testing.assertEqual(r1, cfg3)
+        testing.assertEqual(r1.prsrc(), cfg3.prsrc())
         r2 = sess.below().below().get()
         testing.assertEqual(r2, out3)
         done(True, None)
