@@ -520,11 +520,11 @@ class _ListTransaction(_Transaction):
         res = 'Empty'
         for key,r in results.items():
             if isinstance(r, Exception):
-                print('   # ...... (List)', self.path, 'RESULT:', r, err=True)
+                print('   # ...... (List)', self.path, 'ANALYZE RESULT:', r, err=True)
                 return r
             if isinstance(r, str) and r == 'Ok':
                 res = r
-        print('   # ...... (List)', self.path, 'RESULT:', res, err=True)
+        print('   # ...... (List)', self.path, 'ANALYZE RESULT:', res, err=True)
         return res
 
     # yield action
@@ -631,7 +631,7 @@ class _TransformBase(_Node):
 
 
 class _TransformTransactionBase(_Transaction):
-    inputs: dict[str, dict[str, gdata.Node]]
+    inputs: dict[str, (dict[str, gdata.Node], bool)]
     config: dict[str, gdata.Node]
     candidates: dict[str, (dict[str,gdata.Node], ?gdata.Node)]
     output: ?gdata.Node
@@ -653,8 +653,8 @@ class _TransformTransactionBase(_Transaction):
         self.me = '(src_' + str(self)[-10:-1] + ')'
 
     def configure(self, tid, diff, out, force=False):
-        print('####', tid, '(Transform)', self.path, 'configure', actorid(), err=True)
-        self.inputs[tid] = diff
+        print('####', tid, '(Transform)', self.path, 'configure force:', force, actorid(), err=True)
+        self.inputs[tid] = (diff, force)
         newconf = patch(self.config, diff)
         #for s,c in inp.items():
         #    print("   #", tid, "INPUT", self.path, s, ":", c.prsrc(), err=True)
@@ -664,11 +664,11 @@ class _TransformTransactionBase(_Transaction):
         #    print("   #", tid, "NEWCONF", self.path, s, ":", c.prsrc(), err=True)
         if newconf == self.config and not force:
             self.candidates[tid] = (self.config, self.output)
-            print('   #', tid, '(Transform) NO CHANGE', self.path, err=True)
+            print('   #', tid, '(Transform)', self.path, 'NO CHANGE', err=True)
             return 'Ok'
         elif newconf == {}:
             self.candidates[tid] = ({}, None)
-            print('   #', tid, '(Transform) EMPTY RESULT', self.path, err=True)
+            print('   #', tid, '(Transform)', self.path, 'EMPTY RESULT', err=True)
             return 'Empty'
         else:
             try:
@@ -699,9 +699,9 @@ class _TransformTransactionBase(_Transaction):
             return
         self.locker = tid
         if tid not in self.candidates:
-            inp = self.inputs.get_def(tid, {})
+            inp, force = self.inputs.get_def(tid, ({},False))
             print('   #', tid, '(Transform)', self.path, 'RE-CONFIGURING', err=True)
-            res = self.configure(tid, inp, out)
+            res = self.configure(tid, inp, out, force)
             done(res)
         else:
             print('   #', tid, '(Transform)', self.path, 'LOCKED', err=True)
