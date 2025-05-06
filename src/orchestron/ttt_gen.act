@@ -170,9 +170,6 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     ttt_src += "import logging\n\n"
     ttt_src += "import orchestron.device as odev\n"
     ttt_src += "import orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
-    for ic in ts.input_classes:
-        ttt_src += "from %s import %s\n" % (input_yang_module, ic)
-    ttt_src += "\n"
     ttt_src += "\n".join(list(set(ts.imports))) + "\n\n"
     ttt_src += "def get_ttt(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str])->ttt.Node:\n"
     ttt_src += "    r = " + ts.src + "\n    return r\n"
