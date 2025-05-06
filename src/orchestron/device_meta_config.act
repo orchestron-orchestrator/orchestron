@@ -44,10 +44,6 @@ class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address__initial_credentials_entry:
         return orchestron_rfs__device__address__initial_credentials_entry(username=n.get_str('username'), password=n.get_str('password'), key=n.get_str('key'))
 
-    @staticmethod
-    mut def from_xml(n: xml.Node) -> orchestron_rfs__device__address__initial_credentials_entry:
-        return orchestron_rfs__device__address__initial_credentials_entry(username=yang.gdata.from_xml_str(n, 'username'), password=yang.gdata.from_xml_str(n, 'password'), key=yang.gdata.from_xml_str(n, 'key'))
-
 class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
     elements: list[orchestron_rfs__device__address__initial_credentials_entry]
     mut def __init__(self, elements=[]):
@@ -90,13 +86,6 @@ class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
                 res.append(orchestron_rfs__device__address__initial_credentials_entry.from_gdata(e))
         return res
 
-    @staticmethod
-    mut def from_xml(nodes: list[xml.Node]) -> list[orchestron_rfs__device__address__initial_credentials_entry]:
-        res = []
-        for node in nodes:
-            res.append(orchestron_rfs__device__address__initial_credentials_entry.from_xml(node))
-        return res
-
 
 class orchestron_rfs__device__address_entry(yang.adata.MNode):
     name: str
@@ -130,10 +119,6 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
         return orchestron_rfs__device__address_entry(name=n.get_str('name'), address=n.get_str('address'), port=n.get_opt_str('port'), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')))
-
-    @staticmethod
-    mut def from_xml(n: xml.Node) -> orchestron_rfs__device__address_entry:
-        return orchestron_rfs__device__address_entry(name=yang.gdata.from_xml_str(n, 'name'), address=yang.gdata.from_xml_str(n, 'address'), port=yang.gdata.from_xml_opt_str(n, 'port'), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_xml(yang.gdata.get_xml_children(n, 'initial-credentials')))
 
 class orchestron_rfs__device__address(yang.adata.MNode):
     elements: list[orchestron_rfs__device__address_entry]
@@ -171,13 +156,6 @@ class orchestron_rfs__device__address(yang.adata.MNode):
                 res.append(orchestron_rfs__device__address_entry.from_gdata(e))
         return res
 
-    @staticmethod
-    mut def from_xml(nodes: list[xml.Node]) -> list[orchestron_rfs__device__address_entry]:
-        res = []
-        for node in nodes:
-            res.append(orchestron_rfs__device__address_entry.from_xml(node))
-        return res
-
 
 
 
@@ -205,10 +183,6 @@ class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__credentials__key_entry:
         return orchestron_rfs__device__credentials__key_entry(key=n.get_str('key'), private_key=n.get_opt_str('private-key'))
-
-    @staticmethod
-    mut def from_xml(n: xml.Node) -> orchestron_rfs__device__credentials__key_entry:
-        return orchestron_rfs__device__credentials__key_entry(key=yang.gdata.from_xml_str(n, 'key'), private_key=yang.gdata.from_xml_opt_str(n, 'private-key'))
 
 class orchestron_rfs__device__credentials__key(yang.adata.MNode):
     elements: list[orchestron_rfs__device__credentials__key_entry]
@@ -246,13 +220,6 @@ class orchestron_rfs__device__credentials__key(yang.adata.MNode):
                 res.append(orchestron_rfs__device__credentials__key_entry.from_gdata(e))
         return res
 
-    @staticmethod
-    mut def from_xml(nodes: list[xml.Node]) -> list[orchestron_rfs__device__credentials__key_entry]:
-        res = []
-        for node in nodes:
-            res.append(orchestron_rfs__device__credentials__key_entry.from_xml(node))
-        return res
-
 
 class orchestron_rfs__device__credentials(yang.adata.MNode):
     username: str
@@ -282,12 +249,6 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__credentials:
         if n != None:
             return orchestron_rfs__device__credentials(username=n.get_str('username'), password=n.get_opt_str('password'), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_opt_list('key')))
-        raise ValueError('Missing required subtree orchestron_rfs__device__credentials')
-
-    @staticmethod
-    mut def from_xml(n: ?xml.Node) -> orchestron_rfs__device__credentials:
-        if n != None:
-            return orchestron_rfs__device__credentials(username=yang.gdata.from_xml_str(n, 'username'), password=yang.gdata.from_xml_opt_str(n, 'password'), key=orchestron_rfs__device__credentials__key.from_xml(yang.gdata.get_xml_children(n, 'key')))
         raise ValueError('Missing required subtree orchestron_rfs__device__credentials')
 
 
@@ -321,10 +282,6 @@ class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__initial_credentials_entry:
         return orchestron_rfs__device__initial_credentials_entry(username=n.get_str('username'), password=n.get_str('password'), key=n.get_str('key'))
-
-    @staticmethod
-    mut def from_xml(n: xml.Node) -> orchestron_rfs__device__initial_credentials_entry:
-        return orchestron_rfs__device__initial_credentials_entry(username=yang.gdata.from_xml_str(n, 'username'), password=yang.gdata.from_xml_str(n, 'password'), key=yang.gdata.from_xml_str(n, 'key'))
 
 class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
     elements: list[orchestron_rfs__device__initial_credentials_entry]
@@ -368,13 +325,6 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
                 res.append(orchestron_rfs__device__initial_credentials_entry.from_gdata(e))
         return res
 
-    @staticmethod
-    mut def from_xml(nodes: list[xml.Node]) -> list[orchestron_rfs__device__initial_credentials_entry]:
-        res = []
-        for node in nodes:
-            res.append(orchestron_rfs__device__initial_credentials_entry.from_xml(node))
-        return res
-
 
 
 
@@ -412,10 +362,6 @@ class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__mock__module_entry:
         return orchestron_rfs__device__mock__module_entry(name=n.get_str('name'), namespace=n.get_str('namespace'), revision=n.get_opt_str('revision'), feature=n.get_opt_strs('feature'))
 
-    @staticmethod
-    mut def from_xml(n: xml.Node) -> orchestron_rfs__device__mock__module_entry:
-        return orchestron_rfs__device__mock__module_entry(name=yang.gdata.from_xml_str(n, 'name'), namespace=yang.gdata.from_xml_str(n, 'namespace'), revision=yang.gdata.from_xml_opt_str(n, 'revision'), feature=yang.gdata.from_xml_opt_strs(n, 'feature'))
-
 class orchestron_rfs__device__mock__module(yang.adata.MNode):
     elements: list[orchestron_rfs__device__mock__module_entry]
     mut def __init__(self, elements=[]):
@@ -452,13 +398,6 @@ class orchestron_rfs__device__mock__module(yang.adata.MNode):
                 res.append(orchestron_rfs__device__mock__module_entry.from_gdata(e))
         return res
 
-    @staticmethod
-    mut def from_xml(nodes: list[xml.Node]) -> list[orchestron_rfs__device__mock__module_entry]:
-        res = []
-        for node in nodes:
-            res.append(orchestron_rfs__device__mock__module_entry.from_xml(node))
-        return res
-
 
 class orchestron_rfs__device__mock(yang.adata.MNode):
     preset: list[str]
@@ -481,12 +420,6 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__mock:
         if n != None:
             return orchestron_rfs__device__mock(preset=n.get_opt_strs('preset'), module=orchestron_rfs__device__mock__module.from_gdata(n.get_opt_list('module')))
-        return orchestron_rfs__device__mock()
-
-    @staticmethod
-    mut def from_xml(n: ?xml.Node) -> orchestron_rfs__device__mock:
-        if n != None:
-            return orchestron_rfs__device__mock(preset=yang.gdata.from_xml_opt_strs(n, 'preset'), module=orchestron_rfs__device__mock__module.from_xml(yang.gdata.get_xml_children(n, 'module')))
         return orchestron_rfs__device__mock()
 
 
@@ -538,10 +471,6 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device_entry:
         return orchestron_rfs__device_entry(name=n.get_str('name'), description=n.get_opt_str('description'), type=n.get_opt_str('type'), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list('address')), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_container('credentials')), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_container('mock')))
 
-    @staticmethod
-    mut def from_xml(n: xml.Node) -> orchestron_rfs__device_entry:
-        return orchestron_rfs__device_entry(name=yang.gdata.from_xml_str(n, 'name'), description=yang.gdata.from_xml_opt_str(n, 'description'), type=yang.gdata.from_xml_opt_str(n, 'type'), address=orchestron_rfs__device__address.from_xml(yang.gdata.get_xml_children(n, 'address')), credentials=orchestron_rfs__device__credentials.from_xml(yang.gdata.get_xml_child(n, 'credentials')), initial_credentials=orchestron_rfs__device__initial_credentials.from_xml(yang.gdata.get_xml_children(n, 'initial-credentials')), mock=orchestron_rfs__device__mock.from_xml(yang.gdata.get_xml_opt_child(n, 'mock')))
-
 class orchestron_rfs__device(yang.adata.MNode):
     elements: list[orchestron_rfs__device_entry]
     mut def __init__(self, elements=[]):
@@ -576,13 +505,6 @@ class orchestron_rfs__device(yang.adata.MNode):
         if n is not None:
             for e in n.elements:
                 res.append(orchestron_rfs__device_entry.from_gdata(e))
-        return res
-
-    @staticmethod
-    mut def from_xml(nodes: list[xml.Node]) -> list[orchestron_rfs__device_entry]:
-        res = []
-        for node in nodes:
-            res.append(orchestron_rfs__device_entry.from_xml(node))
         return res
 
 
