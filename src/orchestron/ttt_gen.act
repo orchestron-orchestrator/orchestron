@@ -131,8 +131,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         imports.extend(children_res.imports)
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
-        ns = (", ns='" + sn.namespace + "'") if set_ns else ""
-        return TTTSrc(src="ttt.List(ttt.Container({%s}%s))" % (children_res.src, ns), input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
+        nsq = f", ns='{sn.namespace}', module='{sn.module}'" if set_ns and sn.namespace != "" else ""
+        return TTTSrc(src="ttt.List(ttt.Container({%s}%s))" % (children_res.src, nsq), input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
 
     elif isinstance(sn, schema.DNodeInner):
         sn_children = sn.children
@@ -141,8 +141,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         imports.extend(children_res.imports)
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
-        ns = (", ns='" + sn.namespace + "'") if set_ns else ""
-        return TTTSrc(src="ttt.Container({%s}%s)" % (children_res.src, ns), input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
+        nsq = f", ns='{sn.namespace}', module='{sn.module}'" if set_ns and sn.namespace != "" else ""
+        return TTTSrc(src="ttt.Container({%s}%s)" % (children_res.src, nsq), input_classes=input_classes, imports=imports, defs=defs, base_defs=base_defs)
 
     raise NotImplementedError("Unhandled schema type: %s" % str(type(sn)))
 
