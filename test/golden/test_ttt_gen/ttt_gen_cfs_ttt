@@ -9,8 +9,6 @@ import orchestron.ttt as ttt
 import yang.adata
 import yang.gdata
 
-from respnet.layers.y_0 import foo__c1__foo__bar_entry
-
 import respnet.cfs
 
 def get_ttt(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str])->ttt.Node:
