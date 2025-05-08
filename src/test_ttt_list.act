@@ -211,4 +211,4 @@ def _test_aborted_create2(done, logger: logging.Handler):
 ########################
 
 actor main(env):
-    aborted_create_tester2(lambda s,e: env.exit(0))
+    basic_delete_tester(lambda s,e: env.exit(0))
