@@ -12,6 +12,7 @@ jobs:
           channel: 'tip'
       - name: "Check out repository code"
         uses: actions/checkout@v4
-      - run: actonc --version
       - run: make
-      - run: for ((i = 0; i < 1000; i++)); do out/bin/test_ttt_callbacks; echo "\n\n\n"; done
+      - run: acton test
+      - run: acton test perf
+      - run: git diff --exit-code
