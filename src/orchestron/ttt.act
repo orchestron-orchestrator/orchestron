@@ -641,10 +641,10 @@ class _TransformBase(_Node):
 
 
 class _TransformTransactionBase(_Transaction):
-    inputs: dict[str, (dict[str, gdata.Node], bool)]
-    config: dict[str, gdata.Node]
-    candidates: dict[str, (dict[str,gdata.Node], ?gdata.Node)]
-    invalid: set[str]
+    diffs: dict[str, dict[str, gdata.Node]]
+    candidates: dict[str, dict[str, gdata.Node]]
+    essays: dict[str, ?gdata.Node]
+    running: dict[str, gdata.Node]
     output: ?gdata.Node
     locker: ?str
     pending: list[(Transaction, str, ?Session, action(value)->None)]
@@ -654,11 +654,11 @@ class _TransformTransactionBase(_Transaction):
     finalize : proc(tid: str) -> None
 
     def __init__(self, path):
-        self.path = path
-        self.inputs = {}
-        self.config = {}
+        self.diffs = {}
         self.candidates = {}
-        self.invalid = set()
+        self.essays = {}
+        self.path = path
+        self.running = {}
         self.output = None
         self.locker = None
         self.pending = []
@@ -666,25 +666,22 @@ class _TransformTransactionBase(_Transaction):
 
     def configure(self, tid, diff, out, force=False):
         print('####', tid, '(Transform)', self.path, 'configure', actorid(), self.me, err=True)
-        self.inputs[tid] = (diff, force)
 
-        if tid not in self.candidates:
-            self.candidates[tid] = (self.config, self.output)
-        elif tid in self.invalid:
-            self.candidates[tid] = (self.config, self.candidates[tid].1)
-            self.invalid.discard(tid)
-        oldconf = self.candidates[tid].0
+        if tid not in self.diffs:
+            self.diffs[tid] = {}
+        accdiff = self.diffs[tid]
+        accdiff.update(diff.items())
+        newconf = patch(self.running, accdiff)
+        self.candidates[tid] = newconf
 
-        newconf = patch(oldconf, diff)
-        print('   #', tid, '(Transform)', self.path, 'INPUT DIFF (', force, ')\n', per_src(diff), err=True)
-        print('   #', tid, '(Transform)', self.path, 'OLD CONFIG\n', per_src(oldconf), err=True)
+        print('   #', tid, '(Transform)', self.path, 'NEW DIFF\n', per_src(diff), err=True)
+        print('   #', tid, '(Transform)', self.path, 'ACCUMULATED DIFF\n', per_src(accdiff), err=True)
+        print('   #', tid, '(Transform)', self.path, 'RUNNING CONFIG\n', per_src(self.running), err=True)
         print('   #', tid, '(Transform)', self.path, 'NEWCONF\n', per_src(newconf), err=True)
-        if newconf == oldconf and not force:
-            print('   #', tid, '(Transform)', self.path, 'NO CHANGE', err=True)
-            return 'Ok'
-        elif newconf == {}:
-            self.candidates[tid] = ({}, None)
-            print('   #', tid, '(Transform)', self.path, 'EMPTY RESULT', err=True)
+
+        if newconf == {}:
+            self.essays[tid] = None
+            print('   #', tid, '(Transform)', self.path, 'EMPTY CONFIG', err=True)
             return 'Empty'
         else:
             try:
@@ -696,13 +693,13 @@ class _TransformTransactionBase(_Transaction):
                 return e
             else:
                 newout = self.compute(tid, merged, out)
-                self.candidates[tid] = (newconf, newout)
+                self.essays[tid] = newout
                 print('   #', tid, '(Transform)', self.path, 'OUTPUT\n       ', newout.prsrc(indent=4), err=True)
                 return 'Ok'
         return 'Ok'
 
     # yield action
-    def lock(self, actself, tid, out: ?Session, done):                         # yield await
+    def lock(self, actself, tid, out: ?Session, done):                          # yield await
         print('####', tid, '(Transform)', self.path, 'lock', err=True)
         locker = self.locker
         if locker is not None:
@@ -711,48 +708,43 @@ class _TransformTransactionBase(_Transaction):
                 done('Ok')
             else:
                 print('   #', tid, '(Transform)', self.path, 'LOCK SUSPENDING', err=True)
-                self.pending.append((actself, tid, out, done))          # suspend
+                self.pending.append((actself, tid, out, done))                  # suspend
             return
         self.locker = tid
-        if tid in self.invalid:
+        if tid not in self.candidates:
             print('   #', tid, '(Transform)', self.path, 'LOCK - RE-CONFIGURING', err=True)
-            inp, force = self.inputs.get_def(tid, ({}, False))
-            res = self.configure(tid, inp, out, force)
+            res = self.configure(tid, {}, out)
             done(res)
         else:
             print('   #', tid, '(Transform)', self.path, 'LOCKED', err=True)
-            done('Ok' if self.candidates[tid].0 else 'Empty')
+            done('Ok' if self.candidates[tid] else 'Empty')
 
     def lock_cont (self, actself, res):
         pass
 
     def commit(self, tid, ok):
         print('####', tid, '(Transform)', self.path, 'commit', ok, err=True)
-        self.inputs.pop(tid)
-        self.invalid.discard(tid)
+        self.diffs.pop(tid)
+        candidate = self.candidates.pop_def(tid, {})
+        essay = self.essays.pop(tid)
         if tid == self.locker:
-            if ok and tid in self.candidates:
-                config, output = self.candidates[tid]
-                self.candidates.pop(tid)
-                self.config = config
-                self.output = output
-                print('   #', tid, '(Transform)', self.path, 'COMMITTING\n', per_src(self.config), err=True)
+            if ok:
+                self.running = candidate
+                self.output = essay
+                print('   #', tid, '(Transform)', self.path, 'COMMITTING\n', per_src(candidate), err=True)
                 if self.candidates:
-                    invalid_tids = set(self.candidates.keys())
-                    self.invalid.update(invalid_tids)
-                    print('   #', tid, '(Transform)', self.path, 'INVALIDATING', invalid_tids, err=True)
+                    print('   #', tid, '(Transform)', self.path, 'INVALIDATING', set(self.candidates.keys()), err=True)
+                    self.candidates = {}
                 self.finalize(tid)
             else:
                 print('   #', tid, '(Transform)', self.path, 'ABORTING', err=True)
-                self.candidates.pop(tid)
             self.locker = None
             if self.pending:
                 (actself, tid2, out, done) = self.pending.pop(0)
                 print('   #', tid2, '(Transform)', self.path, 'RESUMING', err=True)
-                self.lock(actself, tid2, out, done)                     # resume
+                self.lock(actself, tid2, out, done)                             # resume
         else:
             print('   #', tid, '(Transform)', self.path, 'IGNORING', err=True)
-            self.candidates.pop(tid)
 
     def finalize(self, tid):
         pass
@@ -765,8 +757,8 @@ class _TransformTransactionBase(_Transaction):
         pass
 
     def get(self):
-        if self.config:
-            return merge(self.config)
+        if self.running:
+            return merge(self.running)
         else:
             return gdata.Absent()
 
@@ -791,9 +783,8 @@ class _TransformTransaction(_TransformTransactionBase):
         self.function = function(log_handler)
 
     def compute(self, tid, merged, out):
-        oldout = self.candidates[tid].1 if tid in self.candidates else self.output
         newout = self.function.transform_wrapper(merged)
-        res = difference(oldout, newout)
+        res = difference(self.output, newout)
         if out is not None and res is not None:
             out.configure(tid, {self.me: res})
         return newout
@@ -849,9 +840,8 @@ class _RFSTransaction(_TransformTransactionBase):
             dev_content["modset_id"] = gdata.Leaf("str", modset_id)
         if len(modset) > 0:
             print('####', tid, '(RFSTransform)', self.path, 'compute', self.devname, err=True)
-            oldout = self.candidates[tid].1 if tid in self.candidates else self.output
             newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset))
-            res = difference(oldout, newout)
+            res = difference(self.output, newout)
             if isinstance(res, gdata.Container):
                 dev_content["config"] = gdata.Container(res.children)
         else:
