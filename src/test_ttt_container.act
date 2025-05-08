@@ -278,8 +278,8 @@ actor config_failure_tester(done: action(?bool, ?Exception)->None):
     t1 = container.newtrans()
     t2 = container.newtrans()
 
-    t1.configure("1", {'srcA': a0}, None)
-    t2.configure("2", {'srcB': a1}, None)
+    await async t1.configure("1", {'srcA': a0}, None)
+    await async t2.configure("2", {'srcB': a1}, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
@@ -502,4 +502,4 @@ def _test_spurious_config(done, logger: logging.Handler):
 ########################
 
 actor main(env):
-    spurious_commit_tester(lambda s,e: env.exit(0))
+    config_failure_tester(lambda s,e: env.exit(0))
