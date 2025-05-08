@@ -167,10 +167,10 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
     # yield action
     def edit_config(diff, done:?action(value)->None=None, complete:?action(value)->None=None, force=False):
         tid = 'tr' + actorid()
-        print('####', tid, '(Layer)', name, 'edit_config', actorid(), err=True)
+        #print('####', tid, '(Layer)', name, 'edit_config', actorid(), err=True)
         configure(tid, {'_': diff})
         res = apply(tid, force)
-        print('   #', tid, '(Layer)', name, 'EDIT_CONFIG', 'PREP RESULT', res, err=True)
+        #print('   #', tid, '(Layer)', name, 'EDIT_CONFIG', 'PREP RESULT', res, err=True)
         if isinstance(res, str) and res == 'Ok':
             done_cont = done
             comp_cont = complete
@@ -182,11 +182,11 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
                 complete(res)
 
     def edit_config_cont(res):
-        print('####', tid_state, '(Layer)', name, 'edit_config_cont', err=True)
+        #print('####', tid_state, '(Layer)', name, 'edit_config_cont', err=True)
         if tid_state is not None:
             commit(tid_state, isinstance(res, str) and res == 'Ok')
             if done_cont is not None:
-                print('   #', tid_state, '(Layer)', name, 'EDIT_CONFIG DONE', res, err=True)
+                #print('   #', tid_state, '(Layer)', name, 'EDIT_CONFIG DONE', res, err=True)
                 done_cont(res)
             if comp_cont is not None:
                 wait_complete(comp_cont)
@@ -194,26 +194,26 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
         tid_state = None
 
     def configure(tid, diff_per_source):
-        print('####', tid, '(Layer)', name, 'configure', list(diff_per_source.keys()), err=True)
+        #print('####', tid, '(Layer)', name, 'configure', list(diff_per_source.keys()), err=True)
         buf.update(diff_per_source.items())
 
     def apply(tid, force=False):
-        print('####', tid, '(Layer)', name, 'apply', err=True)
+        #print('####', tid, '(Layer)', name, 'apply', err=True)
         diff = buf
         buf = {}
-        print('   #', tid, '(Layer)', name, 'APPLY\n', per_src(diff), err=True)
+        #print('   #', tid, '(Layer)', name, 'APPLY\n', per_src(diff), err=True)
         res = root.configure(tid, diff, lower, force)
         if not isinstance(res, Exception) and lower is not None:
             res = lower.apply(tid, force=False)
         rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
-        print('   #', tid, '(Layer)', name, 'APPLY RESULT', rr, err=True)
+        #print('   #', tid, '(Layer)', name, 'APPLY RESULT', rr, err=True)
         return rr
 
     # yield action
     def lock(tid, done:?action(value)->None=None):
-        print('####', tid, '(Layer)', name, 'lock', err=True)
+        #print('####', tid, '(Layer)', name, 'lock', err=True)
         if buf:                                         # An upper layer has re-configured
-            print('####', tid, '(Layer)', name, 'LOCK RE-APPLY', err=True)
+            #print('####', tid, '(Layer)', name, 'LOCK RE-APPLY', err=True)
             res = apply(tid, force=False)
             if isinstance(res, Exception):
                 if done is not None:
@@ -224,30 +224,30 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
         root.lock(tid, lower, lock_cont1)                                   # yield await
 
     def lock_cont1(res):
-        print('####', tid_state, '(Layer)', name, 'lock_cont1', err=True)
+        #print('####', tid_state, '(Layer)', name, 'lock_cont1', err=True)
         if tid_state is not None:
             if not isinstance(res, Exception) and lower is not None:
-                print('   #', tid_state, '(Layer)', name, 'LOCK LOWER', err=True)
+                #print('   #', tid_state, '(Layer)', name, 'LOCK LOWER', err=True)
                 lower.lock(tid_state, lock_cont2)                           # yield await
             else:
                 lock_cont2(res)
 
     def lock_cont2(res):
-        print('####', tid_state, '(Layer)', name, 'lock_cont2', err=True)
+        #print('####', tid_state, '(Layer)', name, 'lock_cont2', err=True)
         if lock_cont is not None:
             rr = 'Ok' if isinstance(res, str) and res == 'Empty' else res
-            print('   #', tid_state, '(Layer)', name, 'LOCK RESULT', rr, err=True)
+            #print('   #', tid_state, '(Layer)', name, 'LOCK RESULT', rr, err=True)
             lock_cont(rr)
         lock_cont = None
 
     def commit(tid, ok):
-        print('####', tid, '(Layer)', name, 'commit', ok, err=True)
+        #print('####', tid, '(Layer)', name, 'commit', ok, err=True)
         root.commit(tid, ok)
         if lower is not None:
             lower.commit(tid, ok)
 
     def wait_complete(done:action(value)->None):
-        print('####', tid_state, '(Layer)', name, 'wait_complete', err=True)
+        #print('####', tid_state, '(Layer)', name, 'wait_complete', err=True)
         if tid_state is not None:
             if lower is not None:
                 lower.wait_complete(done)
@@ -310,7 +310,7 @@ class _ContainerTransaction(_Transaction):
             self.elems[key] = node.newtrans()
 
     def configure(self, tid, diff, out, force=False):
-        print('####', tid, '(Container)', self.path, 'configure force:', force, actorid(), err=True)
+        #print('####', tid, '(Container)', self.path, 'configure force:', force, actorid(), err=True)
         diff_by_child = transpose(diff)
         if len(diff_by_child) == 0 and force:
             for k in self.elems.keys():
@@ -318,95 +318,95 @@ class _ContainerTransaction(_Transaction):
         msgs = {}
         for child,subdiff in diff_by_child.items():
             if child in self.elems:
-                print('   #', tid, '(Container)', self.path, 'CONFIGURE CHILD', child, err=True)
+                #print('   #', tid, '(Container)', self.path, 'CONFIGURE CHILD', child, err=True)
                 msgs[child] = async self.elems[child].configure(tid, subdiff, out, force)
         results = {}
         for child,msg in msgs.items():
             results[child] = await msg
-            print('   #', tid, '(Container)', self.path, 'RESULT CHILD', child, ':', results[child], err=True)
+            #print('   #', tid, '(Container)', self.path, 'RESULT CHILD', child, ':', results[child], err=True)
         return self._analyze(results)
 
     def _analyze(self, results):
         self.accum.update(results.items())
         for r in results.values():
             if isinstance(r, Exception):
-                print('   # ...... (Container)', self.path, 'ANALYZE RESULT:', r, err=True)
+                #print('   # ...... (Container)', self.path, 'ANALYZE RESULT:', r, err=True)
                 return r
-        print('   # ...... (Container)', self.path, 'ANALYZE RESULT: Ok', err=True)
+        #print('   # ...... (Container)', self.path, 'ANALYZE RESULT: Ok', err=True)
         return 'Ok'
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
-        print('####', tid, '(Container)', self.path, 'lock', sorted(self.accum.keys()), err=True)
+        #print('####', tid, '(Container)', self.path, 'lock', sorted(self.accum.keys()), err=True)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
-            print('   #', tid, '(Container)', self.path, 'LOCK CHILD', key, err=True)
+            #print('   #', tid, '(Container)', self.path, 'LOCK CHILD', key, err=True)
             tr.lock(tid, out, actself.lock_cont)                    # yield await
         except StopIteration:
-            print('   #', tid, '(Container)', self.path, 'LOCK IMMEDIATELY DONE', err=True)
+            #print('   #', tid, '(Container)', self.path, 'LOCK IMMEDIATELY DONE', err=True)
             done('Ok')
 
     proc def lock_cont (self, actself, res):
         state = self.state
         if state is not None:
-            print('   #', state.tid, '(Container)', self.path, 'LOCK CHILD', state.key, 'RESULT:', res, err=True)
+            #print('   #', state.tid, '(Container)', self.path, 'LOCK CHILD', state.key, 'RESULT:', res, err=True)
             state.results[state.key] = res
             try:
                 key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
-                print('   #', state.tid, '(Container)', self.path, 'LOCK CHILD', key, err=True)
+                #print('   #', state.tid, '(Container)', self.path, 'LOCK CHILD', key, err=True)
                 tr.lock(state.tid, state.out, actself.lock_cont)
             except StopIteration:
                 self.state = None
-                print('   #', state.tid, '(Container)', self.path, 'LOCK DONE', err=True)
+                #print('   #', state.tid, '(Container)', self.path, 'LOCK DONE', err=True)
                 state.done(self._analyze(state.results))
         else:
-            print('#### ...... (Container)', self.path, 'lock_cont empty state!!!', err=True)
+            #print('#### ...... (Container)', self.path, 'lock_cont empty state!!!', err=True)
             pass
 
     proc def commit(self, tid, ok):
-        print('####', tid, '(Container)', self.path, 'commit', ok, err=True)
+        #print('####', tid, '(Container)', self.path, 'commit', ok, err=True)
         for child in self.accum.keys():
-            print('   #', tid, '(Container)', self.path, 'COMMIT CHILD', child, err=True)
+            #print('   #', tid, '(Container)', self.path, 'COMMIT CHILD', child, err=True)
             self.elems[child].commit(tid, ok)
-        print('   #', tid, '(Container)', self.path, 'COMMIT DONE', err=True)
+        #print('   #', tid, '(Container)', self.path, 'COMMIT DONE', err=True)
         self.accum = {}
 
     # yield action
     def wait_complete(self, actself, tid, done):
-        print('####', tid, '(Container)', self.path, 'wait_complete', list(self.accum.keys()), err=True)
+        #print('####', tid, '(Container)', self.path, 'wait_complete', list(self.accum.keys()), err=True)
         it = iter(sorted(self.elems.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, None, done)
             tr = self.elems[key]
-            print('   #', tid, '(Container)', self.path, 'COMPLETE CHILD', key, err=True)
+            #print('   #', tid, '(Container)', self.path, 'COMPLETE CHILD', key, err=True)
             tr.wait_complete(tid, actself.wait_complete_cont)               # yield await
         except StopIteration:
-            print('   #', tid, '(Container)', self.path, 'COMPLETION IMMEDIATELY DONE', err=True)
+            #print('   #', tid, '(Container)', self.path, 'COMPLETION IMMEDIATELY DONE', err=True)
             done('Ok')
 
     proc def wait_complete_cont (self, actself, res):
         state = self.state
         if state is not None:
-            print('   #', state.tid, '(Container)', self.path, 'COMPLETE CHILD', state.key, 'RESULT:', res, err=True)
+            #print('   #', state.tid, '(Container)', self.path, 'COMPLETE CHILD', state.key, 'RESULT:', res, err=True)
             state.results[state.key] = res
             try:
                 key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
-                print('   #', state.tid, '(Container)', self.path, 'COMPLETE CHILD', key, err=True)
+                #print('   #', state.tid, '(Container)', self.path, 'COMPLETE CHILD', key, err=True)
                 tr.wait_complete(state.tid, actself.wait_complete_cont)
             except StopIteration:
                 self.state = None
-                print('   #', state.tid, '(Container)', self.path, 'COMPLETION DONE', err=True)
+                #print('   #', state.tid, '(Container)', self.path, 'COMPLETION DONE', err=True)
                 state.done(self._analyze(state.results))
         else:
-            print('#### ...... (Container)', self.path, 'wait_complete_cont empty state!!!', err=True)
+            #print('#### ...... (Container)', self.path, 'wait_complete_cont empty state!!!', err=True)
             pass
 
     def get(self):
@@ -457,23 +457,23 @@ actor ListState(path, template: proc(list[str]) -> Node):
             for k in new:
                 elems[k] = template(path+[k])
             provisional |= new
-            print('====', tid, path, 'acquire keys:', keys, 'new:', new, 'provisional:', provisional, actorid(), err=True)
+            #print('====', tid, path, 'acquire keys:', keys, 'new:', new, 'provisional:', provisional, actorid(), err=True)
         else:
             keys1 = set(elems.keys())
-            print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
+            #print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
         active[tid] = keys1
         for k in keys1:
             result[k] = elems[k]
         return result
 
     def release(tid: str, ok: bool, deletes: set[str]):
-        print('====', tid, path, 'release', ok, 'deletes:', deletes, 'provisional:', provisional, err=True)
+        #print('====', tid, path, 'release', ok, 'deletes:', deletes, 'provisional:', provisional, err=True)
         if ok:
             provisional -= active[tid]
             provisional |= deletes
         del active[tid]
         if not active:
-            print('====', tid, path, 'deleting:', provisional, err=True)
+            #print('====', tid, path, 'deleting:', provisional, err=True)
             for k in provisional:
                 del elems[k]
             provisional = set()
@@ -498,7 +498,7 @@ class _ListTransaction(_Transaction):
         self.reset = False
 
     def configure(self, tid, diff, out: ?Session, force=False):
-        print('####', tid, '(List)', self.path, 'configure', actorid(), err=True)
+        #print('####', tid, '(List)', self.path, 'configure', actorid(), err=True)
         if self.reset:
             self.elems = {}
             self.accum = {}
@@ -513,7 +513,7 @@ class _ListTransaction(_Transaction):
                 self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():
-            print('   #', tid, '(List)', self.path, 'CONFIGURE ELEMENT', key, err=True)
+            #print('   #', tid, '(List)', self.path, 'CONFIGURE ELEMENT', key, err=True)
             msgs[key] = async self.elems[key].configure(tid, subdiff, out, force)
         for key in self.accum.keys():
             if key not in diff_by_key:
@@ -522,7 +522,7 @@ class _ListTransaction(_Transaction):
         for key,msg in msgs.items():
             results[key] = await msg
             v = results[key]
-            print('   #', tid, '(List)', self.path, 'RESULT ELEMENT', key, ':', v, err=True)
+            #print('   #', tid, '(List)', self.path, 'RESULT ELEMENT', key, ':', v, err=True)
         return self._analyze(results)
 
     def _analyze(self, results: dict[str,value]):
@@ -530,91 +530,91 @@ class _ListTransaction(_Transaction):
         res = 'Empty'
         for key,r in results.items():
             if isinstance(r, Exception):
-                print('   # ...... (List)', self.path, 'ANALYZE RESULT:', r, err=True)
+                #print('   # ...... (List)', self.path, 'ANALYZE RESULT:', r, err=True)
                 return r
             if isinstance(r, str) and r == 'Ok':
                 res = r
-        print('   # ...... (List)', self.path, 'ANALYZE RESULT:', res, err=True)
+        #print('   # ...... (List)', self.path, 'ANALYZE RESULT:', res, err=True)
         return res
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
-        print('####', tid, '(List)', self.path, 'lock', sorted(self.accum.keys()), err=True)
+        #print('####', tid, '(List)', self.path, 'lock', sorted(self.accum.keys()), err=True)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
-            print('   #', tid, '(List)', self.path, 'LOCK ELEMENT', key, err=True)
+            #print('   #', tid, '(List)', self.path, 'LOCK ELEMENT', key, err=True)
             tr.lock(tid, out, actself.lock_cont)                        # yield await
         except StopIteration:
-            print('   #', tid, '(List)', self.path, 'LOCK IMMEDIATELY DONE', err=True)
+            #print('   #', tid, '(List)', self.path, 'LOCK IMMEDIATELY DONE', err=True)
             done('Ok')
 
     def lock_cont (self, actself, res):
         state = self.state
         if state is not None:
-            print('   #', state.tid, '(List)', self.path, 'LOCK ELEMENT RESULT:', res, err=True)
+            #print('   #', state.tid, '(List)', self.path, 'LOCK ELEMENT RESULT:', res, err=True)
             state.results[state.key] = res
             try:
                 key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
-                print('   #', state.tid, '(List)', self.path, 'LOCK ELEMENT', key, err=True)
+                #print('   #', state.tid, '(List)', self.path, 'LOCK ELEMENT', key, err=True)
                 tr.lock(state.tid, state.out, actself.lock_cont)
             except StopIteration:
                 self.state = None
-                print('   #', state.tid, '(List)', self.path, 'LOCK DONE', err=True)
+                #print('   #', state.tid, '(List)', self.path, 'LOCK DONE', err=True)
                 state.done(self._analyze(state.results))
         else:
             pass
-            print('#### ...... (List)', self.path, 'lock_cont empty state!!!', err=True)
+            #print('#### ...... (List)', self.path, 'lock_cont empty state!!!', err=True)
 
     def commit(self, tid, ok):
-        print('####', tid, '(List)', self.path, 'commit', ok, err=True)
+        #print('####', tid, '(List)', self.path, 'commit', ok, err=True)
         for key,tr in self.elems.items():
-            print('   #', tid, '(List)', self.path, 'COMMIT ELEMENT', key, err=True)
+            #print('   #', tid, '(List)', self.path, 'COMMIT ELEMENT', key, err=True)
             tr.commit(tid, ok)
         deletes = set()
         for key,res in self.accum.items():
             if isinstance(res, str) and res == 'Empty':
-                print('   #', tid, '(List)', self.path, 'DELETE ELEMENT', key, err=True)
+                #print('   #', tid, '(List)', self.path, 'DELETE ELEMENT', key, err=True)
                 deletes.add(key)
         self.liststate.release(tid, ok, deletes)
         self.reset = True       # Defer resetting accum, for the benefit of 'wait_complete'
 
     # yield action
     def wait_complete(self, actself, tid, done):
-        print('####', tid, '(List)', self.path, 'wait_complete', list(self.accum.keys()), err=True)
+        #print('####', tid, '(List)', self.path, 'wait_complete', list(self.accum.keys()), err=True)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, None, done)
             tr = self.elems[key]
-            print('   #', tid, '(List)', self.path, 'COMPLETE ELEMENT', key, err=True)
+            #print('   #', tid, '(List)', self.path, 'COMPLETE ELEMENT', key, err=True)
             tr.wait_complete(tid, actself.wait_complete_cont)                   # yield await
         except StopIteration:
-            print('   #', tid, '(List)', self.path, 'COMPLETION IMMEDIATELY DONE', err=True)
+            #print('   #', tid, '(List)', self.path, 'COMPLETION IMMEDIATELY DONE', err=True)
             done('Ok')
 
     def wait_complete_cont (self, actself, res):
         state = self.state
         if state is not None:
-            print('   #', state.tid, '(List)', self.path, 'COMPLETE ELEMENT', state.key, 'RESULT:', res, err=True)
+            #print('   #', state.tid, '(List)', self.path, 'COMPLETE ELEMENT', state.key, 'RESULT:', res, err=True)
             state.results[state.key] = res
             try:
                 key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
-                print('   #', state.tid, '(List)', self.path, 'COMPLETE ELEMENT', key, err=True)
+                #print('   #', state.tid, '(List)', self.path, 'COMPLETE ELEMENT', key, err=True)
                 tr.wait_complete(state.tid, actself.wait_complete_cont)
             except StopIteration:
                 self.state = None
-                print('   #', state.tid, '(List)', self.path, 'COMPLETION DONE', err=True)
+                #print('   #', state.tid, '(List)', self.path, 'COMPLETION DONE', err=True)
                 state.done(self._analyze(state.results))
         else:
             pass
-            print('#### ...... (List)', self.path, 'wait_complete_cont empty state!!!', err=True)
+            #print('#### ...... (List)', self.path, 'wait_complete_cont empty state!!!', err=True)
 
     def get(self):
         res = []
@@ -665,7 +665,7 @@ class _TransformTransactionBase(_Transaction):
         self.me = '(src_' + str(self)[-10:-1] + ')'
 
     def configure(self, tid, diff, out, force=False):
-        print('####', tid, '(Transform)', self.path, 'configure', actorid(), self.me, err=True)
+        #print('####', tid, '(Transform)', self.path, 'configure', actorid(), self.me, err=True)
 
         if tid not in self.diffs:
             self.diffs[tid] = {}
@@ -674,56 +674,56 @@ class _TransformTransactionBase(_Transaction):
         newconf = patch(self.running, accdiff)
         self.candidates[tid] = newconf
 
-        print('   #', tid, '(Transform)', self.path, 'NEW DIFF\n', per_src(diff), err=True)
-        print('   #', tid, '(Transform)', self.path, 'ACCUMULATED DIFF\n', per_src(accdiff), err=True)
-        print('   #', tid, '(Transform)', self.path, 'RUNNING CONFIG\n', per_src(self.running), err=True)
-        print('   #', tid, '(Transform)', self.path, 'NEWCONF\n', per_src(newconf), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'NEW DIFF\n', per_src(diff), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'ACCUMULATED DIFF\n', per_src(accdiff), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'RUNNING CONFIG\n', per_src(self.running), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'NEWCONF\n', per_src(newconf), err=True)
 
         if newconf == {}:
             self.essays[tid] = None
-            print('   #', tid, '(Transform)', self.path, 'EMPTY CONFIG', err=True)
+            #print('   #', tid, '(Transform)', self.path, 'EMPTY CONFIG', err=True)
             return 'Empty'
         else:
             try:
                 merged = assert_complete(merge(newconf))
-                print('   #', tid, '(Transform)', self.path, 'MERGED\n       ', merged.prsrc(indent=4), err=True)
+                #print('   #', tid, '(Transform)', self.path, 'MERGED\n       ', merged.prsrc(indent=4), err=True)
 #                assert self.validate(merged)
             except Exception as e:
-                print('   #', tid, '(Transform)', self.path, 'FAILURE', e, err=True)
+                #print('   #', tid, '(Transform)', self.path, 'FAILURE', e, err=True)
                 return e
             else:
                 newout = self.compute(tid, merged, out)
                 self.essays[tid] = newout
-                print('   #', tid, '(Transform)', self.path, 'OUTPUT\n       ', newout.prsrc(indent=4), err=True)
+                #print('   #', tid, '(Transform)', self.path, 'OUTPUT\n       ', newout.prsrc(indent=4), err=True)
                 return 'Ok'
         return 'Ok'
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):                          # yield await
-        print('####', tid, '(Transform)', self.path, 'lock', err=True)
+        #print('####', tid, '(Transform)', self.path, 'lock', err=True)
         locker = self.locker
         if locker is not None:
             if locker == tid:
-                print('   #', tid, '(Transform)', self.path, 'LOCK REDUNDANT', err=True)
+                #print('   #', tid, '(Transform)', self.path, 'LOCK REDUNDANT', err=True)
                 done('Ok')
             else:
-                print('   #', tid, '(Transform)', self.path, 'LOCK SUSPENDING', err=True)
+                #print('   #', tid, '(Transform)', self.path, 'LOCK SUSPENDING', err=True)
                 self.pending.append((actself, tid, out, done))                  # suspend
             return
         self.locker = tid
         if tid not in self.candidates:
-            print('   #', tid, '(Transform)', self.path, 'LOCK - RE-CONFIGURING', err=True)
+            #print('   #', tid, '(Transform)', self.path, 'LOCK - RE-CONFIGURING', err=True)
             res = self.configure(tid, {}, out)
             done(res)
         else:
-            print('   #', tid, '(Transform)', self.path, 'LOCKED', err=True)
+            #print('   #', tid, '(Transform)', self.path, 'LOCKED', err=True)
             done('Ok' if self.candidates[tid] else 'Empty')
 
     def lock_cont (self, actself, res):
         pass
 
     def commit(self, tid, ok):
-        print('####', tid, '(Transform)', self.path, 'commit', ok, err=True)
+        #print('####', tid, '(Transform)', self.path, 'commit', ok, err=True)
         self.diffs.pop(tid)
         candidate = self.candidates.pop_def(tid, {})
         essay = self.essays.pop(tid)
@@ -731,26 +731,28 @@ class _TransformTransactionBase(_Transaction):
             if ok:
                 self.running = candidate
                 self.output = essay
-                print('   #', tid, '(Transform)', self.path, 'COMMITTING\n', per_src(candidate), err=True)
+                #print('   #', tid, '(Transform)', self.path, 'COMMITTING\n', per_src(candidate), err=True)
                 if self.candidates:
-                    print('   #', tid, '(Transform)', self.path, 'INVALIDATING', set(self.candidates.keys()), err=True)
+                    #print('   #', tid, '(Transform)', self.path, 'INVALIDATING', set(self.candidates.keys()), err=True)
                     self.candidates = {}
                 self.finalize(tid)
             else:
-                print('   #', tid, '(Transform)', self.path, 'ABORTING', err=True)
+                #print('   #', tid, '(Transform)', self.path, 'ABORTING', err=True)
+                pass
             self.locker = None
             if self.pending:
                 (actself, tid2, out, done) = self.pending.pop(0)
-                print('   #', tid2, '(Transform)', self.path, 'RESUMING', err=True)
+                #print('   #', tid2, '(Transform)', self.path, 'RESUMING', err=True)
                 self.lock(actself, tid2, out, done)                             # resume
         else:
-            print('   #', tid, '(Transform)', self.path, 'IGNORING', err=True)
+            #print('   #', tid, '(Transform)', self.path, 'IGNORING', err=True)
+            pass
 
     def finalize(self, tid):
         pass
 
     def wait_complete(self, actself, tid, done):                                # (yield await)
-        print('####', tid, '(Transform)', self.path, 'wait_complete', err=True)
+        #print('####', tid, '(Transform)', self.path, 'wait_complete', err=True)
         done('Ok')
 
     def wait_complete_cont (self, actself, res):
@@ -831,7 +833,7 @@ class _RFSTransaction(_TransformTransactionBase):
         self.dev = dev_mgr.get(self.devname)
 
     def compute(self, tid, merged, out):
-        print('####', tid, '(RFSTransform)', self.path, 'compute', actorid(), err=True)
+        #print('####', tid, '(RFSTransform)', self.path, 'compute', actorid(), err=True)
         dev_content = {
             "name": gdata.Leaf("str", self.devname),
         }
@@ -839,13 +841,13 @@ class _RFSTransaction(_TransformTransactionBase):
         if modset_id is not None:
             dev_content["modset_id"] = gdata.Leaf("str", modset_id)
         if len(modset) > 0:
-            print('####', tid, '(RFSTransform)', self.path, 'compute', self.devname, err=True)
+            #print('####', tid, '(RFSTransform)', self.path, 'compute', self.devname, err=True)
             newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset))
             res = difference(self.output, newout)
             if isinstance(res, gdata.Container):
                 dev_content["config"] = gdata.Container(res.children)
         else:
-            print('####', tid, '(RFSTransform)', self.path, 'compute', ": No device capabilities, skipping RFS transform for", self.devname, err=True)
+            #print('####', tid, '(RFSTransform)', self.path, 'compute', ": No device capabilities, skipping RFS transform for", self.devname, err=True)
             newout = gdata.Container({})
 
         if out is not None:
@@ -910,7 +912,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         return merged
 
     def finalize(self, tid):
-        print('####', tid, '(DeviceMeta)', self.path, 'finalize', actorid(), err=True)
+        #print('####', tid, '(DeviceMeta)', self.path, 'finalize', actorid(), err=True)
         config = self.output
         if config is not None:
             meta_config = DeviceMetaConfig.from_gdata(config)
@@ -943,7 +945,7 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
         return merged
 
     def finalize(self, tid):
-        print('####', tid, '(DeviceConfig)', self.path, 'finalize', actorid(), err=True)
+        #print('####', tid, '(DeviceConfig)', self.path, 'finalize', actorid(), err=True)
         device = self.output
         if device is not None:
             if isinstance(device, gdata.Container):
@@ -959,12 +961,12 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
                         cfg = gdata.Container(config.children)
                         self.dev.configure(cfg, cfg_modset_id, tid)
                 else:
-                    print('   #', tid, '(DeviceConfig)', self.path, "No config in device config, registering interest...", err=True)
+                    #print('   #', tid, '(DeviceConfig)', self.path, "No config in device config, registering interest...", err=True)
                     self.dev.configure(None, None, tid)
 
 
     def wait_complete(self, actself, tid, done):                                # (yield await)
-        print('####', tid, '(DeviceConfig)', self.path, 'wait_complete', err=True)
+        #print('####', tid, '(DeviceConfig)', self.path, 'wait_complete', err=True)
         self.dev.wait_complete(tid, done)
 
 
