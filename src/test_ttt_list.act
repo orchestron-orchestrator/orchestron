@@ -101,6 +101,97 @@ def _test_basic_delete(done, logger: logging.Handler):
 
 ########################
 
+actor all_delete_tester(done: action(?bool, ?Exception)->None):
+    in1 = gdata.List(["name"], [
+            gdata.Container({
+                "x": gdata.Leaf("int", 1)
+            }, ["k1"]),
+            gdata.Container({
+                "x": gdata.Leaf("int", 2)
+            }, ["k2"]),
+        ])
+
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough)) ([])
+    t1 = tlist.newtrans()
+    t1.configure("1", {"srcA": in1})
+
+    def cont1(r):
+        t1.commit("1", True)
+        out1 = t1.get()
+        testing.assertEqual(out1.prsrc(), in1.prsrc())
+        t1.configure("1", {"srcA": gdata.Absent()})
+
+        def cont2(r):
+            if isinstance(r, str):
+                testing.assertEqual(r, "Empty")
+            t1.commit("1", True)
+            out2 = t1.get()
+            exp2 = gdata.List(["name"], [])
+            testing.assertEqual(out2.prsrc(), exp2.prsrc())
+            done(True, None)
+
+        t1.lock("1", None, cont2)
+
+    t1.lock("1", None, cont1)
+
+def _test_all_delete(done, logger: logging.Handler):
+    c = all_delete_tester(done)
+
+########################
+
+actor nested_delete_tester(done: action(?bool, ?Exception)->None):
+    in1 = gdata.List(["name"], [
+            gdata.Container({
+                "left": gdata.Container({
+                    "x": gdata.Leaf("int", 1)
+                }),
+                "right": gdata.Container({
+                    "y": gdata.Leaf("int", 1)
+                }),
+            }, ["k1"]),
+            gdata.Container({
+                "left": gdata.Container({
+                    "x": gdata.Leaf("int", 2)
+                }),
+                "right": gdata.Container({
+                    "y": gdata.Leaf("int", 2)
+                }),
+            }, ["k2"]),
+        ])
+
+    tlist = ttt.List(
+                ttt.Container({
+                    "left": ttt.Transform(ttt.PassThrough),
+                    "right": ttt.Transform(ttt.PassThrough)
+                })
+            ) ([])
+    t1 = tlist.newtrans()
+    t1.configure("1", {"srcA": in1})
+
+    def cont1(r):
+        t1.commit("1", True)
+        out1 = t1.get()
+        testing.assertEqual(out1.prsrc(), in1.prsrc())
+        t1.configure("1", {"srcA": gdata.Absent()})
+
+        def cont2(r):
+            if isinstance(r, str):
+                testing.assertEqual(r, "Empty")
+            t1.commit("1", True)
+            out2 = t1.get()
+            exp2 = gdata.List(["name"], [])
+            testing.assertEqual(out2.prsrc(), exp2.prsrc())
+            done(True, None)
+
+        t1.lock("1", None, cont2)
+
+    t1.lock("1", None, cont1)
+
+def _test_nested_delete(done, logger: logging.Handler):
+    c = nested_delete_tester(done)
+
+########################
+
 list1a = gdata.List(["name"], [
     gdata.Container({
         "a": gdata.Leaf("int", 0)

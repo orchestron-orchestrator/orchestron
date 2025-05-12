@@ -11,6 +11,8 @@ def per_src(cfg_per_src: dict[str, gdata.Node]):
         res.append("       '" + src + "': " + cfg.prsrc(4, src))
     return "\n".join(res)
 
+WILDKEY = ""
+
 def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
     cfg_per_key = {}
     for src, conf in cfg_per_src.items():
@@ -27,6 +29,8 @@ def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.N
                     cfg_per_key[key][src] = subconf
                 else:
                     cfg_per_key[key] = {src: subconf}
+        elif isinstance (conf, gdata.Absent):
+            cfg_per_key[WILDKEY] = {src: conf}
         else:
             raise NotImplementedError("Cannot transpose configuration type" + str(type(conf)))
 
@@ -343,6 +347,14 @@ class _ContainerTransaction(_Transaction):
         if len(diff_by_child) == 0 and force:
             for k in self.elems.keys():
                 diff_by_child[k] = {}
+        elif WILDKEY in diff_by_child:
+            wildconf = diff_by_child[WILDKEY]
+            for k in self.elems.keys():
+                if k in diff_by_child:
+                    diff_by_child[k].update(wildconf.items())
+                else:
+                    diff_by_child[k] = wildconf
+            del diff_by_child[WILDKEY]
         msgs = {}
         for child,subdiff in diff_by_child.items():
             if child in self.elems:
@@ -356,12 +368,15 @@ class _ContainerTransaction(_Transaction):
 
     def _analyze(self, results):
         self.accum.update(results.items())
+        res = "Empty"
         for r in results.values():
             if isinstance(r, Exception):
                 #print('   # ...... (Container)', self.path, 'ANALYZE RESULT:', r, err=True)
                 return r
+            if isinstance(r, str) and r == "Ok":
+                res = r
         #print('   # ...... (Container)', self.path, 'ANALYZE RESULT: Ok', err=True)
-        return 'Ok'
+        return res
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
@@ -377,7 +392,7 @@ class _ContainerTransaction(_Transaction):
             #print('   #', tid, '(Container)', self.path, 'LOCK IMMEDIATELY DONE', err=True)
             done('Ok')
 
-    proc def lock_cont (self, actself, res):
+    def lock_cont(self, actself, res):
         state = self.state
         if state is not None:
             #print('   #', state.tid, '(Container)', self.path, 'LOCK CHILD', state.key, 'RESULT:', res, err=True)
@@ -544,6 +559,15 @@ class _ListTransaction(_Transaction):
             for key,node in self.liststate.acquire(tid, None).items():
                 diff_by_key[key] = {}
                 self.elems[key] = node.newtrans()
+        elif WILDKEY in diff_by_key:
+            wildconf = diff_by_key[WILDKEY]
+            for key,node in self.liststate.acquire(tid, None).items():
+                if key in diff_by_key:
+                    diff_by_key[key].update(wildconf.items())
+                else:
+                    diff_by_key[key] = wildconf
+                self.elems[key] = node.newtrans()
+            del diff_by_key[WILDKEY]
         else:
             for key,node in self.liststate.acquire(tid, set(diff_by_key.keys())).items():
                 self.elems[key] = node.newtrans()
@@ -564,7 +588,7 @@ class _ListTransaction(_Transaction):
     def _analyze(self, results: dict[str,value]):
         self.accum.update(results.items())
         res = 'Empty'
-        for key,r in results.items():
+        for r in results.values():
             if isinstance(r, Exception):
                 #print('   # ...... (List)', self.path, 'ANALYZE RESULT:', r, err=True)
                 return r
@@ -587,7 +611,7 @@ class _ListTransaction(_Transaction):
             #print('   #', tid, '(List)', self.path, 'LOCK IMMEDIATELY DONE', err=True)
             done('Ok')
 
-    def lock_cont (self, actself, res):
+    def lock_cont(self, actself, res):
         state = self.state
         if state is not None:
             #print('   #', state.tid, '(List)', self.path, 'LOCK ELEMENT RESULT:', res, err=True)
