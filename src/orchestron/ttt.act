@@ -8,7 +8,7 @@ import xml, logging
 def per_src(cfg_per_src: dict[str, gdata.Node]):
     res = []
     for src,cfg in cfg_per_src.items():
-        res.append("       '" + src + "': " + cfg.prsrc(4, src))
+        res.append("        '" + src + "': " + cfg.prsrc(4, src))
     return "\n".join(res)
 
 WILDKEY = ""
@@ -49,7 +49,6 @@ def patch(conf: dict[str,gdata.Node], diff: dict[str,gdata.Node]) -> dict[str,gd
             p = gdata.patch(conf[s], d)
             if p is not None:
                 res[s] = p
-        else:
             res[s] = d
     for s,c in conf.items():
         if s not in diff:
@@ -231,7 +230,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
         #print('####', tid, '(Layer)', name, 'apply', err=True)
         diff = buf
         buf = {}
-        #print('   #', tid, '(Layer)', name, 'APPLY\n', per_src(diff), err=True)
+        #print('   #', tid, '(Layer)', name, 'APPLY\n' + per_src(diff), err=True)
         res = root.configure(tid, diff, lower, force)
         if not isinstance(res, Exception) and lower is not None:
             res = lower.apply(tid, force=False)
@@ -744,10 +743,10 @@ class _TransformTransactionBase(_Transaction):
         newconf = patch(self.running, accdiff)
         self.candidates[tid] = newconf
 
-        #print('   #', tid, '(Transform)', self.path, 'NEW DIFF\n', per_src(diff), err=True)
-        #print('   #', tid, '(Transform)', self.path, 'ACCUMULATED DIFF\n', per_src(accdiff), err=True)
-        #print('   #', tid, '(Transform)', self.path, 'RUNNING CONFIG\n', per_src(self.running), err=True)
-        #print('   #', tid, '(Transform)', self.path, 'NEWCONF\n', per_src(newconf), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'NEW DIFF\n' + per_src(diff), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'ACCUMULATED DIFF\n' + per_src(accdiff), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'RUNNING CONFIG\n' + per_src(self.running), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'NEWCONF\n' + per_src(newconf), err=True)
 
         if newconf == {}:
             self.essays[tid] = None
@@ -801,7 +800,7 @@ class _TransformTransactionBase(_Transaction):
             if ok:
                 self.running = candidate
                 self.output = essay
-                #print('   #', tid, '(Transform)', self.path, 'COMMITTING\n', per_src(candidate), err=True)
+                #print('   #', tid, '(Transform)', self.path, 'COMMITTING\n' + per_src(candidate), err=True)
                 if self.candidates:
                     #print('   #', tid, '(Transform)', self.path, 'INVALIDATING', set(self.candidates.keys()), err=True)
                     self.candidates = {}
