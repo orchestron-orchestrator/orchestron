@@ -49,7 +49,7 @@ def patch(conf: dict[str,gdata.Node], diff: dict[str,gdata.Node]) -> dict[str,gd
             p = gdata.patch(conf[s], d)
             if p is not None:
                 res[s] = p
-        else:
+        elif not isinstance(d, gdata.Absent):
             res[s] = d
     for s,c in conf.items():
         if s not in diff:
