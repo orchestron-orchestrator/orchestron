@@ -139,6 +139,62 @@ def _test_all_delete(done, logger: logging.Handler):
 
 ########################
 
+actor partial_delete_tester(done: action(?bool, ?Exception)->None):
+    inA = gdata.List(["name"], [
+            gdata.Container({
+                "x": gdata.Leaf("int", 1)
+            }, ["k1"]),
+            gdata.Container({
+                "x": gdata.Leaf("int", 2)
+            }, ["k2"])
+        ])
+
+    inB = gdata.List(["name"], [
+            gdata.Container({
+                "x": gdata.Leaf("int", 2)
+            }, ["k2"]),
+            gdata.Container({
+                "x": gdata.Leaf("int", 3)
+            }, ["k3"]),
+        ])
+
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough)) ([])
+    t1 = tlist.newtrans()
+    t1.configure("1", {"srcA": inA, "srcB": inB})
+
+    def cont1(r):
+        t1.commit("1", True)
+        out1 = t1.get()
+        exp1 = gdata.List(["name"], [
+                gdata.Container({
+                    "x": gdata.Leaf("int", 1)
+                }, ["k1"]),
+                gdata.Container({
+                    "x": gdata.Leaf("int", 2)
+                }, ["k2"]),
+                gdata.Container({
+                    "x": gdata.Leaf("int", 3)
+                }, ["k3"]),
+            ])
+        testing.assertEqual(out1.prsrc(), exp1.prsrc())
+        t1.configure("1", {"srcA": gdata.Absent()})
+
+        def cont2(r):
+            t1.commit("1", True)
+            out2 = t1.get()
+            testing.assertEqual(out2.prsrc(), inB.prsrc())
+            done(True, None)
+
+        t1.lock("1", None, cont2)
+#        done(True, None)
+
+    t1.lock("1", None, cont1)
+
+def _test_partial_delete(done, logger: logging.Handler):
+    c = partial_delete_tester(done)
+
+########################
+
 actor nested_delete_tester(done: action(?bool, ?Exception)->None):
     in1 = gdata.List(["name"], [
             gdata.Container({
