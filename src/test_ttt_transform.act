@@ -257,7 +257,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
 
     def cont1(_r: value):
         r = t1.get()
-        testing.assertEqual(r, gdata.Absent())
+        testing.assertEqual(r, gdata.Container())
         t1.commit("1", True)
         t2.lock("2", None, cont2)
 

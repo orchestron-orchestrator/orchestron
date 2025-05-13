@@ -49,6 +49,7 @@ def patch(conf: dict[str,gdata.Node], diff: dict[str,gdata.Node]) -> dict[str,gd
             p = gdata.patch(conf[s], d)
             if p is not None:
                 res[s] = p
+        else:
             res[s] = d
     for s,c in conf.items():
         if s not in diff:
@@ -831,7 +832,7 @@ class _TransformTransactionBase(_Transaction):
         if self.running:
             return merge(self.running)
         else:
-            return gdata.Absent()
+            return gdata.Container()
 
 
 def Transform(function, log_handler: ?logging.Handler=None):
@@ -869,10 +870,10 @@ class TransformFunction(object):
         self.logger = logging.Logger(log_handler)
 
     def transform_wrapper(self, cfg):
-        return gdata.Absent()
+        return gdata.Container()
 
     def transform_xml(self, cfg):
-        return gdata.Absent()
+        return gdata.Container()
 
 
 ################# RFSTransform ###################
@@ -949,10 +950,10 @@ class RFSFunction(object):
         self.logger = logging.Logger(log_handler)
 
     def transform_wrapper(self, cfg, di):
-        return gdata.Absent()
+        return gdata.Container()
 
     def transform_xml(self, cfg, di):
-        return gdata.Absent()
+        return gdata.Container()
 
 
 ################# Device #####################
