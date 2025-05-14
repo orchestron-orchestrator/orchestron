@@ -107,7 +107,7 @@ actor all_delete_tester(done: action(?bool, ?Exception)->None):
     def cont1(r):
         t1.commit("1", True)
         out1 = t1.get()
-        testing.assertEqual(out1.prsrc(), in1.prsrc())
+        testing.assertEqual(out1, in1)
         t1.configure("1", {"srcA": gdata.Absent()})
 
         def cont2(r):
@@ -119,7 +119,7 @@ actor all_delete_tester(done: action(?bool, ?Exception)->None):
                 "left": gdata.Container(),
                 "right": gdata.Container()
             })
-            testing.assertEqual(out2.prsrc(), exp2.prsrc())
+            testing.assertEqual(out2, exp2)
             done(True, None)
 
         t1.lock("1", None, cont2)
@@ -158,7 +158,7 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
     def cont1(r):
         t1.commit("1", True)
         out1 = t1.get()
-        testing.assertEqual(out1.prsrc(), in1.prsrc())
+        testing.assertEqual(out1, in1)
         t1.configure("1", {"srcA": gdata.Absent()})
 
         def cont2(r):
@@ -170,7 +170,7 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
                 "left": gdata.List(["name"], []),
                 "right": gdata.List(["name"], [])
             })
-            testing.assertEqual(out2.prsrc(), exp2.prsrc())
+            testing.assertEqual(out2, exp2)
             done(True, None)
 
         t1.lock("1", None, cont2)
@@ -385,7 +385,7 @@ actor config_failure_tester(done: action(?bool, ?Exception)->None):
             t2.commit("2", True)
             r = t2.get()
             if r != a0b1:
-                testing.assertEqual(r.prsrc(), a0b1.prsrc())
+                testing.assertEqual(r, a0b1)
             done(True, None)
 
         t2.lock("2", None, cont2)
@@ -415,7 +415,7 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
     def cont1(_r: value):
         t1.commit("1", True)
         r = t1.get()
-        testing.assertEqual(r.prsrc(), a0.prsrc())
+        testing.assertEqual(r, a0)
         done(True, None)
 
     t2.lock("2", None, cont2)

@@ -83,13 +83,13 @@ actor basic_delete_tester(done: action(?bool, ?Exception)->None):
     def cont2(_r: value):
         t1.commit("1", True)
         r = t1.get()
-        testing.assertEqual(r.prsrc(), tree1pruned.prsrc())
+        testing.assertEqual(r, tree1pruned)
         done(True, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
         r = t1.get()
-        testing.assertEqual(r.prsrc(), tree1.prsrc())
+        testing.assertEqual(r, tree1)
         t1.configure("1", {'srcA': tree1diff}, None)
         t1.lock("1", None, cont2)
 
@@ -118,7 +118,7 @@ actor all_delete_tester(done: action(?bool, ?Exception)->None):
     def cont1(r):
         t1.commit("1", True)
         out1 = t1.get()
-        testing.assertEqual(out1.prsrc(), in1.prsrc())
+        testing.assertEqual(out1, in1)
         t1.configure("1", {"srcA": gdata.Absent()})
 
         def cont2(r):
@@ -127,7 +127,7 @@ actor all_delete_tester(done: action(?bool, ?Exception)->None):
             t1.commit("1", True)
             out2 = t1.get()
             exp2 = gdata.List(["name"], [])
-            testing.assertEqual(out2.prsrc(), exp2.prsrc())
+            testing.assertEqual(out2, exp2)
             done(True, None)
 
         t1.lock("1", None, cont2)
@@ -176,13 +176,13 @@ actor partial_delete_tester(done: action(?bool, ?Exception)->None):
                     "x": gdata.Leaf("int", 3)
                 }, ["k3"]),
             ])
-        testing.assertEqual(out1.prsrc(), exp1.prsrc())
+        testing.assertEqual(out1, exp1)
         t1.configure("1", {"srcA": gdata.Absent()})
 
         def cont2(r):
             t1.commit("1", True)
             out2 = t1.get()
-            testing.assertEqual(out2.prsrc(), inB.prsrc())
+            testing.assertEqual(out2, inB)
             done(True, None)
 
         t1.lock("1", None, cont2)
@@ -348,7 +348,7 @@ actor aborted_create_tester2(done: action(?bool, ?Exception)->None):
         t2.configure("2", {'srcB': y2b}, None)
         t2.commit("2", True)
         r = t2.get()
-        testing.assertEqual(r.prsrc(), y2b.prsrc())
+        testing.assertEqual(r, y2b)
         done(True, None)
 
     t1.configure("1", {'srcA': y1}, None)
@@ -396,13 +396,11 @@ actor nested_list_tester(done: action(?bool, ?Exception)->None):
     def cont1(_r: value):
         t1.commit("1", True)
         r = t1.get()
-        print(nested_tree.prsrc())
-        print(r.prsrc())
         try:
             testing.assertEqual(nested_tree, r)
             done(True, None)
         except Exception as e:
-            done(False, Exception(f"Diff:\n{diff.diff(nested_tree.prsrc(), r.prsrc(), color=True)}"))
+            done(False, Exception("Diff:\n{diff.diff(nested_tree.prsrc(), r.prsrc(), color=True)}"))
     t1.lock("1", None, cont1)
 
 def _test_nested_list(done, logger: logging.Handler):
