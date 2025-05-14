@@ -45,7 +45,7 @@ cfg2 = gdata.List(["name"], [
 
 actor reconf2_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
     dev_mgr = odev.DeviceManager(None, log_handler)
-    stack = ttt.Layer("devices", ttt.List(ttt.DeviceConfig(dev_mgr)), None)
+    stack = ttt.Layer("devices", ttt.List(ttt.DeviceConfig(dev_mgr), ["name"], ["string"]), None)
     
     var devs = set()
     
@@ -104,8 +104,8 @@ def rfs_for_device(dev):
 
 actor complete_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
     dev_mgr = odev.DeviceManager(None, log_handler)
-    stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.List(ttt.Container({"base": ttt.List(ttt.RFSTransform(Fun, dev_mgr))}))}),
-            ttt.Layer("devices", ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_mgr))})}),
+    stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.List(ttt.Container({"base": ttt.List(ttt.RFSTransform(Fun, dev_mgr), ["id"], ["string"])}), ["name"], ["string"])}),
+            ttt.Layer("devices", ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_mgr), ["name"], ["string"])})}),
             None))
 
     def reconf(dev):

@@ -67,6 +67,32 @@ def merge(cfg_per_src: dict[str,gdata.Node]):
     else:
         raise ValueError("Nothing to merge")
 
+def split_key_str(key_str: str) -> list[str]:
+    """
+    Split a comma-separated string into individual components,
+    respecting escaped commas (\\,).
+    """
+    result = []
+    current = ""
+    i = 0
+
+    while i < len(key_str):
+        if key_str[i] == '\\' and i + 1 < len(key_str) and key_str[i + 1] == ',':
+            current += ','
+            i += 2
+        elif key_str[i] == ',':
+            result.append(current)
+            current = ""
+            i += 1
+        else:
+            current += key_str[i]
+            i += 1
+
+    # Last, or only element
+    if current != "" or i > 0:
+        result.append(current)
+
+    return result
 
 ##################### Node & Transactions #####################
 
@@ -255,6 +281,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
                 root.wait_complete(tid_state, done)
 
     def get():
+        #print('####', '(Layer)', name, 'GET', root, err=True)
         return root.get()
 
     def below():
@@ -281,6 +308,7 @@ class _Container(_Node):
         return ContainerTransaction(self.path, self.elems, self.ns)
 
     def get(self):
+        #print('####', '(Container)', self.path, actorid(),'NODE GET', err=True)
         res = {}
         for tag,node in self.elems.items():
             res[tag] = node.get()
@@ -410,6 +438,7 @@ class _ContainerTransaction(_Transaction):
             pass
 
     def get(self):
+        #print('####', '(Container)', self.path, actorid(), 'GET', err=True)
         res = {}
         for tag,node in self.elems.items():
             res[tag] = node.get()
@@ -422,26 +451,29 @@ class _ContainerTransaction(_Transaction):
 
 ################# Lists ####################
 
-def List(template):
-    return lambda path: Node(_List(path, template))
+def List(template, key_names: list[str], key_types: list[str]):
+    return lambda path: Node(_List(path, template, key_names, key_types))
 
 class _List(_Node):
     liststate: ListState
 
-    def __init__(self, path, template):
+    def __init__(self, path, template, key_names, key_types):
         self.path = path
+        self.key_names = key_names
+        self.key_types = key_types
         self.liststate = ListState(path, template)
 
     def newtrans(self):
-        return ListTransaction(self.path, self.liststate)
+        return ListTransaction(self.path, self.liststate, self.key_names, self.key_types)
 
     def get(self):
+        #print('####', '(List)', self.path, 'NODE GET', err=True)
         res = []
         for key,node in self.liststate.all().items():
             r = node.get()
             if isinstance(r, gdata.Container):
                 res.append(r)
-        return gdata.List(["name"], res)
+        return gdata.List(self.key_names, res)
 
 
 actor ListState(path, template: proc(list[str]) -> Node):
@@ -484,14 +516,18 @@ actor ListState(path, template: proc(list[str]) -> Node):
 
 class _ListTransaction(_Transaction):
     liststate : ListState
+    key_names : list[str]
+    key_types : list[str]
     elems : dict[str, Transaction]
     accum : dict[str, value]
     state : ?YieldState
     reset: bool
 
-    def __init__(self, path, liststate):
+    def __init__(self, path, liststate, key_names, key_types):
         self.path = path
         self.liststate = liststate
+        self.key_names = key_names
+        self.key_types = key_types
         self.elems = {}
         self.accum = {}
         self.state = None
@@ -617,15 +653,25 @@ class _ListTransaction(_Transaction):
             #print('#### ...... (List)', self.path, 'wait_complete_cont empty state!!!', err=True)
 
     def get(self):
+        #print('####', '(List)', self.path, 'GET', err=True)
         res = []
         for key,node in self.liststate.all().items():
             r = node.get()
             if isinstance(r, gdata.Container):
-                res.append(r)
-        return gdata.List(["name"], res)
+                if r.key == []:
+                    # Restore the list element Container.key attribute and key leaf children, to keep the gdata valid
+                    #print('####', '(List)', self.path, 'RESTORING KEY', key, err=True)
+                    split_key = split_key_str(key)
+                    list_element = gdata.Container(r.children, split_key)
+                    for i, kn in enumerate(self.key_names):
+                        list_element.children.setdefault(kn, gdata.Leaf(self.key_types[i], split_key[i]))
+                else:
+                    list_element = r
+                res.append(gdata.Container(list_element.children, list_element.key))
+        return gdata.List(self.key_names, res)
 
-def ListTransaction(path, liststate: ListState):
-    return Transaction(_ListTransaction(path, liststate))
+def ListTransaction(path, liststate: ListState, key_names, key_types):
+    return Transaction(_ListTransaction(path, liststate, key_names, key_types))
 
 
 ################# Transform #####################
