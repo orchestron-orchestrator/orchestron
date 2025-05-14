@@ -680,7 +680,10 @@ class _ListTransaction(_Transaction):
         #print('####', '(List)', self.path, 'GET', err=True)
         res = []
         for key,node in self.liststate.all().items():
-            r = node.get()
+            if key in self.elems:
+                r = self.elems[key].get()
+            else:
+                r = node.get()
             if isinstance(r, gdata.Container):
                 if r.key == []:
                     # Restore the list element Container.key attribute and key leaf children, to keep the gdata valid
