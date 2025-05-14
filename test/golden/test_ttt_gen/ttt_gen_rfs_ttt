@@ -12,5 +12,5 @@ import yang.gdata
 import respnet.rfs
 
 def get_ttt(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str])->ttt.Node:
-    r = ttt.Container({"device": ttt.List(ttt.Device(dev_mgr, log_handler)), "rfs": ttt.List(ttt.Container({"backbone-interface": ttt.List(ttt.RFSTransform(respnet.rfs.BBInterface, dev_mgr, log_handler))}, ns='http://orchestron.org/yang/orchestron-rfs.yang'))}, ns='')
+    r = ttt.Container({"device": ttt.List(ttt.Device(dev_mgr, log_handler), ['name'], ['string']), "rfs": ttt.List(ttt.Container({"backbone-interface": ttt.List(ttt.RFSTransform(respnet.rfs.BBInterface, dev_mgr, log_handler), ['name'], ['string'])}, ns='http://orchestron.org/yang/orchestron-rfs.yang'), ['name'], ['string'])}, ns='')
     return r
