@@ -72,7 +72,7 @@ class TransF(ttt.TransformFunction):
 
 actor basic_output_tester(done: action(?bool, ?Exception)->None):
     out = ttt.Sink().newsession()
-    tlist = ttt.List(ttt.Transform(TransF)) ([])
+    tlist = ttt.List(ttt.Transform(TransF), ["name"], ["string"]) ([])
     t1 = tlist.newtrans()
 
     t1.configure("1", {'srcA': cfg1}, out)
@@ -98,7 +98,7 @@ def _test_basic_output(done, logger: logging.Handler):
 ########################
 
 actor layered_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF)), ttt.Sink())
+    stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF), ["name"], ["string"]), ttt.Sink())
 
     sess = stack.newsession()
 
@@ -117,7 +117,7 @@ def _test_layered_commit(done, logger: logging.Handler):
 ########################
 
 actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
-    stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF)), ttt.Sink())
+    stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF), ["name"], ["string"]), ttt.Sink())
     
     sess1 = stack.newsession()
     sess2 = stack.newsession()
