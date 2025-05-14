@@ -8,8 +8,10 @@ import xml, logging
 def per_src(cfg_per_src: dict[str, gdata.Node]):
     res = []
     for src,cfg in cfg_per_src.items():
-        res.append("       '" + src + "': " + cfg.prsrc(4, src))
+        res.append("        '" + src + "': " + cfg.prsrc(4, src))
     return "\n".join(res)
+
+WILDKEY = ""
 
 def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
     cfg_per_key = {}
@@ -27,6 +29,8 @@ def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.N
                     cfg_per_key[key][src] = subconf
                 else:
                     cfg_per_key[key] = {src: subconf}
+        elif isinstance (conf, gdata.Absent):
+            cfg_per_key[WILDKEY] = {src: conf}
         else:
             raise NotImplementedError("Cannot transpose configuration type" + str(type(conf)))
 
@@ -45,7 +49,7 @@ def patch(conf: dict[str,gdata.Node], diff: dict[str,gdata.Node]) -> dict[str,gd
             p = gdata.patch(conf[s], d)
             if p is not None:
                 res[s] = p
-        else:
+        elif not isinstance(d, gdata.Absent):
             res[s] = d
     for s,c in conf.items():
         if s not in diff:
@@ -227,7 +231,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
         #print('####', tid, '(Layer)', name, 'apply', err=True)
         diff = buf
         buf = {}
-        #print('   #', tid, '(Layer)', name, 'APPLY\n', per_src(diff), err=True)
+        #print('   #', tid, '(Layer)', name, 'APPLY\n' + per_src(diff), err=True)
         res = root.configure(tid, diff, lower, force)
         if not isinstance(res, Exception) and lower is not None:
             res = lower.apply(tid, force=False)
@@ -343,6 +347,14 @@ class _ContainerTransaction(_Transaction):
         if len(diff_by_child) == 0 and force:
             for k in self.elems.keys():
                 diff_by_child[k] = {}
+        elif WILDKEY in diff_by_child:
+            wildconf = diff_by_child[WILDKEY]
+            for k in self.elems.keys():
+                if k in diff_by_child:
+                    diff_by_child[k].update(wildconf.items())
+                else:
+                    diff_by_child[k] = wildconf
+            del diff_by_child[WILDKEY]
         msgs = {}
         for child,subdiff in diff_by_child.items():
             if child in self.elems:
@@ -356,12 +368,15 @@ class _ContainerTransaction(_Transaction):
 
     def _analyze(self, results):
         self.accum.update(results.items())
+        res = "Empty"
         for r in results.values():
             if isinstance(r, Exception):
                 #print('   # ...... (Container)', self.path, 'ANALYZE RESULT:', r, err=True)
                 return r
+            if isinstance(r, str) and r == "Ok":
+                res = r
         #print('   # ...... (Container)', self.path, 'ANALYZE RESULT: Ok', err=True)
-        return 'Ok'
+        return res
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
@@ -377,7 +392,7 @@ class _ContainerTransaction(_Transaction):
             #print('   #', tid, '(Container)', self.path, 'LOCK IMMEDIATELY DONE', err=True)
             done('Ok')
 
-    proc def lock_cont (self, actself, res):
+    def lock_cont(self, actself, res):
         state = self.state
         if state is not None:
             #print('   #', state.tid, '(Container)', self.path, 'LOCK CHILD', state.key, 'RESULT:', res, err=True)
@@ -544,6 +559,15 @@ class _ListTransaction(_Transaction):
             for key,node in self.liststate.acquire(tid, None).items():
                 diff_by_key[key] = {}
                 self.elems[key] = node.newtrans()
+        elif WILDKEY in diff_by_key:
+            wildconf = diff_by_key[WILDKEY]
+            for key,node in self.liststate.acquire(tid, None).items():
+                if key in diff_by_key:
+                    diff_by_key[key].update(wildconf.items())
+                else:
+                    diff_by_key[key] = wildconf
+                self.elems[key] = node.newtrans()
+            del diff_by_key[WILDKEY]
         else:
             for key,node in self.liststate.acquire(tid, set(diff_by_key.keys())).items():
                 self.elems[key] = node.newtrans()
@@ -564,7 +588,7 @@ class _ListTransaction(_Transaction):
     def _analyze(self, results: dict[str,value]):
         self.accum.update(results.items())
         res = 'Empty'
-        for key,r in results.items():
+        for r in results.values():
             if isinstance(r, Exception):
                 #print('   # ...... (List)', self.path, 'ANALYZE RESULT:', r, err=True)
                 return r
@@ -587,7 +611,7 @@ class _ListTransaction(_Transaction):
             #print('   #', tid, '(List)', self.path, 'LOCK IMMEDIATELY DONE', err=True)
             done('Ok')
 
-    def lock_cont (self, actself, res):
+    def lock_cont(self, actself, res):
         state = self.state
         if state is not None:
             #print('   #', state.tid, '(List)', self.path, 'LOCK ELEMENT RESULT:', res, err=True)
@@ -656,7 +680,10 @@ class _ListTransaction(_Transaction):
         #print('####', '(List)', self.path, 'GET', err=True)
         res = []
         for key,node in self.liststate.all().items():
-            r = node.get()
+            if key in self.elems:
+                r = self.elems[key].get()
+            else:
+                r = node.get()
             if isinstance(r, gdata.Container):
                 if r.key == []:
                     # Restore the list element Container.key attribute and key leaf children, to keep the gdata valid
@@ -720,10 +747,10 @@ class _TransformTransactionBase(_Transaction):
         newconf = patch(self.running, accdiff)
         self.candidates[tid] = newconf
 
-        #print('   #', tid, '(Transform)', self.path, 'NEW DIFF\n', per_src(diff), err=True)
-        #print('   #', tid, '(Transform)', self.path, 'ACCUMULATED DIFF\n', per_src(accdiff), err=True)
-        #print('   #', tid, '(Transform)', self.path, 'RUNNING CONFIG\n', per_src(self.running), err=True)
-        #print('   #', tid, '(Transform)', self.path, 'NEWCONF\n', per_src(newconf), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'NEW DIFF\n' + per_src(diff), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'ACCUMULATED DIFF\n' + per_src(accdiff), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'RUNNING CONFIG\n' + per_src(self.running), err=True)
+        #print('   #', tid, '(Transform)', self.path, 'NEWCONF\n' + per_src(newconf), err=True)
 
         if newconf == {}:
             self.essays[tid] = None
@@ -777,7 +804,7 @@ class _TransformTransactionBase(_Transaction):
             if ok:
                 self.running = candidate
                 self.output = essay
-                #print('   #', tid, '(Transform)', self.path, 'COMMITTING\n', per_src(candidate), err=True)
+                #print('   #', tid, '(Transform)', self.path, 'COMMITTING\n' + per_src(candidate), err=True)
                 if self.candidates:
                     #print('   #', tid, '(Transform)', self.path, 'INVALIDATING', set(self.candidates.keys()), err=True)
                     self.candidates = {}
@@ -808,7 +835,7 @@ class _TransformTransactionBase(_Transaction):
         if self.running:
             return merge(self.running)
         else:
-            return gdata.Absent()
+            return gdata.Container()
 
 
 def Transform(function, log_handler: ?logging.Handler=None):
@@ -846,10 +873,10 @@ class TransformFunction(object):
         self.logger = logging.Logger(log_handler)
 
     def transform_wrapper(self, cfg):
-        return gdata.Absent()
+        return gdata.Container()
 
     def transform_xml(self, cfg):
-        return gdata.Absent()
+        return gdata.Container()
 
 
 ################# RFSTransform ###################
@@ -926,10 +953,10 @@ class RFSFunction(object):
         self.logger = logging.Logger(log_handler)
 
     def transform_wrapper(self, cfg, di):
-        return gdata.Absent()
+        return gdata.Container()
 
     def transform_xml(self, cfg, di):
-        return gdata.Absent()
+        return gdata.Container()
 
 
 ################# Device #####################

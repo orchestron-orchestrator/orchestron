@@ -102,6 +102,44 @@ def _test_transpose():
     transp2 = ttt.transpose(transp1["k1"])
     testing.assertEqual(transp2, y1_transp_l1_k1)
 
+def _test_transpose_absent():
+    in1 = {
+        "srcA": gdata.List(["id"], [
+            gdata.Container({
+                "x": gdata.Leaf("int", 1)
+            }, ["k1"]),
+            gdata.Container({
+                "x": gdata.Leaf("int", 2)
+            }, ["k2"]),
+        ]),
+        "srcB": gdata.Absent(),
+        "srcC": gdata.List(["id"], [
+            gdata.Container({
+                "x": gdata.Leaf("int", 2)
+            }, ["k2"])
+        ])
+    }
+    out1 = ttt.transpose(in1)
+    exp1 = {
+        "k1": {
+            "srcA": gdata.Container({
+                "x": gdata.Leaf("int", 1),
+            }, ["k1"])
+        },
+        ttt.WILDKEY: {
+            "srcB": gdata.Absent()
+        },
+        "k2": {
+            "srcA": gdata.Container({
+                "x": gdata.Leaf("int", 2),
+            }, ["k2"]),
+            "srcC": gdata.Container({
+                "x": gdata.Leaf("int", 2),
+            }, ["k2"])
+        }
+    }
+    testing.assertEqual(out1, exp1)
+
 ########################
 
 def _test_multi_merge():
@@ -219,7 +257,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
 
     def cont1(_r: value):
         r = t1.get()
-        testing.assertEqual(r, gdata.Absent())
+        testing.assertEqual(r, gdata.Container())
         t1.commit("1", True)
         t2.lock("2", None, cont2)
 

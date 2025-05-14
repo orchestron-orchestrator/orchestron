@@ -83,13 +83,13 @@ actor basic_delete_tester(done: action(?bool, ?Exception)->None):
     def cont2(_r: value):
         t1.commit("1", True)
         r = t1.get()
-        testing.assertEqual(r.prsrc(), tree1pruned.prsrc())
+        testing.assertEqual(r, tree1pruned)
         done(True, None)
 
     def cont1(_r: value):
         t1.commit("1", True)
         r = t1.get()
-        testing.assertEqual(r.prsrc(), tree1.prsrc())
+        testing.assertEqual(r, tree1)
         t1.configure("1", {'srcA': tree1diff}, None)
         t1.lock("1", None, cont2)
 
@@ -98,6 +98,155 @@ actor basic_delete_tester(done: action(?bool, ?Exception)->None):
 
 def _test_basic_delete(done, logger: logging.Handler):
     c = basic_delete_tester(done)
+
+########################
+
+actor all_delete_tester(done: action(?bool, ?Exception)->None):
+    in1 = gdata.List(["name"], [
+            gdata.Container({
+                "x": gdata.Leaf("int", 1)
+            }, ["k1"]),
+            gdata.Container({
+                "x": gdata.Leaf("int", 2)
+            }, ["k2"]),
+        ])
+
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([])
+    t1 = tlist.newtrans()
+    t1.configure("1", {"srcA": in1})
+
+    def cont1(r):
+        t1.commit("1", True)
+        out1 = t1.get()
+        testing.assertEqual(out1, in1)
+        t1.configure("1", {"srcA": gdata.Absent()})
+
+        def cont2(r):
+            if isinstance(r, str):
+                testing.assertEqual(r, "Empty")
+            t1.commit("1", True)
+            out2 = t1.get()
+            exp2 = gdata.List(["name"], [])
+            testing.assertEqual(out2, exp2)
+            done(True, None)
+
+        t1.lock("1", None, cont2)
+
+    t1.lock("1", None, cont1)
+
+def _test_all_delete(done, logger: logging.Handler):
+    c = all_delete_tester(done)
+
+########################
+
+actor partial_delete_tester(done: action(?bool, ?Exception)->None):
+    inA = gdata.List(["name"], [
+            gdata.Container({
+                "x": gdata.Leaf("int", 1)
+            }, ["k1"]),
+            gdata.Container({
+                "x": gdata.Leaf("int", 2)
+            }, ["k2"])
+        ])
+
+    inB = gdata.List(["name"], [
+            gdata.Container({
+                "x": gdata.Leaf("int", 2)
+            }, ["k2"]),
+            gdata.Container({
+                "x": gdata.Leaf("int", 3)
+            }, ["k3"]),
+        ])
+
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([])
+    t1 = tlist.newtrans()
+    t1.configure("1", {"srcA": inA, "srcB": inB})
+
+    def cont1(r):
+        t1.commit("1", True)
+        out1 = t1.get()
+        exp1 = gdata.List(["name"], [
+                gdata.Container({
+                    "x": gdata.Leaf("int", 1)
+                }, ["k1"]),
+                gdata.Container({
+                    "x": gdata.Leaf("int", 2)
+                }, ["k2"]),
+                gdata.Container({
+                    "x": gdata.Leaf("int", 3)
+                }, ["k3"]),
+            ])
+        testing.assertEqual(out1, exp1)
+        t1.configure("1", {"srcA": gdata.Absent()})
+
+        def cont2(r):
+            t1.commit("1", True)
+            out2 = t1.get()
+            testing.assertEqual(out2, inB)
+            done(True, None)
+
+        t1.lock("1", None, cont2)
+#        done(True, None)
+
+    t1.lock("1", None, cont1)
+
+def _test_partial_delete(done, logger: logging.Handler):
+    c = partial_delete_tester(done)
+
+########################
+
+actor nested_delete_tester(done: action(?bool, ?Exception)->None):
+    in1 = gdata.List(["name"], [
+            gdata.Container({
+                "name": gdata.Leaf("str", "k1"),
+                "left": gdata.Container({
+                    "x": gdata.Leaf("int", 1)
+                }),
+                "right": gdata.Container({
+                    "y": gdata.Leaf("int", 1)
+                }),
+            }, ["k1"]),
+            gdata.Container({
+                "name": gdata.Leaf("str", "k2"),
+                "left": gdata.Container({
+                    "x": gdata.Leaf("int", 2)
+                }),
+                "right": gdata.Container({
+                    "y": gdata.Leaf("int", 2)
+                }),
+            }, ["k2"]),
+        ])
+
+    tlist = ttt.List(
+                ttt.Container({
+                    "left": ttt.Transform(ttt.PassThrough),
+                    "right": ttt.Transform(ttt.PassThrough)
+                }), ["name"], ["str"]
+            ) ([])
+    t1 = tlist.newtrans()
+    t1.configure("1", {"srcA": in1})
+
+    def cont1(r):
+        t1.commit("1", True)
+        out1 = t1.get()
+        testing.assertEqual(out1, in1)
+        t1.configure("1", {"srcA": gdata.Absent()})
+
+        def cont2(r):
+            if isinstance(r, str):
+                testing.assertEqual(r, "Empty")
+            t1.commit("1", True)
+            out2 = t1.get()
+            exp2 = gdata.List(["name"], [])
+            testing.assertEqual(out2, exp2)
+            done(True, None)
+
+        t1.lock("1", None, cont2)
+
+    t1.lock("1", None, cont1)
+
+def _test_nested_delete(done, logger: logging.Handler):
+    c = nested_delete_tester(done)
 
 ########################
 
@@ -199,7 +348,7 @@ actor aborted_create_tester2(done: action(?bool, ?Exception)->None):
         t2.configure("2", {'srcB': y2b}, None)
         t2.commit("2", True)
         r = t2.get()
-        testing.assertEqual(r.prsrc(), y2b.prsrc())
+        testing.assertEqual(r, y2b)
         done(True, None)
 
     t1.configure("1", {'srcA': y1}, None)
@@ -247,13 +396,11 @@ actor nested_list_tester(done: action(?bool, ?Exception)->None):
     def cont1(_r: value):
         t1.commit("1", True)
         r = t1.get()
-        print(nested_tree.prsrc())
-        print(r.prsrc())
         try:
             testing.assertEqual(nested_tree, r)
             done(True, None)
         except Exception as e:
-            done(False, Exception(f"Diff:\n{diff.diff(nested_tree.prsrc(), r.prsrc(), color=True)}"))
+            done(False, Exception("Diff:\n{diff.diff(nested_tree.prsrc(), r.prsrc(), color=True)}"))
     t1.lock("1", None, cont1)
 
 def _test_nested_list(done, logger: logging.Handler):
