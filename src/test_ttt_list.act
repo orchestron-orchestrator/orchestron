@@ -111,7 +111,7 @@ actor all_delete_tester(done: action(?bool, ?Exception)->None):
             }, ["k2"]),
         ])
 
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough)) ([])
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([])
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})
 
@@ -158,7 +158,7 @@ actor partial_delete_tester(done: action(?bool, ?Exception)->None):
             }, ["k3"]),
         ])
 
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough)) ([])
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([])
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": inA, "srcB": inB})
 
@@ -198,6 +198,7 @@ def _test_partial_delete(done, logger: logging.Handler):
 actor nested_delete_tester(done: action(?bool, ?Exception)->None):
     in1 = gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("str", "k1"),
                 "left": gdata.Container({
                     "x": gdata.Leaf("int", 1)
                 }),
@@ -206,6 +207,7 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
                 }),
             }, ["k1"]),
             gdata.Container({
+                "name": gdata.Leaf("str", "k2"),
                 "left": gdata.Container({
                     "x": gdata.Leaf("int", 2)
                 }),
@@ -219,7 +221,7 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
                 ttt.Container({
                     "left": ttt.Transform(ttt.PassThrough),
                     "right": ttt.Transform(ttt.PassThrough)
-                })
+                }), ["name"], ["str"]
             ) ([])
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})
@@ -227,7 +229,7 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
     def cont1(r):
         t1.commit("1", True)
         out1 = t1.get()
-        testing.assertEqual(out1.prsrc(), in1.prsrc())
+        testing.assertEqual(out1, in1)
         t1.configure("1", {"srcA": gdata.Absent()})
 
         def cont2(r):
@@ -236,7 +238,7 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
             t1.commit("1", True)
             out2 = t1.get()
             exp2 = gdata.List(["name"], [])
-            testing.assertEqual(out2.prsrc(), exp2.prsrc())
+            testing.assertEqual(out2, exp2)
             done(True, None)
 
         t1.lock("1", None, cont2)
