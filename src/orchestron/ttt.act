@@ -12,6 +12,7 @@ def per_src(cfg_per_src: dict[str, gdata.Node]):
     return "\n".join(res)
 
 WILDKEY = ""
+EXTRASKEY = "!extras"
 
 def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
     cfg_per_key = {}
@@ -340,10 +341,33 @@ class _ContainerTransaction(_Transaction):
         self.ns = ns
         for key,node in contents.items():
             self.elems[key] = node.newtrans()
+        self.elems[EXTRASKEY] = Transform(NoOp) (path + [EXTRASKEY]).newtrans()
 
     def configure(self, tid, diff, out, force=False):
         #print('####', tid, '(Container)', self.path, 'configure force:', force, actorid(), err=True)
         diff_by_child = transpose(diff)
+        msgs = {}
+
+        # Extra nodes are nodes that are present in the diff, but cannot be
+        # delegated to any of our embedded transforms. As such, they are a
+        # responsibility of this container. They must still be part of the
+        # transaction, so we keep track of them in a special extras transform.
+        # We merge all extra nodes into a single gdata.Container, and then
+        # restore them by merging them back into our result.
+        extra_nodes = set(diff_by_child.keys()) - set(self.elems.keys()) - set([WILDKEY])
+        extra_nodes_by_src = {}
+        for k in extra_nodes:
+            for src, node in diff_by_child[k].items():
+                extra_nodes_by_src.setdefault(src, gdata.Container())
+                extra_nodes_by_src[src].children[k] = node
+            del diff_by_child[k]
+        if extra_nodes_by_src:
+            # TODO: why do I need a None check for out (?Session) here??
+            if out is not None:
+                msgs[EXTRASKEY] = async self.elems[EXTRASKEY].configure(tid, extra_nodes_by_src, out, force)
+            else:
+                msgs[EXTRASKEY] = async self.elems[EXTRASKEY].configure(tid, extra_nodes_by_src, None, force)
+
         if len(diff_by_child) == 0 and force:
             for k in self.elems.keys():
                 diff_by_child[k] = {}
@@ -355,7 +379,7 @@ class _ContainerTransaction(_Transaction):
                 else:
                     diff_by_child[k] = wildconf
             del diff_by_child[WILDKEY]
-        msgs = {}
+
         for child,subdiff in diff_by_child.items():
             if child in self.elems:
                 #print('   #', tid, '(Container)', self.path, 'CONFIGURE CHILD', child, err=True)
@@ -455,8 +479,11 @@ class _ContainerTransaction(_Transaction):
     def get(self):
         #print('####', '(Container)', self.path, actorid(), 'GET', err=True)
         res = {}
-        for tag,node in self.elems.items():
-            res[tag] = node.get()
+        for tag, node in self.elems.items():
+            if tag == EXTRASKEY:
+                res.update(node.get().children.items())
+            else:
+                res[tag] = node.get()
         ns = self.ns
         if len(self.path) <= 1 and ns is not None:
             return gdata.Container(res, ns=ns)
@@ -686,12 +713,14 @@ class _ListTransaction(_Transaction):
                 r = node.get()
             if isinstance(r, gdata.Container):
                 if r.key == []:
-                    # Restore the list element Container.key attribute and key leaf children, to keep the gdata valid
                     #print('####', '(List)', self.path, 'RESTORING KEY', key, err=True)
+                    # Restore the list element Container.key attribute to keep
+                    # the gdata valid. The key leaf children and any other
+                    # nodes that are not part of any embedded transform are
+                    # automatically restored as "extras" by the list element
+                    # Container.
                     split_key = split_key_str(key)
                     list_element = gdata.Container(r.children, split_key)
-                    for i, kn in enumerate(self.key_names):
-                        list_element.children.setdefault(kn, gdata.Leaf(self.key_types[i], split_key[i]))
                 else:
                     list_element = r
                 res.append(gdata.Container(list_element.children, list_element.key))
@@ -1048,6 +1077,10 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
 class PassThrough(TransformFunction):
     def transform_wrapper(self, cfg):
         return cfg
+
+class NoOp(TransformFunction):
+    def transform_wrapper(self, cfg):
+        return gdata.Container()
 
 def Sink():
     return Layer('sink', Transform(PassThrough), None)
