@@ -494,8 +494,8 @@ class _ContainerTransaction(_Transaction):
 
 ################# Lists ####################
 
-def List(template: proc(list[str]) -> Node, key_names: list[str], key_types: list[str]) -> proc(list[str]) -> Node:
-    return lambda path: Node(_List(path, template, key_names, key_types))
+def List(template: proc(list[str]) -> Node, key_names: list[str]) -> proc(list[str]) -> Node:
+    return lambda path: Node(_List(path, template, key_names))
 
 # Specialized factory for the case where this List does not contain a
 # "user-facing transform" - that is, the list was not annotated with the
@@ -504,20 +504,19 @@ def List(template: proc(list[str]) -> Node, key_names: list[str], key_types: lis
 # here is a function is called with our key_names argument, and then returns a
 # function that returns the next Node given its path.
 # The only template that satisfies this constraint is the ListElement factory.
-def ListStructural(template: proc(list[str]) ->  proc(list[str]) -> Node, key_names: list[str], key_types: list[str]) -> proc(list[str]) -> Node:
-    return lambda path: Node(_List(path, template(key_names), key_names, key_types))
+def ListStructural(template: proc(list[str]) ->  proc(list[str]) -> Node, key_names: list[str]) -> proc(list[str]) -> Node:
+    return lambda path: Node(_List(path, template(key_names), key_names))
 
 class _List(_Node):
     liststate: ListState
 
-    def __init__(self, path, template, key_names, key_types):
+    def __init__(self, path, template, key_names):
         self.path = path
         self.key_names = key_names
-        self.key_types = key_types
         self.liststate = ListState(path, template)
 
     def newtrans(self):
-        return ListTransaction(self.path, self.liststate, self.key_names, self.key_types)
+        return ListTransaction(self.path, self.liststate, self.key_names)
 
     def get(self):
         #print('####', '(List)', self.path, 'NODE GET', err=True)
@@ -570,17 +569,15 @@ actor ListState(path, template: proc(list[str]) -> Node):
 class _ListTransaction(_Transaction):
     liststate : ListState
     key_names : list[str]
-    key_types : list[str]
     elems : dict[str, Transaction]
     accum : dict[str, value]
     state : ?YieldState
     reset: bool
 
-    def __init__(self, path, liststate, key_names, key_types):
+    def __init__(self, path, liststate, key_names):
         self.path = path
         self.liststate = liststate
         self.key_names = key_names
-        self.key_types = key_types
         self.elems = {}
         self.accum = {}
         self.state = None
@@ -733,8 +730,8 @@ class _ListTransaction(_Transaction):
                 res.append(gdata.Container(list_element.children, list_element.key))
         return gdata.List(self.key_names, res)
 
-def ListTransaction(path, liststate: ListState, key_names, key_types):
-    return Transaction(_ListTransaction(path, liststate, key_names, key_types))
+def ListTransaction(path, liststate: ListState, key_names):
+    return Transaction(_ListTransaction(path, liststate, key_names))
 
 
 ################# Transform #####################
