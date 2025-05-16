@@ -199,7 +199,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
         act_defs.extend(children_res.act_defs)
-        return TTTSrc(src="ttt.List(ttt.Container({{{children_res.src}}}), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+        return TTTSrc(src="ttt.ListStructural(ttt.ListElement({{{children_res.src}}}), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
     elif isinstance(sn, schema.DNodeInner):
         sn_children = sn.children

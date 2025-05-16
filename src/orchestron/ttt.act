@@ -67,32 +67,6 @@ def merge(cfg_per_src: dict[str,gdata.Node]):
     else:
         raise ValueError("Nothing to merge")
 
-def split_key_str(key_str: str) -> list[str]:
-    """
-    Split a comma-separated string into individual components,
-    respecting escaped commas (\\,).
-    """
-    result = []
-    current = ""
-    i = 0
-
-    while i < len(key_str):
-        if key_str[i] == '\\' and i + 1 < len(key_str) and key_str[i + 1] == ',':
-            current += ','
-            i += 2
-        elif key_str[i] == ',':
-            result.append(current)
-            current = ""
-            i += 1
-        else:
-            current += key_str[i]
-            i += 1
-
-    # Last, or only element
-    if current != "" or i > 0:
-        result.append(current)
-
-    return result
 
 def expect[T](t: ?T, errmsg: str) -> T:
     if t is not None:
@@ -323,21 +297,30 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
 ############## Containers ##################
 
 def Container(template={}, ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
-    return lambda path, lower: Node(_Container(path, template, ns, module, lower))
+    return lambda path, lower: Node(_Container(path, template, ns, module, lower, []))
+
+# Specialized factory for the case when this is a container for a list element,
+# that in turn contains other embedded transform templates like List or
+# Container. This container must know the key leaf names for its associated
+# list, so that it may preserve them.
+def ListElement(template={}, ns:?str=None, module:?str=None):
+    return lambda key_names: lambda path, lower: Node(_Container(path, template, ns, module, lower, key_names))
 
 class _Container(_Node):
     elems: dict[str, Node]
     ns: ?str
     module: ?str
+    key_names: list[str]
 
-    def __init__(self, path, template: dict[str, proc(list[str], ?Layer)->Node], ns, module, lower: ?Layer):
+    def __init__(self, path, template: dict[str, proc(list[str], ?Layer)->Node], ns, module, lower: ?Layer, key_names: list[str]):
         self.path = path
         self.elems = {key: templ(path + [key], lower) for key, templ in template.items()}
         self.ns = ns
         self.module = module
+        self.key_names = key_names
 
     def newtrans(self):
-        return ContainerTransaction(self.path, self.elems, self.ns, self.module)
+        return ContainerTransaction(self.path, self.elems, self.key_names, self.ns, self.module)
 
     def get(self):
         #print('####', '(Container)', self.path, actorid(),'NODE GET', err=True)
@@ -345,8 +328,8 @@ class _Container(_Node):
         return gdata.Container(res, ns=self.ns, module=self.module)
 
 
-def ContainerTransaction(path, contents, ns:?str=None, module:?str=None):
-    return Transaction(_ContainerTransaction(path, contents, ns, module))
+def ContainerTransaction(path, contents, key_names, ns:?str=None, module:?str=None):
+    return Transaction(_ContainerTransaction(path, contents, ns, module, key_names))
 
 class _ContainerTransaction(_Transaction):
     elems : dict[str, Transaction]
@@ -354,8 +337,10 @@ class _ContainerTransaction(_Transaction):
     state : ?YieldState
     ns: ?str
     module: ?str
+    key_names: list[str]
+    key_leaves: dict[str, gdata.Node]
 
-    def __init__(self, path, contents, ns, module):
+    def __init__(self, path, contents, ns, module, key_names):
         self.path = path
         self.elems = {}
         self.accum = {}
@@ -363,10 +348,26 @@ class _ContainerTransaction(_Transaction):
         self.ns = ns
         self.elems = {key: node.newtrans() for key, node in contents.items()}
         self.module = module
+        self.key_names = key_names
+        self.key_leaves = {}
+        print('####', '(Container)', self.path, 'NEWTRANS', actorid(), key_names, err=True)
 
     def configure(self, tid, diff, out, force=False):
         #print('####', tid, '(Container)', self.path, 'configure force:', force, actorid(), err=True)
         diff_by_child = transpose(diff)
+
+        # Key leaf values are immutable, always present and are also the same
+        # regardless of the source. Just take the values from the first
+        # available source, once. The only exception to that is when the entire
+        # subtree is being deleted, denoted by the presence of WILDKEY
+        if WILDKEY not in diff_by_child:
+            for kn in self.key_names:
+                if kn not in self.key_leaves:
+                    kv = next(iter(diff_by_child[kn].values()))
+                    self.key_leaves[kn] = kv
+                # If key leaf is not present, input gdata is not valid!
+                del diff_by_child[kn]
+
         # Extra nodes present in diff_by_child represent configuration that is
         # not any of our embedded transforms. These may be key leaf values, or
         # in general any other configuration nodes in the same list element.
@@ -485,14 +486,25 @@ class _ContainerTransaction(_Transaction):
     def get(self):
         #print('####', '(Container)', self.path, actorid(), 'GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
+        res.update(self.key_leaves.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
 
 ################# Lists ####################
 
 # TODO: remove key_types, now that gdata.Leaf.type attribute is gone?!
-def List(template, key_names: list[str], key_types: list[str], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
+def List(template: proc(list[str], ?Layer) -> Node, key_names: list[str], key_types: list[str], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
     return lambda path, lower: Node(_List(path, template, key_names, key_types, ns, module, lower))
+
+# Specialized factory for the case where this List does not contain a
+# "user-facing transform" - that is, the list was not annotated with the
+# "orchestron:X" extension, but is rather just a containing node for a
+# "user-facing transform" defined in one if its children. The template argument
+# here is a function is called with our key_names argument, and then returns a
+# function that returns the next Node given its path.
+# The only template that satisfies this constraint is the ListElement factory.
+def ListStructural(template: proc(list[str]) -> proc(list[str], ?Layer) -> Node, key_names: list[str], key_types: list[str], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer) -> Node:
+    return lambda path, lower: Node(_List(path, template(key_names), key_names, key_types, ns, module, lower))
 
 class _List(_Node):
     liststate: ListState
@@ -719,14 +731,6 @@ class _ListTransaction(_Transaction):
                 r = self.elems[key].get()
             else:
                 r = node.get()
-            if isinstance(r, gdata.Container):
-                # Restore the list element key leaf leaf children to keep the
-                # gdata valid. This is only necessary when the elements of this
-                # list are not any of the ttt.Transform, but ttt.Container.
-                #print('####', '(List)', self.path, 'RESTORING KEY', key, err=True)
-                split_key = split_key_str(key)
-                for i, kn in enumerate(self.key_names):
-                    r.children.setdefault(kn, gdata.Leaf(split_key[i]))
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 

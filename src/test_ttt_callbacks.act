@@ -104,7 +104,7 @@ def rfs_for_device(dev):
 
 actor complete(t: testing.AsyncT):
     dev_registry = odev.DeviceRegistry(log_handler=t.log_handler)
-    stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.List(ttt.Container({"base": ttt.List(ttt.RFSTransform(Fun, dev_registry), ["id"], ["string"])}), ["name"], ["string"])}),
+    stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.ListStructural(ttt.ListElement({"base": ttt.List(ttt.RFSTransform(Fun, dev_registry), ["id"], ["string"])}), ["name"], ["string"])}),
             ttt.Layer("devices", ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_registry), ["name"], ["string"])})}),
             None))
 
