@@ -110,24 +110,20 @@ actor complete_tester(done: action(?bool, ?Exception)->None, log_handler: loggin
 
     def reconf(dev):
         cfg = rfs_for_device(dev)
-        print("//// Reconf", actorid(), dev, err=True)
         stack.edit_config(cfg, force=True)
         
     dev_mgr.on_reconf(reconf)
     
     def cont1(_r):
-        print("//// Transaction done", actorid(), err=True)
         dmc1 = DeviceMetaConfig("k1", Credentials("admin", "admin"), mock=Mock(["cisco-ios-xr"]))
         dmc2 = DeviceMetaConfig("k2", Credentials("admin", "admin"), mock=Mock(["cisco-ios-xr"]))
         k1 = dev_mgr.get("k1").set_dmc(dmc1)
         k2 = dev_mgr.get("k2").set_dmc(dmc2)
     
     def complete(_r):
-        print("//// Transaction complete", actorid(), err=True)
         done(True, None)
         
     sess = stack.newsession()
-    print("//// Transaction start", actorid(), err=True)
     sess.edit_config(cfg3, cont1, complete)
 
 def _test_complete(done, logger: logging.Handler):

@@ -302,6 +302,11 @@ class _Container(_Node):
     ns: ?str
 
     def __init__(self, path, template: dict[str, proc(list[str])->Node], ns):
+        if path:
+            keys = split_key_str(path[-1])
+        else:
+            keys = []
+        print('####', '(Container)', path, 'init with key:', keys, err=True)
         self.path = path
         self.elems = {}
         self.ns = ns
@@ -724,6 +729,7 @@ class _TransformTransactionBase(_Transaction):
     me: str
 
     compute : proc(tid: str, merged: gdata.Node, out: ?Session) -> gdata.Node
+    clear : proc(tid: str, out: ?Session) -> None
     finalize : proc(tid: str) -> None
 
     def __init__(self, path):
@@ -737,7 +743,7 @@ class _TransformTransactionBase(_Transaction):
         self.pending = []
         self.me = '(src_' + str(self)[-10:-1] + ')'
 
-    def configure(self, tid, diff, out, force=False):
+    def configure(self, tid, diff, out: ?Session, force=False):
         #print('####', tid, '(Transform)', self.path, 'configure', actorid(), self.me, err=True)
 
         if tid not in self.diffs:
@@ -755,6 +761,7 @@ class _TransformTransactionBase(_Transaction):
         if newconf == {}:
             self.essays[tid] = None
             #print('   #', tid, '(Transform)', self.path, 'EMPTY CONFIG', err=True)
+#            self.clear(tid, out)
             return 'Empty'
         else:
             try:
@@ -864,6 +871,11 @@ class _TransformTransaction(_TransformTransactionBase):
             out.configure(tid, {self.me: res})
         return newout
 
+    def clear(self, tid, out):
+        res = difference(self.output, gdata.Container())
+        if out is not None and res is not None:
+            out.configure(tid, {self.me: res})
+
 class TransformFunction(object):
     transform_wrapper: mut(gdata.Node) -> gdata.Node
     transform_xml: mut(xml.Node) -> gdata.Node
@@ -918,23 +930,36 @@ class _RFSTransaction(_TransformTransactionBase):
             newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset))
             res = difference(self.output, newout)
             if isinstance(res, gdata.Container):
-                dev_content["config"] = gdata.Container(res.children)
+                dev_content["config"] = res
         else:
             #print('####', tid, '(RFSTransform)', self.path, 'compute', ": No device capabilities, skipping RFS transform for", self.devname, err=True)
             newout = gdata.Container({})
 
         if out is not None:
-            embedded_res = gdata.Container({
-                "devices": gdata.Container({
-                    "device": gdata.List(["name"], [
-                        gdata.Container(dev_content, [self.devname])
-                    ])
-                })
-            }, ns="http://orchestron.org/yang/orchestron-device.yang")
+            embedded_res = self.embed(dev_content)
             out.configure(tid, {self.me: embedded_res})
-
         return newout
 
+    def clear(self, tid, out):
+        pass
+        if out is not None:
+            diff = difference(self.output, gdata.Container())
+            if isinstance(diff, gdata.Container):
+                dev_content = {
+                    "name": gdata.Leaf("str", self.devname),
+                    "config": diff
+                }
+                embedded_diff: gdata.Node = self.embed(dev_content)
+                out.configure(tid, {self.me: embedded_diff})
+
+    def embed(self, dev_content):
+        return gdata.Container({
+            "devices": gdata.Container({
+                "device": gdata.List(["name"], [
+                    gdata.Container(dev_content, [self.devname])
+                ])
+            })
+        }, ns="http://orchestron.org/yang/orchestron-device.yang")
 
 class DeviceInfo(object):
     name: str
@@ -984,6 +1009,9 @@ class _DeviceTransaction(_TransformTransactionBase):
     def compute(self, tid, merged, out):
         return merged
 
+    def clear(self, tid, out):
+        pass
+
     def finalize(self, tid):
         #print('####', tid, '(DeviceMeta)', self.path, 'finalize', actorid(), err=True)
         config = self.output
@@ -1016,6 +1044,9 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
 
     def compute(self, tid, merged, out):
         return merged
+
+    def clear(self, tid, out):
+        pass
 
     def finalize(self, tid):
         #print('####', tid, '(DeviceConfig)', self.path, 'finalize', actorid(), err=True)
