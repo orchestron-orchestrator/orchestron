@@ -217,8 +217,8 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
             }, ["k2"]),
         ])
 
-    tlist = ttt.List(
-                ttt.Container({
+    tlist = ttt.ListStructural(
+                ttt.ListElement({
                     "left": ttt.Transform(ttt.PassThrough),
                     "right": ttt.Transform(ttt.PassThrough)
                 }), ["name"], ["str"]
@@ -389,7 +389,7 @@ nested_tree = gdata.Container({
 })
 
 actor nested_list_tester(done: action(?bool, ?Exception)->None):
-    tlist = ttt.Container({"top-list": ttt.List(ttt.Container({"nested-list": ttt.List(ttt.Transform(ttt.PassThrough), ["id"], ["string"])}), ["name"], ["string"])}) ([])
+    tlist = ttt.Container({"top-list": ttt.ListStructural(ttt.ListElement({"nested-list": ttt.List(ttt.Transform(ttt.PassThrough), ["id"], ["string"])}), ["name"], ["string"])}) ([])
     t1 = tlist.newtrans()
     t1.configure("1", {'srcA': nested_tree}, None)
 

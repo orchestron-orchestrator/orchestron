@@ -154,7 +154,7 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
         ns = (", ns='" + sn.namespace + "'") if set_ns else ""
-        return TTTSrc(src=f"ttt.List(ttt.Container({{{children_res.src}}}{ns}), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs)
+        return TTTSrc(src=f"ttt.ListStructural(ttt.ListElement({{{children_res.src}}}{ns}), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs)
 
     elif isinstance(sn, schema.DNodeInner):
         sn_children = sn.children

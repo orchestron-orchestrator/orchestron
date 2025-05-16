@@ -98,13 +98,15 @@ cfg3 = gdata.Container({
 def rfs_for_device(dev):
     return gdata.Container({
         'rfs': gdata.List(["name"], [
-            gdata.Container({}, [dev])
+            gdata.Container({
+                "name": gdata.Leaf("str", dev),
+            }, [dev])
         ])
     })
 
 actor complete_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
     dev_mgr = odev.DeviceManager(None, log_handler)
-    stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.List(ttt.Container({"base": ttt.List(ttt.RFSTransform(Fun, dev_mgr), ["id"], ["string"])}), ["name"], ["string"])}),
+    stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.ListStructural(ttt.ListElement({"base": ttt.List(ttt.RFSTransform(Fun, dev_mgr), ["id"], ["string"])}), ["name"], ["string"])}),
             ttt.Layer("devices", ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_mgr), ["name"], ["string"])})}),
             None))
 
