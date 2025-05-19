@@ -302,11 +302,6 @@ class _Container(_Node):
     ns: ?str
 
     def __init__(self, path, template: dict[str, proc(list[str])->Node], ns):
-        if path:
-            keys = split_key_str(path[-1])
-        else:
-            keys = []
-        print('####', '(Container)', path, 'init with key:', keys, err=True)
         self.path = path
         self.elems = {}
         self.ns = ns
@@ -761,7 +756,7 @@ class _TransformTransactionBase(_Transaction):
         if newconf == {}:
             self.essays[tid] = None
             #print('   #', tid, '(Transform)', self.path, 'EMPTY CONFIG', err=True)
-#            self.clear(tid, out)
+            self.clear(tid, out)
             return 'Empty'
         else:
             try:
@@ -872,9 +867,12 @@ class _TransformTransaction(_TransformTransactionBase):
         return newout
 
     def clear(self, tid, out):
-        res = difference(self.output, gdata.Container())
-        if out is not None and res is not None:
-            out.configure(tid, {self.me: res})
+        output = self.output
+        if output is not None:
+            #print('   #', tid, '(Transform)', self.path, 'CLEARING ' + output.prsrc(), err=True)
+            res = difference(self.output, gdata.Container(key=output.key))
+            if out is not None and res is not None:
+                out.configure(tid, {self.me: res})
 
 class TransformFunction(object):
     transform_wrapper: mut(gdata.Node) -> gdata.Node
@@ -941,9 +939,9 @@ class _RFSTransaction(_TransformTransactionBase):
         return newout
 
     def clear(self, tid, out):
-        pass
-        if out is not None:
-            diff = difference(self.output, gdata.Container())
+        output = self.output
+        if out is not None and output is not None:
+            diff = difference(output, gdata.Container(key=output.key))
             if isinstance(diff, gdata.Container):
                 dev_content = {
                     "name": gdata.Leaf("str", self.devname),
