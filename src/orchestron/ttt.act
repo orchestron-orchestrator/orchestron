@@ -18,7 +18,7 @@ def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.N
     for src, conf in cfg_per_src.items():
         if isinstance(conf, gdata.List):
             for le in conf.elements:
-                key = le.key_str()
+                key = le.key_str(conf.keys)
                 if key in cfg_per_key:
                     cfg_per_key[key][src] = le
                 else:
@@ -344,6 +344,13 @@ class _ContainerTransaction(_Transaction):
     def configure(self, tid, diff, out, force=False):
         #print('####', tid, '(Container)', self.path, 'configure force:', force, actorid(), err=True)
         diff_by_child = transpose(diff)
+        # Extra nodes present in diff_by_child represent configuration that is
+        # not any of our embedded transforms. These may be key leaf values, or
+        # in general any other configuration nodes in the same list element.
+        # In any case this container is not responsible for tracking them, so we remove them.
+        for k in set(diff_by_child.keys()) - set(self.elems.keys()) - set([WILDKEY]):
+            del diff_by_child[k]
+
         if len(diff_by_child) == 0 and force:
             for k in self.elems.keys():
                 diff_by_child[k] = {}
@@ -685,16 +692,14 @@ class _ListTransaction(_Transaction):
             else:
                 r = node.get()
             if isinstance(r, gdata.Container):
-                if r.key == []:
-                    # Restore the list element Container.key attribute and key leaf children, to keep the gdata valid
-                    #print('####', '(List)', self.path, 'RESTORING KEY', key, err=True)
-                    split_key = split_key_str(key)
-                    list_element = gdata.Container(r.children, split_key)
-                    for i, kn in enumerate(self.key_names):
-                        list_element.children.setdefault(kn, gdata.Leaf(self.key_types[i], split_key[i]))
-                else:
-                    list_element = r
-                res.append(gdata.Container(list_element.children, list_element.key))
+                # Restore the list element key leaf leaf children to keep the
+                # gdata valid. This is only necessary when the elements of this
+                # list are not any of the ttt.Transform, but ttt.Container.
+                #print('####', '(List)', self.path, 'RESTORING KEY', key, err=True)
+                split_key = split_key_str(key)
+                for i, kn in enumerate(self.key_names):
+                    r.children.setdefault(kn, gdata.Leaf(self.key_types[i], split_key[i]))
+            res.append(r)
         return gdata.List(self.key_names, res)
 
 def ListTransaction(path, liststate: ListState, key_names, key_types):
@@ -870,7 +875,7 @@ class _TransformTransaction(_TransformTransactionBase):
         output = self.output
         if output is not None:
             #print('   #', tid, '(Transform)', self.path, 'CLEARING ' + output.prsrc(), err=True)
-            res = difference(self.output, gdata.Container(key=output.key))
+            res = difference(self.output, gdata.Container())
             if out is not None and res is not None:
                 out.configure(tid, {self.me: res})
 
@@ -918,11 +923,11 @@ class _RFSTransaction(_TransformTransactionBase):
     def compute(self, tid, merged, out):
         #print('####', tid, '(RFSTransform)', self.path, 'compute', actorid(), err=True)
         dev_content = {
-            "name": gdata.Leaf("str", self.devname),
+            "name": gdata.Leaf("string", self.devname),
         }
         modset, modset_id = self.dev.get_modules()
         if modset_id is not None:
-            dev_content["modset_id"] = gdata.Leaf("str", modset_id)
+            dev_content["modset_id"] = gdata.Leaf("string", modset_id)
         if len(modset) > 0:
             #print('####', tid, '(RFSTransform)', self.path, 'compute', self.devname, err=True)
             newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset))
@@ -941,7 +946,7 @@ class _RFSTransaction(_TransformTransactionBase):
     def clear(self, tid, out):
         output = self.output
         if out is not None and output is not None:
-            diff = difference(output, gdata.Container(key=output.key))
+            diff = difference(output, gdata.Container())
             if isinstance(diff, gdata.Container):
                 dev_content = {
                     "name": gdata.Leaf("str", self.devname),
@@ -954,7 +959,7 @@ class _RFSTransaction(_TransformTransactionBase):
         return gdata.Container({
             "devices": gdata.Container({
                 "device": gdata.List(["name"], [
-                    gdata.Container(dev_content, [self.devname])
+                    gdata.Container(dev_content)
                 ])
             })
         }, ns="http://orchestron.org/yang/orchestron-device.yang")

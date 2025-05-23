@@ -30,17 +30,17 @@ def _test_reconf(done, logger: logging.Handler):
 
 cfg2 = gdata.List(["name"], [
     gdata.Container({
-        "name": gdata.Leaf("str", "k1"),
+        "name": gdata.Leaf("string", "k1"),
         "config": gdata.Container({
-            "val": gdata.Leaf("str", "one")
+            "val": gdata.Leaf("string", "one")
         })
-    }, ["k1"]),
+    }),
     gdata.Container({
-        "name": gdata.Leaf("str", "k2"),
+        "name": gdata.Leaf("string", "k2"),
         "config": gdata.Container({
-            "val": gdata.Leaf("str", "two")
+            "val": gdata.Leaf("string", "two")
         })
-    }, ["k2"])
+    })
 ])
 
 actor reconf2_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
@@ -77,28 +77,32 @@ class Fun(ttt.RFSFunction):
 cfg3 = gdata.Container({
     "rfs": gdata.List(["name"], [
         gdata.Container({
-            "name": gdata.Leaf("str", "k1"),
+            "name": gdata.Leaf("string", "k1"),
             "base": gdata.List(["id"], [
                 gdata.Container({
-                    "val": gdata.Leaf("str", "one")
-                }, ["A"])
+                    "id": gdata.Leaf("string", "A"),
+                    "val": gdata.Leaf("string", "one")
+                })
             ])
-        }, ["k1"]),
+        }),
         gdata.Container({
-            "name": gdata.Leaf("str", "k2"),
+            "name": gdata.Leaf("string", "k2"),
             "base": gdata.List(["id"], [
                 gdata.Container({
-                    "val": gdata.Leaf("str", "two")
-                }, ["A"])
+                    "id": gdata.Leaf("string", "A"),
+                    "val": gdata.Leaf("string", "two")
+                })
             ])
-        }, ["k2"])
+        })
     ])
 })
 
 def rfs_for_device(dev):
     return gdata.Container({
         'rfs': gdata.List(["name"], [
-            gdata.Container({}, [dev])
+            gdata.Container({
+                "name": gdata.Leaf("string", dev)
+            })
         ])
     })
 
