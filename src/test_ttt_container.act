@@ -10,12 +10,14 @@ tree1 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("string", "k1"),
                 "n1": gdata.Leaf("int", 1),
                 "n2": gdata.Leaf("int", 2)
-            }, ["k1"]),
+            }),
             gdata.Container({
+                "name": gdata.Leaf("string", "k4"),
                 "n4": gdata.Leaf("int", 4)
-            }, ["k4"])
+            })
         ])
     }),
     'right': gdata.Container({
@@ -27,12 +29,14 @@ tree2 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("string", "k1"),
                 "n2": gdata.Leaf("int", 2)
-            }, ["k1"]),
+            }),
             gdata.Container({
+                "name": gdata.Leaf("string", "k2"),
                 "n1": gdata.Leaf("int", 1),
                 "n3": gdata.Leaf("int", 3)
-            }, ["k2"])
+            })
         ]),
     }),
     'right': gdata.Container({
@@ -44,16 +48,19 @@ merge_1_2 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("string", "k1"),
                 "n1": gdata.Leaf("int", 1),
                 "n2": gdata.Leaf("int", 2)
-            }, ["k1"]),
+            }),
             gdata.Container({
+                "name": gdata.Leaf("string", "k2"),
                 "n1": gdata.Leaf("int", 1),
                 "n3": gdata.Leaf("int", 3)
-            }, ["k2"]),
+            }),
             gdata.Container({
+                "name": gdata.Leaf("string", "k4"),
                 "n4": gdata.Leaf("int", 4)
-            }, ["k4"])
+            })
         ]),
     }),
     'right': gdata.Container({
@@ -135,16 +142,19 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
     in1 = gdata.Container({
         "left": gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("string", "k1"),
                 "x": gdata.Leaf("int", 1)
-            }, ["k1"]),
+            }),
             gdata.Container({
+                "name": gdata.Leaf("string", "k2"),
                 "x": gdata.Leaf("int", 2)
-            }, ["k2"])
+            })
         ]),
         "right": gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("string", "v1"),
                 "y": gdata.Leaf("int", 1)
-            }, ["v1"]),
+            }),
         ])
     })
 
@@ -296,8 +306,9 @@ tree0 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("string", "k4"),
                 "n4": gdata.Leaf("int", 0)
-            }, ["k4"])
+            })
         ]),
     }),
     'right': gdata.Container({

@@ -9,49 +9,60 @@ import yang.gdata as gdata
 
 tree1 = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "k1"),
         "n1": gdata.Leaf("int", 1),
         "n2": gdata.Leaf("int", 2)
-    }, ["k1"]),
+    }),
     gdata.Container({
+        "name": gdata.Leaf("string", "k4"),
         "n4": gdata.Leaf("int", 4)
-    }, ["k4"])
+    })
 ])
 
 tree1diff = gdata.List(["name"], [
-    gdata.Absent(["k1"]),
+    gdata.Absent({
+        "name": gdata.Leaf("string", "k1")
+    }),
     gdata.Container({
+        "name": gdata.Leaf("string", "k4"),
         "n4": gdata.Leaf("int", 0)
-    }, ["k4"])
+    })
 ])
 
 tree1pruned = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "k4"),
         "n4": gdata.Leaf("int", 0)
-    }, ["k4"])
+    })
 ])
 
 tree2 = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "k1"),
         "n2": gdata.Leaf("int", 2)
-    }, ["k1"]),
+    }),
     gdata.Container({
+        "name": gdata.Leaf("string", "k2"),
         "n1": gdata.Leaf("int", 1),
         "n3": gdata.Leaf("int", 3)
-    }, ["k2"])
+    })
 ])
 
 merge_1_2 = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "k1"),
         "n1": gdata.Leaf("int", 1),
         "n2": gdata.Leaf("int", 2)
-    }, ["k1"]),
+    }),
     gdata.Container({
+        "name": gdata.Leaf("string", "k2"),
         "n1": gdata.Leaf("int", 1),
         "n3": gdata.Leaf("int", 3)
-    }, ["k2"]),
+    }),
     gdata.Container({
+        "name": gdata.Leaf("string", "k4"),
         "n4": gdata.Leaf("int", 4)
-    }, ["k4"])
+    })
 ])
 
 
@@ -104,11 +115,13 @@ def _test_basic_delete(done, logger: logging.Handler):
 actor all_delete_tester(done: action(?bool, ?Exception)->None):
     in1 = gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("str", "k1"),
                 "x": gdata.Leaf("int", 1)
-            }, ["k1"]),
+            }),
             gdata.Container({
+                "name": gdata.Leaf("str", "k2"),
                 "x": gdata.Leaf("int", 2)
-            }, ["k2"]),
+            }),
         ])
 
     tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([])
@@ -142,20 +155,24 @@ def _test_all_delete(done, logger: logging.Handler):
 actor partial_delete_tester(done: action(?bool, ?Exception)->None):
     inA = gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("str", "k1"),
                 "x": gdata.Leaf("int", 1)
-            }, ["k1"]),
+            }),
             gdata.Container({
+                "name": gdata.Leaf("str", "k2"),
                 "x": gdata.Leaf("int", 2)
-            }, ["k2"])
+            })
         ])
 
     inB = gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("str", "k2"),
                 "x": gdata.Leaf("int", 2)
-            }, ["k2"]),
+            }),
             gdata.Container({
+                "name": gdata.Leaf("str", "k3"),
                 "x": gdata.Leaf("int", 3)
-            }, ["k3"]),
+            }),
         ])
 
     tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([])
@@ -167,14 +184,17 @@ actor partial_delete_tester(done: action(?bool, ?Exception)->None):
         out1 = t1.get()
         exp1 = gdata.List(["name"], [
                 gdata.Container({
+                    "name": gdata.Leaf("str", "k1"),
                     "x": gdata.Leaf("int", 1)
-                }, ["k1"]),
+                }),
                 gdata.Container({
+                    "name": gdata.Leaf("str", "k2"),
                     "x": gdata.Leaf("int", 2)
-                }, ["k2"]),
+                }),
                 gdata.Container({
+                    "name": gdata.Leaf("str", "k3"),
                     "x": gdata.Leaf("int", 3)
-                }, ["k3"]),
+                }),
             ])
         testing.assertEqual(out1, exp1)
         t1.configure("1", {"srcA": gdata.Absent()})
@@ -205,7 +225,7 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
                 "right": gdata.Container({
                     "y": gdata.Leaf("int", 1)
                 }),
-            }, ["k1"]),
+            }),
             gdata.Container({
                 "name": gdata.Leaf("str", "k2"),
                 "left": gdata.Container({
@@ -214,7 +234,7 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
                 "right": gdata.Container({
                     "y": gdata.Leaf("int", 2)
                 }),
-            }, ["k2"]),
+            }),
         ])
 
     tlist = ttt.List(
@@ -252,21 +272,24 @@ def _test_nested_delete(done, logger: logging.Handler):
 
 list1a = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "key1"),
         "a": gdata.Leaf("int", 0)
-    }, ["key1"])
+    })
 ])
 
 list1b = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "key1"),
         "b": gdata.Leaf("int", 1)
-    }, ["key1"])
+    })
 ])
 
 list1 = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "key1"),
         "a": gdata.Leaf("int", 0),
         "b": gdata.Leaf("int", 1)
-    }, ["key1"])
+    })
 ])
 
 actor simultaneous_create_tester(done: action(?bool, ?Exception)->None):
@@ -313,26 +336,31 @@ def _test_aborted_create(done, logger: logging.Handler):
 
 y1 = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "key0"),
         "a": gdata.Leaf("int", 0)
-    }, ["key0"]),
+    }),
     gdata.Container({
+        "name": gdata.Leaf("string", "key1"),
         "a": gdata.Leaf("int", 1)
-    }, ["key1"])
+    })
 ])
 
 y2 = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "key1"),
         "b": gdata.Leaf("int", 1)
-    }, ["key1"]),
+    }),
     gdata.Container({
+        "name": gdata.Leaf("string", "key2"),
         "a": gdata.Leaf("int", 1)
-    }, ["key2"])
+    })
 ])
 
 y2b = gdata.List(["name"], [
     gdata.Container({
+        "name": gdata.Leaf("string", "key1"),
         "b": gdata.Leaf("int", 1)
-    }, ["key1"])
+    })
 ])
 
 actor aborted_create_tester2(done: action(?bool, ?Exception)->None):
@@ -370,21 +398,21 @@ nested_tree = gdata.Container({
             "name": gdata.Leaf("str", "k1"),
             "nested-list": gdata.List(["id"], [
                 gdata.Container({
-                    "id": gdata.Leaf("str", "k1"),
+                    "id": gdata.Leaf("str", "k1-k1"),
                     "a": gdata.Leaf("int", 1)
-                }, ["k1-k1"])
+                })
             ])
         # This is the key attribute for the top-list list element, and it must remain in the output.
-        }, ["k1"]),
+        }),
         gdata.Container({
             "name": gdata.Leaf("str", "k2"),
             "nested-list": gdata.List(["id"], [
                 gdata.Container({
-                    "id": gdata.Leaf("str", "k2"),
+                    "id": gdata.Leaf("str", "k2-k1"),
                     "a": gdata.Leaf("int", 2)
-                }, ["k2-k1"])
+                })
             ])
-        }, ["k2"])
+        })
     ])
 })
 

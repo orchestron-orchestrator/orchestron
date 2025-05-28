@@ -38,7 +38,7 @@ class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNod
         _key = self.key
         if _key is not None:
             children['key'] = yang.gdata.Leaf('string', _key)
-        return yang.gdata.Container(children, [yang.gdata.yang_str(self.username), yang.gdata.yang_str(self.password), yang.gdata.yang_str(self.key)])
+        return yang.gdata.Container(children)
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address__initial_credentials_entry:
@@ -114,7 +114,7 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
         _initial_credentials = self.initial_credentials
         if _initial_credentials is not None:
             children['initial-credentials'] = _initial_credentials.to_gdata()
-        return yang.gdata.Container(children, [yang.gdata.yang_str(self.name)])
+        return yang.gdata.Container(children)
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
@@ -178,7 +178,7 @@ class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
         _private_key = self.private_key
         if _private_key is not None:
             children['private-key'] = yang.gdata.Leaf('string', _private_key)
-        return yang.gdata.Container(children, [yang.gdata.yang_str(self.key)])
+        return yang.gdata.Container(children)
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__credentials__key_entry:
@@ -277,7 +277,7 @@ class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
         _key = self.key
         if _key is not None:
             children['key'] = yang.gdata.Leaf('string', _key)
-        return yang.gdata.Container(children, [yang.gdata.yang_str(self.username), yang.gdata.yang_str(self.password), yang.gdata.yang_str(self.key)])
+        return yang.gdata.Container(children)
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__initial_credentials_entry:
@@ -356,7 +356,7 @@ class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
         if _revision is not None:
             children['revision'] = yang.gdata.Leaf('string', _revision)
         children['feature'] = yang.gdata.LeafList('string', self.feature)
-        return yang.gdata.Container(children, [yang.gdata.yang_str(self.name)])
+        return yang.gdata.Container(children)
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__mock__module_entry:
@@ -465,7 +465,7 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         _mock = self.mock
         if _mock is not None:
             children['mock'] = _mock.to_gdata()
-        return yang.gdata.Container(children, [yang.gdata.yang_str(self.name)])
+        return yang.gdata.Container(children)
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device_entry:

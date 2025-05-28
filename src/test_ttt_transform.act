@@ -10,12 +10,14 @@ y1 = gdata.Container({
     "a": gdata.Leaf("int", 1),
     "l1": gdata.List(["name"], [
         gdata.Container({
+            "name": gdata.Leaf("string", "k1"),
             "n1": gdata.Leaf("int", 1),
             "n2": gdata.Leaf("int", 2)
-        }, ["k1"]),
+        }),
         gdata.Container({
+            "name": gdata.Leaf("string", "k4"),
             "n4": gdata.Leaf("int", 4)
-        }, ["k4"])
+        })
     ])
 })
 y1_transp = {
@@ -25,26 +27,30 @@ y1_transp = {
     "l1": {
         'src': gdata.List(["name"], [
             gdata.Container({
+                "name": gdata.Leaf("string", "k1"),
                 "n1": gdata.Leaf("int", 1),
                 "n2": gdata.Leaf("int", 2)
-            }, ["k1"]),
+            }),
             gdata.Container({
+                "name": gdata.Leaf("string", "k4"),
                 "n4": gdata.Leaf("int", 4)
-            }, ["k4"])
+            })
         ])
     }
 }
 y1_transp_l1 = {
     "k1": {
         'src': gdata.Container({
+            "name": gdata.Leaf("string", "k1"),
             "n1": gdata.Leaf("int", 1),
             "n2": gdata.Leaf("int", 2)
-        }, ["k1"])
+        })
     },
     "k4": {
         'src': gdata.Container({
+            "name": gdata.Leaf("string", "k4"),
             "n4": gdata.Leaf("int", 4)
-        }, ["k4"])
+        })
     }
 }
 y1_transp_l1_k1 = {
@@ -53,6 +59,9 @@ y1_transp_l1_k1 = {
     },
     "n2": {
         'src': gdata.Leaf("int", 2)
+    },
+    "name": {
+        'src': gdata.Leaf("string", "k1")
     }
 }
 y2 = gdata.Container({
@@ -60,12 +69,14 @@ y2 = gdata.Container({
     "c": gdata.Leaf("int", 3),
     "l1": gdata.List(["name"], [
         gdata.Container({
+            "name": gdata.Leaf("string", "k1"),
             "n2": gdata.Leaf("int", 2)
-        }, ["k1"]),
+        }),
         gdata.Container({
+            "name": gdata.Leaf("string", "k2"),
             "n1": gdata.Leaf("int", 1),
             "n3": gdata.Leaf("int", 3)
-        }, ["k2"])
+        })
     ]),
     "d": gdata.LeafList("string", ["a", "b", "c"])
 })
@@ -75,16 +86,19 @@ merge_y1_y2 = gdata.Container({
     "c": gdata.Leaf("int", 3),
     "l1": gdata.List(["name"], [
         gdata.Container({
+            "name": gdata.Leaf("string", "k1"),
             "n1": gdata.Leaf("int", 1),
             "n2": gdata.Leaf("int", 2)
-        }, ["k1"]),
+        }),
         gdata.Container({
+            "name": gdata.Leaf("string", "k2"),
             "n1": gdata.Leaf("int", 1),
             "n3": gdata.Leaf("int", 3)
-        }, ["k2"]),
+        }),
         gdata.Container({
+            "name": gdata.Leaf("string", "k4"),
             "n4": gdata.Leaf("int", 4)
-        }, ["k4"])
+        })
     ]),
     "d": gdata.LeafList("string", ["a", "b", "c"])
 })
@@ -106,36 +120,42 @@ def _test_transpose_absent():
     in1 = {
         "srcA": gdata.List(["id"], [
             gdata.Container({
+                "id": gdata.Leaf("string", "k1"),
                 "x": gdata.Leaf("int", 1)
-            }, ["k1"]),
+            }),
             gdata.Container({
+                "id": gdata.Leaf("string", "k2"),
                 "x": gdata.Leaf("int", 2)
-            }, ["k2"]),
+            }),
         ]),
         "srcB": gdata.Absent(),
         "srcC": gdata.List(["id"], [
             gdata.Container({
+                "id": gdata.Leaf("string", "k2"),
                 "x": gdata.Leaf("int", 2)
-            }, ["k2"])
+            })
         ])
     }
     out1 = ttt.transpose(in1)
     exp1 = {
         "k1": {
             "srcA": gdata.Container({
+                "id": gdata.Leaf("string", "k1"),
                 "x": gdata.Leaf("int", 1),
-            }, ["k1"])
+            })
         },
         ttt.WILDKEY: {
             "srcB": gdata.Absent()
         },
         "k2": {
             "srcA": gdata.Container({
+                "id": gdata.Leaf("string", "k2"),
                 "x": gdata.Leaf("int", 2),
-            }, ["k2"]),
+            }),
             "srcC": gdata.Container({
+                "id": gdata.Leaf("string", "k2"),
                 "x": gdata.Leaf("int", 2),
-            }, ["k2"])
+            })
         }
     }
     testing.assertEqual(out1, exp1)
@@ -166,7 +186,9 @@ def _test_patch():
         'srcB': gdata.Container({
             "b": gdata.Leaf("int", 0),
             'l1': gdata.List(["name"], [
-                gdata.Absent(["k2"])
+                gdata.Absent({
+                    "name": gdata.Leaf("string", "k2")
+                })
             ]),
             'd': gdata.Absent()
         })
@@ -181,8 +203,9 @@ def _test_patch():
             "c": gdata.Leaf("int", 3),
             "l1": gdata.List(["name"], [
                 gdata.Container({
+                    "name": gdata.Leaf("string", "k1"),
                     "n2": gdata.Leaf("int", 2)
-                }, ["k1"])
+                })
             ])
         })
     }
@@ -224,12 +247,14 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
                     'c': gdata.Leaf("int", 3),
                     'l1': gdata.List(['name'], [
                         gdata.Container({
+                            "name": gdata.Leaf("string", "k1"),
                             'n2': gdata.Leaf("int", 2)
-                        }, ['k1']),
+                        }),
                         gdata.Container({
+                            "name": gdata.Leaf("string", "k2"),
                             'n1': gdata.Leaf("int", 1),
                             'n3': gdata.Leaf("int", 3)
-                        }, ['k2'])
+                        })
                     ]),
                     'd': gdata.LeafList("string", ['a', 'c'])
                 })
@@ -320,8 +345,9 @@ y0 = gdata.Container({
     "a": gdata.Leaf("int", 0),
     "l1": gdata.List(["name"], [
         gdata.Container({
+            "name": gdata.Leaf("string", "k4"),
             "n4": gdata.Leaf("int", 0)
-        }, ["k4"])
+        })
     ]),
     "d": gdata.LeafList("string", ["a", "b"])
 })
