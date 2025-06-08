@@ -8,7 +8,7 @@ import xml, logging
 def per_src(cfg_per_src: dict[str, gdata.Node]):
     res = []
     for src,cfg in cfg_per_src.items():
-        res.append("        '" + src + "': " + cfg.prsrc(4, src))
+        res.append(f"        '{src}': {cfg.prsrc(4, src)}")
     return "\n".join(res)
 
 WILDKEY = ""
@@ -32,7 +32,7 @@ def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.N
         elif isinstance (conf, gdata.Absent):
             cfg_per_key[WILDKEY] = {src: conf}
         else:
-            raise NotImplementedError("Cannot transpose configuration type" + str(type(conf)))
+            raise NotImplementedError(f"Cannot transpose configuration type{type(conf)}")
 
     return cfg_per_key
 
@@ -169,7 +169,7 @@ class _Transaction(object):
 ####################### Layer ########################
 
 actor Layer(name: str, rootgen: proc(list[str])->Node, lower: ?Layer):
-    root = rootgen(["("+name+")"])
+    root = rootgen([f"({name})"])
 
     def newsession():
         return Session(name, root, lower)
@@ -916,7 +916,7 @@ class _RFSTransaction(_TransformTransactionBase):
         _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
         if len(path) < 3:
-            raise ValueError("RFSTransform " + str(path) + ": path length < 3")
+            raise ValueError(f"RFSTransform {path}: path length < 3")
         self.devname = path[-3]
         self.dev = dev_mgr.get(self.devname)
 

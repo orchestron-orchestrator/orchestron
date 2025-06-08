@@ -85,56 +85,56 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
                             deserializer += "_element"
                         deserializers.append(deserializer)
                         if ext.name == "transform":
-                            base_defs.append("""class %s(ttt.TransformFunction):
-    transform: mut(%s) -> yang.adata.MNode
+                            base_defs.append(f"""class {transform_name}(ttt.TransformFunction):
+    transform: mut({input_class}) -> yang.adata.MNode
 
     @staticmethod
     def input_type():
         \"\"\"Return the modeled input type for this transform\"\"\"
-        return %s
+        return {input_class}
 
     mut def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
         \"\"\"Wrap the user provided transform method to convert from gdata to
         modeled input and back to gdata
         \"\"\"
-        modeled_input = %s.from_gdata(i)
+        modeled_input = {input_class}.from_gdata(i)
         return self.transform(modeled_input).to_gdata()
 
     mut def transform_xml(self, i: xml.Node) -> yang.gdata.Node:
         \"\"\"Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         \"\"\"
-        gdata_input = %s(i)
-        modeled_input = %s.from_gdata(gdata_input)
+        gdata_input = {deserializer}(i)
+        modeled_input = {input_class}.from_gdata(gdata_input)
         return self.transform(modeled_input).to_gdata()
-""" % (transform_name, input_class, input_class, input_class, deserializer, input_class))
+""")
                             return TTTSrc(src=f"ttt.List(ttt.Transform({transform}, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs)
                         elif ext.name == "rfs-transform":
-                            base_defs.append("""class %s(ttt.RFSFunction):
-    transform: mut(%s, ttt.DeviceInfo) -> yang.adata.MNode
+                            base_defs.append(f"""class {transform_name}(ttt.RFSFunction):
+    transform: mut({input_class}, ttt.DeviceInfo) -> yang.adata.MNode
 
     @staticmethod
     def input_type():
         \"\"\"Return the modeled input type for this transform\"\"\"
-        return %s
+        return {input_class}
 
     mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttt.DeviceInfo) -> yang.gdata.Node:
         \"\"\"Wrap the user provided transform method to convert from gdata to
         modeled input and back to gdata
         \"\"\"
-        modeled_input = %s.from_gdata(i)
+        modeled_input = {input_class}.from_gdata(i)
         return self.transform(modeled_input, device_info).to_gdata()
 
     mut def transform_xml(self, i: xml.Node, device_info: ttt.DeviceInfo) -> yang.gdata.Node:
         \"\"\"Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         \"\"\"
-        gdata_input = %s(i)
-        modeled_input = %s.from_gdata(gdata_input)
+        gdata_input = {deserializer}(i)
+        modeled_input = {input_class}.from_gdata(gdata_input)
         return self.transform(modeled_input, device_info).to_gdata()
-""" % (transform_name, input_class, input_class, input_class, deserializer, input_class))
+""")
                             return TTTSrc(src=f"ttt.List(ttt.RFSTransform({transform}, dev_mgr, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs)
-                        raise ValueError("Unknown extension name: %s" % ext.name)
+                        raise ValueError(f"Unknown extension name: {ext.name}")
                     else:
                         raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
                 elif ext.name == "device":
@@ -153,7 +153,7 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         imports.extend(children_res.imports)
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
-        ns = (", ns='" + sn.namespace + "'") if set_ns else ""
+        ns = (f", ns='{sn.namespace}'") if set_ns else ""
         return TTTSrc(src=f"ttt.List(ttt.Container({{{children_res.src}}}{ns}), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs)
 
     elif isinstance(sn, schema.DNodeInner):
@@ -164,10 +164,10 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         imports.extend(children_res.imports)
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
-        ns = (", ns='" + sn.namespace + "'") if set_ns else ""
-        return TTTSrc(src="ttt.Container({%s}%s)" % (children_res.src, ns), input_classes=input_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs)
+        ns = (f", ns='{sn.namespace}'") if set_ns else ""
+        return TTTSrc(src=f"ttt.Container({{{children_res.src}}}{ns})", input_classes=input_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs)
 
-    raise NotImplementedError("Unhandled schema type: %s" % str(type(sn)))
+    raise NotImplementedError(f"Unhandled schema type: {type(sn)}")
 
 def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str) -> (base: str, ttt: str):
     ts = dschema_to_tttsrc(sn)
@@ -177,12 +177,12 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     base_src += "# WARNING WARNING WARNING WARNING WARNING\n\n"
     base_src += "import logging\nimport xml\nimport orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
     for ic in ts.input_classes:
-        base_src += "from %s import %s\n" % (input_yang_module, ic)
+        base_src += f"from {input_yang_module} import {ic}\n"
     for ds in ts.deserializers:
-        base_src += "from %s import %s\n" % (input_yang_module, ds)
+        base_src += f"from {input_yang_module} import {ds}\n"
 
     if output_yang_module is not None:
-        base_src += "from %s import root as output_root\n\n" % output_yang_module
+        base_src += f"from {output_yang_module} import root as output_root\n\n"
         base_src += "def o_root():\n"
         base_src += "    return output_root()\n\n"
 
@@ -197,5 +197,5 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     ttt_src += "import orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
     ttt_src += "\n".join(list(set(ts.imports))) + "\n\n"
     ttt_src += "def get_ttt(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str])->ttt.Node:\n"
-    ttt_src += "    r = " + ts.src + "\n    return r\n"
+    ttt_src += f"    r = {ts.src}\n    return r\n"
     return (base=base_src, ttt=ttt_src)

@@ -506,7 +506,7 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
 
         if wcap is not None and username is not None and password is not None:
             conn_state = CONNECTING
-            _log.debug("Setting up NETCONF client... %s %d %s %s" % (address, port, username, password))
+            _log.debug(f"Setting up NETCONF client... {address} {port} {username} {password}")
             c = netconf.Client(wcap, address, port, username, password,
                                on_connect=_on_connect,
                                on_error=_on_error,
