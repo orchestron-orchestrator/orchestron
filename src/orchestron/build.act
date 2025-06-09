@@ -68,11 +68,11 @@ class CompiledSysSpec(object):
         tttsrc += "import yang.gdata\n\n"
         tttsrc_getlayers = "def get_layers(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):\n    res = "
         for idx, layer in enumerate(self.layers):
-            print("Generating layer %d" % idx)
+            print(f"Generating layer {idx}")
             layer_name = layer.name
             lname = layer_name if layer_name is not None else str(idx)
-            name = "%s/%s/layers/y_%s.act" % (output_dir, self.name, lname)
-            modname = "%s.layers.y_%s" % (self.name, lname)
+            name = f"{output_dir}/{self.name}/layers/y_{lname}.act"
+            modname = f"{self.name}.layers.y_{lname}"
     #        if idx == 0:
     #            name = "src/y_cfs.act"
     #        elif idx == len(layers) - 1:
@@ -80,66 +80,66 @@ class CompiledSysSpec(object):
 
             layer_adata = layer.root.prdaclass()
             if _maybe_write_file(fc, name, layer_adata):
-                print("+ Layer %d adata changed" % idx)
+                print(f"+ Layer {idx} adata changed")
             else:
-                print("+ Layer %d adata unchanged" % idx)
+                print(f"+ Layer {idx} adata unchanged")
 
-            tttsrc += "import %s.layers.t_%d\n" % (self.name, idx)
-            print("Generating base & TTT(?) for layer %d" % idx)
+            tttsrc += f"import {self.name}.layers.t_{idx}\n"
+            print(f"Generating base & TTT(?) for layer {idx}")
 
             # Not for the last layer
             out_layer_modname = None
             if idx < len(self.layers) - 1:
-                out_layer_modname = "%s.layers.y_%d_loose" % (self.name, idx+1)
+                out_layer_modname = f"{self.name}.layers.y_{idx+1}_loose"
 
             tttl = ttt_gen.ttt_prsrc(layer.root, modname, out_layer_modname)
 
-            base_name = "%s/%s/layers/base_%d.act" % (output_dir, self.name, idx)
+            base_name = f"{output_dir}/{self.name}/layers/base_{idx}.act"
             if _maybe_write_file(fc, base_name, tttl.base):
-                print("+ Layer %d base changed" % idx)
+                print(f"+ Layer {idx} base changed")
             else:
-                print("+ Layer %d base unchanged" % idx)
+                print(f"+ Layer {idx} base unchanged")
 
-            t_name = "%s/%s/layers/t_%d.act" % (output_dir, self.name, idx)
+            t_name = f"{output_dir}/{self.name}/layers/t_{idx}.act"
             if _maybe_write_file(fc, t_name, tttl.ttt):
-                print("+ Layer %d TTT(?) changed" % idx)
+                print(f"+ Layer {idx} TTT(?) changed")
             else:
-                print("+ Layer %d TTT(?) unchanged" % idx)
+                print(f"+ Layer {idx} TTT(?) unchanged")
 
             indent = "" if idx == 0 else "          "
-            tttsrc_getlayers += "%sttt.Layer('%s', %s.layers.t_%d.get_ttt(dev_mgr, log_handler),\n" % (indent, lname, self.name, idx)
+            tttsrc_getlayers += f"{indent}ttt.Layer('{lname}', {self.name}.layers.t_{idx}.get_ttt(dev_mgr, log_handler),\n"
 
-            loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)
+            loose_name = f"{output_dir}/{self.name}/layers/y_{idx}_loose.act"
             if _maybe_write_file(fc, loose_name, layer.root.prdaclass(loose=True)):
-                print("+ Layer %d loose adata changed" % idx)
+                print(f"+ Layer {idx} loose adata changed")
             else:
-                print("+ Layer %d loose adata unchanged" % idx)
+                print(f"+ Layer {idx} loose adata unchanged")
 
         syssrc = ""
         syssrc_devtypes = ""
         for dev_type in self.dev_types.values():
-            print("Generating device type %s" % dev_type.name)
+            print(f"Generating device type {dev_type.name}")
             dev_tree_adata = dev_type.root.prdaclass(gen_json=False, loose=True)
-            name = "%s/%s/devices/%s.act" % (output_dir, self.name, dev_type.name)
+            name = f"{output_dir}/{self.name}/devices/{dev_type.name}.act"
             if _maybe_write_file(fc, name, dev_tree_adata):
-                print("+ Device type %s adata changed" % dev_type.name)
+                print(f"+ Device type {dev_type.name} adata changed")
             else:
-                print("+ Device type %s adata unchanged" % dev_type.name)
+                print(f"+ Device type {dev_type.name} adata unchanged")
 
-            syssrc += "import %s.devices.%s\n" % (self.name, dev_type.name)
-            syssrc_devtypes += "    \"%s\": %s.devices.%s.schema_namespaces,\n" % (dev_type.name, self.name, dev_type.name)
+            syssrc += f"import {self.name}.devices.{dev_type.name}\n"
+            syssrc_devtypes += f'    "{dev_type.name}": {self.name}.devices.{dev_type.name}.schema_namespaces,\n'
         syssrc += "device_types = {\n"
         syssrc += syssrc_devtypes
         syssrc += "}\n"
-        if _maybe_write_file(fc, "%s/%s/sysspec.act" % (output_dir, self.name), syssrc):
+        if _maybe_write_file(fc, f"{output_dir}/{self.name}/sysspec.act", syssrc):
             print("+ Sys spec changed")
         else:
             print("+ Sys spec unchanged")
 
         print("Generating app layers.act")
-        tttsrc_getlayers += "          None%s\n    return res\n" % (")" * len(self.layers))
+        tttsrc_getlayers += f"          None{")" * len(self.layers)}\n    return res\n"
         tttsrc += tttsrc_getlayers
-        if _maybe_write_file(fc, "%s/%s/layers.act" % (output_dir, self.name), tttsrc):
+        if _maybe_write_file(fc, f"{output_dir}/{self.name}/layers.act", tttsrc):
             print("+ App layers.act changed")
         else:
             print("+ App layers.act unchanged")
@@ -219,7 +219,7 @@ class Layer(object):
 
         for f in fs.listdir(dir):
             if f.endswith(".yang"):
-                rf = file.ReadFile(rfc, "%s/%s" % (dir, f))
+                rf = file.ReadFile(rfc, f"{dir}/{f}")
                 models.append(rf.read().decode())
         return Layer(models, name)
 
@@ -258,12 +258,12 @@ def apply_schema_transforms_to_dir(fc: file.FileCap, dir: str, transforms: list[
                 yang_text = rf.read().decode()
             if yang_text is not None:
                 for t in tc.transforms:
-                    print("Applying transform %s to %s" % (t.name, in_name))
+                    print(f"Applying transform {t.name} to {in_name}")
                     yang_text = t.apply(yang_text)
         if yang_text is not None:
             # Remove the .orig suffix
             out_name = in_name[:-5]
-            print("Writing %s" % out_name)
+            print(f"Writing {out_name}")
             wf = file.WriteFile(wfc, file.join_path([dir, out_name]))
             await async wf.write(yang_text.encode())
 
@@ -285,6 +285,6 @@ class DeviceType(object):
 
         for f in fs.listdir(dir):
             if f.endswith(".yang"):
-                rf = file.ReadFile(rfc, "%s/%s" % (dir, f))
+                rf = file.ReadFile(rfc, f"{dir}/{f}")
                 models.append(rf.read().decode())
         return DeviceType(name, models)
