@@ -44,6 +44,19 @@ class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address__initial_credentials_entry:
         return orchestron_rfs__device__address__initial_credentials_entry(username=n.get_str('username'), password=n.get_str('password'), key=n.get_str('key'))
 
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append(f'# Top node: /device/address/initial-credentials')
+            res.append(f'{self_name} = orchestron_rfs__device__address__initial_credentials({repr(self.username)}, {repr(self.password)}, {repr(self.key)})')
+        leaves = []
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/address/initial-credentials'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
 class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
     elements: list[orchestron_rfs__device__address__initial_credentials_entry]
     mut def __init__(self, elements=[]):
@@ -120,6 +133,29 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
         return orchestron_rfs__device__address_entry(name=n.get_str('name'), address=n.get_str('address'), port=n.get_opt_str('port'), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')))
 
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append(f'# Top node: /device/address')
+            res.append(f'{self_name} = orchestron_rfs__device__address({repr(self.name)}, {repr(self.address)})')
+        leaves = []
+        _port = self.port
+        if _port is not None:
+            leaves.append(f'{self_name}.port = {repr(_port)}')
+        _initial_credentials = self.initial_credentials
+        for _element in _initial_credentials.elements:
+            res.append('')
+            res.append(f"# List /device/address/initial-credentials element: {_element.to_gdata().key_str(['username', 'password', 'key'])}")
+            list_elem = f'initial_credentials_element = {self_name}.initial_credentials.create({repr(_element.username)}, {repr(_element.password)}, {repr(_element.key)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc(f'initial_credentials_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/address'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
 class orchestron_rfs__device__address(yang.adata.MNode):
     elements: list[orchestron_rfs__device__address_entry]
     mut def __init__(self, elements=[]):
@@ -183,6 +219,22 @@ class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__credentials__key_entry:
         return orchestron_rfs__device__credentials__key_entry(key=n.get_str('key'), private_key=n.get_opt_str('private-key'))
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append(f'# Top node: /device/credentials/key')
+            res.append(f'{self_name} = orchestron_rfs__device__credentials__key({repr(self.key)})')
+        leaves = []
+        _private_key = self.private_key
+        if _private_key is not None:
+            leaves.append(f'{self_name}.private_key = {repr(_private_key)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/credentials/key'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
 
 class orchestron_rfs__device__credentials__key(yang.adata.MNode):
     elements: list[orchestron_rfs__device__credentials__key_entry]
@@ -251,6 +303,29 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
             return orchestron_rfs__device__credentials(username=n.get_str('username'), password=n.get_opt_str('password'), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_opt_list('key')))
         raise ValueError('Missing required subtree orchestron_rfs__device__credentials')
 
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append(f'# Top node: /device/credentials')
+            res.append(f'{self_name} = orchestron_rfs__device__credentials({repr(self.username)})')
+        leaves = []
+        _password = self.password
+        if _password is not None:
+            leaves.append(f'{self_name}.password = {repr(_password)}')
+        _key = self.key
+        for _element in _key.elements:
+            res.append('')
+            res.append(f"# List /device/credentials/key element: {_element.to_gdata().key_str(['key'])}")
+            list_elem = f'key_element = {self_name}.key.create({repr(_element.key)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc(f'key_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/credentials'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
 
 
 
@@ -282,6 +357,19 @@ class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__initial_credentials_entry:
         return orchestron_rfs__device__initial_credentials_entry(username=n.get_str('username'), password=n.get_str('password'), key=n.get_str('key'))
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append(f'# Top node: /device/initial-credentials')
+            res.append(f'{self_name} = orchestron_rfs__device__initial_credentials({repr(self.username)}, {repr(self.password)}, {repr(self.key)})')
+        leaves = []
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/initial-credentials'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
 
 class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
     elements: list[orchestron_rfs__device__initial_credentials_entry]
@@ -362,6 +450,25 @@ class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__mock__module_entry:
         return orchestron_rfs__device__mock__module_entry(name=n.get_str('name'), namespace=n.get_str('namespace'), revision=n.get_opt_str('revision'), feature=n.get_opt_strs('feature'))
 
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append(f'# Top node: /device/mock/module')
+            res.append(f'{self_name} = orchestron_rfs__device__mock__module({repr(self.name)}, {repr(self.namespace)})')
+        leaves = []
+        _revision = self.revision
+        if _revision is not None:
+            leaves.append(f'{self_name}.revision = {repr(_revision)}')
+        _feature = self.feature
+        if _feature is not None:
+            leaves.append(f'{self_name}.feature = {repr(_feature)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/mock/module'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
 class orchestron_rfs__device__mock__module(yang.adata.MNode):
     elements: list[orchestron_rfs__device__mock__module_entry]
     mut def __init__(self, elements=[]):
@@ -422,6 +529,29 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
             return orchestron_rfs__device__mock(preset=n.get_opt_strs('preset'), module=orchestron_rfs__device__mock__module.from_gdata(n.get_opt_list('module')))
         return orchestron_rfs__device__mock()
 
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append(f'# Top node: /device/mock')
+            res.append(f'{self_name} = orchestron_rfs__device__mock()')
+        leaves = []
+        _preset = self.preset
+        if _preset is not None:
+            leaves.append(f'{self_name}.preset = {repr(_preset)}')
+        _module = self.module
+        for _element in _module.elements:
+            res.append('')
+            res.append(f"# List /device/mock/module element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = f'module_element = {self_name}.module.create({repr(_element.name)}, {repr(_element.namespace)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc(f'module_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/mock'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
 
 class orchestron_rfs__device_entry(yang.adata.MNode):
     name: str
@@ -470,6 +600,49 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device_entry:
         return orchestron_rfs__device_entry(name=n.get_str('name'), description=n.get_opt_str('description'), type=n.get_opt_str('type'), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list('address')), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_container('credentials')), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_container('mock')))
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append(f'# Top node: /device')
+            res.append(f'self_credentials = orchestron_rfs__device__credentials({repr(self.credentials.username)})')
+            res.append(f'{self_name} = orchestron_rfs__device({repr(self.name)}, self_credentials)')
+        leaves = []
+        _name = self.name
+        if _name is not None:
+            leaves.append(f'{self_name}.name = {repr(_name)}')
+        _description = self.description
+        if _description is not None:
+            leaves.append(f'{self_name}.description = {repr(_description)}')
+        _type = self.type
+        if _type is not None:
+            leaves.append(f'{self_name}.type = {repr(_type)}')
+        _address = self.address
+        for _element in _address.elements:
+            res.append('')
+            res.append(f"# List /device/address element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = f'address_element = {self_name}.address.create({repr(_element.name)}, {repr(_element.address)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc(f'address_element', False, list_element=True).splitlines())
+        _credentials = self.credentials
+        if _credentials is not None:
+            res.extend(_credentials.prsrc(f'{self_name}.credentials', False).splitlines())
+        _initial_credentials = self.initial_credentials
+        for _element in _initial_credentials.elements:
+            res.append('')
+            res.append(f"# List /device/initial-credentials element: {_element.to_gdata().key_str(['username', 'password', 'key'])}")
+            list_elem = f'initial_credentials_element = {self_name}.initial_credentials.create({repr(_element.username)}, {repr(_element.password)}, {repr(_element.key)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc(f'initial_credentials_element', False, list_element=True).splitlines())
+        _mock = self.mock
+        if _mock is not None:
+            res.extend(_mock.prsrc(f'{self_name}.mock', False).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
 
 class orchestron_rfs__device(yang.adata.MNode):
     elements: list[orchestron_rfs__device_entry]
