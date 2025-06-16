@@ -57,22 +57,22 @@ out1_2 = gdata.Container({
 })
 
 class TransF(ttt.TransformFunction):
-    def transform_wrapper(self, cfg):
+    def transform_wrapper(self, cfg, memory, dynstate):
         if isinstance(cfg, gdata.Container):
             return gdata.Container({
                 'devices': gdata.List(["id"], [
                     cfg
                 ])
-            })
+            }), None
         else:
-            return gdata.Container({})
+            return gdata.Container({}), None
 
 
 ########################
 
 actor basic_output_tester(done: action(?bool, ?Exception)->None):
     out = ttt.Sink().newsession()
-    tlist = ttt.List(ttt.Transform(TransF), ["name"], ["string"]) ([])
+    tlist = ttt.List(ttt.Transform(TransF), ["name"], ["string"]) ([], None)
     t1 = tlist.newtrans()
 
     t1.configure("1", {'srcA': cfg1}, out)
@@ -160,7 +160,7 @@ out3 = gdata.Container({
 })
 
 class WriteDev(ttt.TransformFunction):
-    def transform_wrapper(self, cfg: gdata.Node):
+    def transform_wrapper(self, cfg: gdata.Node, memory, dynstate):
         i = cfg.get_int("a")
         return gdata.Container({
             'devices': gdata.List(["id"], [
@@ -168,7 +168,7 @@ class WriteDev(ttt.TransformFunction):
                     "val": gdata.Leaf("int", i)
                 }, [str(i)])
             ])
-        })
+        }), None
 
 actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
     stack = ttt.Layer("top",
@@ -198,7 +198,7 @@ cfg4 = gdata.Container({
 })
 
 class ServiceMap(ttt.TransformFunction):
-    def transform_wrapper(self, cfg):
+    def transform_wrapper(self, cfg, memory, dynstate):
         ll = cfg.get_int("ll")
         rr = cfg.get_int("rr")
         return gdata.Container({
@@ -208,7 +208,7 @@ class ServiceMap(ttt.TransformFunction):
             "right": gdata.Container({
                 "a": gdata.Leaf("int", rr)
             })
-        })
+        }), None
 
 actor multi_layer_tester(done: action(?bool, ?Exception)->None):
     stack = ttt.Layer("top",
@@ -250,8 +250,8 @@ out5 = gdata.Container({
 
 
 class WriteDevs(ttt.TransformFunction):
-    def transform_wrapper(self, cfg: gdata.Node):
-        return out5
+    def transform_wrapper(self, cfg: gdata.Node, memory, dynstate):
+        return out5, None
 
 actor nodiff_config_tester(done: action(?bool, ?Exception)->None):
     stack = ttt.Layer("top",

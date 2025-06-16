@@ -66,8 +66,12 @@ class CompiledSysSpec(object):
         tttsrc += "import orchestron.ttt as ttt\n"
         tttsrc += "import yang.adata\n"
         tttsrc += "import yang.gdata\n\n"
-        tttsrc_getlayers = "def get_layers(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):\n    res = "
-        for idx, layer in enumerate(self.layers):
+        tttsrc_getlayers = "def get_layers(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):\n"
+        # for idx, layer in reversed(enumerate(self.layers)):
+        layers_len = len(self.layers)
+        idx = layers_len
+        for layer in reversed(self.layers):
+            idx -= 1
             print("Generating layer %d" % idx)
             layer_name = layer.name
             lname = layer_name if layer_name is not None else str(idx)
@@ -106,8 +110,9 @@ class CompiledSysSpec(object):
             else:
                 print("+ Layer %d TTT(?) unchanged" % idx)
 
-            indent = "" if idx == 0 else "          "
-            tttsrc_getlayers += "%sttt.Layer('%s', %s.layers.t_%d.get_ttt(dev_mgr, log_handler),\n" % (indent, lname, self.name, idx)
+            lowerlayer = "layer%d" % (idx+1) if idx < layers_len -1 else "None"
+            tttsrc_getlayers += "    layer%d = ttt.Layer('%s', %s.layers.t_%d.get_ttt(%s, dev_mgr, log_handler), %s)\n" \
+                % (idx, lname, self.name, idx, lowerlayer, lowerlayer)
 
             loose_name = "%s/%s/layers/y_%d_loose.act" % (output_dir, self.name, idx)
             if _maybe_write_file(fc, loose_name, layer.root.prdaclass(loose=True)):
@@ -137,7 +142,7 @@ class CompiledSysSpec(object):
             print("+ Sys spec unchanged")
 
         print("Generating app layers.act")
-        tttsrc_getlayers += "          None%s\n    return res\n" % (")" * len(self.layers))
+        tttsrc_getlayers += "    return layer0\n"
         tttsrc += tttsrc_getlayers
         if _maybe_write_file(fc, "%s/%s/layers.act" % (output_dir, self.name), tttsrc):
             print("+ App layers.act changed")
