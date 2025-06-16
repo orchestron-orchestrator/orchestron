@@ -76,7 +76,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    })([], None)
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, None)
@@ -107,7 +107,7 @@ actor all_delete_tester(done: action(?bool, ?Exception)->None):
     tlist = ttt.Container({
                 "left": ttt.Transform(ttt.PassThrough),
                 "right": ttt.Transform(ttt.PassThrough)
-            }) ([])
+            }) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})
 
@@ -161,7 +161,7 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
     tlist = ttt.Container({
                 "left": ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]),
                 "right": ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"])
-            }) ([])
+            }) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})
 
@@ -196,7 +196,7 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -228,7 +228,7 @@ actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -260,7 +260,7 @@ actor modified_commit_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, None)
@@ -283,7 +283,7 @@ actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, None)
@@ -320,7 +320,7 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -380,7 +380,7 @@ actor config_failure_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -412,7 +412,7 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -440,7 +440,7 @@ actor multi_lock_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
 
     t1.configure("1", {'srcA': tree1}, None)
@@ -476,7 +476,7 @@ actor empty_lock_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -504,7 +504,7 @@ actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -534,7 +534,7 @@ actor no_lock_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -560,7 +560,7 @@ actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
 
@@ -585,7 +585,7 @@ actor spurious_config_tester(done: action(?bool, ?Exception)->None):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
-    }) ([])
+    }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
 

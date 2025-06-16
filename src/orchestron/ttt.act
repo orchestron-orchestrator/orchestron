@@ -151,6 +151,12 @@ actor Transaction(impl: _Transaction):
     def get():
         return impl.get()
 
+    def init_dynstate(node: Node, act: proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None):
+        impl.init_dynstate(node, act, update_dynstate)
+
+    def update_dynstate(dynstate: ?yang.adata.MNode):
+        impl.update_dynstate(dynstate.to_gdata() if dynstate is not None else None)
+
 class _Transaction(object):
     path: list[str]
     configure:  proc(tid: str, diff: dict[str,gdata.Node], out: ?Session, force: ?bool) -> value
@@ -162,11 +168,16 @@ class _Transaction(object):
     wait_complete_cont : proc(actself: Transaction, res: value) -> None
     get: proc() -> gdata.Node
 
+    proc def init_dynstate(self, node: Node, act: proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?yang.adata.MNode)->None):
+        pass
+
+    proc def update_dynstate(self, dynstate: ?gdata.Node) -> None:
+        pass
 
 ####################### Layer ########################
 
-actor Layer(name: str, rootgen: proc(list[str])->Node, lower: ?Layer):
-    root = rootgen([f"({name})"])
+actor Layer(name: str, rootgen: proc(list[str], ?Layer)->Node, lower: ?Layer):
+    root = rootgen([f"({name})"], lower)
 
     def newsession():
         return Session(name, root, lower)
@@ -223,6 +234,22 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
     def configure(tid, diff_per_source):
         #print('####', tid, '(Layer)', name, 'configure', list(diff_per_source.keys()), err=True)
         buf.update(diff_per_source.items())
+
+    def recompute(done: ?action(value)->None=None, complete: ?action(value)->None=None, force=False):
+        tid = 'tr' + actorid()
+        #print('####', tid, '(Layer)', name, 'recompute', actorid(), err=True)
+        res = apply(tid, force)
+        if isinstance(res, str) and res == 'Ok':
+            done_cont = done
+            comp_cont = complete
+            lock(tid, edit_config_cont)                                     # yield await
+        else:
+            if done is not None:
+                done(res)
+            if complete is not None:
+                complete(res)
+
+        # TODO: Optimize by cull operations unnecessary due to no input diff?
 
     def apply(tid, force=False):
         #print('####', tid, '(Layer)', name, 'apply', err=True)
@@ -291,16 +318,16 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
 
 ############## Containers ##################
 
-def Container(template={}, ns:?str=None):
-    return lambda path: Node(_Container(path, template, ns))
+def Container(template={}, ns:?str=None) -> proc(list[str], ?Layer)->Node:
+    return lambda path, lower: Node(_Container(path, template, ns, lower))
 
 class _Container(_Node):
     elems: dict[str, Node]
     ns: ?str
 
-    def __init__(self, path, template: dict[str, proc(list[str])->Node], ns):
+    def __init__(self, path, template: dict[str, proc(list[str], ?Layer)->Node], ns, lower: ?Layer):
         self.path = path
-        self.elems = {key: templ(path + [key]) for key, templ in template.items()}
+        self.elems = {key: templ(path + [key], lower) for key, templ in template.items()}
         self.ns = ns
 
     def newtrans(self):
@@ -463,17 +490,17 @@ class _ContainerTransaction(_Transaction):
 
 ################# Lists ####################
 
-def List(template, key_names: list[str], key_types: list[str]):
-    return lambda path: Node(_List(path, template, key_names, key_types))
+def List(template, key_names: list[str], key_types: list[str]) -> proc(list[str], ?Layer)->Node:
+    return lambda path, lower: Node(_List(path, template, key_names, key_types, lower))
 
 class _List(_Node):
     liststate: ListState
 
-    def __init__(self, path, template, key_names, key_types):
+    def __init__(self, path, template, key_names, key_types, lower: ?Layer):
         self.path = path
         self.key_names = key_names
         self.key_types = key_types
-        self.liststate = ListState(path, template)
+        self.liststate = ListState(path, template, lower)
 
     def newtrans(self):
         return ListTransaction(self.path, self.liststate, self.key_names, self.key_types)
@@ -488,7 +515,7 @@ class _List(_Node):
         return gdata.List(self.key_names, res)
 
 
-actor ListState(path, template: proc(list[str]) -> Node):
+actor ListState(path, template: proc(list[str], ?Layer) -> Node, lower: ?Layer):
     var elems = {}
     var active = {}
     var provisional = set()
@@ -498,7 +525,7 @@ actor ListState(path, template: proc(list[str]) -> Node):
             keys1 = keys
             new = keys - set(elems.keys())
             for k in new:
-                elems[k] = template(path+[k])
+                elems[k] = template(path+[k], lower)
             provisional |= new
             #print('====', tid, path, 'acquire keys:', keys, 'new:', new, 'provisional:', provisional, actorid(), err=True)
         else:
@@ -709,14 +736,14 @@ class _TransformBase(_Node):
 class _TransformTransactionBase(_Transaction):
     diffs: dict[str, dict[str, gdata.Node]]
     candidates: dict[str, dict[str, gdata.Node]]
-    essays: dict[str, ?gdata.Node]
+    essays: dict[str, (?gdata.Node, ?gdata.Node)]
     running: dict[str, gdata.Node]
     output: ?gdata.Node
     locker: ?str
     pending: list[(Transaction, str, ?Session, action(value)->None)]
     me: str
 
-    compute : proc(tid: str, merged: gdata.Node, out: ?Session) -> gdata.Node
+    compute : proc(tid: str, merged: gdata.Node, out: ?Session) -> (gdata.Node, ?gdata.Node)
     clear : proc(tid: str, out: ?Session) -> None
     finalize : proc(tid: str) -> None
 
@@ -747,7 +774,7 @@ class _TransformTransactionBase(_Transaction):
         #print('   #', tid, '(Transform)', self.path, 'NEWCONF\n' + per_src(newconf), err=True)
 
         if newconf == {}:
-            self.essays[tid] = None
+            self.essays[tid] = (None, None) # TODO: do we want to keep memory?
             #print('   #', tid, '(Transform)', self.path, 'EMPTY CONFIG', err=True)
             self.clear(tid, out)
             return 'Empty'
@@ -760,8 +787,8 @@ class _TransformTransactionBase(_Transaction):
                 #print('   #', tid, '(Transform)', self.path, 'FAILURE', e, err=True)
                 return e
             else:
-                newout = self.compute(tid, merged, out)
-                self.essays[tid] = newout
+                newout, newmem = self.compute(tid, merged, out)
+                self.essays[tid] = (newout, newmem)
                 #print('   #', tid, '(Transform)', self.path, 'OUTPUT\n       ', newout.prsrc(indent=4), err=True)
                 return 'Ok'
         return 'Ok'
@@ -798,7 +825,8 @@ class _TransformTransactionBase(_Transaction):
         if tid == self.locker:
             if ok:
                 self.running = candidate
-                self.output = essay
+                self.output = essay.0 if essay is not None else None
+                self.update_memory(essay.1 if essay is not None else None)
                 #print('   #', tid, '(Transform)', self.path, 'COMMITTING\n' + per_src(candidate), err=True)
                 if self.candidates:
                     #print('   #', tid, '(Transform)', self.path, 'INVALIDATING', set(self.candidates.keys()), err=True)
@@ -815,6 +843,9 @@ class _TransformTransactionBase(_Transaction):
         else:
             #print('   #', tid, '(Transform)', self.path, 'IGNORING', err=True)
             pass
+
+    mut def update_memory(self, newmem: ?gdata.Node):
+        pass
 
     def finalize(self, tid):
         pass
@@ -833,31 +864,45 @@ class _TransformTransactionBase(_Transaction):
             return gdata.Container()
 
 
-def Transform(function, log_handler: ?logging.Handler=None):
-    return lambda path: Node(_Transform(path, function, log_handler))
+def Transform(function, act: ?(proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+    proc def _create_transform_node(path, lower):
+        transform = _Transform(path, function, lower, log_handler)
+        node = Node(transform)
+        if act is not None:
+            transform.init_dynstate(node, act)
+        return node
+    return _create_transform_node
 
 class _Transform(_TransformBase):
-    def __init__(self, path, function, log_handler):
+    def __init__(self, path, function, lower, log_handler):
         self.path = path
-        self.transaction = TransformTransaction(path, function, log_handler)
+        self.transaction = TransformTransaction(path, function, lower, log_handler)
 
+    proc def init_dynstate(self, node, act):
+        self.transaction.init_dynstate(node, act)
 
-def TransformTransaction(path, function, log_handler):
-    return Transaction(_TransformTransaction(path, function, log_handler))
+def TransformTransaction(path, function, lower, log_handler):
+    return Transaction(_TransformTransaction(path, function, lower, log_handler))
 
 class _TransformTransaction(_TransformTransactionBase):
     function: TransformFunction
+    memory: ?gdata.Node
+    dynstate: ?gdata.Node
+    node: ?Node
+    lower: ?Layer
 
-    def __init__(self, path, function: proc(?logging.Handler) -> TransformFunction, log_handler):
+    def __init__(self, path, function: proc(?logging.Handler) -> TransformFunction, lower: ?Layer, log_handler):
         _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
+        self.lower = lower
 
     def compute(self, tid, merged, out):
-        newout = self.function.transform_wrapper(merged)
+        newoutmem = self.function.transform_wrapper(merged, self.memory, self.dynstate)
+        newout = newoutmem.0
         res = difference(self.output, newout)
         if out is not None and res is not None:
             out.configure(tid, {self.me: res})
-        return newout
+        return newoutmem
 
     def clear(self, tid, out):
         output = self.output
@@ -867,46 +912,88 @@ class _TransformTransaction(_TransformTransactionBase):
             if out is not None and res is not None:
                 out.configure(tid, {self.me: res})
 
+    def update_memory(self, newmem):
+        self.memory = newmem
+
+    proc def init_dynstate(self, node, act, update_dynstate):
+        self.node = node
+        self.function.init_dynstate(act, update_dynstate)
+
+    proc def update_dynstate(self, dynstate):
+        self.dynstate = dynstate
+        _node = self.node
+        if _node is not None:
+            Session(self.me, _node, self.lower).recompute() # TODO: Verify that this always succeeds (due to no input diff)?
+
+    def finalize(self, tid):
+        #print('####', tid, '(_TransformTransaction)', self.path, 'finalize', actorid(), err=True)
+        config = self.output
+        if config is not None:
+            self.function.on_conf(config, self.memory)
+
 class TransformFunction(object):
-    transform_wrapper: mut(gdata.Node) -> gdata.Node
-    transform_xml: mut(xml.Node) -> gdata.Node
+    transform_wrapper: mut(gdata.Node, ?gdata.Node, ?gdata.Node) -> (gdata.Node, ?gdata.Node)
+    transform_xml: mut(xml.Node, ?gdata.Node, ?gdata.Node) -> (gdata.Node, ?gdata.Node)
+    _on_conf: ?proc(gdata.Node, ?gdata.Node) -> None
     logger: logging.Logger
 
     def __init__(self, log_handler: ?logging.Handler=None):
         self.logger = logging.Logger(log_handler)
 
-    def transform_wrapper(self, cfg):
-        return gdata.Container()
+    def transform_wrapper(self, cfg, memory, dynstate):
+        return (gdata.Container(), None)
 
-    def transform_xml(self, cfg):
-        return gdata.Container()
+    def transform_xml(self, cfg, memory, dynstate):
+        return gdata.Container(), None
 
+    proc def init_dynstate(self, act: proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?yang.adata.MNode)->None):
+        self._on_conf = act(update_dynstate)
+
+    proc def on_conf(self, conf: gdata.Node, memory: ?gdata.Node):
+        _on_conf = self._on_conf
+        if _on_conf is not None:
+            _on_conf(conf, memory)
 
 ################# RFSTransform ###################
 
-def RFSTransform(function, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
-    return lambda path: Node(_RFSTransform(path, function, dev_mgr, log_handler))
+def RFSTransform(function, dev_mgr: odev.DeviceManager, act: ?(proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+    proc def _create_rfs_transform_node(path, lower):
+        rfs_transform = _RFSTransform(path, function, dev_mgr, lower, log_handler)
+        node = Node(rfs_transform)
+        if act is not None:
+            rfs_transform.init_dynstate(node, act)
+        return node
+    return _create_rfs_transform_node
+
 
 class _RFSTransform(_TransformBase):
-    def __init__(self, path, function, dev_mgr, log_handler):
+    def __init__(self, path, function, dev_mgr, lower, log_handler):
         self.path = path
-        self.transaction = RFSTransaction(path, function, dev_mgr, log_handler)
+        self.transaction = RFSTransaction(path, function, dev_mgr, lower, log_handler)
 
-def RFSTransaction(path, function, dev_mgr, log_handler):
-    return Transaction(_RFSTransaction(path, function, dev_mgr, log_handler))
+    proc def init_dynstate(self, node, act):
+        self.transaction.init_dynstate(node, act)
+
+def RFSTransaction(path, function, dev_mgr, lower, log_handler):
+    return Transaction(_RFSTransaction(path, function, dev_mgr, lower, log_handler))
 
 class _RFSTransaction(_TransformTransactionBase):
     function: RFSFunction
     devname: str
     dev: odev.Device
+    memory: ?gdata.Node
+    dynstate: ?gdata.Node
+    node: ?Node
+    lower: ?Layer
 
-    def __init__(self, path, function: proc(?logging.Handler) -> RFSFunction, dev_mgr: odev.DeviceManager, log_handler):
+    def __init__(self, path, function: proc(?logging.Handler) -> RFSFunction, dev_mgr: odev.DeviceManager, lower: ?Layer, log_handler):
         _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
         if len(path) < 3:
             raise ValueError(f"RFSTransform {path}: path length < 3")
         self.devname = path[-3]
         self.dev = dev_mgr.get(self.devname)
+        self.lower = lower
 
     def compute(self, tid, merged, out):
         #print('####', tid, '(RFSTransform)', self.path, 'compute', actorid(), err=True)
@@ -918,18 +1005,19 @@ class _RFSTransaction(_TransformTransactionBase):
             dev_content["modset_id"] = gdata.Leaf("string", modset_id)
         if len(modset) > 0:
             #print('####', tid, '(RFSTransform)', self.path, 'compute', self.devname, err=True)
-            newout = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset))
+            newoutmem = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset), self.memory, self.dynstate)
+            newout = newoutmem.0
             res = difference(self.output, newout)
             if isinstance(res, gdata.Container):
                 dev_content["config"] = res
         else:
             #print('####', tid, '(RFSTransform)', self.path, 'compute', ": No device capabilities, skipping RFS transform for", self.devname, err=True)
-            newout = gdata.Container({})
+            newoutmem = (gdata.Container({}), None)
 
         if out is not None:
             embedded_res = self.embed(dev_content)
             out.configure(tid, {self.me: embedded_res})
-        return newout
+        return newoutmem # TODO: dynstate for RFS?
 
     def clear(self, tid, out):
         output = self.output
@@ -952,6 +1040,25 @@ class _RFSTransaction(_TransformTransactionBase):
             })
         }, ns="http://orchestron.org/yang/orchestron-device.yang")
 
+    def update_memory(self, newmem):
+        self.memory = newmem
+
+    proc def init_dynstate(self, node, act, update_dynstate):
+        self.node = node
+        self.function.init_dynstate(act, update_dynstate)
+
+    proc def update_dynstate(self, dynstate):
+        self.dynstate = dynstate
+        _node = self.node
+        if _node is not None:
+            Session(self.me, _node, self.lower).recompute() # TODO: Verify that this always succeeds (due to no input diff)?
+
+    def finalize(self, tid):
+        #print('####', tid, '(_TransformTransaction)', self.path, 'finalize', actorid(), err=True)
+        config = self.output
+        if config is not None:
+            self.function.on_conf(config, self.memory)
+
 class DeviceInfo(object):
     name: str
     modules: dict[str, odev.ModCap]
@@ -961,24 +1068,33 @@ class DeviceInfo(object):
         self.modules = modules
 
 class RFSFunction(object):
-    transform_wrapper: mut(gdata.Node, DeviceInfo) -> gdata.Node
-    transform_xml: mut(xml.Node, DeviceInfo) -> gdata.Node
+    transform_wrapper: mut(gdata.Node, DeviceInfo, ?gdata.Node, ?gdata.Node) -> (gdata.Node, ?gdata.Node)
+    transform_xml: mut(xml.Node, DeviceInfo, ?gdata.Node, ?gdata.Node) -> (gdata.Node, ?gdata.Node)
+    _on_conf: ?proc(gdata.Node, ?gdata.Node) -> None
     logger: logging.Logger
 
     def __init__(self, log_handler: ?logging.Handler=None):
         self.logger = logging.Logger(log_handler)
 
-    def transform_wrapper(self, cfg, di):
-        return gdata.Container()
+    def transform_wrapper(self, cfg, di, memory, dynstate):
+        return (gdata.Container(), None)
 
-    def transform_xml(self, cfg, di):
-        return gdata.Container()
+    def transform_xml(self, cfg, di, memory, dynstate):
+        return (gdata.Container(), None)
+
+    proc def init_dynstate(self, act: proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?yang.adata.MNode)->None):
+        self._on_conf = act(update_dynstate)
+
+    proc def on_conf(self, conf: gdata.Node, memory: ?gdata.Node):
+        _on_conf = self._on_conf
+        if _on_conf is not None:
+            _on_conf(conf, memory)
 
 
 ################# Device #####################
 
-def Device(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
-    return lambda path: Node(_Device(path, dev_mgr, log_handler))
+def Device(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+    return lambda path, _lower: Node(_Device(path, dev_mgr, log_handler))
 
 class _Device(_TransformBase):
     def __init__(self, path, dev_mgr, log_handler):
@@ -998,7 +1114,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
-        return merged
+        return merged, None
 
     def clear(self, tid, out):
         pass
@@ -1013,8 +1129,8 @@ class _DeviceTransaction(_TransformTransactionBase):
 
 ################# DeviceConfig #####################
 
-def DeviceConfig(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):
-    return lambda path: Node(_DeviceConfig(path, dev_mgr, log_handler))
+def DeviceConfig(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+    return lambda path, _lower: Node(_DeviceConfig(path, dev_mgr, log_handler))
 
 class _DeviceConfig(_TransformBase):
     def __init__(self, path, dev_mgr, log_handler):
@@ -1034,7 +1150,7 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
-        return merged
+        return merged, None
 
     def clear(self, tid, out):
         pass
@@ -1068,8 +1184,8 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
 ################# Trivials #####################
 
 class PassThrough(TransformFunction):
-    def transform_wrapper(self, cfg):
-        return cfg
+    def transform_wrapper(self, cfg, memory, dynstate):
+        return (cfg, memory)
 
 def Sink():
     return Layer('sink', Transform(PassThrough), None)
