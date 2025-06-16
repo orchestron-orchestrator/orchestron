@@ -2,15 +2,6 @@
 import yang
 import yang.schema as schema
 
-#def wrap_transform(fq_transform_fn: str)
-#    short_transform_fn = fq_transform_fn.split(".")[-1]
-#    res = """class Wrapped%s(%s):
-#    def transform_wrapper(self, i: yang.gdata.Node) -> yang.gdata.Node:
-#        mi = %s.from_gdata(i)
-#        return self.transform(mi).to_gdata()
-#""" % (short_transform_fn, fq_transform_fn)
-#    return res
-
 def get_list_name(sn: schema.DList) -> str:
     sn_parent = sn.parent
     if sn_parent is not None:
@@ -52,7 +43,7 @@ def children_to_tttsrc(sn: schema.DNodeInner) -> TTTSrc:
         imports.extend(res.imports)
         defs.extend(res.defs)
         base_defs.extend(res.base_defs)
-        elems.append('"%s": %s' % (child.name, res.src))
+        elems.append(f'"{child.name}": {res.src}')
     children_src = ", ".join(elems)
     return TTTSrc(src=children_src, input_classes=input_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs)
 
