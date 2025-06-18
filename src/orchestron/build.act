@@ -35,12 +35,8 @@ class SysSpec(object):
         return self.compile().gen_app(fc, output_dir)
 
     def compile(self):
-        compiled_layers = []
-        for l in self.layers:
-            compiled_layers.append(CompiledLayer(yang.compile(l.models), l.name))
-        compiled_dev_types = []
-        for dev_type in self.device_types:
-            compiled_dev_types.append(CompiledDeviceType(yang.compile(dev_type.models), dev_type.name))
+        compiled_layers = [CompiledLayer(yang.compile(l.models), l.name) for l in self.layers]
+        compiled_dev_types = [CompiledDeviceType(yang.compile(dev_type.models), dev_type.name) for dev_type in self.device_types]
         return CompiledSysSpec(self.name, compiled_layers, compiled_dev_types)
 
 class CompiledSysSpec(object):
@@ -53,9 +49,7 @@ class CompiledSysSpec(object):
     def __init__(self, name: str, layers: list[CompiledLayer], device_types: list[CompiledDeviceType]):
         self.name = name
         self.layers = layers + [CompiledLayer(yang.compile([oyang.device]))]
-        self.dev_types = {}
-        for dev_type in device_types:
-            self.dev_types[dev_type.name] = dev_type
+        self.dev_types = {dev_type.name: dev_type for dev_type in device_types}
 
     def gen_app(self, fc: file.FileCap, output_dir: str):
         tttsrc = "# WARNING WARNING WARNING WARNING WARNING\n"
@@ -215,12 +209,7 @@ class Layer(object):
         """
         rfc = file.ReadFileCap(fc)
         fs = file.FS(fc)
-        models = []
-
-        for f in fs.listdir(dir):
-            if f.endswith(".yang"):
-                rf = file.ReadFile(rfc, f"{dir}/{f}")
-                models.append(rf.read().decode())
+        models = [file.ReadFile(rfc, f"{dir}/{f}").read().decode() for f in fs.listdir(dir) if f.endswith(".yang")]
         return Layer(models, name)
 
 class _CompiledLayerBase(object):
@@ -281,10 +270,5 @@ class DeviceType(object):
         """
         rfc = file.ReadFileCap(fc)
         fs = file.FS(fc)
-        models = []
-
-        for f in fs.listdir(dir):
-            if f.endswith(".yang"):
-                rf = file.ReadFile(rfc, f"{dir}/{f}")
-                models.append(rf.read().decode())
+        models = [file.ReadFile(rfc, f"{dir}/{f}").read().decode() for f in fs.listdir(dir) if f.endswith(".yang")]
         return DeviceType(name, models)
