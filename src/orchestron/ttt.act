@@ -6,10 +6,7 @@ from orchestron.device_meta_config import orchestron_rfs__device_entry as Device
 import xml, logging
 
 def per_src(cfg_per_src: dict[str, gdata.Node]):
-    res = []
-    for src,cfg in cfg_per_src.items():
-        res.append(f"        '{src}': {cfg.prsrc(4, src)}")
-    return "\n".join(res)
+    return "\n".join([f"        '{src}': {cfg.prsrc(4, src)}" for src,cfg in cfg_per_src.items()])
 
 WILDKEY = ""
 
@@ -303,19 +300,15 @@ class _Container(_Node):
 
     def __init__(self, path, template: dict[str, proc(list[str])->Node], ns):
         self.path = path
-        self.elems = {}
+        self.elems = {key: templ(path + [key]) for key, templ in template.items()}
         self.ns = ns
-        for key,templ in template.items():
-            self.elems[key] = templ(path+[key])
 
     def newtrans(self):
         return ContainerTransaction(self.path, self.elems, self.ns)
 
     def get(self):
         #print('####', '(Container)', self.path, actorid(),'NODE GET', err=True)
-        res = {}
-        for tag,node in self.elems.items():
-            res[tag] = node.get()
+        res = {tag: node.get() for tag, node in self.elems.items()}
         ns = self.ns
         if len(self.path) <= 1 and ns is not None:
             return gdata.Container(res, ns=ns)
@@ -338,8 +331,7 @@ class _ContainerTransaction(_Transaction):
         self.accum = {}
         self.state = None
         self.ns = ns
-        for key,node in contents.items():
-            self.elems[key] = node.newtrans()
+        self.elems = {key: node.newtrans() for key, node in contents.items()}
 
     def configure(self, tid, diff, out, force=False):
         #print('####', tid, '(Container)', self.path, 'configure force:', force, actorid(), err=True)
@@ -461,9 +453,7 @@ class _ContainerTransaction(_Transaction):
 
     def get(self):
         #print('####', '(Container)', self.path, actorid(), 'GET', err=True)
-        res = {}
-        for tag,node in self.elems.items():
-            res[tag] = node.get()
+        res = {tag: node.get() for tag, node in self.elems.items()}
         ns = self.ns
         if len(self.path) <= 1 and ns is not None:
             return gdata.Container(res, ns=ns)
@@ -504,7 +494,6 @@ actor ListState(path, template: proc(list[str]) -> Node):
     var provisional = set()
 
     def acquire(tid: str, keys: ?set[str]):
-        result = {}
         if keys is not None:
             keys1 = keys
             new = keys - set(elems.keys())
@@ -516,9 +505,8 @@ actor ListState(path, template: proc(list[str]) -> Node):
             keys1 = set(elems.keys())
             #print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
         active[tid] = keys1
-        for k in keys1:
-            result[k] = elems[k]
-        return result
+
+        return {k: elems[k] for k in keys1}
 
     def release(tid: str, ok: bool, deletes: set[str]):
         #print('====', tid, path, 'release', ok, 'deletes:', deletes, 'provisional:', provisional, err=True)

@@ -603,11 +603,11 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
 
 def hash_modset(modset: dict[str, ModCap]) -> str:
     # TODO: use a better hash function
-    big_string = ""
-    for m in sorted(modset.keys()):
-        mod = modset[m]
-        big_string += str(mod)
-    return str(hash(big_string))
+    # We use map here instead of a list comprehension to avoid creating the
+    # intermediate list of strings. Ideally we could achieve the same with a
+    # generator expression.
+    modset_str = map(lambda m: str(modset[m]), sorted(modset.keys()))
+    return str(hash("".join(modset_str)))
 
 def modset_eq(a: dict[str, ModCap], b: dict[str, ModCap]) -> bool:
     if len(a) != len(b):
