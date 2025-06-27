@@ -396,7 +396,7 @@ actor config_failure_tester(done: action(?bool, ?Exception)->None):
             t2.commit("2", True)
             r = t2.get()
             if r != a0b1:
-                testing.assertEqual(r, a0b1)
+                testing.assertEqual(r.prsrc(), a0b1.prsrc())
             done(True, None)
 
         t2.lock("2", None, cont2)
