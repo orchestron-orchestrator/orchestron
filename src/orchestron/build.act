@@ -120,12 +120,12 @@ class CompiledSysSpec(object):
             else:
                 print(f"+ Device type {dev_type.name} adata unchanged")
 
-            syssrc += f"import {self.name}.devices.{dev_type.name}\n"
-            syssrc_devtypes += f'    "{dev_type.name}": {self.name}.devices.{dev_type.name}.schema_namespaces,\n'
-        syssrc += "device_types = {\n"
+            syssrc += "import {self.name}.devices.{dev_type.name}\n"
+            syssrc_devtypes += '    "{dev_type.name}": {self.name}.devices.{dev_type.name}.schema_namespaces,\n'
+        syssrc += "device_types = {{\n"
         syssrc += syssrc_devtypes
-        syssrc += "}\n"
-        if _maybe_write_file(fc, f"{output_dir}/{self.name}/sysspec.act", syssrc):
+        syssrc += "}}\n"
+        if _maybe_write_file(fc, "{output_dir}/{self.name}/sysspec.act", syssrc):
             print("+ Sys spec changed")
         else:
             print("+ Sys spec unchanged")

@@ -143,7 +143,7 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
         _initial_credentials = self.initial_credentials
         for _element in _initial_credentials.elements:
             res.append('')
-            res.append(f"# List /device/address/initial-credentials element: {_element.to_gdata().key_str(['username', 'password', 'key'])}")
+            res.append("# List /device/address/initial-credentials element: {_element.to_gdata().key_str(['username', 'password', 'key'])}")
             list_elem = f'initial_credentials_element = {self_name}.initial_credentials.create({repr(_element.username)}, {repr(_element.password)}, {repr(_element.key)})'
             res.append(list_elem)
             res.extend(_element.prsrc(f'initial_credentials_element', False, list_element=True).splitlines())
@@ -309,7 +309,7 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
         _key = self.key
         for _element in _key.elements:
             res.append('')
-            res.append(f"# List /device/credentials/key element: {_element.to_gdata().key_str(['key'])}")
+            res.append("# List /device/credentials/key element: {_element.to_gdata().key_str(['key'])}")
             list_elem = f'key_element = {self_name}.key.create({repr(_element.key)})'
             res.append(list_elem)
             res.extend(_element.prsrc(f'key_element', False, list_element=True).splitlines())
@@ -531,7 +531,7 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
         _module = self.module
         for _element in _module.elements:
             res.append('')
-            res.append(f"# List /device/mock/module element: {_element.to_gdata().key_str(['name'])}")
+            res.append("# List /device/mock/module element: {_element.to_gdata().key_str(['name'])}")
             list_elem = f'module_element = {self_name}.module.create({repr(_element.name)}, {repr(_element.namespace)})'
             res.append(list_elem)
             res.extend(_element.prsrc(f'module_element', False, list_element=True).splitlines())
@@ -610,7 +610,7 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         _address = self.address
         for _element in _address.elements:
             res.append('')
-            res.append(f"# List /device/address element: {_element.to_gdata().key_str(['name'])}")
+            res.append("# List /device/address element: {_element.to_gdata().key_str(['name'])}")
             list_elem = f'address_element = {self_name}.address.create({repr(_element.name)}, {repr(_element.address)})'
             res.append(list_elem)
             res.extend(_element.prsrc(f'address_element', False, list_element=True).splitlines())
@@ -620,7 +620,7 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         _initial_credentials = self.initial_credentials
         for _element in _initial_credentials.elements:
             res.append('')
-            res.append(f"# List /device/initial-credentials element: {_element.to_gdata().key_str(['username', 'password', 'key'])}")
+            res.append("# List /device/initial-credentials element: {_element.to_gdata().key_str(['username', 'password', 'key'])}")
             list_elem = f'initial_credentials_element = {self_name}.initial_credentials.create({repr(_element.username)}, {repr(_element.password)}, {repr(_element.key)})'
             res.append(list_elem)
             res.extend(_element.prsrc(f'initial_credentials_element', False, list_element=True).splitlines())

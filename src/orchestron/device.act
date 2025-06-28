@@ -85,7 +85,7 @@ def truncate_conf(conf: ?yang.gdata.Node) -> str:
         if trunc_len < len(sc):
             sc = sc[:trunc_len] + "..."
         return sc
-    return "{}"
+    return r"{}"
 
 actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None):
     """Device

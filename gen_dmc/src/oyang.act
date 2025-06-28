@@ -1,5 +1,5 @@
 
-rfs = """module orchestron-rfs {
+rfs = r"""module orchestron-rfs {
   yang-version "1.1";
   namespace "http://orchestron.org/yang/orchestron-rfs.yang";
   prefix "orfs";
@@ -126,7 +126,7 @@ rfs = """module orchestron-rfs {
 }
 """
 
-device = """module orchestron-device {
+device = r"""module orchestron-device {
   yang-version "1.1";
   namespace "http://orchestron.org/yang/orchestron-device.yang";
   prefix "odev";
@@ -155,7 +155,7 @@ device = """module orchestron-device {
 }
 """
 
-ietf_inet_types = """module ietf-inet-types {
+ietf_inet_types = r"""module ietf-inet-types {
 
   namespace "urn:ietf:params:xml:ns:yang:ietf-inet-types";
   prefix "inet";

@@ -4,7 +4,7 @@ import yang
 import orchestron.ttt_gen as ttt_gen
 import orchestron.yang as oyang
 
-ys_cfs = """module foo {
+ys_cfs = r"""module foo {
   yang-version "1.1";
   namespace "http://example.com/foo";
   prefix "foo";
@@ -40,7 +40,7 @@ def _test_ttt_gen_cfs_ttt():
     r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_0', 'respnet.layers.y_1_loose')
     return r.ttt
 
-ys_rfs = """module foo {
+ys_rfs = r"""module foo {
   yang-version "1.1";
   namespace "http://example.com/foo";
   prefix "foo";
