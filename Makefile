@@ -27,3 +27,8 @@ test:
 .PHONY: test-ldep
 test-ldep:
 	$(MAKE) test DEP_OVERRIDES="--dep yang=../acton-yang"
+
+.PHONY: pkg-upgrade
+pkg-upgrade:
+	acton pkg upgrade
+	cd gen_dmc && acton pkg upgrade
