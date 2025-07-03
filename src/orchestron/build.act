@@ -226,16 +226,14 @@ class _CompiledLayerBase(object):
     src: list[str]
 
     def print(self, loose=False, gen_json=True):
-        # TODO: serialize list[str] of YANG models with repr(), use raw string to avoid interpolation?!
-        l = """{self.root.prdaclass(loose=loose, gen_json=gen_json)}
+        """Print the Acton (adata) classes for the layer
 
-def src_yang():
-    res = []
-"""
-        for s in self.src:
-            l += '    res.append(r"""{s}""")\n'
-        l += "    return res"
-        return l
+        This prints the entire contents of the Acton module representing a
+        single layer in the application. The module includes generated adata
+        classes, XML and JSON deserializers and the schema info. The schema is
+        used by the XML and JSON schema-driven deserializers.
+        """
+        return self.root.prdaclass(schema_yang=self.src, loose=loose, gen_json=gen_json)
 
 class CompiledLayer(_CompiledLayerBase):
     def __init__(self, root: yang.schema.DRoot, src: list[str], name: ?str=None):
