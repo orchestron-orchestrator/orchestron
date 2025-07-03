@@ -36,6 +36,15 @@ class DeviceType(object):
     @property
     root: mut() -> yang.adata.MNode
 
+    ## Workaround for "device_type.root.from_gdata" not working, I suspect
+    ## because root.from_gdata is a static method .. This now points to the
+    ## from_gdata static method on an aliased import of the root type, like this:
+    # from foo.devices.bar_device_adata import root as bar_device_adata_root
+    # ... = DeviceType(..., from_gdata=bar_device_adata_root.from_gdata, ...)
+    # TODO: why is @property needed here?
+    @property
+    from_gdata: mut(?yang.gdata.Node) -> yang.adata.MNode
+
     ## Function to convert from XML to gdata using the DeviceType schema
     # TODO: why is @property needed here?
     @property
@@ -46,11 +55,12 @@ class DeviceType(object):
     @property
     from_json: mut(dict[str, ?value]) -> yang.gdata.Container
 
-    def __init__(self, name, schema_namespaces, root, from_xml, from_json):
+    def __init__(self, name, schema_namespaces, root, from_gdata, from_xml, from_json):
         self.name = name
         #self.adapter_type = adapter_type
         self.schema_namespaces = schema_namespaces
         self.root = root
+        self.from_gdata = from_gdata
         self.from_xml = from_xml if from_xml is not None else lambda x: yang.gdata.Container()
         self.from_json = from_json if from_json is not None else lambda x: yang.gdata.Container()
 
