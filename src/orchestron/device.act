@@ -1,5 +1,6 @@
 import logging
 import testing
+import xml
 
 import yang.adata
 import yang.gdata
@@ -14,6 +15,44 @@ IN_TRANSACTION = 1
 NOT_CONNECTED = 0
 CONNECTING = 1
 CONNECTED = 2
+
+## DeviceType represents a type of device, i.e. a specific platform or
+## implementation of a device. It is used to define the schema and
+## adapter type for the device.
+class DeviceType(object):
+    ## Name of the device type
+    name: str
+
+    ## Adapter type, i.e. the DeviceAdapter subclass to use
+    # TODO: why is @property needed here?
+    @property
+    adapter_type: (Device, logging.Handler, ?WorldCap) -> DeviceAdapter
+
+    ## Schema namespaces
+    schema_namespaces: set[str]
+
+    ## Root of the config data tree
+    # TODO: why is @property needed here?
+    @property
+    root: mut() -> yang.adata.MNode
+
+    ## Function to convert from XML to gdata using the DeviceType schema
+    # TODO: why is @property needed here?
+    @property
+    from_xml: mut(xml.Node) -> yang.gdata.Container
+
+    ## Function to convert from JSON to gdata using the DeviceType schema
+    # TODO: why is @property needed here?
+    @property
+    from_json: mut(dict[str, ?value]) -> yang.gdata.Container
+
+    def __init__(self, name, schema_namespaces, root, from_xml, from_json):
+        self.name = name
+        #self.adapter_type = adapter_type
+        self.schema_namespaces = schema_namespaces
+        self.root = root
+        self.from_xml = from_xml if from_xml is not None else lambda x: yang.gdata.Container()
+        self.from_json = from_json if from_json is not None else lambda x: yang.gdata.Container()
 
 class DeviceError(Exception):
     """Exception raised when the device configuration fails

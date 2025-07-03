@@ -109,7 +109,7 @@ class CompiledSysSpec(object):
             else:
                 print(f"+ Layer {idx} loose adata unchanged")
 
-        syssrc = ""
+        syssrc = "import orchestron.device as odev\n\n"
         syssrc_devtypes = ""
         for dev_type in self.dev_types.values():
             print(f"Generating device type {dev_type.name}")
@@ -120,8 +120,14 @@ class CompiledSysSpec(object):
             else:
                 print(f"+ Device type {dev_type.name} adata unchanged")
 
-            syssrc += "import {self.name}.devices.{dev_type.name}\n"
-            syssrc_devtypes += '    "{dev_type.name}": {self.name}.devices.{dev_type.name}.schema_namespaces,\n'
+            modname = "{self.name}.devices.{dev_type.name}"
+            syssrc += "import {modname}\n"
+            syssrc_devtypes += """    "{dev_type.name}": odev.DeviceType(name="{dev_type.name}",
+            schema_namespaces={modname}.schema_namespaces,
+            root={modname}.root,
+            from_xml={modname}.from_xml
+        ),
+"""
         syssrc += "device_types = {{\n"
         syssrc += syssrc_devtypes
         syssrc += "}}\n"
