@@ -122,9 +122,11 @@ class CompiledSysSpec(object):
 
             modname = "{self.name}.devices.{dev_type.name}"
             syssrc += "import {modname}\n"
+            syssrc += "from {modname} import root as {dev_type.name}_root\n"
             syssrc_devtypes += """    "{dev_type.name}": odev.DeviceType(name="{dev_type.name}",
             schema_namespaces={modname}.schema_namespaces,
             root={modname}.root,
+            from_gdata={dev_type.name}_root.from_gdata,
             from_xml={modname}.from_xml
         ),
 """
