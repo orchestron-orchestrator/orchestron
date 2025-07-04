@@ -71,8 +71,8 @@ def _test_reconf2(done, logger: logging.Handler):
 ########################
 
 class Fun(ttt.RFSFunction):
-    def transform_wrapper(self, cfg, device_info):
-        return gdata.Container(cfg.children)
+    def transform_wrapper(self, cfg, device_info, memory, dynstate):
+        return (gdata.Container(cfg.children), memory)
 
 cfg3 = gdata.Container({
     "rfs": gdata.List(["name"], [

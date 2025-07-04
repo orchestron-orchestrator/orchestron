@@ -69,7 +69,7 @@ merge_1_2 = gdata.List(["name"], [
 ########################
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([])
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([], None)
     t1 = tlist.newtrans()
 
     t1.configure("1", {'srcA': tree1}, None)
@@ -88,7 +88,7 @@ def _test_basic_commit(done, logger: logging.Handler):
 ########################
 
 actor basic_delete_tester(done: action(?bool, ?Exception)->None):
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([])
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([], None)
     t1 = tlist.newtrans()
 
     def cont2(_r: value):
@@ -124,7 +124,7 @@ actor all_delete_tester(done: action(?bool, ?Exception)->None):
             }),
         ])
 
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([])
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})
 
@@ -175,7 +175,7 @@ actor partial_delete_tester(done: action(?bool, ?Exception)->None):
             }),
         ])
 
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([])
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": inA, "srcB": inB})
 
@@ -242,7 +242,7 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
                     "left": ttt.Transform(ttt.PassThrough),
                     "right": ttt.Transform(ttt.PassThrough)
                 }), ["name"], ["str"]
-            ) ([])
+            ) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})
 
@@ -293,7 +293,7 @@ list1 = gdata.List(["name"], [
 ])
 
 actor simultaneous_create_tester(done: action(?bool, ?Exception)->None):
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([])
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([], None)
     t1 = tlist.newtrans()
     t2 = tlist.newtrans()
 
@@ -317,7 +317,7 @@ def _test_simultaneous_create(done, logger: logging.Handler):
 ########################
 
 actor aborted_create_tester(done: action(?bool, ?Exception)->None):
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([])
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([], None)
     t1 = tlist.newtrans()
 
     def cont1(_r: value):
@@ -364,7 +364,7 @@ y2b = gdata.List(["name"], [
 ])
 
 actor aborted_create_tester2(done: action(?bool, ?Exception)->None):
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([])
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([], None)
     t1 = tlist.newtrans()
     t2 = tlist.newtrans()
 
@@ -417,7 +417,7 @@ nested_tree = gdata.Container({
 })
 
 actor nested_list_tester(done: action(?bool, ?Exception)->None):
-    tlist = ttt.Container({"top-list": ttt.List(ttt.Container({"nested-list": ttt.List(ttt.Transform(ttt.PassThrough), ["id"], ["string"])}), ["name"], ["string"])}) ([])
+    tlist = ttt.Container({"top-list": ttt.List(ttt.Container({"nested-list": ttt.List(ttt.Transform(ttt.PassThrough), ["id"], ["string"])}), ["name"], ["string"])}) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {'srcA': nested_tree}, None)
 

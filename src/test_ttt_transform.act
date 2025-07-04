@@ -4,6 +4,7 @@ import logging
 import orchestron.ttt as ttt
 #import orchestron.gdata as gdata
 import yang.gdata as gdata
+import yang.adata as adata
 
 
 y1 = gdata.Container({
@@ -214,7 +215,7 @@ def _test_patch():
 ########################
 
 actor basic_commit_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
     t3 = router.newtrans()
@@ -273,7 +274,7 @@ def _test_basic_commit(done, logger: logging.Handler):
 ########################
 
 actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -302,7 +303,7 @@ def _test_overlapping_commit(done, logger: logging.Handler):
 ########################
 
 actor modified_commit_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
 
     t1.configure("1", {'srcA': y1}, None)
@@ -322,7 +323,7 @@ def _test_modified_commit(done, logger: logging.Handler):
 ########################
 
 actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
 
     t1.configure("1", {'srcA': y1}, None)
@@ -353,7 +354,7 @@ y0 = gdata.Container({
 })
 
 actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -384,7 +385,7 @@ y3 = gdata.Container({
 })
 
 actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -427,7 +428,7 @@ a0b1 = gdata.Container({
 })
 
 actor config_failure_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -455,7 +456,7 @@ def _test_config_failure(done, logger: logging.Handler):
 ########################
 
 actor config_abort_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -480,7 +481,7 @@ def _test_config_abort(done, logger: logging.Handler):
 ########################
 
 actor multi_lock_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
 
     t1.configure("1", {'srcA': y1}, None)
@@ -504,7 +505,7 @@ def _test_multi_lock(done, logger: logging.Handler):
 ########################
 
 actor empty_lock_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -529,7 +530,7 @@ def _test_empty_lock(done, logger: logging.Handler):
 ########################
 
 actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -556,7 +557,7 @@ def _test_empty_lock2(done, logger: logging.Handler):
 ########################
 
 actor no_lock_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -579,7 +580,7 @@ def _test_no_lock(done, logger: logging.Handler):
 ########################
 
 actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -601,7 +602,7 @@ def _test_spurious_commit(done, logger: logging.Handler):
 ########################
 
 actor spurious_config_tester(done: action(?bool, ?Exception)->None):
-    router = ttt.Transform(ttt.PassThrough) ([])
+    router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
 
@@ -624,6 +625,94 @@ def _test_spurious_config(done, logger: logging.Handler):
 
 ########################
 
+class MemoryTransform(ttt.TransformFunction):
+    def transform_wrapper(self, cfg: gdata.Node, memory: ?gdata.Node, dynstate: ?gdata.Node):
+        if memory is not None and isinstance(memory, gdata.Leaf):
+            _memory: gdata.Leaf = memory
+            t = _memory.t
+            val = _memory.val
+            if t == 'int' and isinstance(val, int):
+                if val == 42:
+                    return (cfg, memory)
+        elif isinstance(cfg, gdata.Leaf):
+            _cfg: gdata.Leaf = cfg
+            t = _cfg.t
+            val = _cfg.val
+            if t == 'int' and isinstance(val, int):
+                if val == 42:
+                    new_memory = gdata.Leaf('int', 42)
+                    return (cfg, new_memory)
+
+        # testing.error()
+        raise AssertionError("Test error")
+
+actor transform_memory_tester(done: action(?bool, ?Exception)->None):
+    router = ttt.Transform(MemoryTransform) ([], None)
+
+    s1 = ttt.Session("s1", router, None)
+
+    def cont2(_r: value):
+        done(True, None)
+
+    def cont1(_r: value):
+        s2 = ttt.Session("s2", router, None)
+        s2.edit_config(gdata.Leaf('int', 0), None, cont2)
+
+    s1.edit_config(gdata.Leaf('int', 42), None, cont1)
+
+def _test_transform_memory(done, logger: logging.Handler):
+    c = transform_memory_tester(done)
+
+########################
+
+class GDataWrapper(adata.MNode):
+    def __init__(self, inner: gdata.Node):
+        self._schema = None
+        self._ns = ""
+        self._name = ""
+        self._parent = None
+        self._inner = inner
+
+    mut def to_gdata(self) -> gdata.Node:
+        return self._inner
+
+actor DynstateActor(update_dynstate: proc(?adata.MNode)->None, done: action(?bool, ?Exception)->None):
+    def on_conf(conf: gdata.Node, memory: ?gdata.Node):
+        if isinstance(conf, gdata.Leaf):
+            _conf: gdata.Leaf = conf
+            t = _conf.t
+            val = _conf.val
+            if t == 'int' and isinstance(val, int):
+                if val == 42:
+                    done(True, None)
+                else:
+                    update_dynstate(GDataWrapper(gdata.Leaf('int', 41)))
+
+class DynstateTransform(ttt.TransformFunction):
+    def transform_wrapper(self, cfg: gdata.Node, memory: ?gdata.Node, dynstate: ?gdata.Node):
+        if dynstate is not None and isinstance(dynstate, gdata.Leaf):
+            _dynstate: gdata.Leaf = dynstate
+            t = _dynstate.t
+            val = _dynstate.val
+            if t == 'int' and isinstance(val, int):
+                if val == 41:
+                    return (gdata.Leaf('int', 42), memory)
+
+        return (cfg, memory)
+
+actor transform_dynstate_tester(done: action(?bool, ?Exception)->None):
+    def DynstateActorCtor(update_dynstate: proc(?adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None:
+        act = DynstateActor(update_dynstate, done)
+        return act.on_conf
+
+    router = ttt.Transform(DynstateTransform, DynstateActorCtor) ([], None)
+    s1 = ttt.Session("s1", router, None)
+    s1.edit_config(gdata.Leaf("int", 40))
+
+def _test_transform_dynstate(done, logger: logging.Handler):
+    c = transform_dynstate_tester(done)
+
+########################
 
 actor main(env):
     basic_commit_tester(lambda s,e: env.exit(0))

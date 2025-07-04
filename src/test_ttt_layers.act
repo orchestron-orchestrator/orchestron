@@ -66,7 +66,7 @@ out1_2 = gdata.Container({
 })
 
 class TransF(ttt.TransformFunction):
-    def transform_wrapper(self, cfg):
+    def transform_wrapper(self, cfg, memory, dynstate):
         """Simple transform that copies inputs to ouputs (sans keys)
 
         The input list layer is keyed on "name", the output on "id". This
@@ -83,16 +83,16 @@ class TransF(ttt.TransformFunction):
                 'devices': gdata.List(["id"], [
                     out
                 ])
-            })
+            }), None
         else:
-            return gdata.Container({})
+            return gdata.Container({}), None
 
 
 ########################
 
 actor basic_output_tester(done: action(?bool, ?Exception)->None):
     out = ttt.Sink().newsession()
-    tlist = ttt.List(ttt.Transform(TransF), ["name"], ["string"]) ([])
+    tlist = ttt.List(ttt.Transform(TransF), ["name"], ["string"]) ([], None)
     t1 = tlist.newtrans()
 
     t1.configure("1", {'srcA': cfg1}, out)
@@ -137,12 +137,12 @@ def _test_layered_commit(done, logger: logging.Handler):
 
 actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
     stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF), ["name"], ["string"]), ttt.Sink())
-    
+
     sess1 = stack.newsession()
     sess2 = stack.newsession()
 
     var acks = 0
-    
+
     def cont(_r: value):
         acks += 1
         if acks == 2:
@@ -182,7 +182,7 @@ out3 = gdata.Container({
 })
 
 class WriteDev(ttt.TransformFunction):
-    def transform_wrapper(self, cfg: gdata.Node):
+    def transform_wrapper(self, cfg: gdata.Node, memory, dynstate):
         i = cfg.get_int("a")
         return gdata.Container({
             'devices': gdata.List(["id"], [
@@ -191,7 +191,7 @@ class WriteDev(ttt.TransformFunction):
                     "val": gdata.Leaf("int", i)
                 })
             ])
-        })
+        }), None
 
 actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
     stack = ttt.Layer("top",
@@ -221,7 +221,7 @@ cfg4 = gdata.Container({
 })
 
 class ServiceMap(ttt.TransformFunction):
-    def transform_wrapper(self, cfg):
+    def transform_wrapper(self, cfg, memory, dynstate):
         ll = cfg.get_int("ll")
         rr = cfg.get_int("rr")
         return gdata.Container({
@@ -231,7 +231,7 @@ class ServiceMap(ttt.TransformFunction):
             "right": gdata.Container({
                 "a": gdata.Leaf("int", rr)
             })
-        })
+        }), None
 
 actor multi_layer_tester(done: action(?bool, ?Exception)->None):
     stack = ttt.Layer("top",
@@ -273,8 +273,8 @@ out5 = gdata.Container({
 
 
 class WriteDevs(ttt.TransformFunction):
-    def transform_wrapper(self, cfg: gdata.Node):
-        return out5
+    def transform_wrapper(self, cfg: gdata.Node, memory, dynstate):
+        return out5, None
 
 actor nodiff_config_tester(done: action(?bool, ?Exception)->None):
     stack = ttt.Layer("top",
