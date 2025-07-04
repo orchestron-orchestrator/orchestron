@@ -1,3 +1,4 @@
+import diff
 import logging
 import testing
 import xml
@@ -175,6 +176,10 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     # this is NOT the NMDA-speak "intended configuration" of the device itself.
     var intended_conf: ?yang.gdata.Node = None
 
+    # The currently running configuration on the device (which in NMDA lingo is
+    # the "intended configuration" of the device)
+    var running_conf: ?xml.Node = None
+
     # The device's meta configuration, like address, credentials, etc.
     var dmc: ?DeviceMetaConfig = None
 
@@ -215,6 +220,7 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     def on_connect(new_modset: dict[str, ModCap]):
         _log.debug("Device connected", {"new_modset": new_modset})
+        adapter.get_config(_get_config_done)
         if modset_eq(modset, new_modset):
             _log.debug("Supported modules unchanged")
             if modset != {}:
@@ -261,11 +267,13 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
                 current_txids = set()
                 if len(pending_txids) > 0:
                     _log.debug("New intended configuration available, retrying with latest config")
+                    adapter.get_config(_get_config_done)
                     _send_config()
                 else:
                     _log.debug("No new intended configuration available, no point in retrying with same conf")
         else:
             _log.debug("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids})
+            adapter.get_config(_get_config_done)
             for tid,callback in callbacks.items():
                 if tid in current_txids:
                     callback(True)
@@ -316,6 +324,19 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     def get_modules() -> (dict[str, ModCap], ?str):
         return modset, modset_id
 
+    def _get_config_done(new_running_conf: ?xml.Node, error: ?Exception):
+        if error is not None:
+            _log.error("Device._get_config_done: {str(error)}")
+        if new_running_conf is not None:
+            if running_conf is not None:
+                conf_diff = diff.diff(xml.encode(running_conf), xml.encode(new_running_conf))
+                if conf_diff != "":
+                    _log.warning("Device._get_config_done: Running config diff detected", {"diff": conf_diff})
+            running_conf = new_running_conf
+
+    def get_running_config():
+        return running_conf
+
 
 class DeviceAdapter(object):
     """Abstract base class for Device Adapters
@@ -346,6 +367,19 @@ class DeviceAdapter(object):
     proc def get_modules(self) -> dict[str, ModCap]:
         raise NotImplementedError("DeviceAdapter.get_modules() not implemented")
 
+    proc def get_config(self, done: action(?xml.Node, ?Exception) -> None) -> None:
+        """Get the current running config from the device
+
+        :param done: callback to call when the operation is completed
+        This is an async operation with the results available in the callback.
+        Until we make the schema-driven "from_xml" parsers available to device
+        adapters this is an XML (NETCONF) document.
+        The result is also cached and available via the get_running_config_xml()
+        method.
+        """
+        raise NotImplementedError("DeviceAdater.get_config() not implemented")
+
+
 class NoAdapter(DeviceAdapter):
     def set_dmc(self, new_dmc):
         self._log.debug("NoAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_json()})
@@ -359,6 +393,9 @@ class NoAdapter(DeviceAdapter):
 
     def get_modules(self):
         return {}
+
+    def get_config(self, done: ?action(?xml.Node, ?Exception) -> None = None):
+        pass
 
 
 class MockAdapter(DeviceAdapter):
@@ -385,6 +422,10 @@ class MockAdapter(DeviceAdapter):
     def get_modules(self) -> dict[str, ModCap]:
         return self._driver.get_modules()
 
+    def get_config(self, done):
+        return self._driver.get_config(done)
+
+
 actor MockDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     _log = logging.Logger(log_handler)
     _log.info("MockDriver starting up")
@@ -393,6 +434,7 @@ actor MockDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     var modset: dict[str, ModCap] = {}
 
     var conn_state: int = NOT_CONNECTED
+    var running_conf_xml: ?xml.Node = None
 
     def set_dmc(new_dmc):
         if dmc is not None and new_dmc is not None:
@@ -438,6 +480,7 @@ actor MockDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     def configure(done, new_conf):
         if conn_state == CONNECTED:
             _log.debug("MockAdapter.configure: device 'connected', responding done")
+            running_conf_xml = xml.decode("<data>{new_conf.to_xmlstr()}</data>")
             done(None)
         else:
             _log.debug("MockAdapter.configure: device not connected")
@@ -448,6 +491,10 @@ actor MockDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
 
     def get_modules():
         return modset
+
+    def get_config(done):
+        if done is not None:
+            done(running_conf_xml, None)
 
 
 class NetconfAdapter(DeviceAdapter):
@@ -471,6 +518,10 @@ class NetconfAdapter(DeviceAdapter):
     def get_modules(self) -> dict[str, ModCap]:
         return self._driver.get_modules()
 
+    def get_config(self, done: ?action(?xml.Node, ?Exception) -> None) -> None:
+        self._driver.get_config(done)
+
+
 actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     """NETCONF device adapter
     """
@@ -484,6 +535,7 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
     var running_conf: ?yang.gdata.Node = None
+    var running_conf_xml: ?xml.Node = None
 
     # The device's meta configuration, like address, credentials, etc.
     var dmc: ?DeviceMetaConfig = None
@@ -494,6 +546,7 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     var conn_state: int = NOT_CONNECTED
     var error: ?Exception = None
     var on_done: ?action(?Exception) -> None = None
+    var on_get_config_done: ?action(?xml.Node, ?Exception) -> None = None
 
     var modset: dict[str, ModCap] = {}
 
@@ -595,7 +648,6 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
             else:
                 _log.debug("Device.configure: No client, cannot send config")
 
-
     def get_capabilities():
         if client is not None:
             return client.get_capabilities()
@@ -614,6 +666,8 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
         if on_done is not None:
             on_done(error)
         on_done = None
+        if client is not None:
+            client.get_config(_on_get_config)
 
     def _on_conf(c, r):
         if r is not None:
@@ -648,6 +702,26 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
             _log.debug("Device._on_discard_changes: Device disconnected")
             _transaction_done(NotConnectedError())
 
+    def _on_get_config(c, r):
+        if r is not None:
+            if r.tag == "rpc-reply" and len(r.children) == 1 and r.children[0].tag == "data":
+                _log.trace("Device._on_get_config", {"r": r.encode()})
+                running_conf_xml = r.children[0]
+                if on_get_config_done is not None:
+                    on_get_config_done(running_conf_xml, None)
+                on_get_config_done = None
+            else:
+                _log.error("Device._on_get_config", {"r": r.encode()})
+                if on_get_config_done is not None:
+                    on_get_config_done(None, ValueError("Unexpected response to <get-config>"))
+                on_get_config_done = None
+
+    def get_config(done: ?action(?xml.Node, ?Exception) -> None) -> None:
+        if on_get_config_done is not None and done is not None:
+            done(None, Exception("Already getting config"))
+        if client is not None:
+            on_get_config_done = done
+            client.get_config(_on_get_config)
 
 
 def hash_modset(modset: dict[str, ModCap]) -> str:
