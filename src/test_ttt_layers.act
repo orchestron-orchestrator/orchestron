@@ -90,7 +90,7 @@ class TransF(ttt.TransformFunction):
 
 ########################
 
-actor basic_output_tester(done: action(?bool, ?Exception)->None):
+actor basic_output(t: testing.AsyncT):
     out = ttt.Sink().newsession()
     tlist = ttt.List(ttt.Transform(TransF), ["name"], ["string"]) ([], None)
     t1 = tlist.newtrans()
@@ -107,16 +107,11 @@ actor basic_output_tester(done: action(?bool, ?Exception)->None):
         out.commit("1", True)
         r = out.get()
         testing.assertEqual(r, out1)
-        done(True, None)
+        t.success()
 
     t1.lock("1", out, cont1)
 
-def _test_basic_output(done, logger: logging.Handler):
-    c = basic_output_tester(done)
-
-########################
-
-actor layered_commit_tester(done: action(?bool, ?Exception)->None):
+actor layered_commit(t: testing.AsyncT):
     stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF), ["name"], ["string"]), ttt.Sink())
 
     sess = stack.newsession()
@@ -126,16 +121,11 @@ actor layered_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r0, cfg1)
         r1 = sess.below().get()
         testing.assertEqual(r1, out1)
-        done(True, None)
+        t.success()
 
     sess.edit_config(cfg1, cont1)
 
-def _test_layered_commit(done, logger: logging.Handler):
-    c = layered_commit_tester(done)
-
-########################
-
-actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
+actor simultaneous_commit(t: testing.AsyncT):
     stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF), ["name"], ["string"]), ttt.Sink())
 
     sess1 = stack.newsession()
@@ -149,13 +139,10 @@ actor simultaneous_commit_tester(done: action(?bool, ?Exception)->None):
             r2 = sess2.below().get()
             r1 = sess1.below().get()
             testing.assertEqual(r1, out1_2)
-            done(True, None)
+            t.success()
 
     sess1.edit_config(cfg1, cont)
     sess2.edit_config(cfg2, cont)
-
-def _test_simultaneous_commit(done, logger: logging.Handler):
-    c = simultaneous_commit_tester(done)
 
 ########################
 
@@ -193,7 +180,7 @@ class WriteDev(ttt.TransformFunction):
             ])
         }), None
 
-actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
+actor diamond_commit(t: testing.AsyncT):
     stack = ttt.Layer("top",
         ttt.Container({
             "left": ttt.Transform(WriteDev),
@@ -206,12 +193,9 @@ actor diamond_commit_tester(done: action(?bool, ?Exception)->None):
     def cont(_r: value):
         r = sess.below().get()
         testing.assertEqual(r, out3)
-        done(True, None)
+        t.success()
 
     sess.edit_config(cfg3, cont)
-
-def _test_diamond_commit(done, logger: logging.Handler):
-    c = diamond_commit_tester(done)
 
 ########################
 
@@ -233,7 +217,7 @@ class ServiceMap(ttt.TransformFunction):
             })
         }), None
 
-actor multi_layer_tester(done: action(?bool, ?Exception)->None):
+actor multi_layer(t: testing.AsyncT):
     stack = ttt.Layer("top",
                 ttt.Transform(ServiceMap),
                 ttt.Layer("bottom",
@@ -250,12 +234,9 @@ actor multi_layer_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1.prsrc(), cfg3.prsrc())
         r2 = sess.below().below().get()
         testing.assertEqual(r2, out3)
-        done(True, None)
+        t.success()
 
     sess.edit_config(cfg4, cont)
-
-def _test_multi_layer(done, logger: logging.Handler):
-    c = multi_layer_tester(done)
 
 ########################
 
@@ -276,7 +257,7 @@ class WriteDevs(ttt.TransformFunction):
     def transform_wrapper(self, cfg: gdata.Node, memory, dynstate):
         return out5, None
 
-actor nodiff_config_tester(done: action(?bool, ?Exception)->None):
+actor _test_redundant_config(t: testing.AsyncT):
     stack = ttt.Layer("top",
         ttt.Transform(WriteDevs),
         ttt.Sink())
@@ -292,14 +273,6 @@ actor nodiff_config_tester(done: action(?bool, ?Exception)->None):
     def cont2(_r):
         r = sess.below().get()
         testing.assertEqual(r, out5)
-        done(True, None)
+        t.success()
 
     sess.edit_config(cfg5, cont)
-
-def _test_redundant_config(done, logger: logging.Handler):
-    c = nodiff_config_tester(done)
-
-########################
-
-actor main(env):
-    simultaneous_commit_tester(lambda s,e: env.exit(0))

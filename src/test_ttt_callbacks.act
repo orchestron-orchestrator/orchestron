@@ -12,19 +12,17 @@ from orchestron.device_meta_config import \
 
 ########################
 
-actor reconf_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
-    dev_mgr = odev.DeviceManager(None, log_handler)
+actor reconf(t: testing.AsyncT):
+    dev_mgr = odev.DeviceManager(None, logging.Handler(None))
     
-    def reconf(dev):
+    def reconf_cb(dev):
         #print("Reconfiguring", dev)
-        done(True, None)
+        t.success()
         
     dmc = DeviceMetaConfig("k1", Credentials("admin", "admin"), mock=Mock(["cisco-ios-xr"]))
-    dev_mgr.on_reconf(reconf)
+    dev_mgr.on_reconf(reconf_cb)
     dev_mgr.get("k1").set_dmc(dmc)
 
-def _test_reconf(done, logger: logging.Handler):
-    c = reconf_tester(done, logger)
 
 ########################
 
@@ -43,19 +41,19 @@ cfg2 = gdata.List(["name"], [
     })
 ])
 
-actor reconf2_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
-    dev_mgr = odev.DeviceManager(None, log_handler)
+actor reconf2(t: testing.AsyncT):
+    dev_mgr = odev.DeviceManager(None, logging.Handler(None))
     stack = ttt.Layer("devices", ttt.List(ttt.DeviceConfig(dev_mgr), ["name"], ["string"]), None)
     
     var devs = set()
     
-    def reconf(dev):
+    def reconf_cb(dev):
         devs.add(dev)
         #print("Reconfiguring", dev)
         if devs == {"k1", "k2"}:
-            done(True, None)
+            t.success()
         
-    dev_mgr.on_reconf(reconf)
+    dev_mgr.on_reconf(reconf_cb)
     sess = stack.newsession()
     
     def cont1(_r):
@@ -65,8 +63,6 @@ actor reconf2_tester(done: action(?bool, ?Exception)->None, log_handler: logging
     
     sess.edit_config(cfg2, cont1)
 
-def _test_reconf2(done, logger: logging.Handler):
-    c = reconf2_tester(done, logger)
 
 ########################
 
@@ -106,17 +102,17 @@ def rfs_for_device(dev):
         ])
     })
 
-actor complete_tester(done: action(?bool, ?Exception)->None, log_handler: logging.Handler):
-    dev_mgr = odev.DeviceManager(None, log_handler)
+actor complete(t: testing.AsyncT):
+    dev_mgr = odev.DeviceManager(None, logging.Handler(None))
     stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.List(ttt.Container({"base": ttt.List(ttt.RFSTransform(Fun, dev_mgr), ["id"], ["string"])}), ["name"], ["string"])}),
             ttt.Layer("devices", ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_mgr), ["name"], ["string"])})}),
             None))
 
-    def reconf(dev):
+    def reconf_cb(dev):
         cfg = rfs_for_device(dev)
         stack.edit_config(cfg, force=True)
         
-    dev_mgr.on_reconf(reconf)
+    dev_mgr.on_reconf(reconf_cb)
     
     def cont1(_r):
         dmc1 = DeviceMetaConfig("k1", Credentials("admin", "admin"), mock=Mock(["cisco-ios-xr"]))
@@ -124,17 +120,12 @@ actor complete_tester(done: action(?bool, ?Exception)->None, log_handler: loggin
         k1 = dev_mgr.get("k1").set_dmc(dmc1)
         k2 = dev_mgr.get("k2").set_dmc(dmc2)
     
-    def complete(_r):
-        done(True, None)
+    def complete_cb(_r):
+        t.success()
         
     sess = stack.newsession()
-    sess.edit_config(cfg3, cont1, complete)
+    sess.edit_config(cfg3, cont1, complete_cb)
 
-def _test_complete(done, logger: logging.Handler):
-    c = complete_tester(done, logger)
 
 ########################
 
-actor main(env):
-    log_handler = logging.Handler(None)
-    complete_tester(lambda s,e: env.exit(0), log_handler)

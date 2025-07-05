@@ -72,7 +72,7 @@ merge_1_2 = gdata.Container({
 
 ########################
 
-actor basic_commit_tester(done: action(?bool, ?Exception)->None):
+actor basic_commit(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -85,16 +85,14 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r, tree1)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_basic_commit(done, logger: logging.Handler):
-    c = basic_commit_tester(done)
 
 ########################
 
-actor all_delete_tester(done: action(?bool, ?Exception)->None):
+actor all_delete(t: testing.AsyncT):
     in1 = gdata.Container({
             "left" : gdata.Container({
                 "x": gdata.Leaf("int", 1)
@@ -127,18 +125,16 @@ actor all_delete_tester(done: action(?bool, ?Exception)->None):
                 "right": gdata.Container()
             })
             testing.assertEqual(out2, exp2)
-            done(True, None)
+            t.success()
 
         t1.lock("1", None, cont2)
 
     t1.lock("1", None, cont1)
 
-def _test_all_delete(done, logger: logging.Handler):
-    c = all_delete_tester(done)
 
 ########################
 
-actor nested_delete_tester(done: action(?bool, ?Exception)->None):
+actor nested_delete(t: testing.AsyncT):
     in1 = gdata.Container({
         "left": gdata.List(["name"], [
             gdata.Container({
@@ -181,18 +177,16 @@ actor nested_delete_tester(done: action(?bool, ?Exception)->None):
                 "right": gdata.List(["name"], [])
             })
             testing.assertEqual(out2, exp2)
-            done(True, None)
+            t.success()
 
         t1.lock("1", None, cont2)
 
     t1.lock("1", None, cont1)
 
-def _test_nested_delete(done, logger: logging.Handler):
-    c = nested_delete_tester(done)
 
 ########################
 
-actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
+actor overlapping_commit(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -215,16 +209,14 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r2, merge_1_2)
         r1 = t1.get()
         testing.assertEqual(r1, r2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_overlapping_commit(done, logger: logging.Handler):
-    c = overlapping_commit_tester(done)
 
 ########################
 
-actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
+actor overlapping_commit2(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -247,16 +239,14 @@ actor overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r1, merge_1_2)
         r2 = t2.get()
         testing.assertEqual(r1, r2)
-        done(True, None)
+        t.success()
 
     t2.lock("2", None, cont2)
 
-def _test_overlapping_commit2(done, logger: logging.Handler):
-    c = overlapping_commit_tester2(done)
 
 ########################
 
-actor modified_commit_tester(done: action(?bool, ?Exception)->None):
+actor modified_commit(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -270,16 +260,14 @@ actor modified_commit_tester(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r1 = t1.get()
         testing.assertEqual(r1, tree2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_modified_commit(done, logger: logging.Handler):
-    c = modified_commit_tester(done)
 
 ########################
 
-actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
+actor modified_commit2(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -293,12 +281,10 @@ actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r1 = t1.get()
         testing.assertEqual(r1, tree2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_modified_commit2(done, logger: logging.Handler):
-    c = modified_commit_tester2(done)
 
 ########################
 
@@ -316,7 +302,7 @@ tree0 = gdata.Container({
     })
 })
 
-actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
+actor modified_overlapping_commit(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -336,12 +322,10 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         t2.commit("2", True)
         r2 = t2.get()
         testing.assertEqual(r2, merge_1_2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_modified_overlapping_commit(done, logger: logging.Handler):
-    c = modified_overlapping_commit_tester(done)
 
 ########################
 
@@ -376,7 +360,7 @@ a0b1 = gdata.Container({
     })
 })
 
-actor config_failure_tester(done: action(?bool, ?Exception)->None):
+actor config_failure(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -397,18 +381,16 @@ actor config_failure_tester(done: action(?bool, ?Exception)->None):
             r = t2.get()
             if r != a0b1:
                 testing.assertEqual(r.prsrc(), a0b1.prsrc())
-            done(True, None)
+            t.success()
 
         t2.lock("2", None, cont2)
 
     t1.lock("1", None, cont1)
 
-def _test_config_failure(done, logger: logging.Handler):
-    c = config_failure_tester(done)
 
 ########################
 
-actor config_abort_tester(done: action(?bool, ?Exception)->None):
+actor config_abort(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -427,16 +409,14 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r, a0)
-        done(True, None)
+        t.success()
 
     t2.lock("2", None, cont2)
 
-def _test_config_abort(done, logger: logging.Handler):
-    c = config_abort_tester(done)
 
 ########################
 
-actor multi_lock_tester(done: action(?bool, ?Exception)->None):
+actor multi_lock(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -452,14 +432,12 @@ actor multi_lock_tester(done: action(?bool, ?Exception)->None):
             t1.commit("1", True)
             r = t1.get()
             testing.assertEqual(r, tree2)
-            done(True, None)
+            t.success()
 
         t1.lock("1", None, cont2)
 
     t1.lock("1", None, cont1)
 
-def _test_multi_lock(done, logger: logging.Handler):
-    c = multi_lock_tester(done)
 
 ########################
 
@@ -472,7 +450,7 @@ tree3 = gdata.Container({
     })
 })
 
-actor empty_lock_tester(done: action(?bool, ?Exception)->None):
+actor empty_lock(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -491,16 +469,14 @@ actor empty_lock_tester(done: action(?bool, ?Exception)->None):
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, tree2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_empty_lock(done, logger: logging.Handler):
-    c = empty_lock_tester(done)
 
 ########################
 
-actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
+actor empty_lock2(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -516,7 +492,7 @@ actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r2, tree2)
         r1 = t1.get()
         testing.assertEqual(r1, tree2)
-        done(True, None)
+        t.success()
 
     def cont2(_r: value):
         t2.configure("2", {'srcB': tree2}, None)
@@ -525,12 +501,10 @@ actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
 
     t2.lock("2", None, cont2)
 
-def _test_empty_lock2(done, logger: logging.Handler):
-    c = empty_lock_tester2(done)
 
 ########################
 
-actor no_lock_tester(done: action(?bool, ?Exception)->None):
+actor no_lock(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -547,16 +521,14 @@ actor no_lock_tester(done: action(?bool, ?Exception)->None):
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, tree2)
-        done(True, None)
+        t.success()
 
     t2.lock("2", None, cont2)
 
-def _test_no_lock(done, logger: logging.Handler):
-    c = no_lock_tester(done)
 
 ########################
 
-actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
+actor spurious_commit(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -572,16 +544,14 @@ actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r, tree1)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_spurious_commit(done, logger: logging.Handler):
-    c = spurious_commit_tester(done)
 
 ########################
 
-actor spurious_config_tester(done: action(?bool, ?Exception)->None):
+actor spurious_config(t: testing.AsyncT):
     container = ttt.Container({
         'left': ttt.Transform(ttt.PassThrough),
         'right': ttt.Transform(ttt.PassThrough)
@@ -599,14 +569,10 @@ actor spurious_config_tester(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r, tree1)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_spurious_config(done, logger: logging.Handler):
-    c = spurious_config_tester(done)
 
 ########################
 
-actor main(env):
-    config_failure_tester(lambda s,e: env.exit(0))

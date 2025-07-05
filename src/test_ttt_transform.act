@@ -214,7 +214,7 @@ def _test_patch():
 
 ########################
 
-actor basic_commit_tester(done: action(?bool, ?Exception)->None):
+actor basic_commit(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -260,7 +260,7 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
                     'd': gdata.LeafList("string", ['a', 'c'])
                 })
                 testing.assertEqual(r, expected)
-                done(True, None)
+                t.success()
 
             t3.lock("3", None, cont3)
 
@@ -268,12 +268,10 @@ actor basic_commit_tester(done: action(?bool, ?Exception)->None):
 
     t1.lock("1", None, cont1)
 
-def _test_basic_commit(done, logger: logging.Handler):
-    c = basic_commit_tester(done)
 
 ########################
 
-actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
+actor overlapping_commit(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -293,16 +291,13 @@ actor overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, merge_y1_y2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_overlapping_commit(done, logger: logging.Handler):
-    c = overlapping_commit_tester(done)
-
 ########################
 
-actor modified_commit_tester(done: action(?bool, ?Exception)->None):
+actor modified_commit(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
 
@@ -313,16 +308,13 @@ actor modified_commit_tester(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r, y2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_modified_commit(done, logger: logging.Handler):
-    c = modified_commit_tester(done)
-
 ########################
 
-actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
+actor modified_commit2(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
 
@@ -333,12 +325,9 @@ actor modified_commit_tester2(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r, y2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
-
-def _test_modified_commit2(done, logger: logging.Handler):
-    c = modified_commit_tester2(done)
 
 ########################
 
@@ -353,7 +342,7 @@ y0 = gdata.Container({
     "d": gdata.LeafList("string", ["a", "b"])
 })
 
-actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
+actor modified_overlapping_commit(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -370,12 +359,9 @@ actor modified_overlapping_commit_tester(done: action(?bool, ?Exception)->None):
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, merge_y1_y2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
-
-def _test_modified_overlapping_commit(done, logger: logging.Handler):
-    c = modified_overlapping_commit_tester(done)
 
 ########################
 
@@ -384,7 +370,7 @@ y3 = gdata.Container({
     "c": gdata.Leaf("int", 0),
 })
 
-actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None):
+actor modified_overlapping_commit2(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -401,12 +387,9 @@ actor modified_overlapping_commit_tester2(done: action(?bool, ?Exception)->None)
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, merge_y1_y2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
-
-def _test_modified_overlapping_commit2(done, logger: logging.Handler):
-    c = modified_overlapping_commit_tester2(done)
 
 ########################
 
@@ -427,7 +410,7 @@ a0b1 = gdata.Container({
     'b': gdata.Leaf("int", 1)
 })
 
-actor config_failure_tester(done: action(?bool, ?Exception)->None):
+actor config_failure(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -444,18 +427,15 @@ actor config_failure_tester(done: action(?bool, ?Exception)->None):
             t2.commit("2", True)
             r = t2.get()
             testing.assertEqual(r, a0b1)
-            done(True, None)
+            t.success()
 
         t2.lock("2", None, cont2)
 
     t1.lock("1", None, cont1)
 
-def _test_config_failure(done, logger: logging.Handler):
-    c = config_failure_tester(done)
-
 ########################
 
-actor config_abort_tester(done: action(?bool, ?Exception)->None):
+actor config_abort(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -471,16 +451,13 @@ actor config_abort_tester(done: action(?bool, ?Exception)->None):
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, a1)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_config_abort(done, logger: logging.Handler):
-    c = config_abort_tester(done)
-
 ########################
 
-actor multi_lock_tester(done: action(?bool, ?Exception)->None):
+actor multi_lock(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
 
@@ -493,18 +470,15 @@ actor multi_lock_tester(done: action(?bool, ?Exception)->None):
             t1.commit("1", True)
             r = t1.get()
             testing.assertEqual(r, y2)
-            done(True, None)
+            t.success()
 
         t1.lock("1", None, cont2)
 
     t1.lock("1", None, cont1)
 
-def _test_multi_lock(done, logger: logging.Handler):
-    c = multi_lock_tester(done)
-
 ########################
 
-actor empty_lock_tester(done: action(?bool, ?Exception)->None):
+actor empty_lock(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -520,16 +494,13 @@ actor empty_lock_tester(done: action(?bool, ?Exception)->None):
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, y2)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_empty_lock(done, logger: logging.Handler):
-    c = empty_lock_tester(done)
-
 ########################
 
-actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
+actor empty_lock2(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -542,7 +513,7 @@ actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
         testing.assertEqual(r2, y2)
         r1 = t1.get()
         testing.assertEqual(r1, y2)
-        done(True, None)
+        t.success()
 
     def cont2(_r: value):
         t2.configure("2", {'srcB': y2}, None)
@@ -551,12 +522,9 @@ actor empty_lock_tester2(done: action(?bool, ?Exception)->None):
 
     t2.lock("2", None, cont2)
 
-def _test_empty_lock2(done, logger: logging.Handler):
-    c = empty_lock_tester2(done)
-
 ########################
 
-actor no_lock_tester(done: action(?bool, ?Exception)->None):
+actor no_lock(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -570,16 +538,13 @@ actor no_lock_tester(done: action(?bool, ?Exception)->None):
         t2.commit("2", True)
         r = t2.get()
         testing.assertEqual(r, y2)
-        done(True, None)
+        t.success()
 
     t2.lock("2", None, cont2)
 
-def _test_no_lock(done, logger: logging.Handler):
-    c = no_lock_tester(done)
-
 ########################
 
-actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
+actor spurious_commit(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -592,16 +557,13 @@ actor spurious_commit_tester(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r, y1)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
 
-def _test_spurious_commit(done, logger: logging.Handler):
-    c = spurious_commit_tester(done)
-
 ########################
 
-actor spurious_config_tester(done: action(?bool, ?Exception)->None):
+actor spurious_config(t: testing.AsyncT):
     router = ttt.Transform(ttt.PassThrough) ([], None)
     t1 = router.newtrans()
     t2 = router.newtrans()
@@ -616,12 +578,9 @@ actor spurious_config_tester(done: action(?bool, ?Exception)->None):
         t1.commit("1", True)
         r = t1.get()
         testing.assertEqual(r, y1)
-        done(True, None)
+        t.success()
 
     t1.lock("1", None, cont1)
-
-def _test_spurious_config(done, logger: logging.Handler):
-    c = spurious_config_tester(done)
 
 ########################
 
@@ -646,22 +605,19 @@ class MemoryTransform(ttt.TransformFunction):
         # testing.error()
         raise AssertionError("Test error")
 
-actor transform_memory_tester(done: action(?bool, ?Exception)->None):
+actor transform_memory(t: testing.AsyncT):
     router = ttt.Transform(MemoryTransform) ([], None)
 
     s1 = ttt.Session("s1", router, None)
 
     def cont2(_r: value):
-        done(True, None)
+        t.success()
 
     def cont1(_r: value):
         s2 = ttt.Session("s2", router, None)
         s2.edit_config(gdata.Leaf('int', 0), None, cont2)
 
     s1.edit_config(gdata.Leaf('int', 42), None, cont1)
-
-def _test_transform_memory(done, logger: logging.Handler):
-    c = transform_memory_tester(done)
 
 ########################
 
@@ -676,15 +632,15 @@ class GDataWrapper(adata.MNode):
     mut def to_gdata(self) -> gdata.Node:
         return self._inner
 
-actor DynstateActor(update_dynstate: proc(?adata.MNode)->None, done: action(?bool, ?Exception)->None):
+actor DynstateActor(update_dynstate: proc(?adata.MNode)->None, t: testing.AsyncT):
     def on_conf(conf: gdata.Node, memory: ?gdata.Node):
         if isinstance(conf, gdata.Leaf):
             _conf: gdata.Leaf = conf
-            t = _conf.t
+            typ = _conf.t
             val = _conf.val
-            if t == 'int' and isinstance(val, int):
+            if typ == 'int' and isinstance(val, int):
                 if val == 42:
-                    done(True, None)
+                    t.success()
                 else:
                     update_dynstate(GDataWrapper(gdata.Leaf('int', 41)))
 
@@ -700,19 +656,13 @@ class DynstateTransform(ttt.TransformFunction):
 
         return (cfg, memory)
 
-actor transform_dynstate_tester(done: action(?bool, ?Exception)->None):
+actor transform_dynstate(t: testing.AsyncT):
     def DynstateActorCtor(update_dynstate: proc(?adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None:
-        act = DynstateActor(update_dynstate, done)
+        act = DynstateActor(update_dynstate, t)
         return act.on_conf
 
     router = ttt.Transform(DynstateTransform, DynstateActorCtor) ([], None)
     s1 = ttt.Session("s1", router, None)
     s1.edit_config(gdata.Leaf("int", 40))
 
-def _test_transform_dynstate(done, logger: logging.Handler):
-    c = transform_dynstate_tester(done)
-
 ########################
-
-actor main(env):
-    basic_commit_tester(lambda s,e: env.exit(0))
