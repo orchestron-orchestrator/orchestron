@@ -48,13 +48,25 @@ class DeviceSchema(object):
     @property
     from_json: mut(dict[str, ?value]) -> yang.gdata.Container
 
-    def __init__(self, name, schema_namespaces, root, from_gdata, from_xml=None, from_json=None):
+    ## Function to convert from XML to gdata using the DeviceType schema (schema-driven)
+    # TODO: why is @property needed here?
+    @property
+    from_xml_gen3: mut(xml.Node, list[str]) -> yang.gdata.Container
+
+    ## Function to convert from JSON to gdata using the DeviceType schema (schema-driven)
+    # TODO: why is @property needed here?
+    @property
+    from_json_gen3: mut(dict[str, ?value], list[str]) -> yang.gdata.Container
+
+    def __init__(self, name, schema_namespaces, root, from_gdata, from_xml=None, from_json=None, from_xml_gen3=None, from_json_gen3=None):
         self.name = name
         self.schema_namespaces = schema_namespaces
         self.root = root
         self.from_gdata = from_gdata
         self.from_xml = from_xml if from_xml is not None else lambda x: yang.gdata.Container()
         self.from_json = from_json if from_json is not None else lambda x: yang.gdata.Container()
+        self.from_xml_gen3 = from_xml_gen3 if from_xml_gen3 is not None else lambda x, y: yang.gdata.Container()
+        self.from_json_gen3 = from_json_gen3 if from_json_gen3 is not None else lambda x, y: yang.gdata.Container()
 
 
 ## DeviceType represents a type of device, i.e. a specific platform or
@@ -71,10 +83,10 @@ class DeviceType(object):
 
     schema: DeviceSchema
 
-    def __init__(self, name: str, adapter_type, schema_namespaces, root, from_gdata, from_xml=None, from_json=None):
+    def __init__(self, name: str, adapter_type, schema_namespaces, root, from_gdata, from_xml=None, from_json=None, from_xml_gen3=None, from_json_gen3=None):
         self.name = name
         self.adapter_type = adapter_type
-        self.schema = DeviceSchema(name, schema_namespaces, root, from_gdata, from_xml, from_json)
+        self.schema = DeviceSchema(name, schema_namespaces, root, from_gdata, from_xml, from_json, from_xml_gen3, from_json_gen3)
 
 class MockRoot(yang.adata.MNode):
     """Mock root node for mock devices"""
@@ -1100,7 +1112,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
             _log.debug("Device._on_get_config: r is not None")
             if r.tag == "rpc-reply" and len(r.children) == 1 and r.children[0].tag == "data":
                 _log.debug("Device._on_get_config", {"r": r.encode()})
-                running_conf = schema.from_xml(r.children[0])
+                running_conf = schema.from_xml_gen3(r.children[0], [])
                 if cb is not None:
                     cb(running_conf, None)
             else:

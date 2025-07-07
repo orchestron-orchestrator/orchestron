@@ -129,7 +129,8 @@ class CompiledSysSpec(object):
             schema_namespaces={modname}.schema_namespaces,
             root={modname}.root,
             from_gdata={modname}.root.from_gdata,
-            from_xml={modname}.from_xml
+            from_xml={modname}.from_xml,
+            from_xml_gen3={modname}.from_xml_gen3
         ),
 """
         syssrc += "device_types = {{\n"
