@@ -43,23 +43,24 @@ class DeviceSchema(object):
     @property
     from_gdata: mut(?yang.gdata.Node) -> yang.adata.MNode
 
+    # TODO: just define from_data: mut(YangData) ?!
     ## Function to convert from XML to gdata using the DeviceType schema
     # TODO: why is @property needed here?
     @property
-    from_xml: mut(xml.Node) -> yang.gdata.Container
+    from_xml: mut(xml.Node, list[str]) -> yang.gdata.Container
 
     ## Function to convert from JSON to gdata using the DeviceType schema
     # TODO: why is @property needed here?
     @property
-    from_json: mut(dict[str, ?value]) -> yang.gdata.Container
+    from_json: mut(dict[str, ?value], list[str]) -> yang.gdata.Container
 
     def __init__(self, name, schema_namespaces, root, from_gdata, from_xml=None, from_json=None):
         self.name = name
         self.schema_namespaces = schema_namespaces
         self.root = root
         self.from_gdata = from_gdata
-        self.from_xml = from_xml if from_xml is not None else lambda x: yang.gdata.Container()
-        self.from_json = from_json if from_json is not None else lambda x: yang.gdata.Container()
+        self.from_xml = from_xml if from_xml is not None else lambda x, y: yang.gdata.Container()
+        self.from_json = from_json if from_json is not None else lambda x, y: yang.gdata.Container()
 
 
 ## DeviceType represents a type of device, i.e. a specific platform or
@@ -1276,7 +1277,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                 # Extract current config and compute hash
                 data_tag = r.children[0] if len(r.children) > 0 else None
                 if data_tag is not None:
-                    current = schema.from_xml(data_tag)
+                    current = schema.from_xml(data_tag, [])
                     if current is not None:
                         # Compute hash of the entire config as txid
                         current_xml_bytes = current.to_xmlstr().encode()
@@ -1606,7 +1607,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                     # JUNOS response looks like this
                     # <data>\n<configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm" junos:commit-seconds="1756279893" junos:commit-localtime="2025-08-27 07:31:33 UTC" junos:commit-user="root">
                     # We want to extract the junos:commit-seconds and attach as txid on the root node in running_conf
-                    new_conf = schema.from_xml(r.children[0])
+                    new_conf = schema.from_xml(r.children[0], [])
                     if new_conf is not None:
                         if new_conf.txid is None:
                             txid = extract_txid(data_tag)

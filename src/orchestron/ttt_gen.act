@@ -13,11 +13,10 @@ def get_key_types(sn: schema.DList) -> list[str]:
     return key_types
 
 class TTTSrc(object):
-    def __init__(self, src: str, input_classes: list[str], state_classes: list[str], deserializers: list[str], imports: list[str], defs: list[str], base_defs: list[str], act_defs: list[str]):
+    def __init__(self, src: str, input_classes: list[str], state_classes: list[str], imports: list[str], defs: list[str], base_defs: list[str], act_defs: list[str]):
         self.src = src
         self.input_classes = input_classes
         self.state_classes = state_classes
-        self.deserializers = deserializers
         self.imports = imports
         self.defs = defs
         self.base_defs = base_defs
@@ -26,7 +25,6 @@ class TTTSrc(object):
 def children_to_tttsrc(sn: schema.DNodeInner, spath: list[schema.DNode]) -> TTTSrc:
     input_classes = []
     state_classes = []
-    deserializers = []
     imports = []
     defs = []
     base_defs = []
@@ -38,19 +36,17 @@ def children_to_tttsrc(sn: schema.DNodeInner, spath: list[schema.DNode]) -> TTTS
         res = dschema_to_tttsrc(child, spath + [child], set_ns=child.namespace!=sn.namespace)
         input_classes.extend(res.input_classes)
         state_classes.extend(res.state_classes)
-        deserializers.extend(res.deserializers)
         imports.extend(res.imports)
         defs.extend(res.defs)
         base_defs.extend(res.base_defs)
         act_defs.extend(res.act_defs)
         elems.append(f'"{child.name}": {res.src}')
     children_src = ", ".join(elems)
-    return TTTSrc(src=children_src, input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+    return TTTSrc(src=children_src, input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
 def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set_ns=True) -> TTTSrc:
     input_classes = []
     state_classes = []
-    deserializers = []
     imports = []
     defs = []
     base_defs = []
@@ -130,11 +126,9 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
                         else:
                             wrapper_return = "return self.transform(modeled_input%s).to_gdata(), None" % wrapper_extra_params
 
-                        deserializer = f"from_xml_{schema.get_path_name(spath)}"
-                        # TODO: align with adata names, like _entry above?
-                        if isinstance(sn, schema.DList):
-                            deserializer += "_element"
-                        deserializers.append(deserializer)
+                        root_path = ["{'{node.module}:' if prev.module != node.module else ''}{node.name}" if node is not None else None for prev, node in zip(spath, spath[1:] + [None])]
+                        deserializer = root_path[:-1]
+
                         if ext.name == "transform":
                             base_defs.append(f"""class {transform_name}(ttt.TransformFunction):
     transform: mut({input_class}{transform_extra_typed_params}) -> {transform_output}
@@ -155,11 +149,11 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         \"\"\"Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         \"\"\"
-        gdata_input = {deserializer}(i)
+        gdata_input = from_xml(i, {deserializer})
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
-                            return TTTSrc(src="ttt.List(ttt.Transform({transform}, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                            return TTTSrc(src="ttt.List(ttt.Transform({transform}, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
                         elif ext.name == "rfs-transform":
                             base_defs.append(f"""class {transform_name}(ttt.RFSFunction):
@@ -181,45 +175,43 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         \"\"\"Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         \"\"\"
-        gdata_input = {deserializer}(i)
+        gdata_input = from_xml(i, {deserializer})
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
-                            return TTTSrc(src="ttt.List(ttt.RFSTransform({transform}, dev_registry, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                            return TTTSrc(src="ttt.List(ttt.RFSTransform({transform}, dev_registry, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
                         raise ValueError("Unknown extension name: {ext.name}")
                     else:
                         raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
                 elif ext.name == "device":
                     if extarg is not None:
                         raise ValueError("Extraneous argument to orchestron:device. Remove argument.")
-                    return TTTSrc(src="ttt.List(ttt.Device(dev_registry, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                    return TTTSrc(src="ttt.List(ttt.Device(dev_registry, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
                 elif ext.name == "device-config":
                     if extarg is not None:
                         raise ValueError("Extraneous argument to orchestron:device-config. Remove argument.")
-                    return TTTSrc(src="ttt.List(ttt.DeviceConfig(dev_registry, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                    return TTTSrc(src="ttt.List(ttt.DeviceConfig(dev_registry, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
         # List without an extension
         children_res = children_to_tttsrc(sn, spath)
         input_classes.extend(children_res.input_classes)
         state_classes.extend(children_res.state_classes)
-        deserializers.extend(children_res.deserializers)
         imports.extend(children_res.imports)
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
         act_defs.extend(children_res.act_defs)
-        return TTTSrc(src="ttt.List(ttt.Container({{{children_res.src}}}), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+        return TTTSrc(src="ttt.List(ttt.Container({{{children_res.src}}}), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
     elif isinstance(sn, schema.DNodeInner):
         sn_children = sn.children
         children_res = children_to_tttsrc(sn, spath)
         input_classes.extend(children_res.input_classes)
         state_classes.extend(children_res.state_classes)
-        deserializers.extend(children_res.deserializers)
         imports.extend(children_res.imports)
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
         act_defs.extend(children_res.act_defs)
-        return TTTSrc(src="ttt.Container({{{children_res.src}}}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+        return TTTSrc(src="ttt.Container({{{children_res.src}}}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
     raise NotImplementedError(f"Unhandled schema type: {type(sn)}")
 
@@ -232,8 +224,7 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     base_src += "import logging\nimport xml\nimport orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
     for ic in ts.input_classes:
         base_src += f"from {input_yang_module} import {ic}\n"
-    for ds in ts.deserializers:
-        base_src += f"from {input_yang_module} import {ds}\n"
+    base_src += f"from {input_yang_module} import from_xml\n"
 
     if output_yang_module is not None:
         base_src += f"from {output_yang_module} import root as output_root\n\n"
