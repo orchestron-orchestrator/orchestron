@@ -49,7 +49,7 @@ class DeviceType(object):
     ## Function to convert from XML to gdata using the DeviceType schema
     # TODO: why is @property needed here?
     @property
-    from_xml: mut(xml.Node) -> yang.gdata.Container
+    from_xml: mut(xml.Node, ?list[str]) -> yang.gdata.Container
 
     ## Function to convert from JSON to gdata using the DeviceType schema
     # TODO: why is @property needed here?
@@ -62,7 +62,7 @@ class DeviceType(object):
         self.schema_namespaces = schema_namespaces
         self.root = root
         self.from_gdata = from_gdata
-        self.from_xml = from_xml if from_xml is not None else lambda x: yang.gdata.Container()
+        self.from_xml = from_xml if from_xml is not None else lambda x, y: yang.gdata.Container()
         self.from_json = from_json if from_json is not None else lambda x: yang.gdata.Container()
 
 class DeviceError(Exception):
