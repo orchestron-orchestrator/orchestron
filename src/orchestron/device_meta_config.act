@@ -3,6 +3,7 @@ import json
 import xml
 import yang.adata
 import yang.gdata
+from yang.common import Identityref
 
 # == This file is generated ==
 
