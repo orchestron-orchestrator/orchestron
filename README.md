@@ -1,14 +1,17 @@
-# Orchestron
+<p align="left">
+  <img src="docs/images/orchestron_blue.png" width="400"/>
+</p>
 
 Orchestron is a platform for the development of robust network orchestration systems based on model-driven declarative transforms. It does the heavy lifting so you can focus on building automation that makes sense. With native support for streaming telemetry, Orchestron enables you to build reactive closed loop automation.
 
-## Reference Implementation
-A platform is only as good as the use cases it can support. That is why we are
-simultaniously developing **SORESPO**, a **reference implementation** of an
-Orchestron system. As a network operator and/or network service developer we
-encourage you to first of all [explore SORESPO](https://github.com/orchestron-orchestrator/sorespo/blob/main/README.md)
-to experience first hand how the Orchestron platform can support your
-real-world use cases.
+## Getting Started
+Learn all about Orchestron, in under 10 minutes, on our [YouTube channel](https://youtu.be/Mkl-Ud8shMI)!
+
+[<img src="https://img.youtube.com/vi/Mkl-Ud8shMI/hqdefault.jpg" width="600" height="400"
+/>](https://www.youtube.com/embed/Mkl-Ud8shMI)
+
+Check out [SORESPO](https://github.com/orchestron-orchestrator/sorespo/blob/main/README.md),
+our **reference implementation** of Orchestron, including hands-on tutorials!
 
 ## Orchestron Design Philosophy
 
