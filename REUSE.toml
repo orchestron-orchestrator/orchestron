@@ -10,7 +10,7 @@ version = 1
 path = [
     "build.act.json"
 ]
-SPDX-FileCopyrightText = "2024 Deutsche Telekom AG"
+SPDX-FileCopyrightText = "2025 Deutsche Telekom AG"
 SPDX-License-Identifier = "BSD-3-Clause"
 
 
@@ -18,7 +18,7 @@ SPDX-License-Identifier = "BSD-3-Clause"
 path = [
     "gen_dmc/build.act.json"
 ]
-SPDX-FileCopyrightText = "2024 Deutsche Telekom AG"
+SPDX-FileCopyrightText = "2025 Deutsche Telekom AG"
 SPDX-License-Identifier = "BSD-3-Clause"
 
 
@@ -30,7 +30,7 @@ path = [
     "test/golden/test_ttt_gen/ttt_gen_rfs_base",
     "test/golden/test_ttt_gen/ttt_gen_rfs_ttt"
 ]
-SPDX-FileCopyrightText = "2024 Deutsche Telekom AG"
+SPDX-FileCopyrightText = "2025 Deutsche Telekom AG"
 SPDX-License-Identifier = "BSD-3-Clause"
 
 
@@ -38,5 +38,5 @@ SPDX-License-Identifier = "BSD-3-Clause"
 path = [
     "docs/images/orchestron_blue.png"
 ]
-SPDX-FileCopyrightText = "2024 Deutsche Telekom AG"
+SPDX-FileCopyrightText = "2025 Deutsche Telekom AG"
 SPDX-License-Identifier = "CC0-1.0"
