@@ -1,3 +1,9 @@
+<!---
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+# SPDX-License-Identifier: CC0-1.0
+License-Filename: LICENSES/CC0-1.0.txt
+--->
+
 <p align="left">
   <img src="docs/images/orchestron_blue.png" width="400"/>
 </p>
