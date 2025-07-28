@@ -22,6 +22,8 @@ SPDX-FileCopyrightText = "2025 Deutsche Telekom AG"
 SPDX-License-Identifier = "BSD-3-Clause"
 
 
+# The following files are generated and must not be modified, we hence
+# add the copyright andn licence information here.
 [[annotations]]
 path = [
     "test/golden/test_ttt_gen/odev",
