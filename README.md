@@ -1,7 +1,7 @@
 <!---
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
 # SPDX-License-Identifier: CC0-1.0
-License-Filename: LICENSES/CC0-1.0.txt
+# License-Filename: LICENSES/CC0-1.0.txt
 --->
 
 <p align="left">
