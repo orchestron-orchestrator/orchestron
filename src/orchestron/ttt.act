@@ -203,7 +203,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
     var tid_state = None
 
     # yield action
-    def edit_config(diff, done:?action(value)->None=None, complete:?action(value)->None=None, force=False):
+    def edit_config(diff, done: ?action(value)->None=None, complete: ?action(value)->None=None, force=False):
         tid = 'tr' + actorid()
         #print('####', tid, '(Layer)', name, 'edit_config', actorid(), err=True)
         configure(tid, {'_': diff})
