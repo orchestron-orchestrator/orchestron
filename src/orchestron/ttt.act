@@ -1,5 +1,4 @@
 import yang.adata
-#import orchestron.gdata as gdata
 import yang.gdata as gdata
 import orchestron.device as odev
 from orchestron.device_meta_config import orchestron_rfs__device_entry as DeviceMetaConfig
@@ -318,47 +317,47 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
 
 ############## Containers ##################
 
-def Container(template={}, ns:?str=None) -> proc(list[str], ?Layer)->Node:
-    return lambda path, lower: Node(_Container(path, template, ns, lower))
+def Container(template={}, ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
+    return lambda path, lower: Node(_Container(path, template, ns, module, lower))
 
 class _Container(_Node):
     elems: dict[str, Node]
     ns: ?str
+    module: ?str
 
-    def __init__(self, path, template: dict[str, proc(list[str], ?Layer)->Node], ns, lower: ?Layer):
+    def __init__(self, path, template: dict[str, proc(list[str], ?Layer)->Node], ns, module, lower: ?Layer):
         self.path = path
         self.elems = {key: templ(path + [key], lower) for key, templ in template.items()}
         self.ns = ns
+        self.module = module
 
     def newtrans(self):
-        return ContainerTransaction(self.path, self.elems, self.ns)
+        return ContainerTransaction(self.path, self.elems, self.ns, self.module)
 
     def get(self):
         #print('####', '(Container)', self.path, actorid(),'NODE GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
-        ns = self.ns
-        if len(self.path) <= 1 and ns is not None:
-            return gdata.Container(res, ns=ns)
-        else:
-            return gdata.Container(res, ns=self.ns)
+        return gdata.Container(res, ns=self.ns, module=self.module)
 
 
-def ContainerTransaction(path, contents, ns:?str=None):
-    return Transaction(_ContainerTransaction(path, contents, ns))
+def ContainerTransaction(path, contents, ns:?str=None, module:?str=None):
+    return Transaction(_ContainerTransaction(path, contents, ns, module))
 
 class _ContainerTransaction(_Transaction):
     elems : dict[str, Transaction]
     accum : dict[str, value]
     state : ?YieldState
     ns: ?str
+    module: ?str
 
-    def __init__(self, path, contents, ns):
+    def __init__(self, path, contents, ns, module):
         self.path = path
         self.elems = {}
         self.accum = {}
         self.state = None
         self.ns = ns
         self.elems = {key: node.newtrans() for key, node in contents.items()}
+        self.module = module
 
     def configure(self, tid, diff, out, force=False):
         #print('####', tid, '(Container)', self.path, 'configure force:', force, actorid(), err=True)
@@ -481,29 +480,29 @@ class _ContainerTransaction(_Transaction):
     def get(self):
         #print('####', '(Container)', self.path, actorid(), 'GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
-        ns = self.ns
-        if len(self.path) <= 1 and ns is not None:
-            return gdata.Container(res, ns=ns)
-        else:
-            return gdata.Container(res, ns=self.ns)
+        return gdata.Container(res, ns=self.ns, module=self.module)
 
 
 ################# Lists ####################
 
-def List(template, key_names: list[str], key_types: list[str]) -> proc(list[str], ?Layer)->Node:
-    return lambda path, lower: Node(_List(path, template, key_names, key_types, lower))
+def List(template, key_names: list[str], key_types: list[str], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
+    return lambda path, lower: Node(_List(path, template, key_names, key_types, ns, module, lower))
 
 class _List(_Node):
     liststate: ListState
+    ns: ?str
+    module: ?str
 
-    def __init__(self, path, template, key_names, key_types, lower: ?Layer):
+    def __init__(self, path, template, key_names, key_types, ns, module, lower: ?Layer):
         self.path = path
         self.key_names = key_names
         self.key_types = key_types
-        self.liststate = ListState(path, template, lower)
+        self.ns = ns
+        self.module = module
+        self.liststate = ListState(path, template, ns, module, lower)
 
     def newtrans(self):
-        return ListTransaction(self.path, self.liststate, self.key_names, self.key_types)
+        return ListTransaction(self.path, self.liststate, self.key_names, self.key_types, self.ns, self.module)
 
     def get(self):
         #print('####', '(List)', self.path, 'NODE GET', err=True)
@@ -512,10 +511,10 @@ class _List(_Node):
             r = node.get()
             if isinstance(r, gdata.Container):
                 res.append(r)
-        return gdata.List(self.key_names, res)
+        return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
 
-actor ListState(path, template: proc(list[str], ?Layer) -> Node, lower: ?Layer):
+actor ListState(path, template: proc(list[str], ?Layer) -> Node, ns: ?str, module: ?str, lower: ?Layer):
     var elems = {}
     var active = {}
     var provisional = set()
@@ -559,12 +558,16 @@ class _ListTransaction(_Transaction):
     accum : dict[str, value]
     state : ?YieldState
     reset: bool
+    ns: ?str
+    module: ?str
 
-    def __init__(self, path, liststate, key_names, key_types):
+    def __init__(self, path, liststate, key_names, key_types, ns, module):
         self.path = path
         self.liststate = liststate
         self.key_names = key_names
         self.key_types = key_types
+        self.ns = ns
+        self.module = module
         self.elems = {}
         self.accum = {}
         self.state = None
@@ -715,10 +718,10 @@ class _ListTransaction(_Transaction):
                 for i, kn in enumerate(self.key_names):
                     r.children.setdefault(kn, gdata.Leaf(self.key_types[i], split_key[i]))
             res.append(r)
-        return gdata.List(self.key_names, res)
+        return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
-def ListTransaction(path, liststate: ListState, key_names, key_types):
-    return Transaction(_ListTransaction(path, liststate, key_names, key_types))
+def ListTransaction(path, liststate: ListState, key_names, key_types, ns, module):
+    return Transaction(_ListTransaction(path, liststate, key_names, key_types, ns, module))
 
 
 ################# Transform #####################
@@ -1038,7 +1041,7 @@ class _RFSTransaction(_TransformTransactionBase):
                     gdata.Container(dev_content)
                 ])
             })
-        }, ns="http://orchestron.org/yang/orchestron-device.yang")
+        }, ns="http://orchestron.org/yang/orchestron-device.yang", module="orchestron-device")
 
     def update_memory(self, newmem):
         self.memory = newmem
