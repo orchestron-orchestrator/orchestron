@@ -127,6 +127,7 @@ class CompiledSysSpec(object):
             modname = "{self.name}.devices.{dev_type.name}"
             syssrc += "import {modname}\n"
             syssrc_devtypes += """    "{dev_type.name}": odev.DeviceType(name="{dev_type.name}",
+            adapter_type=odev.NetconfAdapter,
             schema_namespaces={modname}.schema_namespaces,
             root={modname}.root,
             from_gdata={modname}.root.from_gdata,
