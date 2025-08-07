@@ -485,20 +485,24 @@ class _ContainerTransaction(_Transaction):
 
 ################# Lists ####################
 
-def List(template, key_names: list[str], key_types: list[str]) -> proc(list[str], ?Layer)->Node:
-    return lambda path, lower: Node(_List(path, template, key_names, key_types, lower))
+def List(template, key_names: list[str], key_types: list[str], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
+    return lambda path, lower: Node(_List(path, template, key_names, key_types, ns, module, lower))
 
 class _List(_Node):
     liststate: ListState
+    ns: ?str
+    module: ?str
 
-    def __init__(self, path, template, key_names, key_types, lower: ?Layer):
+    def __init__(self, path, template, key_names, key_types, ns, module, lower: ?Layer):
         self.path = path
         self.key_names = key_names
         self.key_types = key_types
-        self.liststate = ListState(path, template, lower)
+        self.ns = ns
+        self.module = module
+        self.liststate = ListState(path, template, ns, module, lower)
 
     def newtrans(self):
-        return ListTransaction(self.path, self.liststate, self.key_names, self.key_types)
+        return ListTransaction(self.path, self.liststate, self.key_names, self.key_types, self.ns, self.module)
 
     def get(self):
         #print('####', '(List)', self.path, 'NODE GET', err=True)
@@ -507,10 +511,10 @@ class _List(_Node):
             r = node.get()
             if isinstance(r, gdata.Container):
                 res.append(r)
-        return gdata.List(self.key_names, res)
+        return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
 
-actor ListState(path, template: proc(list[str], ?Layer) -> Node, lower: ?Layer):
+actor ListState(path, template: proc(list[str], ?Layer) -> Node, ns: ?str, module: ?str, lower: ?Layer):
     var elems = {}
     var active = {}
     var provisional = set()
@@ -554,12 +558,16 @@ class _ListTransaction(_Transaction):
     accum : dict[str, value]
     state : ?YieldState
     reset: bool
+    ns: ?str
+    module: ?str
 
-    def __init__(self, path, liststate, key_names, key_types):
+    def __init__(self, path, liststate, key_names, key_types, ns, module):
         self.path = path
         self.liststate = liststate
         self.key_names = key_names
         self.key_types = key_types
+        self.ns = ns
+        self.module = module
         self.elems = {}
         self.accum = {}
         self.state = None
@@ -710,10 +718,10 @@ class _ListTransaction(_Transaction):
                 for i, kn in enumerate(self.key_names):
                     r.children.setdefault(kn, gdata.Leaf(self.key_types[i], split_key[i]))
             res.append(r)
-        return gdata.List(self.key_names, res)
+        return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
-def ListTransaction(path, liststate: ListState, key_names, key_types):
-    return Transaction(_ListTransaction(path, liststate, key_names, key_types))
+def ListTransaction(path, liststate: ListState, key_names, key_types, ns, module):
+    return Transaction(_ListTransaction(path, liststate, key_names, key_types, ns, module))
 
 
 ################# Transform #####################

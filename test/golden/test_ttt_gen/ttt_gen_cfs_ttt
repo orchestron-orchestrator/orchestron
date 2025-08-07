@@ -13,5 +13,5 @@ import respnet.cfs
 
 
 def get_ttt(lower: ?ttt.Layer, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str],?ttt.Layer)->ttt.Node:
-    r = ttt.Container({"c1": ttt.Container({"foo": ttt.List(ttt.Container({"bar": ttt.List(ttt.Transform(respnet.cfs.Foobar, None, lower, log_handler), ['name'], ['string'])}), ['name'], ['string'])}, ns='http://example.com/foo', module='foo')})
+    r = ttt.Container({"c1": ttt.Container({"foo": ttt.List(ttt.Container({"bar": ttt.List(ttt.Transform(respnet.cfs.Foobar, None, lower, log_handler), ['name'], ['string'], ns='http://example.com/foo', module='foo')}), ['name'], ['string'])}, ns='http://example.com/foo', module='foo')})
     return r

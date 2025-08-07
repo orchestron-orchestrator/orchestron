@@ -155,7 +155,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
-                            return TTTSrc(src=f"ttt.List(ttt.Transform({transform}, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                            nsq = f", ns='{sn.namespace}', module='{sn.module}'" if sn.namespace != "" else ""
+                            return TTTSrc(src=f"ttt.List(ttt.Transform({transform}, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
                         elif ext.name == "rfs-transform":
                             base_defs.append(f"""class {transform_name}(ttt.RFSFunction):
@@ -181,18 +182,21 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
-                            return TTTSrc(src=f"ttt.List(ttt.RFSTransform({transform}, dev_mgr, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                            nsq = f", ns='{sn.namespace}', module='{sn.module}'" if sn.namespace != "" else ""
+                            return TTTSrc(src=f"ttt.List(ttt.RFSTransform({transform}, dev_mgr, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
                         raise ValueError(f"Unknown extension name: {ext.name}")
                     else:
                         raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
                 elif ext.name == "device":
                     if extarg is not None:
                         raise ValueError("Extraneous argument to orchestron:device. Remove argument.")
-                    return TTTSrc(src=f"ttt.List(ttt.Device(dev_mgr, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                    nsq = f", ns='{sn.namespace}', module='{sn.module}'" if sn.namespace != "" else ""
+                    return TTTSrc(src=f"ttt.List(ttt.Device(dev_mgr, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
                 elif ext.name == "device-config":
                     if extarg is not None:
                         raise ValueError("Extraneous argument to orchestron:device-config. Remove argument.")
-                    return TTTSrc(src=f"ttt.List(ttt.DeviceConfig(dev_mgr, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                    nsq = f", ns='{sn.namespace}', module='{sn.module}'" if sn.namespace != "" else ""
+                    return TTTSrc(src=f"ttt.List(ttt.DeviceConfig(dev_mgr, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
         # List without an extension
         children_res = children_to_tttsrc(sn)
@@ -203,8 +207,8 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
         act_defs.extend(children_res.act_defs)
-        nsq = (", ns='{sn.namespace}', module='{sn.module}'") if set_ns and sn.namespace != "" else ""
-        return TTTSrc(src="ttt.List(ttt.Container({{{children_res.src}}}{nsq}), {repr(sn.key)}, {repr(get_key_types(sn))})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+        nsq = f", ns='{sn.namespace}', module='{sn.module}'" if set_ns and sn.namespace != "" else ""
+        return TTTSrc(src=f"ttt.List(ttt.Container({{{children_res.src}}}{nsq}), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
     elif isinstance(sn, schema.DNodeInner):
         sn_children = sn.children
