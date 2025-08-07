@@ -1,8 +1,11 @@
 import diff
+import json
 import logging
 import testing
 import xml
 
+import yang
+import yang.schema
 import yang.adata
 import yang.gdata
 
@@ -27,7 +30,7 @@ class DeviceType(object):
     ## Adapter type, i.e. the DeviceAdapter subclass to use
     # TODO: why is @property needed here?
     @property
-    adapter_type: (Device, logging.Handler, ?WorldCap) -> DeviceAdapter
+    adapter_type: proc(Device, logging.Handler, ?WorldCap) -> DeviceAdapter
 
     ## Schema namespaces
     schema_namespaces: set[str]
@@ -56,9 +59,9 @@ class DeviceType(object):
     @property
     from_json: mut(dict[str, ?value]) -> yang.gdata.Container
 
-    def __init__(self, name, schema_namespaces, root, from_gdata, from_xml, from_json):
+    def __init__(self, name, adapter_type, schema_namespaces, root, from_gdata, from_xml, from_json):
         self.name = name
-        #self.adapter_type = adapter_type
+        self.adapter_type = adapter_type
         self.schema_namespaces = schema_namespaces
         self.root = root
         self.from_gdata = from_gdata
@@ -102,7 +105,7 @@ extension ModCap(Eq):
         return self.name == other.name and self.namespace == other.namespace and revision_eq and self.feature == other.feature
 
 
-actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
+actor DeviceManager(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, log_handler: logging.Handler):
     """Device Manager keeps track of all devices and hands out references to
     them based on name.
 
@@ -119,7 +122,7 @@ actor DeviceManager(wcap: ?WorldCap=None, log_handler: logging.Handler):
 
     def get(name: str) -> Device:
         if name not in devices:
-            devices[name] = Device(wcap, name, log_handler, reconf_cb)
+            devices[name] = Device(dev_types, wcap, name, log_handler, reconf_cb)
         dev = devices[name]
         return dev
 
@@ -137,7 +140,7 @@ def truncate_conf(conf: ?yang.gdata.Node) -> str:
         return sc
     return r"{}"
 
-actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None):
+actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None):
     """Device
 
     This is the Orchestron Device, it represents an abstract device in the
@@ -170,7 +173,8 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     _log_handler.set_output_level(logging.DEBUG)
     _log = logging.Logger(_log_handler)
 
-    _log.debug("Device starting up", {"name": name})
+    mock = True if wcap is None else False
+    _log.debug("Device starting up", {"name": name, "mock": mock})
 
     # Orchestron's intended configuration, that we want on the device. Note how
     # this is NOT the NMDA-speak "intended configuration" of the device itself.
@@ -184,8 +188,8 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
     var dmc: ?DeviceMetaConfig = None
 
     #var adapter: DeviceAdapter = NoAdapter(self, _log_handler, wcap)
-    # TODO: default to NoAdapter and extract adapter from dmc type
-    var adapter: DeviceAdapter = NetconfAdapter(self, _log_handler, wcap) if wcap is not None else MockAdapter(self, _log_handler, wcap)
+    # TODO: default to NoAdapter!?
+    var adapter: DeviceAdapter = MockAdapter(self, _log_handler, wcap) if mock else NetconfAdapter(self, _log_handler, wcap)
 
     # The modules supported by the device.
     var modset: dict[str, ModCap] = {}
@@ -235,12 +239,30 @@ actor Device(wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_r
 
     def set_dmc(new_dmc: DeviceMetaConfig) -> None:
         old_type = str(dmc.type) if dmc is not None else str(None)
-        _log.debug("Device.set_dmc", {"old_type": old_type, "new_dmc": new_dmc.to_gdata().to_json()})
-        if old_type != str(new_dmc.type):
-            _log.debug("Device type has changed, using new adapter", {"old_type": old_type, "new_type": str(new_dmc.type)})
-            # TODO: map type from adapter class
-            adapter = NetconfAdapter(self, _log_handler, wcap)
+        _log.debug("Device.set_dmc", {"old_type": old_type, "new_dmc": json.encode(json.decode(new_dmc.to_gdata().to_json()), pretty=False)})
+
+        if mock:
+            _log.debug("Device.set_dmc: mock device")
+        else:
+            new_dmc_type = new_dmc.type
+            if new_dmc_type is not None:
+                if old_type != str(new_dmc.type):
+                    _log.debug("Device type has changed, using new adapter", {"old_type": old_type, "new_type": new_dmc.type})
+
+                    device_type = dev_types.get(new_dmc_type)
+                    if device_type is not None:
+                        adapter = device_type.adapter_type(self, _log_handler, wcap)
+                        _log.info("Device.set_dmc: using adapter", {"adapter": adapter})
+                        adapter.set_dmc(new_dmc)
+                    else:
+                        _log.warning("Device.set_dmc: configured device type not available in system", {"device_type": new_dmc_type})
+                else:
+                    _log.debug("Device.set_dmc: device type unchanged, not changing adapter")
+            else:
+                _log.debug("Device.set_dmc: no device type configured, not changing adapter")
+
         adapter.set_dmc(new_dmc)
+
         dmc = new_dmc
 
     def _transaction_done(error: ?Exception):

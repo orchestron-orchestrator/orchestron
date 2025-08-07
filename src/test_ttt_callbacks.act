@@ -13,8 +13,8 @@ from orchestron.device_meta_config import \
 ########################
 
 actor reconf(t: testing.AsyncT):
-    dev_mgr = odev.DeviceManager(None, logging.Handler(None))
-    
+    dev_mgr = odev.DeviceManager(log_handler=t.log_handler)
+
     def reconf_cb(dev):
         #print("Reconfiguring", dev)
         t.success()
@@ -42,7 +42,7 @@ cfg2 = gdata.List(["name"], [
 ])
 
 actor reconf2(t: testing.AsyncT):
-    dev_mgr = odev.DeviceManager(None, logging.Handler(None))
+    dev_mgr = odev.DeviceManager(log_handler=t.log_handler)
     stack = ttt.Layer("devices", ttt.List(ttt.DeviceConfig(dev_mgr), ["name"], ["string"]), None)
     
     var devs = set()
@@ -103,7 +103,7 @@ def rfs_for_device(dev):
     })
 
 actor complete(t: testing.AsyncT):
-    dev_mgr = odev.DeviceManager(None, logging.Handler(None))
+    dev_mgr = odev.DeviceManager(log_handler=t.log_handler)
     stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.List(ttt.Container({"base": ttt.List(ttt.RFSTransform(Fun, dev_mgr), ["id"], ["string"])}), ["name"], ["string"])}),
             ttt.Layer("devices", ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_mgr), ["name"], ["string"])})}),
             None))
