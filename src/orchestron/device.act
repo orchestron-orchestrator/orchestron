@@ -162,7 +162,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     configuration in-transit to the device, the new configuration is queued up
     and the associated transactions added to pending_txids. Once acknowledgement
     is received from the device, and thus the in-transit commit has concluded,
-    the pending transactions, represented by intended_conf, can be pushed to the
+    the pending transactions, represented by target_conf, can be pushed to the
     device.
 
     The device interaction is entirely asynchronous.
@@ -176,10 +176,10 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     mock = True if wcap is None else False
     _log.debug("Device starting up", {"name": name, "mock": mock})
 
-    # Orchestron's intended configuration, that we want on the device. Note how
-    # this is NOT the NMDA-speak "intended configuration" of the device itself.
-    var intended_conf: ?yang.gdata.Node = None
+    # Orchestron's intended target configuration, that we want on the device.
+    var target_conf: ?yang.gdata.Node = None
 
+    # TODO: remove this - we don't need to store it, the adapter will store it
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
     var running_conf: ?xml.Node = None
@@ -204,11 +204,11 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     # in-transit to the device. When len(pending_txids) > 0, we need to
     # send the latest configuration after the current transaction is done.
     var pending_txids = set()
-    # Note how intended_conf always only reflects the very latest configuration
+    # Note how target_conf always only reflects the very latest configuration
     # that we received from the TTT transaction engine. When the device is ready
     # to receive configuration (we are connected, have said hello, gotten
     # capabilities, do not have an outstanding transaction), we will send the
-    # intended_conf. A snapshot is taken and sent to the device. We do not keep
+    # target_conf. A snapshot is taken and sent to the device. We do not keep
     # that particular version. If later the device failed to commit the
     # configuration and we need to retry, we will retry with a new
     # configuration.
@@ -309,13 +309,13 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
         if len(current_txids) > 0:
             _log.debug("Device._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
         else:
-            if intended_conf is not None:
+            if target_conf is not None:
                 current_txids = pending_txids
                 pending_txids = set()
-                _log.debug("Device._send_config: sending intended configuration", {"txids": current_txids})
-                adapter.configure(_transaction_done, intended_conf)
+                _log.debug("Device._send_config: sending intended target configuration", {"txids": current_txids})
+                adapter.configure(_transaction_done, target_conf)
             else:
-                _log.debug("_send_config: intended_conf not set")
+                _log.debug("_send_config: target_conf not set")
 
     def configure(new_conf: ?yang.gdata.Node, conf_modset_id: ?str, tid: str="0"):
         pending_txids.add(tid)
@@ -324,7 +324,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
                 _log.debug("Device.configure: modset_id mismatch, ignoring configuration", {"conf_modset_id": str(conf_modset_id), "modset_id": str(modset_id)})
                 return
             _log.debug("Device.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
-            intended_conf = new_conf
+            target_conf = new_conf
             _send_config()
         elif new_conf is None and conf_modset_id is None:
             _log.debug("Device.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
@@ -544,9 +544,8 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     _log = logging.Logger(log_handler)
     _log.info("NetconfDriver starting up")
 
-    # Orchestron's intended configuration, that we want on the device. Note how
-    # this is NOT the NMDA-speak "intended configuration" of the device itself
-    var intended_conf: ?yang.gdata.Node = None
+    # Orchestron's intended target configuration, that we want on the device.
+    var target_conf: ?yang.gdata.Node = None
 
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
@@ -661,7 +660,7 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
             _log.debug("Device.configure: Already in transaction, cannot send configuration")
             return
 
-        if intended_conf == new_conf:
+        if target_conf == new_conf:
             _log.debug("Device.configure: ignoring new configuration identical to current intended configuration")
             done()
         else:
@@ -671,7 +670,7 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
                 done(NotConnectedError())
                 return
 
-            intended_conf = new_conf
+            target_conf = new_conf
             xml_conf = new_conf.to_xmlstr(pretty=False)
             if xml_conf == "":
                 # Cisco IOS XRd doesn't like empty <edit-config>, returns error
