@@ -597,7 +597,6 @@ actor NetconfDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Hand
     var conn_state: int = NOT_CONNECTED
     var error: ?Exception = None
     var on_done: ?action(?Exception) -> None = None
-    var on_get_config_done: ?action(?xml.Node, ?Exception) -> None = None
 
     var modset: dict[str, ModCap] = {}
 
@@ -776,26 +775,21 @@ actor NetconfDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Hand
             _log.debug("Device._on_discard_changes: Device disconnected")
             _transaction_done(NotConnectedError())
 
-    def _on_get_config(c, r):
+    def _on_get_config(c, r, cb: ?action(?xml.Node, ?Exception) -> None=None):
         if r is not None:
             if r.tag == "rpc-reply" and len(r.children) == 1 and r.children[0].tag == "data":
                 _log.trace("Device._on_get_config", {"r": r.encode()})
                 running_conf_xml = r.children[0]
-                if on_get_config_done is not None:
-                    on_get_config_done(running_conf_xml, None)
-                on_get_config_done = None
+                if cb is not None:
+                    cb(running_conf_xml, None)
             else:
                 _log.error("Device._on_get_config", {"r": r.encode()})
-                if on_get_config_done is not None:
-                    on_get_config_done(None, ValueError("Unexpected response to <get-config>"))
-                on_get_config_done = None
+                if cb is not None:
+                    cb(None, ValueError("Unexpected response to <get-config>"))
 
     def get_config(done: ?action(?xml.Node, ?Exception) -> None) -> None:
-        if on_get_config_done is not None and done is not None:
-            done(None, Exception("Already getting config"))
         if client is not None:
-            on_get_config_done = done
-            client.get_config(_on_get_config)
+            client.get_config(lambda c, r: _on_get_config(c, r, done))
 
 
 def hash_modset(modset: dict[str, ModCap]) -> str:
