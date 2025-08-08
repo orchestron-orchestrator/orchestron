@@ -129,7 +129,7 @@ extension ModCap(Eq):
     def __eq__(self, other: ModCap) -> bool:
         self_revision = self.revision
         other_revision = other.revision
-        revision_eq = (self_revision == None and other_revision == None) or (self_revision is not None and other_revision is not None and self_revision == other_revision)
+        revision_eq = (self_revision is None and other_revision is None) or (self_revision is not None and other_revision is not None and self_revision == other_revision)
         return self.name == other.name and self.namespace == other.namespace and revision_eq and self.feature == other.feature
 
 
