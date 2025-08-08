@@ -372,34 +372,28 @@ class DeviceAdapter(object):
         self._wcap = wcap
         self._log = logging.Logger(self._log_handler)
 
-    proc def set_dmc(self, new_dmc: DeviceMetaConfig):
-        raise NotImplementedError("DeviceAdapter.set_dmc() not implemented")
+    set_dmc: proc(new_dmc: DeviceMetaConfig) -> None
 
-    proc def configure(self, done: action(?Exception) -> None, new_conf: yang.gdata.Node):
-        """Configure the device with the given configuration
+    ## Configure the device with the given configuration
+    ##
+    ## :param done: callback to call when the configuration is done
+    ## :param new_conf: the new configuration to apply
+    configure: proc(done: action(?Exception) -> None, new_conf: yang.gdata.Node) -> None
 
-        :param done: callback to call when the configuration is done
-        :param new_conf: the new configuration to apply
-        """
-        raise NotImplementedError("DeviceAdapter.configure() not implemented")
+    get_capabilities: proc() -> list[str]
 
-    proc def get_capabilities(self) -> list[str]:
-        raise NotImplementedError("DeviceAdapter.get_capabilities() not implemented")
+    get_modules: proc() -> dict[str, ModCap]
 
-    proc def get_modules(self) -> dict[str, ModCap]:
-        raise NotImplementedError("DeviceAdapter.get_modules() not implemented")
-
-    proc def get_config(self, done: action(?xml.Node, ?Exception) -> None) -> None:
-        """Get the current running config from the device
-
-        :param done: callback to call when the operation is completed
-        This is an async operation with the results available in the callback.
-        Until we make the schema-driven "from_xml" parsers available to device
-        adapters this is an XML (NETCONF) document.
-        The result is also cached and available via the get_running_config_xml()
-        method.
-        """
-        raise NotImplementedError("DeviceAdater.get_config() not implemented")
+    ## Get the current running config from the device
+    ##
+    ## :param done: callback to call when the operation is completed
+    ##
+    ## This is an async operation with the results available in the callback.
+    ## Until we make the schema-driven "from_xml" parsers available to device
+    ## adapters this is an XML (NETCONF) document.
+    ## The result is also cached and available via the get_running_config_xml()
+    ## method.
+    get_config: proc(done: action(?xml.Node, ?Exception) -> None) -> None
 
 
 class NoAdapter(DeviceAdapter):
