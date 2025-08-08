@@ -20,17 +20,8 @@ NOT_CONNECTED = 0
 CONNECTING    = 1
 CONNECTED     = 2
 
-## DeviceType represents a type of device, i.e. a specific platform or
-## implementation of a device. It is used to define the schema and
-## adapter type for the device.
-class DeviceType(object):
-    ## Name of the device type
+class DeviceSchema(object):
     name: str
-
-    ## Adapter type, i.e. the DeviceAdapter subclass to use
-    # TODO: why is @property needed here?
-    @property
-    adapter_type: proc(Device, logging.Handler, ?WorldCap) -> DeviceAdapter
 
     ## Schema namespaces
     schema_namespaces: set[str]
@@ -59,14 +50,51 @@ class DeviceType(object):
     @property
     from_json: mut(dict[str, ?value]) -> yang.gdata.Container
 
-    def __init__(self, name, adapter_type, schema_namespaces, root, from_gdata, from_xml, from_json):
+    def __init__(self, name, schema_namespaces, root, from_gdata, from_xml=None, from_json=None):
         self.name = name
-        self.adapter_type = adapter_type
         self.schema_namespaces = schema_namespaces
         self.root = root
         self.from_gdata = from_gdata
         self.from_xml = from_xml if from_xml is not None else lambda x: yang.gdata.Container()
         self.from_json = from_json if from_json is not None else lambda x: yang.gdata.Container()
+
+
+## DeviceType represents a type of device, i.e. a specific platform or
+## implementation of a device. It is used to define the schema and
+## adapter type for the device.
+class DeviceType(object):
+    ## Name of the device type
+    name: str
+
+    ## Adapter type, i.e. the DeviceAdapter subclass to use
+    # TODO: why is @property needed here?
+    @property
+    adapter_type: proc(Device, DeviceSchema, logging.Handler, ?WorldCap) -> DeviceAdapter
+
+    schema: DeviceSchema
+
+    def __init__(self, name: str, adapter_type, schema_namespaces, root, from_gdata, from_xml=None, from_json=None):
+        self.name = name
+        self.adapter_type = adapter_type
+        self.schema = DeviceSchema(name, schema_namespaces, root, from_gdata, from_xml, from_json)
+
+class MockRoot(yang.adata.MNode):
+    """Mock root node for mock devices"""
+    def __init__(self):
+        self._name = "dummy"
+        self._ns = "dummy_ns"
+        self._schema = None
+        self._parent = None
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        return yang.gdata.Leaf("string", self._name)
+
+    @staticmethod
+    mut def from_gdata(self, gdata: ?yang.gdata.Node=None) -> yang.adata.MNode:
+        return MockRoot()
+
+    mut def prsrc(self, self_name='ad', top=False, list_element=False) -> str:
+        return f"{self_name}.{self._name}"
 
 class DeviceError(Exception):
     """Exception raised when the device configuration fails
@@ -152,7 +180,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
 
     The Device actor sits between the TTT transaction engine and devices out in
     the real world. All changes from TTT are accepted, they are by definition
-    the intended configuration for the device, thus the TTT API is fairly
+    the intended target configuration for the device, thus the TTT API is fairly
     simple. Configuration is fed from TTT to Device asynchronously (nothing can
     go wrong) together with a transaction id (tid). If a TTT transaction wants
     to await the configuration to reach the device, that is possible via the
@@ -162,7 +190,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     configuration in-transit to the device, the new configuration is queued up
     and the associated transactions added to pending_txids. Once acknowledgement
     is received from the device, and thus the in-transit commit has concluded,
-    the pending transactions, represented by intended_conf, can be pushed to the
+    the pending transactions, represented by target_conf, can be pushed to the
     device.
 
     The device interaction is entirely asynchronous.
@@ -176,20 +204,22 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     mock = True if wcap is None else False
     _log.debug("Device starting up", {"name": name, "mock": mock})
 
-    # Orchestron's intended configuration, that we want on the device. Note how
-    # this is NOT the NMDA-speak "intended configuration" of the device itself.
-    var intended_conf: ?yang.gdata.Node = None
+    # Orchestron's intended target configuration, that we want on the device.
+    var target_conf: ?yang.gdata.Node = None
 
+    # TODO: remove this - we don't need to store it, the adapter will store it
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
-    var running_conf: ?xml.Node = None
+    var running_conf: ?yang.gdata.Node = None
 
     # The device's meta configuration, like address, credentials, etc.
     var dmc: ?DeviceMetaConfig = None
 
     #var adapter: DeviceAdapter = NoAdapter(self, _log_handler, wcap)
     # TODO: default to NoAdapter!?
-    var adapter: DeviceAdapter = MockAdapter(self, _log_handler, wcap) if mock else NetconfAdapter(self, _log_handler, wcap)
+
+    var schema: DeviceSchema = DeviceSchema("mock", set(), MockRoot, from_gdata=MockRoot.from_gdata)
+    var adapter: DeviceAdapter = MockAdapter(self, schema, _log_handler, wcap) if mock else NetconfAdapter(self, schema, _log_handler, wcap)
 
     # The modules supported by the device.
     var modset: dict[str, ModCap] = {}
@@ -204,11 +234,11 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     # in-transit to the device. When len(pending_txids) > 0, we need to
     # send the latest configuration after the current transaction is done.
     var pending_txids = set()
-    # Note how intended_conf always only reflects the very latest configuration
+    # Note how target_conf always only reflects the very latest configuration
     # that we received from the TTT transaction engine. When the device is ready
     # to receive configuration (we are connected, have said hello, gotten
     # capabilities, do not have an outstanding transaction), we will send the
-    # intended_conf. A snapshot is taken and sent to the device. We do not keep
+    # target_conf. A snapshot is taken and sent to the device. We do not keep
     # that particular version. If later the device failed to commit the
     # configuration and we need to retry, we will retry with a new
     # configuration.
@@ -251,7 +281,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
 
                     device_type = dev_types.get(new_dmc_type)
                     if device_type is not None:
-                        adapter = device_type.adapter_type(self, _log_handler, wcap)
+                        adapter = device_type.adapter_type(self, device_type.schema, _log_handler, wcap)
                         _log.info("Device.set_dmc: using adapter", {"adapter": adapter})
                         adapter.set_dmc(new_dmc)
                     else:
@@ -262,6 +292,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
                 _log.debug("Device.set_dmc: no device type configured, not changing adapter")
 
         adapter.set_dmc(new_dmc)
+        adapter.get_config(_get_config_done)
 
         dmc = new_dmc
 
@@ -309,13 +340,13 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
         if len(current_txids) > 0:
             _log.debug("Device._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
         else:
-            if intended_conf is not None:
+            if target_conf is not None:
                 current_txids = pending_txids
                 pending_txids = set()
-                _log.debug("Device._send_config: sending intended configuration", {"txids": current_txids})
-                adapter.configure(_transaction_done, intended_conf)
+                _log.debug("Device._send_config: sending intended target configuration", {"txids": current_txids})
+                adapter.configure(_transaction_done, target_conf)
             else:
-                _log.debug("_send_config: intended_conf not set")
+                _log.debug("_send_config: target_conf not set")
 
     def configure(new_conf: ?yang.gdata.Node, conf_modset_id: ?str, tid: str="0"):
         pending_txids.add(tid)
@@ -324,7 +355,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
                 _log.debug("Device.configure: modset_id mismatch, ignoring configuration", {"conf_modset_id": str(conf_modset_id), "modset_id": str(modset_id)})
                 return
             _log.debug("Device.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
-            intended_conf = new_conf
+            target_conf = new_conf
             _send_config()
         elif new_conf is None and conf_modset_id is None:
             _log.debug("Device.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
@@ -346,18 +377,21 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     def get_modules() -> (dict[str, ModCap], ?str):
         return modset, modset_id
 
-    def _get_config_done(new_running_conf: ?xml.Node, error: ?Exception):
+    def _get_config_done(new_running_conf: ?yang.gdata.Node, error: ?Exception):
         if error is not None:
             _log.error("Device._get_config_done: {str(error)}")
         if new_running_conf is not None:
-            if running_conf is not None:
-                conf_diff = diff.diff(xml.encode(running_conf), xml.encode(new_running_conf))
-                if conf_diff != "":
-                    _log.warning("Device._get_config_done: Running config diff detected", {"diff": conf_diff})
+            #if running_conf is not None:
+            #    conf_diff = diff.diff(xml.encode(running_conf), xml.encode(new_running_conf))
+            #    if conf_diff != "":
+            #        _log.warning("Device._get_config_done: Running config diff detected", {"diff": conf_diff})
             running_conf = new_running_conf
 
     def get_running_config():
         return running_conf
+
+    def get_schema():
+        return schema
 
 
 class DeviceAdapter(object):
@@ -366,40 +400,31 @@ class DeviceAdapter(object):
     _log_handler: logging.Handler
     _wcap: ?WorldCap
 
-    def __init__(self, dev: Device, log_handler, wcap):
+    def __init__(self, dev: Device, schema: DeviceSchema, log_handler, wcap):
         self._dev = dev
+        self._schema = schema
         self._log_handler = log_handler
         self._wcap = wcap
         self._log = logging.Logger(self._log_handler)
 
-    proc def set_dmc(self, new_dmc: DeviceMetaConfig):
-        raise NotImplementedError("DeviceAdapter.set_dmc() not implemented")
+    set_dmc: proc(new_dmc: DeviceMetaConfig) -> None
 
-    proc def configure(self, done: action(?Exception) -> None, new_conf: yang.gdata.Node):
-        """Configure the device with the given configuration
+    ## Configure the device with the given configuration
+    ##
+    ## :param done: callback to call when the configuration is done
+    ## :param new_conf: the new configuration to apply
+    configure: proc(done: action(?Exception) -> None, new_conf: yang.gdata.Node) -> None
 
-        :param done: callback to call when the configuration is done
-        :param new_conf: the new configuration to apply
-        """
-        raise NotImplementedError("DeviceAdapter.configure() not implemented")
+    get_capabilities: proc() -> list[str]
 
-    proc def get_capabilities(self) -> list[str]:
-        raise NotImplementedError("DeviceAdapter.get_capabilities() not implemented")
+    get_modules: proc() -> dict[str, ModCap]
 
-    proc def get_modules(self) -> dict[str, ModCap]:
-        raise NotImplementedError("DeviceAdapter.get_modules() not implemented")
-
-    proc def get_config(self, done: action(?xml.Node, ?Exception) -> None) -> None:
-        """Get the current running config from the device
-
-        :param done: callback to call when the operation is completed
-        This is an async operation with the results available in the callback.
-        Until we make the schema-driven "from_xml" parsers available to device
-        adapters this is an XML (NETCONF) document.
-        The result is also cached and available via the get_running_config_xml()
-        method.
-        """
-        raise NotImplementedError("DeviceAdater.get_config() not implemented")
+    ## Get the current running config from the device
+    ##
+    ## :param done: callback to call when the operation is completed
+    ##
+    ## This is an async operation with the results available in the callback.
+    get_config: proc(done: action(?yang.gdata.Node, ?Exception) -> None) -> None
 
 
 class NoAdapter(DeviceAdapter):
@@ -416,21 +441,22 @@ class NoAdapter(DeviceAdapter):
     def get_modules(self):
         return {}
 
-    def get_config(self, done: ?action(?xml.Node, ?Exception) -> None = None):
+    def get_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None = None):
         pass
 
 
 class MockAdapter(DeviceAdapter):
     """Mock device adapter
     """
-    def __init__(self, dev: Device, log_handler, wcap: ?WorldCap):
+    def __init__(self, dev: Device, schema: DeviceSchema, log_handler, wcap: ?WorldCap):
         self._dev = dev
+        self._schema = schema
         self._log_handler = log_handler
         self._wcap = wcap
         self._log = logging.Logger(self._log_handler)
         self._modset = {}
         self._dmc = None
-        self._driver = MockDriver(self._dev, self._log_handler, self._wcap)
+        self._driver = MockDriver(self._dev, schema, self._log_handler, self._wcap)
 
     def set_dmc(self, new_dmc: DeviceMetaConfig):
         self._driver.set_dmc(new_dmc)
@@ -448,7 +474,7 @@ class MockAdapter(DeviceAdapter):
         return self._driver.get_config(done)
 
 
-actor MockDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
+actor MockDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
     _log = logging.Logger(log_handler)
     _log.info("MockDriver starting up")
 
@@ -456,7 +482,7 @@ actor MockDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     var modset: dict[str, ModCap] = {}
 
     var conn_state: int = NOT_CONNECTED
-    var running_conf_xml: ?xml.Node = None
+    var running_conf: ?yang.gdata.Node = None
 
     def set_dmc(new_dmc):
         if dmc is not None and new_dmc is not None:
@@ -502,7 +528,7 @@ actor MockDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     def configure(done, new_conf):
         if conn_state == CONNECTED:
             _log.debug("MockAdapter.configure: device 'connected', responding done")
-            running_conf_xml = xml.decode("<data>{new_conf.to_xmlstr()}</data>")
+            running_conf = new_conf
             done(None)
         else:
             _log.debug("MockAdapter.configure: device not connected")
@@ -516,17 +542,18 @@ actor MockDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
 
     def get_config(done):
         if done is not None:
-            done(running_conf_xml, None)
+            done(running_conf, None)
 
 
 class NetconfAdapter(DeviceAdapter):
 
-    def __init__(self, dev: Device, log_handler, wcap: ?WorldCap):
+    def __init__(self, dev: Device, schema: DeviceSchema, log_handler, wcap: ?WorldCap):
         self._dev = dev
+        self._schema = schema
         self._log_handler = log_handler
         self._wcap = wcap
         self._log = logging.Logger(self._log_handler)
-        self._driver = NetconfDriver(self._dev, self._log_handler, self._wcap)
+        self._driver = NetconfDriver(self._dev, self._schema, self._log_handler, self._wcap)
 
     def set_dmc(self, new_dmc: DeviceMetaConfig):
         self._driver.set_dmc(new_dmc)
@@ -540,19 +567,18 @@ class NetconfAdapter(DeviceAdapter):
     def get_modules(self) -> dict[str, ModCap]:
         return self._driver.get_modules()
 
-    def get_config(self, done: ?action(?xml.Node, ?Exception) -> None) -> None:
+    def get_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
         self._driver.get_config(done)
 
 
-actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
+actor NetconfDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
     """NETCONF device adapter
     """
     _log = logging.Logger(log_handler)
     _log.info("NetconfDriver starting up")
 
-    # Orchestron's intended configuration, that we want on the device. Note how
-    # this is NOT the NMDA-speak "intended configuration" of the device itself
-    var intended_conf: ?yang.gdata.Node = None
+    # Orchestron's intended target configuration, that we want on the device.
+    var target_conf: ?yang.gdata.Node = None
 
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
@@ -568,7 +594,6 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
     var conn_state: int = NOT_CONNECTED
     var error: ?Exception = None
     var on_done: ?action(?Exception) -> None = None
-    var on_get_config_done: ?action(?xml.Node, ?Exception) -> None = None
 
     var modset: dict[str, ModCap] = {}
 
@@ -667,7 +692,7 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
             _log.debug("Device.configure: Already in transaction, cannot send configuration")
             return
 
-        if intended_conf == new_conf:
+        if target_conf == new_conf:
             _log.debug("Device.configure: ignoring new configuration identical to current intended configuration")
             done()
         else:
@@ -677,7 +702,7 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
                 done(NotConnectedError())
                 return
 
-            intended_conf = new_conf
+            target_conf = new_conf
             xml_conf = new_conf.to_xmlstr(pretty=False)
             if xml_conf == "":
                 # Cisco IOS XRd doesn't like empty <edit-config>, returns error
@@ -747,26 +772,24 @@ actor NetconfDriver(dev: Device, log_handler: logging.Handler, wcap: ?WorldCap):
             _log.debug("Device._on_discard_changes: Device disconnected")
             _transaction_done(NotConnectedError())
 
-    def _on_get_config(c, r):
+    def _on_get_config(c, r, cb: ?action(?yang.gdata.Node, ?Exception) -> None=None):
+        _log.debug("Device._on_get_config")
         if r is not None:
+            _log.debug("Device._on_get_config: r is not None")
             if r.tag == "rpc-reply" and len(r.children) == 1 and r.children[0].tag == "data":
-                _log.trace("Device._on_get_config", {"r": r.encode()})
-                running_conf_xml = r.children[0]
-                if on_get_config_done is not None:
-                    on_get_config_done(running_conf_xml, None)
-                on_get_config_done = None
+                _log.debug("Device._on_get_config", {"r": r.encode()})
+                running_conf = schema.from_xml(r.children[0])
+                if cb is not None:
+                    cb(running_conf, None)
             else:
                 _log.error("Device._on_get_config", {"r": r.encode()})
-                if on_get_config_done is not None:
-                    on_get_config_done(None, ValueError("Unexpected response to <get-config>"))
-                on_get_config_done = None
+                if cb is not None:
+                    cb(None, ValueError("Unexpected response to <get-config>"))
 
-    def get_config(done: ?action(?xml.Node, ?Exception) -> None) -> None:
-        if on_get_config_done is not None and done is not None:
-            done(None, Exception("Already getting config"))
+    def get_config(done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
+        _log.debug("Device._get_config")
         if client is not None:
-            on_get_config_done = done
-            client.get_config(_on_get_config)
+            client.get_config(lambda c, r: _on_get_config(c, r, done))
 
 
 def hash_modset(modset: dict[str, ModCap]) -> str:
