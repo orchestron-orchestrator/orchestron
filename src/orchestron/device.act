@@ -180,7 +180,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
 
     The Device actor sits between the TTT transaction engine and devices out in
     the real world. All changes from TTT are accepted, they are by definition
-    the intended configuration for the device, thus the TTT API is fairly
+    the intended target configuration for the device, thus the TTT API is fairly
     simple. Configuration is fed from TTT to Device asynchronously (nothing can
     go wrong) together with a transaction id (tid). If a TTT transaction wants
     to await the configuration to reach the device, that is possible via the
@@ -210,7 +210,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     # TODO: remove this - we don't need to store it, the adapter will store it
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
-    var running_conf: ?xml.Node = None
+    var running_conf: ?yang.gdata.Node = None
 
     # The device's meta configuration, like address, credentials, etc.
     var dmc: ?DeviceMetaConfig = None
@@ -292,6 +292,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
                 _log.debug("Device.set_dmc: no device type configured, not changing adapter")
 
         adapter.set_dmc(new_dmc)
+        adapter.get_config(_get_config_done)
 
         dmc = new_dmc
 
@@ -376,14 +377,14 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     def get_modules() -> (dict[str, ModCap], ?str):
         return modset, modset_id
 
-    def _get_config_done(new_running_conf: ?xml.Node, error: ?Exception):
+    def _get_config_done(new_running_conf: ?yang.gdata.Node, error: ?Exception):
         if error is not None:
             _log.error("Device._get_config_done: {str(error)}")
         if new_running_conf is not None:
-            if running_conf is not None:
-                conf_diff = diff.diff(xml.encode(running_conf), xml.encode(new_running_conf))
-                if conf_diff != "":
-                    _log.warning("Device._get_config_done: Running config diff detected", {"diff": conf_diff})
+            #if running_conf is not None:
+            #    conf_diff = diff.diff(xml.encode(running_conf), xml.encode(new_running_conf))
+            #    if conf_diff != "":
+            #        _log.warning("Device._get_config_done: Running config diff detected", {"diff": conf_diff})
             running_conf = new_running_conf
 
     def get_running_config():
@@ -423,11 +424,7 @@ class DeviceAdapter(object):
     ## :param done: callback to call when the operation is completed
     ##
     ## This is an async operation with the results available in the callback.
-    ## Until we make the schema-driven "from_xml" parsers available to device
-    ## adapters this is an XML (NETCONF) document.
-    ## The result is also cached and available via the get_running_config_xml()
-    ## method.
-    get_config: proc(done: action(?xml.Node, ?Exception) -> None) -> None
+    get_config: proc(done: action(?yang.gdata.Node, ?Exception) -> None) -> None
 
 
 class NoAdapter(DeviceAdapter):
@@ -444,7 +441,7 @@ class NoAdapter(DeviceAdapter):
     def get_modules(self):
         return {}
 
-    def get_config(self, done: ?action(?xml.Node, ?Exception) -> None = None):
+    def get_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None = None):
         pass
 
 
@@ -485,7 +482,7 @@ actor MockDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Handler
     var modset: dict[str, ModCap] = {}
 
     var conn_state: int = NOT_CONNECTED
-    var running_conf_xml: ?xml.Node = None
+    var running_conf: ?yang.gdata.Node = None
 
     def set_dmc(new_dmc):
         if dmc is not None and new_dmc is not None:
@@ -531,7 +528,7 @@ actor MockDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Handler
     def configure(done, new_conf):
         if conn_state == CONNECTED:
             _log.debug("MockAdapter.configure: device 'connected', responding done")
-            running_conf_xml = xml.decode("<data>{new_conf.to_xmlstr()}</data>")
+            running_conf = new_conf
             done(None)
         else:
             _log.debug("MockAdapter.configure: device not connected")
@@ -545,7 +542,7 @@ actor MockDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Handler
 
     def get_config(done):
         if done is not None:
-            done(running_conf_xml, None)
+            done(running_conf, None)
 
 
 class NetconfAdapter(DeviceAdapter):
@@ -570,7 +567,7 @@ class NetconfAdapter(DeviceAdapter):
     def get_modules(self) -> dict[str, ModCap]:
         return self._driver.get_modules()
 
-    def get_config(self, done: ?action(?xml.Node, ?Exception) -> None) -> None:
+    def get_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
         self._driver.get_config(done)
 
 
@@ -775,19 +772,22 @@ actor NetconfDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Hand
             _log.debug("Device._on_discard_changes: Device disconnected")
             _transaction_done(NotConnectedError())
 
-    def _on_get_config(c, r, cb: ?action(?xml.Node, ?Exception) -> None=None):
+    def _on_get_config(c, r, cb: ?action(?yang.gdata.Node, ?Exception) -> None=None):
+        _log.debug("Device._on_get_config")
         if r is not None:
+            _log.debug("Device._on_get_config: r is not None")
             if r.tag == "rpc-reply" and len(r.children) == 1 and r.children[0].tag == "data":
-                _log.trace("Device._on_get_config", {"r": r.encode()})
-                running_conf_xml = r.children[0]
+                _log.debug("Device._on_get_config", {"r": r.encode()})
+                running_conf = schema.from_xml(r.children[0])
                 if cb is not None:
-                    cb(running_conf_xml, None)
+                    cb(running_conf, None)
             else:
                 _log.error("Device._on_get_config", {"r": r.encode()})
                 if cb is not None:
                     cb(None, ValueError("Unexpected response to <get-config>"))
 
-    def get_config(done: ?action(?xml.Node, ?Exception) -> None) -> None:
+    def get_config(done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
+        _log.debug("Device._get_config")
         if client is not None:
             client.get_config(lambda c, r: _on_get_config(c, r, done))
 
