@@ -1,8 +1,3 @@
-# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
-# SPDX-License-Identifier: BSD-3-Clause
-# License-Filename: LICENSES/BSD-3-Clause.txt
-
-
 .PHONY: build
 build: src/orchestron/device_meta_config.act
 	acton build --dev $(DEP_OVERRIDES)
