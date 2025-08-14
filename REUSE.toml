@@ -1,44 +1,28 @@
-# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
-# SPDX-License-Identifier: CC0-1.0
-
-
 # See https://reuse.software/spec-3.3/#reusetoml for specification
 version = 1
 
 
 [[annotations]]
 path = [
-    "build.act.json"
+    "Makefile",
+    "*.mk",
+    "*.act.json",
+    "src/**",
+    "gen_dmc/**",
+    "test/**",
+
 ]
-SPDX-FileCopyrightText = "2025 Deutsche Telekom AG"
+SPDX-FileCopyrightText = "Deutsche Telekom AG"
 SPDX-License-Identifier = "BSD-3-Clause"
 
 
 [[annotations]]
 path = [
-    "gen_dmc/build.act.json"
+    ".gitignore",
+    "README.md",
+    "REUSE.toml",
+    "docs/**",
+    ".github/**"
 ]
-SPDX-FileCopyrightText = "2025 Deutsche Telekom AG"
-SPDX-License-Identifier = "BSD-3-Clause"
-
-
-# The following files are generated and must not be modified, we hence
-# add the copyright andn licence information here.
-[[annotations]]
-path = [
-    "test/golden/test_ttt_gen/odev",
-    "test/golden/test_ttt_gen/ttt_gen_cfs_base",
-    "test/golden/test_ttt_gen/ttt_gen_cfs_ttt",
-    "test/golden/test_ttt_gen/ttt_gen_rfs_base",
-    "test/golden/test_ttt_gen/ttt_gen_rfs_ttt"
-]
-SPDX-FileCopyrightText = "2025 Deutsche Telekom AG"
-SPDX-License-Identifier = "BSD-3-Clause"
-
-
-[[annotations]]
-path = [
-    "docs/images/orchestron_blue.png"
-]
-SPDX-FileCopyrightText = "2025 Deutsche Telekom AG"
+SPDX-FileCopyrightText = "Deutsche Telekom AG"
 SPDX-License-Identifier = "CC0-1.0"
