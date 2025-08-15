@@ -69,7 +69,7 @@ class DeviceType(object):
     ## Adapter type, i.e. the DeviceAdapter subclass to use
     # TODO: why is @property needed here?
     @property
-    adapter_type: proc(Device, DeviceSchema, logging.Handler, ?WorldCap) -> DeviceAdapter
+    adapter_type: proc(DeviceMgr, DeviceSchema, logging.Handler, ?WorldCap) -> DeviceAdapter
 
     schema: DeviceSchema
 
@@ -133,8 +133,8 @@ extension ModCap(Eq):
         return self.name == other.name and self.namespace == other.namespace and revision_eq and self.feature == other.feature
 
 
-actor DeviceManager(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, log_handler: logging.Handler):
-    """Device Manager keeps track of all devices and hands out references to
+actor DeviceRegistry(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, log_handler: logging.Handler):
+    """Device Registry keeps track of all devices and hands out references to
     them based on name.
 
     There must only be a single Device instance per device, i.e. the same device
@@ -148,9 +148,9 @@ actor DeviceManager(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, l
 
     var reconf_cb: action(str) -> None = _dummy_reconf
 
-    def get(name: str) -> Device:
+    def get(name: str) -> DeviceMgr:
         if name not in devices:
-            devices[name] = Device(dev_types, wcap, name, log_handler, reconf_cb)
+            devices[name] = DeviceMgr(dev_types, wcap, name, log_handler, reconf_cb)
         dev = devices[name]
         return dev
 
@@ -168,25 +168,21 @@ def truncate_conf(conf: ?yang.gdata.Node) -> str:
         return sc
     return r"{}"
 
-actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None):
-    """Device
+actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None):
+    """Device Manager manages a device and represents that device, as an
+    abstract device, in the system. Platform specific handling is implemented in
+    the DeviceAdapter, i.e.  in subclasses of DeviceAdapter, like NetconfDriver
+    and MockAdapter.
 
-    This is the Orchestron Device, it represents an abstract device in the
-    system. Platform specific handling is implemented in the DeviceAdapter, i.e.
-    in subclasses of DeviceAdapter, like NetconfDriver and MockAdapter.
-
-    Device is used for the Device-actor whereas 'device' denotes the actual
-    device that exists somewhere across the network.
-
-    The Device actor sits between the TTT transaction engine and devices out in
+    The DeviceMgr sits between the TTT transaction engine and devices out in
     the real world. All changes from TTT are accepted, they are by definition
     the intended target configuration for the device, thus the TTT API is fairly
-    simple. Configuration is fed from TTT to Device asynchronously (nothing can
-    go wrong) together with a transaction id (tid). If a TTT transaction wants
-    to await the configuration to reach the device, that is possible via the
-    wait_complete(tid). The device configuration interaction is serial, which
-    means that we are either idling or have configuration in-transit to the
-    device. If new configuration is received from TTT while we have
+    simple. Configuration is fed from TTT to DeviceMgr asynchronously (nothing
+    can go wrong) together with a transaction id (tid). If a TTT transaction
+    wants to await the configuration to reach the device, that is possible via
+    the wait_complete(tid). The device configuration interaction is serial,
+    which means that we are either idling or have configuration in-transit to
+    the device. If new configuration is received from TTT while we have
     configuration in-transit to the device, the new configuration is queued up
     and the associated transactions added to pending_txids. Once acknowledgement
     is received from the device, and thus the in-transit commit has concluded,
@@ -194,7 +190,6 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     device.
 
     The device interaction is entirely asynchronous.
-
     """
     _log_handler = logging.Handler(name)
     _log_handler.set_handler(log_handler)
@@ -202,7 +197,7 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
     _log = logging.Logger(_log_handler)
 
     mock = True if wcap is None else False
-    _log.debug("Device starting up", {"name": name, "mock": mock})
+    _log.debug("DeviceMgr starting up", {"name": name, "mock": mock})
 
     # Orchestron's intended target configuration, that we want on the device.
     var target_conf: ?yang.gdata.Node = None
@@ -269,27 +264,27 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
 
     def set_dmc(new_dmc: DeviceMetaConfig) -> None:
         old_type = str(dmc.type) if dmc is not None else str(None)
-        _log.debug("Device.set_dmc", {"old_type": old_type, "new_dmc": json.encode(json.decode(new_dmc.to_gdata().to_json()), pretty=False)})
+        _log.debug("DeviceMgr.set_dmc", {"old_type": old_type, "new_dmc": json.encode(json.decode(new_dmc.to_gdata().to_json()), pretty=False)})
 
         if mock:
-            _log.debug("Device.set_dmc: mock device")
+            _log.debug("DeviceMgr.set_dmc: mock device")
         else:
             new_dmc_type = new_dmc.type
             if new_dmc_type is not None:
                 if old_type != str(new_dmc.type):
-                    _log.debug("Device type has changed, using new adapter", {"old_type": old_type, "new_type": new_dmc.type})
+                    _log.debug("DeviceMgr type has changed, using new adapter", {"old_type": old_type, "new_type": new_dmc.type})
 
                     device_type = dev_types.get(new_dmc_type)
                     if device_type is not None:
                         adapter = device_type.adapter_type(self, device_type.schema, _log_handler, wcap)
-                        _log.info("Device.set_dmc: using adapter", {"adapter": adapter})
+                        _log.info("DeviceMgr.set_dmc: using adapter", {"adapter": adapter})
                         adapter.set_dmc(new_dmc)
                     else:
-                        _log.warning("Device.set_dmc: configured device type not available in system", {"device_type": new_dmc_type})
+                        _log.warning("DeviceMgr.set_dmc: configured device type not available in system", {"device_type": new_dmc_type})
                 else:
-                    _log.debug("Device.set_dmc: device type unchanged, not changing adapter")
+                    _log.debug("DeviceMgr.set_dmc: device type unchanged, not changing adapter")
             else:
-                _log.debug("Device.set_dmc: no device type configured, not changing adapter")
+                _log.debug("DeviceMgr.set_dmc: no device type configured, not changing adapter")
 
         adapter.set_dmc(new_dmc)
         adapter.get_config(_get_config_done)
@@ -301,14 +296,14 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
         """
         if error is not None:
             if isinstance(error, NotConnectedError):
-                _log.debug("Device._transaction_done: Device not connected, backing off, waiting for reconnect")
+                _log.debug("DeviceMgr._transaction_done: Device not connected, backing off, waiting for reconnect")
                 pending_txids.update(current_txids)
                 current_txids = set()
             else:
                 if isinstance(error, ConfigError):
-                    _log.debug("Device._transaction_done: Configuration failed, bad config", {"error": error})
+                    _log.debug("DeviceMgr._transaction_done: Configuration failed, bad config", {"error": error})
                 else:
-                    _log.debug("Device._transaction_done: Unhandled error", {"error": error})
+                    _log.debug("DeviceMgr._transaction_done: Unhandled error", {"error": error})
 
                 # TODO: should we signal failure to uptream transactions? or just retry in some way?
                 for tid,callback in callbacks.items():
@@ -338,12 +333,12 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
 
     def _send_config():
         if len(current_txids) > 0:
-            _log.debug("Device._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
+            _log.debug("DeviceMgr._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
         else:
             if target_conf is not None:
                 current_txids = pending_txids
                 pending_txids = set()
-                _log.debug("Device._send_config: sending intended target configuration", {"txids": current_txids})
+                _log.debug("DeviceMgr._send_config: sending intended target configuration", {"txids": current_txids})
                 adapter.configure(_transaction_done, target_conf)
             else:
                 _log.debug("_send_config: target_conf not set")
@@ -352,23 +347,23 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
         pending_txids.add(tid)
         if new_conf is not None and conf_modset_id is not None:
             if conf_modset_id != modset_id:
-                _log.debug("Device.configure: modset_id mismatch, ignoring configuration", {"conf_modset_id": str(conf_modset_id), "modset_id": str(modset_id)})
+                _log.debug("DeviceMgr.configure: modset_id mismatch, ignoring configuration", {"conf_modset_id": str(conf_modset_id), "modset_id": str(modset_id)})
                 return
-            _log.debug("Device.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
+            _log.debug("DeviceMgr.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
             target_conf = new_conf
             _send_config()
         elif new_conf is None and conf_modset_id is None:
-            _log.debug("Device.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
+            _log.debug("DeviceMgr.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
         else:
-            _log.debug("Device.configure: invalid input", {"conf_modset_id": str(conf_modset_id), "new_conf": truncate_conf(new_conf), "tid": tid})
+            _log.debug("DeviceMgr.configure: invalid input", {"conf_modset_id": str(conf_modset_id), "new_conf": truncate_conf(new_conf), "tid": tid})
 
 
     def wait_complete(tid: str, done: action(value)->None):
         if tid not in current_txids | pending_txids:
-            _log.debug("Device.wait_complete: transaction id not found, calling done", {"tid": tid})
+            _log.debug("DeviceMgr.wait_complete: transaction id not found, calling done", {"tid": tid})
             done(True) # Assume tid is very old and has already completed, thus respond immediately
         else:
-            _log.debug("Device.wait_complete: waiting for transaction to complete", {"tid": tid})
+            _log.debug("DeviceMgr.wait_complete: waiting for transaction to complete", {"tid": tid})
             callbacks[tid] = done
 
     def get_capabilities():
@@ -379,12 +374,12 @@ actor Device(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: st
 
     def _get_config_done(new_running_conf: ?yang.gdata.Node, error: ?Exception):
         if error is not None:
-            _log.error("Device._get_config_done: {str(error)}")
+            _log.error("DeviceMgr._get_config_done: {str(error)}")
         if new_running_conf is not None:
             #if running_conf is not None:
             #    conf_diff = diff.diff(xml.encode(running_conf), xml.encode(new_running_conf))
             #    if conf_diff != "":
-            #        _log.warning("Device._get_config_done: Running config diff detected", {"diff": conf_diff})
+            #        _log.warning("DeviceMgr._get_config_done: Running config diff detected", {"diff": conf_diff})
             running_conf = new_running_conf
 
     def get_running_config():
@@ -400,7 +395,7 @@ class DeviceAdapter(object):
     _log_handler: logging.Handler
     _wcap: ?WorldCap
 
-    def __init__(self, dev: Device, schema: DeviceSchema, log_handler, wcap):
+    def __init__(self, dev: DeviceMgr, schema: DeviceSchema, log_handler, wcap):
         self._dev = dev
         self._schema = schema
         self._log_handler = log_handler
@@ -448,7 +443,7 @@ class NoAdapter(DeviceAdapter):
 class MockAdapter(DeviceAdapter):
     """Mock device adapter
     """
-    def __init__(self, dev: Device, schema: DeviceSchema, log_handler, wcap: ?WorldCap):
+    def __init__(self, dev: DeviceMgr, schema: DeviceSchema, log_handler, wcap: ?WorldCap):
         self._dev = dev
         self._schema = schema
         self._log_handler = log_handler
@@ -474,7 +469,7 @@ class MockAdapter(DeviceAdapter):
         return self._driver.get_config(done)
 
 
-actor MockDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
+actor MockDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
     _log = logging.Logger(log_handler)
     _log.info("MockDriver starting up")
 
@@ -547,7 +542,7 @@ actor MockDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Handler
 
 class NetconfAdapter(DeviceAdapter):
 
-    def __init__(self, dev: Device, schema: DeviceSchema, log_handler, wcap: ?WorldCap):
+    def __init__(self, dev: DeviceMgr, schema: DeviceSchema, log_handler, wcap: ?WorldCap):
         self._dev = dev
         self._schema = schema
         self._log_handler = log_handler
@@ -571,7 +566,7 @@ class NetconfAdapter(DeviceAdapter):
         self._driver.get_config(done)
 
 
-actor NetconfDriver(dev: Device, schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
+actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
     """NETCONF device adapter
     """
     _log = logging.Logger(log_handler)

@@ -959,9 +959,9 @@ class TransformFunction(object):
 
 ################# RFSTransform ###################
 
-def RFSTransform(function, dev_mgr: odev.DeviceManager, act: ?(proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+def RFSTransform(function, dev_registry: odev.DeviceRegistry, act: ?(proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
     proc def _create_rfs_transform_node(path, lower):
-        rfs_transform = _RFSTransform(path, function, dev_mgr, lower, log_handler)
+        rfs_transform = _RFSTransform(path, function, dev_registry, lower, log_handler)
         node = Node(rfs_transform)
         if act is not None:
             rfs_transform.init_dynstate(node, act)
@@ -970,32 +970,32 @@ def RFSTransform(function, dev_mgr: odev.DeviceManager, act: ?(proc(proc(?yang.a
 
 
 class _RFSTransform(_TransformBase):
-    def __init__(self, path, function, dev_mgr, lower, log_handler):
+    def __init__(self, path, function, dev_registry, lower, log_handler):
         self.path = path
-        self.transaction = RFSTransaction(path, function, dev_mgr, lower, log_handler)
+        self.transaction = RFSTransaction(path, function, dev_registry, lower, log_handler)
 
     proc def init_dynstate(self, node, act):
         self.transaction.init_dynstate(node, act)
 
-def RFSTransaction(path, function, dev_mgr, lower, log_handler):
-    return Transaction(_RFSTransaction(path, function, dev_mgr, lower, log_handler))
+def RFSTransaction(path, function, dev_registry, lower, log_handler):
+    return Transaction(_RFSTransaction(path, function, dev_registry, lower, log_handler))
 
 class _RFSTransaction(_TransformTransactionBase):
     function: RFSFunction
     devname: str
-    dev: odev.Device
+    dev: odev.DeviceMgr
     memory: ?gdata.Node
     dynstate: ?gdata.Node
     node: ?Node
     lower: ?Layer
 
-    def __init__(self, path, function: proc(?logging.Handler) -> RFSFunction, dev_mgr: odev.DeviceManager, lower: ?Layer, log_handler):
+    def __init__(self, path, function: proc(?logging.Handler) -> RFSFunction, dev_registry: odev.DeviceRegistry, lower: ?Layer, log_handler):
         _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
         if len(path) < 3:
             raise ValueError(f"RFSTransform {path}: path length < 3")
         self.devname = path[-3]
-        self.dev = dev_mgr.get(self.devname)
+        self.dev = dev_registry.get(self.devname)
         self.lower = lower
 
     def compute(self, tid, merged, out):
@@ -1096,24 +1096,24 @@ class RFSFunction(object):
 
 ################# Device #####################
 
-def Device(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
-    return lambda path, _lower: Node(_Device(path, dev_mgr, log_handler))
+def Device(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+    return lambda path, _lower: Node(_Device(path, dev_registry, log_handler))
 
 class _Device(_TransformBase):
-    def __init__(self, path, dev_mgr, log_handler):
+    def __init__(self, path, dev_registry, log_handler):
         self.path = path
-        self.transaction = DeviceTransaction(path, dev_mgr, log_handler)
+        self.transaction = DeviceTransaction(path, dev_registry, log_handler)
 
-def DeviceTransaction(path, dev_mgr, log_handler):
-    return Transaction(_DeviceTransaction(path, dev_mgr, log_handler))
+def DeviceTransaction(path, dev_registry, log_handler):
+    return Transaction(_DeviceTransaction(path, dev_registry, log_handler))
 
 class _DeviceTransaction(_TransformTransactionBase):
-    dev: odev.Device
+    dev: odev.DeviceMgr
     logger: logging.Logger
 
-    def __init__(self, path, dev_mgr: odev.DeviceManager, log_handler):
+    def __init__(self, path, dev_registry: odev.DeviceRegistry, log_handler):
         _TransformTransactionBase.__init__(self, path)
-        self.dev = dev_mgr.get(path[-1])
+        self.dev = dev_registry.get(path[-1])
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
@@ -1132,24 +1132,24 @@ class _DeviceTransaction(_TransformTransactionBase):
 
 ################# DeviceConfig #####################
 
-def DeviceConfig(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
-    return lambda path, _lower: Node(_DeviceConfig(path, dev_mgr, log_handler))
+def DeviceConfig(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+    return lambda path, _lower: Node(_DeviceConfig(path, dev_registry, log_handler))
 
 class _DeviceConfig(_TransformBase):
-    def __init__(self, path, dev_mgr, log_handler):
+    def __init__(self, path, dev_registry, log_handler):
         self.path = path
-        self.transaction = DeviceConfigTransaction(path, dev_mgr, log_handler)
+        self.transaction = DeviceConfigTransaction(path, dev_registry, log_handler)
 
-def DeviceConfigTransaction(path, dev_mgr, log_handler):
-    return Transaction(_DeviceConfigTransaction(path, dev_mgr, log_handler))
+def DeviceConfigTransaction(path, dev_registry, log_handler):
+    return Transaction(_DeviceConfigTransaction(path, dev_registry, log_handler))
 
 class _DeviceConfigTransaction(_TransformTransactionBase):
-    dev: odev.Device
+    dev: odev.DeviceMgr
     logger: logging.Logger
 
-    def __init__(self, path, dev_mgr: odev.DeviceManager, log_handler):
+    def __init__(self, path, dev_registry: odev.DeviceRegistry, log_handler):
         _TransformTransactionBase.__init__(self, path)
-        self.dev = dev_mgr.get(path[-1])
+        self.dev = dev_registry.get(path[-1])
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):

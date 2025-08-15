@@ -187,18 +187,18 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
-                            return TTTSrc(src="ttt.List(ttt.RFSTransform({transform}, dev_mgr, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                            return TTTSrc(src="ttt.List(ttt.RFSTransform({transform}, dev_registry, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
                         raise ValueError("Unknown extension name: {ext.name}")
                     else:
                         raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
                 elif ext.name == "device":
                     if extarg is not None:
                         raise ValueError("Extraneous argument to orchestron:device. Remove argument.")
-                    return TTTSrc(src="ttt.List(ttt.Device(dev_mgr, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                    return TTTSrc(src="ttt.List(ttt.Device(dev_registry, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
                 elif ext.name == "device-config":
                     if extarg is not None:
                         raise ValueError("Extraneous argument to orchestron:device-config. Remove argument.")
-                    return TTTSrc(src="ttt.List(ttt.DeviceConfig(dev_mgr, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                    return TTTSrc(src="ttt.List(ttt.DeviceConfig(dev_registry, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
         # List without an extension
         children_res = children_to_tttsrc(sn)
@@ -255,7 +255,7 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     for sc in ts.state_classes:
         ttt_src += "from %s import %s\n" % (input_yang_module, sc)
     ttt_src += "\n"
-    ttt_src += "def get_ttt(lower: ?ttt.Layer, dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None) -> proc(list[str],?ttt.Layer)->ttt.Node:\n"
+    ttt_src += "def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str],?ttt.Layer)->ttt.Node:\n"
     ttt_src += f"    r = {ts.src}\n    return r\n"
     if len(ts.act_defs) > 0:
         ttt_src += "\n"
