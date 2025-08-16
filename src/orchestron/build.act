@@ -60,7 +60,7 @@ class CompiledSysSpec(object):
         tttsrc += "import orchestron.ttt as ttt\n"
         tttsrc += "import yang.adata\n"
         tttsrc += "import yang.gdata\n\n"
-        tttsrc_getlayers = "def get_layers(dev_mgr: odev.DeviceManager, log_handler: ?logging.Handler=None):\n"
+        tttsrc_getlayers = "def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None):\n"
         # for idx, layer in reversed(enumerate(self.layers)):
         layers_len = len(self.layers)
         idx = layers_len
@@ -105,7 +105,7 @@ class CompiledSysSpec(object):
                 print(f"+ Layer {idx} TTT(?) unchanged")
 
             lowerlayer = f"layer{idx+1}" if idx < layers_len -1 else "None"
-            tttsrc_getlayers += f"    layer{idx} = ttt.Layer('{lname}', {self.name}.layers.t_{idx}.get_ttt({lowerlayer}, dev_mgr, log_handler), {lowerlayer})\n"
+            tttsrc_getlayers += f"    layer{idx} = ttt.Layer('{lname}', {self.name}.layers.t_{idx}.get_ttt({lowerlayer}, dev_registry, log_handler), {lowerlayer})\n"
 
             loose_name = f"{output_dir}/{self.name}/layers/y_{idx}_loose.act"
             if _maybe_write_file(fc, loose_name, layer.root.prdaclass(loose=True)):
