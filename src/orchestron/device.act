@@ -579,7 +579,6 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
     var running_conf: ?yang.gdata.Node = None
-    var running_conf_xml: ?xml.Node = None
 
     # The device's meta configuration, like address, credentials, etc.
     var dmc: DeviceMetaConfig = init_dmc
