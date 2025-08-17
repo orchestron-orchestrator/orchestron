@@ -199,11 +199,6 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     # Orchestron's intended target configuration, that we want on the device.
     var target_conf: ?yang.gdata.Node = None
 
-    # TODO: remove this - we don't need to store it, the adapter will store it
-    # The currently running configuration on the device (which in NMDA lingo is
-    # the "intended configuration" of the device)
-    var running_conf: ?yang.gdata.Node = None
-
     # The device's meta configuration, like address, credentials, etc.
     var dmc: ?DeviceMetaConfig = None
 
@@ -246,7 +241,6 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
     def on_connect(new_modset: dict[str, ModCap]):
         _log.debug("Device connected", {"new_modset": new_modset})
-        adapter.get_config(_get_config_done)
         if modset_eq(modset, new_modset):
             _log.debug("Supported modules unchanged")
             if modset != {}:
@@ -284,7 +278,6 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                 _log.debug("DeviceMgr.set_dmc: no device type configured, not changing adapter")
 
         adapter.set_dmc(new_dmc)
-        adapter.get_config(_get_config_done)
 
         dmc = new_dmc
 
@@ -312,13 +305,11 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                 current_txids = set()
                 if len(pending_txids) > 0:
                     _log.debug("New intended configuration available, retrying with latest config")
-                    adapter.get_config(_get_config_done)
                     _send_config()
                 else:
                     _log.debug("No new intended configuration available, no point in retrying with same conf")
         else:
             _log.debug("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids})
-            adapter.get_config(_get_config_done)
             for tid,callback in callbacks.items():
                 if tid in current_txids:
                     callback(True)
@@ -369,18 +360,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     def get_modules() -> (dict[str, ModCap], ?str):
         return modset, modset_id
 
-    def _get_config_done(new_running_conf: ?yang.gdata.Node, error: ?Exception):
-        if error is not None:
-            _log.error("DeviceMgr._get_config_done: {str(error)}")
-        if new_running_conf is not None:
-            #if running_conf is not None:
-            #    conf_diff = diff.diff(xml.encode(running_conf), xml.encode(new_running_conf))
-            #    if conf_diff != "":
-            #        _log.warning("DeviceMgr._get_config_done: Running config diff detected", {"diff": conf_diff})
-            running_conf = new_running_conf
-
     def get_running_config():
-        return running_conf
+        return adapter.get_running_config()
 
     def get_schema():
         return schema
@@ -418,6 +399,8 @@ class DeviceAdapter(object):
     ## This is an async operation with the results available in the callback.
     get_config: proc(done: action(?yang.gdata.Node, ?Exception) -> None) -> None
 
+    get_running_config: proc() -> ?yang.gdata.Node
+
 
 class NoAdapter(DeviceAdapter):
     def set_dmc(self, new_dmc):
@@ -434,6 +417,9 @@ class NoAdapter(DeviceAdapter):
         return {}
 
     def get_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None = None):
+        pass
+
+    def get_running_config(self):
         pass
 
 
@@ -464,6 +450,9 @@ class MockAdapter(DeviceAdapter):
 
     def get_config(self, done):
         return self._driver.get_config(done)
+
+    def get_running_config(self):
+        return self._driver.get_running_config()
 
 
 actor MockDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
@@ -536,6 +525,9 @@ actor MockDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Hand
         if done is not None:
             done(running_conf, None)
 
+    def get_running_config():
+        return running_conf
+
 
 class NetconfAdapter(DeviceAdapter):
 
@@ -561,6 +553,9 @@ class NetconfAdapter(DeviceAdapter):
 
     def get_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
         self._driver.get_config(done)
+
+    def get_running_config(self):
+        return self._driver.get_running_config()
 
 
 actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
@@ -782,6 +777,9 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.H
         _log.debug("Device._get_config")
         if client is not None:
             client.get_config(lambda c, r: _on_get_config(c, r, done))
+
+    def get_running_config():
+        return running_conf
 
 
 def hash_modset(modset: dict[str, ModCap]) -> str:
