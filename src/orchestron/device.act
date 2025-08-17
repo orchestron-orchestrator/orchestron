@@ -357,8 +357,20 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     def get_modules() -> (dict[str, ModCap], ?str):
         return modset, modset_id
 
-    def get_running_config():
-        return adapter.get_running_config()
+    def get_config():
+        """Get the running config of the device, from the adapter which keeps a cached version of it
+
+        Note how this doesn't actually reach out to the device, but only fetches
+        a local copy. However, since it is in the adapter contract to keep the
+        local view of the config up to date, this is mostly quite safe!
+        """
+        return adapter.get_config()
+
+    # TODO: make cb non-optional
+    def fetch_config(done: action(?yang.gdata.Node, ?Exception) -> None) -> None:
+        """Fetch the current configuration from the device
+        """
+        adapter.fetch_config(done)
 
     def get_schema():
         return schema
@@ -387,9 +399,9 @@ class DeviceAdapter(object):
     ## :param done: callback to call when the operation is completed
     ##
     ## This is an async operation with the results available in the callback.
-    get_config: proc(done: action(?yang.gdata.Node, ?Exception) -> None) -> None
+    fetch_config: proc(done: action(?yang.gdata.Node, ?Exception) -> None) -> None
 
-    get_running_config: proc() -> ?yang.gdata.Node
+    get_config: proc() -> ?yang.gdata.Node
 
 
 class NoAdapter(DeviceAdapter):
@@ -413,10 +425,10 @@ class NoAdapter(DeviceAdapter):
     def get_modules(self):
         return {}
 
-    def get_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None = None):
+    def fetch_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None = None):
         pass
 
-    def get_running_config(self):
+    def get_config(self):
         pass
 
 
@@ -445,11 +457,11 @@ class MockAdapter(DeviceAdapter):
     def get_modules(self) -> dict[str, ModCap]:
         return self._driver.get_modules()
 
-    def get_config(self, done):
-        return self._driver.get_config(done)
+    def fetch_config(self, done):
+        return self._driver.fetch_config(done)
 
-    def get_running_config(self):
-        return self._driver.get_running_config()
+    def get_config(self):
+        return self._driver.get_config()
 
 
 actor MockDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
@@ -518,11 +530,11 @@ actor MockDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Hand
     def get_modules():
         return modset
 
-    def get_config(done):
+    def fetch_config(done):
         if done is not None:
             done(running_conf, None)
 
-    def get_running_config():
+    def get_config():
         return running_conf
 
 
@@ -548,11 +560,11 @@ class NetconfAdapter(DeviceAdapter):
     def get_modules(self) -> dict[str, ModCap]:
         return self._driver.get_modules()
 
-    def get_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
-        self._driver.get_config(done)
+    def fetch_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
+        self._driver.fetch_config(done)
 
-    def get_running_config(self):
-        return self._driver.get_running_config()
+    def get_config(self):
+        return self._driver.get_config()
 
 
 actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaConfig, log_handler: logging.Handler, wcap: ?WorldCap):
@@ -770,12 +782,12 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                 if cb is not None:
                     cb(None, ValueError("Unexpected response to <get-config>"))
 
-    def get_config(done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
-        _log.debug("Device._get_config")
+    def fetch_config(done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
+        _log.debug("Device._fetch_config")
         if client is not None:
             client.get_config(lambda c, r: _on_get_config(c, r, done))
 
-    def get_running_config():
+    def get_config():
         return running_conf
 
 
