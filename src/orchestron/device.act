@@ -66,7 +66,7 @@ class DeviceType(object):
     ## Adapter type, i.e. the DeviceAdapter subclass to use
     # TODO: why is @property needed here?
     @property
-    adapter_type: proc(DeviceMgr, DeviceSchema, logging.Handler, ?WorldCap) -> DeviceAdapter
+    adapter_type: proc(DeviceMgr, DeviceSchema, DeviceMetaConfig, logging.Handler, ?WorldCap) -> DeviceAdapter
 
     schema: DeviceSchema
 
@@ -202,11 +202,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     # The device's meta configuration, like address, credentials, etc.
     var dmc: ?DeviceMetaConfig = None
 
-    #var adapter: DeviceAdapter = NoAdapter(self, _log_handler, wcap)
-    # TODO: default to NoAdapter!?
-
     var schema: DeviceSchema = DeviceSchema("mock", set(), MockRoot, from_gdata=MockRoot.from_gdata)
-    var adapter: DeviceAdapter = MockAdapter(self, schema, _log_handler, wcap) if mock else NetconfAdapter(self, schema, _log_handler, wcap)
+    var adapter: DeviceAdapter = MockAdapter(self, schema, _log_handler, wcap) if mock else NoAdapter(self, schema, _log_handler, wcap)
 
     # The modules supported by the device.
     var modset: dict[str, ModCap] = {}
@@ -267,7 +264,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
                     device_type = dev_types.get(new_dmc_type)
                     if device_type is not None:
-                        adapter = device_type.adapter_type(self, device_type.schema, _log_handler, wcap)
+                        adapter = device_type.adapter_type(self, device_type.schema, new_dmc, _log_handler, wcap)
                         _log.info("DeviceMgr.set_dmc: using adapter", {"adapter": adapter})
                         adapter.set_dmc(new_dmc)
                     else:
@@ -373,13 +370,6 @@ class DeviceAdapter(object):
     _log_handler: logging.Handler
     _wcap: ?WorldCap
 
-    def __init__(self, dev: DeviceMgr, schema: DeviceSchema, log_handler, wcap):
-        self._dev = dev
-        self._schema = schema
-        self._log_handler = log_handler
-        self._wcap = wcap
-        self._log = logging.Logger(self._log_handler)
-
     set_dmc: proc(new_dmc: DeviceMetaConfig) -> None
 
     ## Configure the device with the given configuration
@@ -403,6 +393,13 @@ class DeviceAdapter(object):
 
 
 class NoAdapter(DeviceAdapter):
+    def __init__(self, dev: DeviceMgr, schema: DeviceSchema, log_handler, wcap):
+        self._dev = dev
+        self._schema = schema
+        self._log_handler = log_handler
+        self._wcap = wcap
+        self._log = logging.Logger(self._log_handler)
+
     def set_dmc(self, new_dmc):
         self._log.debug("NoAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_json()})
 
@@ -531,13 +528,13 @@ actor MockDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Hand
 
 class NetconfAdapter(DeviceAdapter):
 
-    def __init__(self, dev: DeviceMgr, schema: DeviceSchema, log_handler, wcap: ?WorldCap):
+    def __init__(self, dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaConfig, log_handler, wcap: ?WorldCap):
         self._dev = dev
         self._schema = schema
         self._log_handler = log_handler
         self._wcap = wcap
         self._log = logging.Logger(self._log_handler)
-        self._driver = NetconfDriver(self._dev, self._schema, self._log_handler, self._wcap)
+        self._driver = NetconfDriver(self._dev, self._schema, init_dmc, self._log_handler, self._wcap)
 
     def set_dmc(self, new_dmc: DeviceMetaConfig):
         self._driver.set_dmc(new_dmc)
@@ -558,7 +555,7 @@ class NetconfAdapter(DeviceAdapter):
         return self._driver.get_running_config()
 
 
-actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
+actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaConfig, log_handler: logging.Handler, wcap: ?WorldCap):
     """NETCONF device adapter
     """
     _log = logging.Logger(log_handler)
@@ -573,7 +570,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.H
     var running_conf_xml: ?xml.Node = None
 
     # The device's meta configuration, like address, credentials, etc.
-    var dmc: ?DeviceMetaConfig = None
+    var dmc: DeviceMetaConfig = init_dmc
 
     # The NETCONF client connection to the device
     var client: ?netconf.Client = None
