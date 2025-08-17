@@ -13,10 +13,7 @@ from orchestron.device_meta_config import orchestron_rfs__device_entry as Device
 
 import netconf
 
-NO_TRANSACTION = 0
-IN_TRANSACTION = 1
-
-NOT_CONNECTED = 0
+DISCONNECTED  = 0
 CONNECTING    = 1
 CONNECTED     = 2
 
@@ -476,7 +473,7 @@ actor MockDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Hand
     var dmc: ?DeviceMetaConfig = None
     var modset: dict[str, ModCap] = {}
 
-    var conn_state: int = NOT_CONNECTED
+    var conn_state: int = DISCONNECTED
     var running_conf: ?yang.gdata.Node = None
 
     def set_dmc(new_dmc):
@@ -586,7 +583,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.H
     # The NETCONF client connection to the device
     var client: ?netconf.Client = None
 
-    var conn_state: int = NOT_CONNECTED
+    var conn_state: int = DISCONNECTED
     var error: ?Exception = None
     var on_done: ?action(?Exception) -> None = None
 
@@ -669,7 +666,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.H
         _log.debug("Device.close")
         if client is not None:
             client.close()
-            conn_state = NOT_CONNECTED
+            conn_state = DISCONNECTED
             _log.debug("Device closed")
         else:
             _log.debug("Device.close: No client, nothing to close")
