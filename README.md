@@ -2,6 +2,8 @@
   <img src="docs/images/orchestron_blue.png" width="400"/>
 </p>
 
+[![REUSE Compliance Check](https://github.com/orchestron-orchestrator/orchestron/actions/workflows/reuse-compliance.yml/badge.svg)](https://github.com/orchestron-orchestrator/orchestron/actions/workflows/reuse-compliance.yml)
+
 Orchestron is a platform for the development of robust network orchestration systems based on model-driven declarative transforms. It does the heavy lifting so you can focus on building automation that makes sense. With native support for streaming telemetry, Orchestron enables you to build reactive closed loop automation.
 
 ## Getting Started
