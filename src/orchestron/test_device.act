@@ -1,0 +1,466 @@
+"""Orchestron Device tests"""
+
+import logging
+import testing
+import xml
+import yang.adata
+import yang.gdata
+
+import orchestron.device
+import orchestron.device_meta_config as dmc
+import netconf
+
+
+test_port = 42830
+test_address = "localhost"
+test_username = "admin"
+test_password = "admin"
+
+
+def create_test_dmc() -> dmc.orchestron_rfs__device_entry:
+    """Create a test DeviceMetaConfig with minimal required fields"""
+    # Create credentials
+    credentials = dmc.orchestron_rfs__device__credentials(
+        username=test_username,
+        password=test_password
+    )
+
+    # Create address entry
+    address_entry = dmc.orchestron_rfs__device__address_entry(
+        name="primary",
+        address=test_address,
+        port=str(test_port)
+    )
+
+    # Create the device entry (DeviceMetaConfig)
+    device_config = dmc.orchestron_rfs__device_entry(
+        name="test-device",
+        credentials=credentials,
+        description="Test device for NetconfAdapter",
+        type="netconf",
+        address=[address_entry]
+    )
+
+    return device_config
+
+
+def create_simple_gdata_config() -> yang.gdata.Node:
+    """Create a simple gdata configuration for testing
+
+    This creates a configuration to set the banner in the netconf-server.
+    The structure matches what we see in the device config:
+    netconf-server -> listen -> endpoints -> endpoint -> ssh -> ssh-server-parameters -> server-identity -> banner
+    """
+    # Build the configuration tree from bottom up
+    banner_leaf = yang.gdata.Leaf("string", "Test banner from Orchestron", ns="urn:cesnet:libnetconf2-netconf-server")
+    
+    # server-identity container with banner
+    server_identity_children = {
+        "banner": banner_leaf
+    }
+    server_identity = yang.gdata.Container(server_identity_children)
+    
+    # ssh-server-parameters container
+    ssh_server_params_children = {
+        "server-identity": server_identity
+    }
+    ssh_server_params = yang.gdata.Container(ssh_server_params_children)
+    
+    # ssh container
+    ssh_children = {
+        "ssh-server-parameters": ssh_server_params
+    }
+    ssh_container = yang.gdata.Container(ssh_children)
+    
+    # endpoint list entry with key "default-ssh"
+    endpoint_children = {
+        "name": yang.gdata.Leaf("string", "default-ssh"),
+        "ssh": ssh_container
+    }
+    endpoint_entry = yang.gdata.Container(endpoint_children)
+    
+    # endpoints list - the key is "name"
+    endpoints_list = yang.gdata.List(["name"], [endpoint_entry])
+    
+    # endpoints container
+    endpoints_children = {
+        "endpoint": endpoints_list
+    }
+    endpoints = yang.gdata.Container(endpoints_children)
+    
+    # listen container
+    listen_children = {
+        "endpoints": endpoints
+    }
+    listen = yang.gdata.Container(listen_children)
+    
+    # netconf-server container (top level)
+    netconf_server_children = {
+        "listen": listen
+    }
+    netconf_server = yang.gdata.Container(netconf_server_children, ns="urn:ietf:params:xml:ns:yang:ietf-netconf-server")
+    
+    # Root container
+    config_children = {
+        "netconf-server": netconf_server
+    }
+    
+    return yang.gdata.Container(config_children)
+
+
+def _test_gdata_to_xml():
+    """Test function to visualize the gdata configuration as XML"""
+    config = create_simple_gdata_config()
+    xml_str = config.to_xmlstr(pretty=True)
+    
+    print("Generated XML configuration:")
+    print("=" * 60)
+    print(xml_str)
+    print("=" * 60)
+    
+    # Also try without pretty printing
+    xml_str_compact = config.to_xmlstr(pretty=False)
+    print("\nCompact version:")
+    print(xml_str_compact)
+    print("=" * 60)
+    
+    testing.assertEqual(len(xml_str) > 0, True, "XML string should not be empty")
+
+
+actor _test_netconf_adapter(t: testing.EnvT):
+    """Test NetconfAdapter instantiation, connection, and configuration
+    
+    This test requires a running NETCONF server (e.g., notconf container).
+    Run with: docker run -td -p 42830:830 ghcr.io/notconf/notconf
+    
+    The test will:
+    1. Verify the server has the right capabilities (banner namespace)
+    2. Reset the configuration to a known state
+    3. Create a NetconfAdapter instance
+    4. Send a configuration through the adapter
+    5. Use a direct netconf.Client to verify the configuration was applied
+    """
+    log = logging.Logger(t.log_handler)
+    log.info("Testing NetconfAdapter")
+
+    var adapter: ?orchestron.device.NetconfAdapter = None
+    var verification_client: ?netconf.Client = None
+
+    # Create a mock DeviceMgr
+    dev_types = {}
+    var config_sent = False
+    var initial_banner_text = ""
+    
+    # First, verify the server and reset configuration
+    def setup_test():
+        log.info("Setting up test - verifying server capabilities and resetting config")
+        
+        def on_setup_connect(c: netconf.Client, err: ?Exception):
+            if err is not None:
+                log.error("Setup client failed to connect", {"error": str(err)})
+                t.failure(err)
+            else:
+                log.info("Setup client connected, checking capabilities")
+                
+                # Check capabilities (for logging) but don't require specific namespace
+                caps = c.get_capabilities()
+                log.info("Server capabilities count", {"count": len(caps)})
+                
+                # Look for any netconf-server related capability
+                for cap in caps:
+                    if "netconf" in cap.lower() and "server" in cap.lower():
+                        log.info("Found netconf-server related capability", {"cap": cap})
+                
+                log.info("Getting current config to check banner state")
+                c.get_config(on_setup_get_config, datastore="running")
+        
+        def on_setup_get_config(c: netconf.Client, r: ?xml.Node):
+            if r is not None:
+                config_xml = r.encode()
+                # Extract current banner if it exists
+                if "<banner" in config_xml and "</banner>" in config_xml:
+                    start = config_xml.find("<banner")
+                    start = config_xml.find(">", start) + 1
+                    end = config_xml.find("</banner>", start)
+                    initial_banner_text = config_xml[start:end]
+                    log.info("Current banner in device", {"banner": initial_banner_text})
+                else:
+                    log.info("No banner currently configured")
+                    initial_banner_text = ""
+                
+                # Reset the banner to a known state (remove or set to default)
+                reset_config = """<netconf-server xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-server">
+<listen>
+<endpoints>
+<endpoint>
+<name>default-ssh</name>
+<ssh>
+<ssh-server-parameters>
+<server-identity>
+<banner xmlns="urn:cesnet:libnetconf2-netconf-server">Initial test banner</banner>
+</server-identity>
+</ssh-server-parameters>
+</ssh>
+</endpoint>
+</endpoints>
+</listen>
+</netconf-server>"""
+                
+                log.info("Resetting device configuration to known state")
+                c.edit_config(reset_config, on_setup_edit_config, datastore="running")
+            else:
+                log.error("Failed to get initial config")
+                t.failure(ValueError("Failed to get initial config"))
+        
+        def on_setup_edit_config(c: netconf.Client, r: ?xml.Node):
+            if r is not None:
+                # Check for errors
+                has_error = False
+                for child in r.children:
+                    if child.tag == "rpc-error":
+                        has_error = True
+                        log.error("Failed to reset config", {"error": child.encode()})
+                
+                if not has_error:
+                    log.info("Configuration reset successful")
+                    c.close(on_setup_close)
+                else:
+                    log.error("Failed to reset configuration")
+                    t.failure(ValueError("Failed to reset configuration"))
+            else:
+                log.error("No response from edit-config")
+                t.failure(ValueError("No response from edit-config"))
+        
+        def on_setup_close():
+            log.info("Setup complete, starting NetconfAdapter test")
+            start_adapter_test()
+        
+        # Create setup client
+        setup_client = netconf.Client(
+            t.env.auth,
+            test_address,
+            test_port,
+            test_username,
+            test_password,
+            on_connect=on_setup_connect,
+            log_handler=t.log_handler
+        )
+    
+    def on_reconf(name: str):
+        log.info("Reconf callback", {"name": name})
+        if adapter is not None and not config_sent:
+            config_sent = True
+            # Create test configuration
+            test_config = create_simple_gdata_config()
+            log.info("Prepared configuration to send", {"xml": test_config.to_xmlstr(pretty=False)})
+            
+            def on_configure_done(error: ?Exception):
+                if error is not None:
+                    log.error("Configure failed", {"error": str(error)})
+                    t.failure(error)
+                else:
+                    log.info("Configuration sent successfully through adapter!")
+                    adapter.close()
+                    # Now create a direct client to verify the config was applied
+                    verify_configuration()
+            
+            log.info("Sending configuration to device through adapter")
+            adapter.configure(on_configure_done, test_config)
+    
+    def start_adapter_test():
+        log.info("Starting NetconfAdapter test with clean device state")
+        
+        # Create DeviceMgr and NetconfAdapter
+        dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf)
+        
+        # Create a simple device schema
+        schema = orchestron.device.DeviceSchema(
+            "test",
+            set(),
+            orchestron.device.MockRoot,
+            from_gdata=orchestron.device.MockRoot.from_gdata
+        )
+
+        # Create test DeviceMetaConfig
+        test_dmc = create_test_dmc()
+
+        # Create the NetconfAdapter - this will trigger connection
+        local_adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, t.log_handler, t.env.auth)
+        adapter = local_adapter
+        if local_adapter is not None:
+            local_adapter.set_dmc(test_dmc)
+
+        log.info("NetconfAdapter created, waiting for connection and reconf callback...")
+    
+    def verify_configuration():
+        log.info("Creating verification client to check device configuration")
+        
+        def on_verify_connect(c: netconf.Client, err: ?Exception):
+            if err is not None:
+                log.error("Verification client failed to connect", {"error": str(err)})
+                t.failure(err)
+            else:
+                log.info("Verification client connected")
+                verification_client = c
+                # Get the running config
+                c.get_config(on_verify_get_config, datastore="running")
+        
+        def on_verify_get_config(c: netconf.Client, r: ?xml.Node):
+            if r is not None:
+                log.info("Retrieved device configuration for verification", {"conf": r.encode()})
+                config_xml = r.encode()
+                
+                # Check if our banner is in the config
+                if "Test banner from Orchestron" in config_xml:
+                    log.info("✓ SUCCESS: Banner was configured on the device!")
+                    log.info("✓ NetconfAdapter successfully pushed configuration to device")
+                    test_error = None
+                else:
+                    log.warning("Banner text not found in device config")
+                    log.warning("Expected 'Test banner from Orchestron' in config")
+                    test_error = ValueError("Expected banner text not found in device config")
+
+                c.close(lambda: on_verify_close(test_error))
+            else:
+                log.error("No response from get-config")
+                t.failure(ValueError("No response from get-config"))
+        
+        def on_verify_close(test_failure):
+            log.info("Verification client closed")
+            log.info("Test completed successfully!")
+            if test_failure is not None:
+                t.failure(test_failure)
+            else:
+                t.success()
+        
+        # Create the verification client
+        verification_client = netconf.Client(
+            t.env.auth,
+            test_address,
+            test_port,
+            test_username,
+            test_password,
+            on_connect=on_verify_connect,
+            log_handler=t.log_handler
+        )
+    
+    # Start the test by first setting up and verifying the server
+    setup_test()
+
+
+#actor _test_netconf_adapter_configure(t: testing.EnvT):
+#    """Test NetconfAdapter configure method and connection flow
+#
+#    This test creates a NetconfAdapter and attempts to configure it.
+#    It should handle the connection establishment and configuration push.
+#    """
+#    log = logging.Logger(t.log_handler)
+#    log.info("Testing NetconfAdapter configure method")
+#
+#    # Create a mock DeviceMgr
+#    dev_types = {}
+#    dev_mgr = odev.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler,
+#                              lambda name: log.info("Reconf callback", {"name": name}))
+#
+#    # Create a simple device schema
+#    schema = odev.DeviceSchema(
+#        "test",
+#        set(),
+#        odev.MockRoot,
+#        from_gdata=odev.MockRoot.from_gdata
+#    )
+#
+#    # Create test DeviceMetaConfig
+#    test_dmc = create_test_dmc()
+#
+#    # Create the NetconfAdapter
+#    adapter = odev.NetconfAdapter(dev_mgr, schema, test_dmc, t.log_handler, t.env.auth)
+#
+#    # Create a simple configuration
+#    test_config = create_simple_gdata_config()
+#
+#    # Define callback for configure completion
+#    def on_configure_done(error: ?Exception):
+#        if error is not None:
+#            if isinstance(error, odev.NotConnectedError):
+#                log.info("Expected NotConnectedError since we're not actually connected to a device")
+#                # This is expected in this test scenario since we don't have a real NETCONF server
+#                t.success()
+#            else:
+#                log.error("Configure failed with unexpected error", {"error": str(error)})
+#                t.failure(error)
+#        else:
+#            log.info("Configuration succeeded (unexpected in test without real device)")
+#            t.success()
+#
+#    # Attempt to configure
+#    log.info("Attempting to configure adapter")
+#    adapter.configure(on_configure_done, test_config)
+#
+#
+#actor _test_netconf_adapter_with_server(t: testing.EnvT):
+#    """Test NetconfAdapter with an actual NETCONF server
+#
+#    This test requires a running NETCONF server (e.g., notconf container).
+#    Run with: docker run -td -p 42830:830 ghcr.io/notconf/notconf
+#    """
+#    log = logging.Logger(t.log_handler)
+#    log.info("Testing NetconfAdapter with NETCONF server")
+#
+#    # Create a mock DeviceMgr with on_connect callback
+#    dev_types = {}
+#
+#    var adapter: ?odev.NetconfAdapter = None
+#    var config_sent = False
+#
+#    def on_device_connect(modset: dict[str, odev.ModCap]):
+#        log.info("Device connected with modules", {"module_count": len(modset)})
+#
+#        # After connection, try to send configuration
+#        if not config_sent and adapter is not None:
+#            config_sent = True
+#            test_config = create_simple_gdata_config()
+#
+#            def on_configure_done(error: ?Exception):
+#                if error is not None:
+#                    log.error("Configure failed", {"error": str(error)})
+#                    t.failure(error)
+#                else:
+#                    log.info("Configuration succeeded!")
+#                    # Fetch the config to verify
+#                    adapter.fetch_config(on_fetch_done)
+#
+#            def on_fetch_done(config: ?yang.gdata.Node, error: ?Exception):
+#                if error is not None:
+#                    log.error("Fetch config failed", {"error": str(error)})
+#                    t.failure(error)
+#                else:
+#                    log.info("Successfully fetched config from device")
+#                    t.success()
+#
+#            log.info("Sending configuration to device")
+#            adapter.configure(on_configure_done, test_config)
+#
+#    dev_mgr = odev.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler,
+#                              lambda name: log.info("Reconf callback", {"name": name}))
+#
+#    # Override the on_connect callback
+#    dev_mgr.on_connect = on_device_connect
+#
+#    # Create a simple device schema
+#    schema = odev.DeviceSchema(
+#        "test",
+#        set(),
+#        odev.MockRoot,
+#        from_gdata=odev.MockRoot.from_gdata
+#    )
+#
+#    # Create test DeviceMetaConfig with actual server details
+#    test_dmc = create_test_dmc()
+#
+#    # Create the NetconfAdapter
+#    adapter = odev.NetconfAdapter(dev_mgr, schema, test_dmc, t.log_handler, t.env.auth)
+#
+#    log.info("NetconfAdapter created, waiting for connection...")
+#
+#

@@ -16,6 +16,7 @@ import netconf
 DISCONNECTED  = 0
 CONNECTING    = 1
 CONNECTED     = 2
+TRANSACTION   = 3
 
 class DeviceSchema(object):
     name: str
@@ -97,11 +98,30 @@ class DeviceError(Exception):
     """Exception raised when the device configuration fails
     """
 
-class NotConnectedError(DeviceError):
+class TransientError(DeviceError):
+    """Transient errors are temporary and can typically be recovered from by retrying
+    """
+
+class PermanentError(DeviceError):
+    """Permanent errors are typically not recoverable
+
+    Like the device things the configuration is invalid, which is not going to
+    change no matter how many times we retry
+    """
+
+class NotConnectedError(TransientError):
     """The device is not connected
     """
 
-class ConfigError(DeviceError):
+class BusyError(TransientError):
+    """The device is busy, i.e. it is currently processing a configuration transaction
+    """
+
+class LockedError(TransientError):
+    """The device is locked, i.e. it is not possible to configure it at the moment
+    """
+
+class ConfigError(PermanentError):
     """Configuration error, i.e. the device rejected the configuration
 
     Retrying the same configuration typically does not help.
@@ -278,45 +298,83 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
         dmc = new_dmc
 
-    def _transaction_done(error: ?Exception):
-        """Internal function called when transaction is done
-        """
-        if error is not None:
-            if isinstance(error, NotConnectedError):
-                _log.debug("DeviceMgr._transaction_done: Device not connected, backing off, waiting for reconnect")
-                pending_txids.update(current_txids)
-                current_txids = set()
-            else:
-                if isinstance(error, ConfigError):
-                    _log.debug("DeviceMgr._transaction_done: Configuration failed, bad config", {"error": error})
-                else:
-                    _log.debug("DeviceMgr._transaction_done: Unhandled error", {"error": error})
+    def _send_config():
+        """Send configuration to the device adapter
 
-                # TODO: should we signal failure to uptream transactions? or just retry in some way?
+        This function manages the transaction queue and calls the adapter's
+        configure method with the current target configuration.
+        """
+        def on_done(error: ?Exception):
+            """Handle transaction completion
+
+            This callback is called when the adapter finishes the configuration
+            transaction, either successfully or with an error.
+            """
+            if error is not None:
+                if isinstance(error, NotConnectedError):
+                    _log.debug("Device not connected, no need to retry - waiting for reconnect")
+                    pending_txids.update(current_txids)
+                    current_txids = set()
+
+                elif isinstance(error, PermanentError):
+                    _log.debug("Permanent error pushing configuration to device", {"error": error})
+                    if isinstance(error, ConfigError):
+                        _log.debug("Configuration failed due to bad config", {"error": error})
+
+                    # Got a permanent error, giving up
+                    for tid,callback in callbacks.items():
+                        if tid in current_txids:
+                            callback(error)
+                            del callbacks[tid]
+
+                    # TODO: uh, what else? we need to bubble up this sort of error state to an operator somehow
+
+                    if len(pending_txids) > 0:
+                        _log.debug("New intended configuration available, retrying with latest config")
+                        pending_txids.update(current_txids)
+                        current_txids = set()
+                        _send_config()
+                    else:
+                        _log.debug("No new intended configuration available, no point in retrying with same conf")
+                        pending_txids.update(current_txids)
+                        current_txids = set()
+
+                elif isinstance(error, TransientError):
+                    _log.debug("Transient error", {"error": error})
+                    if isinstance(error, BusyError):
+                        _log.debug("DeviceAdapter busy, this should never happen")
+
+                    if len(pending_txids) > 0:
+                        _log.debug("New intended configuration available, retrying with latest config")
+                        pending_txids.update(current_txids)
+                        current_txids = set()
+                        _send_config()
+                    else:
+                        retry_in = 1
+                        _log.debug("No new intended configuration available. Scheduling retry of current config", {"retry_in": retry_in})
+                        pending_txids.update(current_txids)
+                        current_txids = set()
+                        after retry_in: _send_config()
+
+                else:
+                    _log.debug("Unhandled error", {"error": error})
+                    # Uh, this is indicative of programmer error and we should fix it, but let's do stupid retry as well
+                    pending_txids.update(current_txids)
+                    current_txids = set()
+                    after 1: _send_config()
+
+            else:
+                _log.debug("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids})
                 for tid,callback in callbacks.items():
                     if tid in current_txids:
-                        callback(error)
+                        callback(True)
                         del callbacks[tid]
-
-                pending_txids.update(current_txids)
                 current_txids = set()
                 if len(pending_txids) > 0:
-                    _log.debug("New intended configuration available, retrying with latest config")
+                    _log.debug("Configuration changed during in-progress transaction, running again...")
                     _send_config()
-                else:
-                    _log.debug("No new intended configuration available, no point in retrying with same conf")
-        else:
-            _log.debug("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids})
-            for tid,callback in callbacks.items():
-                if tid in current_txids:
-                    callback(True)
-                    del callbacks[tid]
-            current_txids = set()
-            if len(pending_txids) > 0:
-                _log.debug("Configuration changed during in-progress transaction, running again...")
-                _send_config()
 
-    def _send_config():
+        # Check if we already have a transaction in progress
         if len(current_txids) > 0:
             _log.debug("DeviceMgr._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
         else:
@@ -324,7 +382,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                 current_txids = pending_txids
                 pending_txids = set()
                 _log.debug("DeviceMgr._send_config: sending intended target configuration", {"txids": current_txids})
-                adapter.configure(_transaction_done, target_conf)
+                adapter.configure(on_done, target_conf)
             else:
                 _log.debug("_send_config: target_conf not set")
 
@@ -566,15 +624,57 @@ class NetconfAdapter(DeviceAdapter):
     def get_config(self):
         return self._driver.get_config()
 
+    def close(self, on_close: ?action() -> None=None):
+        """Close the connection to the device
+        """
+        self._driver.close(on_close)
+
 
 actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaConfig, log_handler: logging.Handler, wcap: ?WorldCap):
     """NETCONF device adapter
+
+    It is possible to configure a device using different transaction commit
+    procedures. Devices that have the writable-running capability allow
+    edit-config RPC to directly target the running datastore so that we can push
+    an entire configuration in a single operation which implicitly also
+    "commits". This is often ideal since we can easily form the complete
+    configuration as a single config payload to apply with a single RPC.
+
+    Many devices support a candidate datastore ("candidate" capability) to which
+    configuration can first be pushed, possibly using multiple edit-config
+    calls, and then committed at which point the configuration goes from the
+    candidate datastore to running. This mimics CLI use by a human where a
+    configuration session to candidate allows editing the configuration in
+    multiple operations and reviewing the result before a commit is performed.
+    There is no real inherent benefit of using candidate mode for a system like
+    Orchestron, the one exception being that it enables the use of confirmed
+    commits (another capability).
+
+    Confirmed commits enables a confirmation timeout for a commit, so that after
+    the commit is performed, it must be confirmed within this time period or it
+    is rolled back. This allows the device to rollback a potentially bad change
+    if it means we lost connectivity to the device and thus we weren't able to
+    confirm the commit. This is ideal from a network automation perspective
+    since we get sort of built-in support for rolling back bad changes.
+
+    Some devices do not support writable-running but do support candidate, such
+    as IOS XR, which forces us to always go through the candidate datastore.
+
+    In order of preference, we have these alternative commit procedures:
+    - write to candidate + confirmed-commit, if confirmed-commit is supported
+    - write directly to running, if writable-running is supported
+    - write to candidate + commit
+
+    What we actually push to the device is a diff that is computed based on the
+    current running configuration which we fetch from the device and the new
+    target configuration that we computed from the transforms in the TTT
+    transaction engine. The diff is then pushed to the device. To ensure correct
+    operations, we take a lock on the datastore on the device for the duration
+    of the entire commit procedure.
+
     """
     _log = logging.Logger(log_handler)
     _log.info("NetconfDriver starting up")
-
-    # Orchestron's intended target configuration, that we want on the device.
-    var target_conf: ?yang.gdata.Node = None
 
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
@@ -587,10 +687,10 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
     var client: ?netconf.Client = None
 
     var state: int = DISCONNECTED
-    var error: ?Exception = None
-    var on_done: ?action(?Exception) -> None = None
 
     var modset: dict[str, ModCap] = {}
+
+    NS_NC_1_0 = "urn:ietf:params:xml:ns:netconf:base:1.0"
 
     def _on_connect(c: netconf.Client, err):
         if client is not None and c is not client:
@@ -638,6 +738,10 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                     _log.debug("Device.set_dmc: ignoring new device meta-config identical to current device meta-config")
                     return
 
+        _connect(new_dmc)
+        dmc = new_dmc
+
+    def _connect(new_dmc):
         if not len(new_dmc.address.elements) > 0:
             _log.debug("Not enough addressess :/")
             return
@@ -661,10 +765,9 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                                on_notif=_on_notif,
                                log_handler=log_handler)
             client = c
-        dmc = new_dmc
 
     # TODO: Close protocol
-    def close():
+    def close(on_close: ?action() -> None=None):
         """Close the connection to the device
         """
         _log.debug("Device.close")
@@ -674,45 +777,214 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
             _log.debug("Device closed")
         else:
             _log.debug("Device.close: No client, nothing to close")
+        if on_close is not None:
+            on_close()
 
     # TODO: Restart protocol
     def restart():
         """Close the existing connection and reconnect to the device
         """
         _log.debug("Device.restart")
-        #close()
-        #connect()
+        new_dmc = dmc
+        close(lambda: _connect(new_dmc))
 
     def configure(done: action(?Exception) -> None, new_conf: yang.gdata.Node):
-        if on_done is not None:
-            _log.debug("Device.configure: Already in transaction, cannot send configuration")
-            return
+        """Configure the device with a new configuration
 
-        if target_conf == new_conf:
-            _log.debug("Device.configure: ignoring new configuration identical to current intended configuration")
-            done()
-        else:
-            _log.debug("Device.configure: new configuration")
-            if state != CONNECTED:
+        This starts a multi-step transaction process:
+        1. Lock the datastore
+        2. Fetch current config from device
+        3. Compute diff between current and target
+        4. Send diff via edit-config
+        5. Commit (if using candidate datastore)
+        6. Unlock datastore
+        """
+        _log.debug("Device.configure: received new configuration")
+
+        # Check state
+        if state != CONNECTED:
+            if state == DISCONNECTED:
                 _log.debug("Device.configure: device not connected, cannot send configuration")
                 done(NotConnectedError())
-                return
+            else:
+                _log.debug("Device.configure: Already in transaction, cannot send configuration")
+                done(BusyError())
+            return
 
-            target_conf = new_conf
-            xml_conf = new_conf.to_xmlstr(pretty=False)
-            if xml_conf == "":
-                # Cisco IOS XRd doesn't like empty <edit-config>, returns error
-                _log.debug("Device.edit_config Config is empty, noop")
-                done()
-                return
+        # Set transaction state
+        state = TRANSACTION
+
+        def on_locked_running(c: netconf.Client, error: ?netconf.NetconfError):
+            """Callback after locking running datastore"""
+            _log.debug("Device.configure.on_locked_running", {"error": error})
+            if error is not None:
+                abort(error)
+            else:
+                if target_datastore() == "candidate":
+                    # Now lock candidate as well
+                    _log.debug("Device.configure: locking candidate datastore")
+                    c.lock(on_locked_candidate, "candidate")
+                else:
+                    # Just running is enough, fetch the config
+                    _log.debug("Device.configure: fetching current config from running")
+                    c.get_config(on_fetched, "running")
+
+        def on_locked_candidate(c: netconf.Client, error: ?netconf.NetconfError):
+            """Callback after locking candidate datastore"""
+            _log.debug("Device.configure.on_locked_candidate", {"error": error})
+            if error is not None:
+                # If we had locked running first, unlock it
+                if has_writable_running():
+                    c.unlock(lambda c, e: abort(error), "running")
+                else:
+                    abort(error)
+            else:
+                _log.debug("Device.configure: fetching current config from running")
+                c.get_config(on_fetched, "running")
+
+        def on_fetched(c: netconf.Client, r: ?xml.Node):
+            _log.debug("Device.configure.on_fetched", {"r": r.encode() if r is not None else "None"})
+            if r is not None:
+                xml_diff = new_conf.to_xmlstr(pretty=False)
+                if xml_diff != "":
+                    _log.debug("Device.configure: sending diff", {"diff": xml_diff})
+                    c.edit_config(xml_diff, on_edited, target_datastore())
+                else:
+                    _log.debug("Device.configure: no changes needed")
+                    complete(c)
+                # TODO: enable parsing of config
+                #current = schema.from_xml(r.children[0])
+                #if current is not None:
+                #    _log.debug("Device.configure: computing diff")
+                #    try:
+                #        # TODO: enable diff computation. We are not ready for
+                #        # this yet as we must produce complete device confs
+                #        #d = yang.gdata.diff(current, new_conf)
+                #        #xml_diff = d.to_xmlstr(pretty=False) if d is not None else ""
+                #        xml_diff = new_conf.to_xmlstr(pretty=False)
+                #        if xml_diff != "":
+                #            _log.debug("Device.configure: sending diff", {"diff": xml_diff})
+                #            c.edit_config(xml_diff, on_edited, target_datastore())
+                #        else:
+                #            _log.debug("Device.configure: no changes needed")
+                #            complete(c)
+                #    except ValueError as exc:
+                #        _log.error("Device.configure: Failed to compute diff", {"current": current.prsrc(), "target": new_conf.prsrc(), "exc": exc})
+                #        abort(ValueError("Failed to compute diff"))
+                #else:
+                #    _log.error("Device.configure: failed to parse config", {"current": current, "target": new_conf})
+                #    abort(ValueError("Failed to parse config"))
+            else:
+                _log.error("Device.configure: no response from device")
+                abort(ValueError("Failed to fetch config"))
+
+        def on_edited(c: netconf.Client, r: ?xml.Node):
+            _log.debug("Device.configure.on_edited", {"r": r.encode() if r is not None else "None"})
+            if r is not None:
+                if target_datastore() == "candidate":
+                    _log.debug("Device.configure: committing to candidate")
+                    c.commit(on_committed)
+                else:
+                    _log.debug("Device.configure: edit-config complete (writable-running)")
+                    complete(c)
+            else:
+                _log.error("Device.configure: device disconnected during edit-config")
+                abort(NotConnectedError())
+
+        def on_committed(c: netconf.Client, r: ?xml.Node):
+            _log.debug("Device.configure.on_committed", {"r": r.encode() if r is not None else "None"})
+            if r is not None:
+                # Check for errors in commit response
+                has_error = False
+                for child in r.children:
+                    if child.tag == "rpc-error":
+                        has_error = True
+                        _log.error("Device.configure: commit error", {"error": child.encode()})
+                        break
+
+                if has_error:
+                    _log.debug("Device.configure: discarding changes after failed commit")
+                    c.discard_changes(lambda c, r: abort(ConfigError("Commit failed")))
+                else:
+                    _log.debug("Device.configure: commit successful")
+                    complete(c)
+            else:
+                _log.error("Device.configure: device disconnected during commit")
+                abort(NotConnectedError())
+
+        def complete(c: netconf.Client):
+            """Successfully complete the transaction"""
+            _log.debug("Device.configure: transaction complete, unlocking")
+
+            def on_candidate_unlocked(c2: netconf.Client, e: ?netconf.NetconfError):
+                # If we locked running, unlock it after candidate (reverse order of locking)
+                if has_writable_running():
+                    c2.unlock(lambda c3, e2: finish(e if e is not None else e2), "running")
+                else:
+                    finish(e)
+
+            if target_datastore() == "candidate":
+                # Unlock candidate first
+                c.unlock(on_candidate_unlocked, "candidate")
+            elif has_writable_running():
+                # Just unlock running (we were using writable-running)
+                c.unlock(lambda c, e: finish(e), "running")
+            else:
+                # Shouldn't happen, but handle gracefully
+                finish(None)
+
+        def abort(err: Exception):
+            """Abort and cleanup the transaction"""
+            _log.debug("Device.configure: aborting transaction", {"error": err})
+
+            def on_abort_candidate_unlocked(c: netconf.Client, e: ?netconf.NetconfError):
+                # If we locked running, unlock it after candidate (reverse order)
+                if has_writable_running():
+                    c.unlock(lambda c2, e2: finish(err), "running")
+                else:
+                    finish(err)
 
             if client is not None:
-                on_done = done
-                target_datastore = "running" if _is_writable_running() else "candidate"
-                _log.debug("Device.configure: edit_config", {"datastore": target_datastore})
-                client.edit_config(xml_conf, _on_conf, datastore=target_datastore)
+                if target_datastore() == "candidate":
+                    # Unlock candidate first
+                    client.unlock(on_abort_candidate_unlocked, "candidate")
+                elif has_writable_running():
+                    # Just unlock running (we were using writable-running)
+                    client.unlock(lambda c, e: finish(err), "running")
+                else:
+                    # No locks to release
+                    finish(err)
             else:
-                _log.debug("Device.configure: No client, cannot send config")
+                finish(err)
+
+        def finish(error: ?Exception):
+            """Final cleanup and state reset"""
+            _log.debug("Device.configure: finishing transaction", {"error": error})
+            # Reset state to CONNECTED
+            state = CONNECTED
+            # Call the done callback
+            done(error)
+            # Refresh running_conf if successful
+            # TODO: feels redundant to refetch whole config here from device,
+            # running_conf should really be target_conf at this point - keeping this for now though
+            if client is not None and error is None:
+                client.get_config(_on_get_config)
+
+        # Start the transaction by locking the datastore(s)
+        # Lock running if it's writable (to prevent others from directly editing it)
+        # Otherwise, just lock the target datastore
+        if client is not None:
+            if has_writable_running():
+                _log.debug("Device.configure: starting transaction, locking running datastore")
+                client.lock(on_locked_running, "running")
+            elif target_datastore() == "candidate":
+                _log.debug("Device.configure: starting transaction, locking candidate datastore only")
+                client.lock(on_locked_candidate, "candidate")
+            else:
+                # This shouldn't happen - we should have either writable-running or candidate
+                _log.error("Device.configure: No lockable datastore available")
+                abort(ValueError("No lockable datastore available"))
+
 
     def get_capabilities():
         if client is not None:
@@ -722,51 +994,29 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
     def get_modules():
         return modset
 
-    def _is_writable_running():
+    def target_datastore():
+        # In order of preference, we have these alternative commit procedures:
+        # - write to candidate + confirmed-commit, if confirmed-commit is supported
+        # - write directly to running, if writable-running is supported
+        # - write to candidate + commit
+        if has_confirmed_commit() and has_candidate():
+            return "candidate"
+        elif has_writable_running():
+            return "running"
+        elif has_candidate():
+            return "candidate"
+
+        raise ValueError("No writable datastore available")
+
+    def has_candidate():
+        return "urn:ietf:params:netconf:capability:candidate:1.0" in modset
+
+    def has_confirmed_commit():
+        return "urn:ietf:params:netconf:capability:confirmed-commit:1.0" in modset
+
+    def has_writable_running():
         return "urn:ietf:params:netconf:capability:writable-running:1.0" in modset
 
-    def _transaction_done(error: ?Exception=None):
-        """Internal function called when transaction is done
-        """
-        _log.debug("Device._transaction_done", {"error": str(error)})
-        if on_done is not None:
-            on_done(error)
-        on_done = None
-        if client is not None:
-            client.get_config(_on_get_config)
-
-    def _on_conf(c, r):
-        if r is not None:
-            _log.debug("Device._on_conf", {"r": r.encode()})
-            if not _is_writable_running():
-                # We edit-config'd candidate, now commit
-                c.commit(_on_commit)
-            else:
-                _transaction_done()
-        else:
-            _log.debug("Device._on_conf: Device disconnected")
-            _transaction_done(NotConnectedError())
-
-    def _on_commit(c, r):
-        if r is not None:
-            _log.debug("Device._on_commit", {"r": r.encode()})
-            if any(filter(lambda c: c.tag == "rpc-error", r.children)) and not _is_writable_running():
-                # We commit'ed candidate, but got an error, now discard-changes
-                # TODO: what if the device does this (:rollback-on-error)?!
-                c.discard_changes(lambda c, r: _on_discard_changes(c, r, error=ConfigError("Commit failed")))
-            else:
-                _transaction_done()
-        else:
-            _log.debug("Device._on_commit: Device disconnected")
-            _transaction_done(NotConnectedError())
-
-    def _on_discard_changes(c, r, error=None):
-        if r is not None:
-            _log.debug("Device._on_discard_changes", {"r": r.encode()})
-            _transaction_done(error)
-        else:
-            _log.debug("Device._on_discard_changes: Device disconnected")
-            _transaction_done(NotConnectedError())
 
     def _on_get_config(c, r, cb: ?action(?yang.gdata.Node, ?Exception) -> None=None):
         _log.debug("Device._on_get_config")
@@ -782,6 +1032,8 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                 if cb is not None:
                     cb(None, ValueError("Unexpected response to <get-config>"))
 
+    # TODO: done callback should not be optional
+    # TODO: move _on_get_config to nested function under fetch_config
     def fetch_config(done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
         _log.debug("Device._fetch_config")
         if client is not None:
