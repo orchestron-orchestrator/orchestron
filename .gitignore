@@ -3,3 +3,4 @@ build.zig*
 .acton.lock
 .actonc.lock
 out
+.vscode/

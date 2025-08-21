@@ -1,0 +1,28 @@
+# See https://reuse.software/spec-3.3/#reusetoml for specification
+version = 1
+
+
+[[annotations]]
+path = [
+    "Makefile",
+    "*.mk",
+    "*.act.json",
+    "src/**",
+    "gen_dmc/**",
+    "test/**",
+
+]
+SPDX-FileCopyrightText = "Deutsche Telekom AG"
+SPDX-License-Identifier = "BSD-3-Clause"
+
+
+[[annotations]]
+path = [
+    ".gitignore",
+    "README.md",
+    "REUSE.toml",
+    "docs/**",
+    ".github/**"
+]
+SPDX-FileCopyrightText = "Deutsche Telekom AG"
+SPDX-License-Identifier = "CC0-1.0"
