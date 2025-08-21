@@ -5,7 +5,7 @@ from orchestron.device_meta_config import orchestron_rfs__device_entry as Device
 import xml, logging
 
 def per_src(cfg_per_src: dict[str, gdata.Node]):
-    return "\n".join([f"        '{src}': {cfg.prsrc(4, src)}" for src,cfg in cfg_per_src.items()])
+    return "\n".join([f"        '{src}': {cfg.prsrc(True, 4, src)}" for src,cfg in cfg_per_src.items()])
 
 WILDKEY = ""
 
