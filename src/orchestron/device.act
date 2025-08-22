@@ -730,11 +730,13 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
 
     def set_dmc(new_dmc: DeviceMetaConfig):
         _log.debug("Device.set_dmc", {"new_dmc": new_dmc.to_gdata().to_json()})
+        # TODO: implement Eq for adata
+        #if dmc is not None and dmc == new_dmc:
         if dmc is not None and new_dmc is not None:
             old_dmcg = dmc.to_gdata()
             new_dmcg = new_dmc.to_gdata()
             if old_dmcg is not None and new_dmcg is not None:
-                if yang.gdata.diff(old_dmcg, new_dmcg) is not None:
+                if old_dmcg == new_dmcg:
                     _log.debug("Device.set_dmc: ignoring new device meta-config identical to current device meta-config")
                     return
 
