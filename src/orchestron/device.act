@@ -923,15 +923,18 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                 else:
                     finish(e)
 
-            if target_datastore() == "candidate":
-                # Unlock candidate first
-                c.unlock(on_candidate_unlocked, "candidate")
-            elif has_writable_running():
-                # Just unlock running (we were using writable-running)
-                c.unlock(lambda c, e: finish(e), "running")
+            if use_locks():
+                if target_datastore() == "candidate":
+                    # Unlock candidate first
+                    c.unlock(on_candidate_unlocked, "candidate")
+                elif has_writable_running():
+                    # Just unlock running (we were using writable-running)
+                    c.unlock(lambda c, e: finish(e), "running")
+                else:
+                    # Shouldn't happen, but handle gracefully
+                    finish()
             else:
-                # Shouldn't happen, but handle gracefully
-                finish(None)
+                finish()
 
         def abort(err: Exception):
             """Abort and cleanup the transaction"""
@@ -957,7 +960,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
             else:
                 finish(err)
 
-        def finish(error: ?Exception):
+        def finish(error: ?Exception=None):
             """Final cleanup and state reset"""
             _log.debug("Device.configure: finishing transaction", {"error": error})
             # Reset state to CONNECTED
@@ -974,16 +977,20 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         # Lock running if it's writable (to prevent others from directly editing it)
         # Otherwise, just lock the target datastore
         if client is not None:
-            if has_writable_running():
-                _log.debug("Device.configure: starting transaction, locking running datastore")
-                client.lock(on_locked_running, "running")
-            elif target_datastore() == "candidate":
-                _log.debug("Device.configure: starting transaction, locking candidate datastore only")
-                client.lock(on_locked_candidate, "candidate")
+            if use_locks():
+                if has_writable_running():
+                    _log.debug("Device.configure: starting transaction, locking running datastore")
+                    client.lock(on_locked_running, "running")
+                elif target_datastore() == "candidate":
+                    _log.debug("Device.configure: starting transaction, locking candidate datastore only")
+                    client.lock(on_locked_candidate, "candidate")
+                else:
+                    # This shouldn't happen - we should have either writable-running or candidate
+                    _log.error("Device.configure: No lockable datastore available")
+                    abort(ValueError("No lockable datastore available"))
             else:
-                # This shouldn't happen - we should have either writable-running or candidate
-                _log.error("Device.configure: No lockable datastore available")
-                abort(ValueError("No lockable datastore available"))
+                _log.error("Device.configure: Not using locks, getting config")
+                client.get_config(on_fetched, "running")
 
 
     def get_capabilities():
@@ -993,6 +1000,21 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
 
     def get_modules():
         return modset
+
+    def use_locks():
+        # Nokia SR Linux seems to be broken. The first commit dance in a NETCONF
+        # session always seem to work, but if we have first acquired the lock on
+        # candidate (Nokia SRL has candidate, not writable-running), the second
+        # commit fails with a cryptic error message:
+        # <rpc-error>
+        #     <error-type>application</error-type>
+        #     <error-tag>operation-failed</error-tag>
+        #     <error-severity>error</error-severity>
+        #     <error-message>
+        #     Error [InvalidArgument]: Cannot discard candidate without starting a configuration session (request session id 17)
+        #     </error-message>
+        # </rpc-error>
+        return not is_nokia_srl()
 
     def target_datastore():
         # In order of preference, we have these alternative commit procedures:
@@ -1017,6 +1039,8 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
     def has_writable_running():
         return "urn:ietf:params:netconf:capability:writable-running:1.0" in modset
 
+    def is_nokia_srl():
+        return "srl_nokia-aaa" in modset
 
     def _on_get_config(c, r, cb: ?action(?yang.gdata.Node, ?Exception) -> None=None):
         _log.debug("Device._on_get_config")
