@@ -656,6 +656,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
             conn_state = CONNECTING
             _log.debug(f"Setting up NETCONF client... {address} {port} {username} {password}")
             c = netconf.Client(wcap, address, port, username, password,
+                               skip_host_key_check=True,
                                on_connect=_on_connect,
                                on_notif=_on_notif,
                                log_handler=log_handler)
