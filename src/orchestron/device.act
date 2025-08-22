@@ -1073,6 +1073,8 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
     def get_config():
         return running_conf
 
+    _connect(dmc)
+
 
 def hash_modset(modset: dict[str, ModCap]) -> str:
     # TODO: use a better hash function
