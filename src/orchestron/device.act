@@ -1002,6 +1002,9 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         return modset
 
     def use_locks():
+        # TODO: enable locks per default? or config option?
+        # Locking is disabled per default.
+        return False
         # Nokia SR Linux seems to be broken. The first commit dance in a NETCONF
         # session always seem to work, but if we have first acquired the lock on
         # candidate (Nokia SRL has candidate, not writable-running), the second
@@ -1014,7 +1017,9 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         #     Error [InvalidArgument]: Cannot discard candidate without starting a configuration session (request session id 17)
         #     </error-message>
         # </rpc-error>
-        return not is_nokia_srl()
+        if is_nokia_srl():
+            return False
+        return True
 
     def target_datastore():
         # In order of preference, we have these alternative commit procedures:
