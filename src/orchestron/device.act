@@ -729,7 +729,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         _log.debug("Notification from device")
 
     def set_dmc(new_dmc: DeviceMetaConfig):
-        _log.debug("Device.set_dmc", {"new_dmc": new_dmc.to_gdata().to_json()})
+        _log.debug("Device.set_dmc", {"dmc": dmc.to_gdata().to_json(), "new_dmc": new_dmc.to_gdata().to_json()})
         # TODO: implement Eq for adata
         #if dmc is not None and dmc == new_dmc:
         if dmc is not None and new_dmc is not None:
@@ -847,35 +847,27 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         def on_fetched(c: netconf.Client, r: ?xml.Node):
             _log.debug("Device.configure.on_fetched", {"r": r.encode() if r is not None else "None"})
             if r is not None:
-                xml_diff = new_conf.to_xmlstr(pretty=False)
-                if xml_diff != "":
-                    _log.debug("Device.configure: sending diff", {"diff": xml_diff})
-                    c.edit_config(xml_diff, on_edited, target_datastore())
+                current = schema.from_xml(r.children[0])
+                if current is not None:
+                    _log.debug("Device.configure: computing diff")
+                    try:
+                        # TODO: enable diff computation. We are not ready for
+                        # this yet as we must produce complete device confs
+                        #d = yang.gdata.diff(current, new_conf)
+                        #xml_diff = d.to_xmlstr(pretty=False) if d is not None else ""
+                        xml_diff = new_conf.to_xmlstr(pretty=False)
+                        if xml_diff != "":
+                            _log.debug("Device.configure: sending diff", {"diff": xml_diff})
+                            c.edit_config(xml_diff, on_edited, target_datastore())
+                        else:
+                            _log.debug("Device.configure: no changes needed")
+                            complete(c)
+                    except ValueError as exc:
+                        _log.error("Device.configure: Failed to compute diff", {"current": current.prsrc(), "target": new_conf.prsrc(), "exc": exc})
+                        abort(ValueError("Failed to compute diff"))
                 else:
-                    _log.debug("Device.configure: no changes needed")
-                    complete(c)
-                # TODO: enable parsing of config
-                #current = schema.from_xml(r.children[0])
-                #if current is not None:
-                #    _log.debug("Device.configure: computing diff")
-                #    try:
-                #        # TODO: enable diff computation. We are not ready for
-                #        # this yet as we must produce complete device confs
-                #        #d = yang.gdata.diff(current, new_conf)
-                #        #xml_diff = d.to_xmlstr(pretty=False) if d is not None else ""
-                #        xml_diff = new_conf.to_xmlstr(pretty=False)
-                #        if xml_diff != "":
-                #            _log.debug("Device.configure: sending diff", {"diff": xml_diff})
-                #            c.edit_config(xml_diff, on_edited, target_datastore())
-                #        else:
-                #            _log.debug("Device.configure: no changes needed")
-                #            complete(c)
-                #    except ValueError as exc:
-                #        _log.error("Device.configure: Failed to compute diff", {"current": current.prsrc(), "target": new_conf.prsrc(), "exc": exc})
-                #        abort(ValueError("Failed to compute diff"))
-                #else:
-                #    _log.error("Device.configure: failed to parse config", {"current": current, "target": new_conf})
-                #    abort(ValueError("Failed to parse config"))
+                    _log.error("Device.configure: failed to parse config", {"current": current, "target": new_conf})
+                    abort(ValueError("Failed to parse config"))
             else:
                 _log.error("Device.configure: no response from device")
                 abort(ValueError("Failed to fetch config"))
