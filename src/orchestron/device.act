@@ -851,11 +851,8 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                 if current is not None:
                     _log.debug("Device.configure: computing diff")
                     try:
-                        # TODO: enable diff computation. We are not ready for
-                        # this yet as we must produce complete device confs
-                        #d = yang.gdata.diff(current, new_conf)
-                        #xml_diff = d.to_xmlstr(pretty=False) if d is not None else ""
-                        xml_diff = new_conf.to_xmlstr(pretty=False)
+                        d = yang.gdata.diff(current, new_conf)
+                        xml_diff = d.to_xmlstr(pretty=False) if d is not None else ""
                         if xml_diff != "":
                             _log.debug("Device.configure: sending diff", {"diff": xml_diff})
                             c.edit_config(xml_diff, on_edited, target_datastore())
