@@ -125,7 +125,23 @@ class ConfigError(PermanentError):
     """Configuration error, i.e. the device rejected the configuration
 
     Retrying the same configuration typically does not help.
+
+    Args:
+        message (str): The error message from the device
+        conf: The configuration sent to the device that caused the error,
+            normally a diff computed from the current running configuration and
+            the target configuration.
+        target_conf: The target configuration, i.e. the configuration that we
+            intended to have on the device, which is the entire declarative
+            configuration for the device as outputted by transforms.
     """
+    conf: ?yang.gdata.Node
+    target_conf: ?yang.gdata.Node
+
+    def __init__(self, message: str="", conf: ?yang.gdata.Node=None, target_conf: ?yang.gdata.Node=None):
+        PermanentError.__init__(self, message)
+        self.conf = conf
+        self.target_conf = target_conf
 
 class ModCap(object):
     name: str
@@ -847,6 +863,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         def on_fetched(c: netconf.Client, r: ?xml.Node):
             _log.debug("Device.configure.on_fetched", {"r": r.encode() if r is not None else "None"})
             if r is not None:
+                # TODO: inspect returned value for ok/errors
                 current = schema.from_xml(r.children[0])
                 if current is not None:
                     _log.debug("Device.configure: computing diff")
@@ -862,17 +879,20 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                             complete(c)
                     except ValueError as exc:
                         _log.error("Device.configure: Failed to compute diff", {"current": current.prsrc(), "target": new_conf.prsrc(), "exc": exc})
+                        # TODO: should be DeviceError
                         abort(ValueError("Failed to compute diff"))
                 else:
                     _log.error("Device.configure: failed to parse config", {"current": current, "target": new_conf})
+                    # TODO: should be DeviceError
                     abort(ValueError("Failed to parse config"))
             else:
-                _log.error("Device.configure: no response from device")
-                abort(ValueError("Failed to fetch config"))
+                _log.error("Device.configure: device disconnected during get-config")
+                abort(NotConnectedError())
 
         def on_edited(c: netconf.Client, r: ?xml.Node):
             _log.debug("Device.configure.on_edited", {"r": r.encode() if r is not None else "None"})
             if r is not None:
+                # TODO: inspect returned value for ok/errors
                 if target_datastore() == "candidate":
                     _log.debug("Device.configure: committing to candidate")
                     c.commit(on_committed)
@@ -888,15 +908,25 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
             if r is not None:
                 # Check for errors in commit response
                 has_error = False
+                error_tag = None
                 for child in r.children:
                     if child.tag == "rpc-error":
                         has_error = True
                         _log.error("Device.configure: commit error", {"error": child.encode()})
+                        # Extract error-tag to determine the type of error
+                        for error_child in child.children:
+                            if error_child.tag == "error-tag":
+                                error_tag = error_child.text
+                                break
                         break
 
                 if has_error:
                     _log.debug("Device.configure: discarding changes after failed commit")
-                    c.discard_changes(lambda c, r: abort(ConfigError("Commit failed")))
+                    # Check if the error is due to locked datastore
+                    if error_tag == "in-use":
+                        c.discard_changes(lambda c, r: abort(LockedError("Datastore is locked")))
+                    else:
+                        c.discard_changes(lambda c, r: abort(ConfigError("Commit failed", conf=new_conf, target_conf=new_conf)))
                 else:
                     _log.debug("Device.configure: commit successful")
                     complete(c)
