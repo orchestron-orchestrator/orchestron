@@ -263,6 +263,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     # configuration and we need to retry, we will retry with a new
     # configuration.
 
+    var reconfigure_id = 0
+
     # TTT transactions can optionally request, through wait_complete(tid, cb), to
     # wait until configuration has been committed to the device. We keep track
     # of those callbacks keyed by tid.
@@ -416,6 +418,29 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         else:
             _log.debug("DeviceMgr.configure: invalid input", {"conf_modset_id": str(conf_modset_id), "new_conf": truncate_conf(new_conf), "tid": tid})
 
+    def reconfigure(cb: ?action(?Exception) -> None):
+        """Reconfigure the device with the current target configuration
+
+        This can be called in order to ensure that the device is configured
+        in accordance with the current target configuration. While configuration
+        changes from within Orchestron naturally trigger configuration of the
+        device, it is possible that the device drifts out of sync, for example
+        due to manual changes on the device. Calling reconfigure() will push
+        the current target configuration to the device again.
+        """
+        def cb_wrapper(result: value):
+            if cb is not None:
+                if isinstance(result, Exception):
+                    cb(result)
+                else:
+                    cb(None)
+
+        reconfigure_id += 1
+        new_tid = "reconfigure-{reconfigure_id}"
+        pending_txids.add(new_tid)
+        _send_config()
+        if cb is not None:
+            wait_complete(new_tid, cb_wrapper)
 
     def wait_complete(tid: str, done: action(value)->None):
         if tid not in current_txids | pending_txids:
