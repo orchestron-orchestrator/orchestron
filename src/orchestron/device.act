@@ -795,7 +795,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         addr = new_dmc.address.elements[0]
         address = addr.address
         addr_port = addr.port
-        port = int(addr_port) if addr_port is not None else 830
+        port = addr_port if addr_port is not None else 830
         username = new_dmc.credentials.username
         password = new_dmc.credentials.password
 

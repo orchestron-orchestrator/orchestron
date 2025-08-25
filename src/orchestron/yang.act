@@ -38,8 +38,7 @@ rfs = r"""module orchestron-rfs {
         mandatory true;
       }
       leaf port {
-        //type uint16;
-        type string;
+        type uint16;
       }
       list initial-credentials {
         key "username password key";
