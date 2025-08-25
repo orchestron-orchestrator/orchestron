@@ -9,7 +9,10 @@ import yang.schema
 import yang.adata
 import yang.gdata
 
-from orchestron.device_meta_config import orchestron_rfs__device_entry as DeviceMetaConfig
+from orchestron.device_meta_config import \
+    orchestron_rfs__device_entry as DeviceMetaConfig, \
+    orchestron_rfs__device__credentials as Credentials, \
+    orchestron_rfs__device__mock as Mock
 
 import netconf
 
@@ -236,7 +239,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     var target_conf: ?yang.gdata.Node = None
 
     # The device's meta configuration, like address, credentials, etc.
-    var dmc: ?DeviceMetaConfig = None
+    var dmc: DeviceMetaConfig = DeviceMetaConfig(name, Credentials("", None))
 
     var schema: DeviceSchema = DeviceSchema("mock", set(), MockRoot, from_gdata=MockRoot.from_gdata)
     var adapter: DeviceAdapter = MockAdapter(self, schema, _log_handler, wcap) if mock else NoAdapter(self, schema, _log_handler, wcap)
@@ -799,7 +802,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         # TODO: we only need o use a new client if connection parameters have
         # changed, other settings don't require a new client
 
-        if wcap is not None and username is not None and password is not None:
+        if wcap is not None and password is not None:
             state = CONNECTING
             _log.debug(f"Setting up NETCONF client... {address} {port} {username} {password}")
             c = netconf.Client(wcap, address, port, username, password,
