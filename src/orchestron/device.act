@@ -851,7 +851,8 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                 if current is not None:
                     _log.debug("Device.configure: computing diff")
                     try:
-                        d = yang.gdata.diff(current, new_conf)
+                        new_conf2 = config_fixer(current, new_conf)
+                        d = yang.gdata.diff(current, new_conf2)
                         xml_diff = d.to_xmlstr(pretty=False) if d is not None else ""
                         if xml_diff != "":
                             _log.debug("Device.configure: sending diff", {"diff": xml_diff})
@@ -1129,3 +1130,41 @@ def _test_parse_cap_xr_hostname():
     testing.assertEqual(mod.namespace, "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg")
     testing.assertEqual(mod.revision, "2021-04-21")
     testing.assertEqual(mod.feature, [])
+
+def config_fixer(current: yang.gdata.Node, new: yang.gdata.Node):
+    # Fix up config. On IOS XR we need to bring with us the Mgmt interface
+    # configuration that exists on the device. We run XRds for testing using
+    # containerlab and containerlab configures the IP addresses as part of a
+    # bootstrap process. The IP addresses are dynamically allocated and thus
+    # vary between test invocations. Since our transform output does not contain
+    # any configuration of the MgmtEth0/RP0/CPU0/0 interface, the diff will
+    # remove it. If we deconfigure the interface from the device, we loose
+    # connectivity to it. This code simply finds if there is a
+    # MgmtEth0/RP0/CPU0/0 interface in the currently running configuraton on the
+    # device and then brings that over into the new target config.
+    def get_xr_mgmt_interface(n: yang.gdata.Node) -> yang.gdata.Node:
+        xr_interfaces = n.children["interfaces"]
+        if xr_interfaces.ns != "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg":
+            raise ValueError("No XR interfaces found")
+        xr_interface = xr_interfaces.children["interface"]
+        if isinstance(xr_interface, yang.gdata.List):
+            for elem in xr_interface.elements:
+                if_name = elem.get_leaf("interface-name").val
+                if isinstance(if_name, str):
+                    if if_name == "MgmtEth0/RP0/CPU0/0":
+                        return yang.gdata.Container({
+  'interfaces': yang.gdata.Container({
+    'interface': yang.gdata.List(['interface-name'], elements=[elem])
+  }, ns='http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg', module='Cisco-IOS-XR-um-interface-cfg')
+})
+        raise ValueError("No XR mgmt interface found")
+
+    try:
+        mgmt_intf_cfg = get_xr_mgmt_interface(current)
+        new2 = yang.gdata.patch(new, mgmt_intf_cfg)
+        if new2 is not None:
+            return new2
+        raise ValueError("Unreachable, patch will never produce empty (None) config for this config input")
+    except Exception as exc:
+        pass
+    return new
