@@ -106,10 +106,10 @@ class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
 class orchestron_rfs__device__address_entry(yang.adata.MNode):
     name: str
     address: str
-    port: ?str
+    port: ?int
     initial_credentials: orchestron_rfs__device__address__initial_credentials
 
-    mut def __init__(self, name: str, address: str, port: ?str, initial_credentials: list[orchestron_rfs__device__address__initial_credentials_entry]=[]):
+    mut def __init__(self, name: str, address: str, port: ?int, initial_credentials: list[orchestron_rfs__device__address__initial_credentials_entry]=[]):
         self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
         self.name = name
         self.address = address
@@ -126,7 +126,7 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
             children['address'] = yang.gdata.Leaf('union', _address)
         _port = self.port
         if _port is not None:
-            children['port'] = yang.gdata.Leaf('string', _port)
+            children['port'] = yang.gdata.Leaf('uint16', _port)
         _initial_credentials = self.initial_credentials
         if _initial_credentials is not None:
             children['initial-credentials'] = _initial_credentials.to_gdata()
@@ -134,7 +134,7 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
-        return orchestron_rfs__device__address_entry(name=n.get_str('name'), address=n.get_str('address'), port=n.get_opt_str('port'), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')))
+        return orchestron_rfs__device__address_entry(name=n.get_str('name'), address=n.get_str('address'), port=n.get_opt_int('port'), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')))
 
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
