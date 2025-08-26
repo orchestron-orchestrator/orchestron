@@ -634,26 +634,18 @@ class GDataWrapper(adata.MNode):
 
 actor DynstateActor(update_dynstate: proc(?adata.MNode)->None, t: testing.AsyncT):
     def on_conf(conf: gdata.Node, memory: ?gdata.Node):
-        if isinstance(conf, gdata.Leaf):
-            _conf: gdata.Leaf = conf
-            typ = _conf.t
-            val = _conf.val
-            if typ == 'int' and isinstance(val, int):
-                if val == 42:
-                    t.success()
-                else:
-                    update_dynstate(GDataWrapper(gdata.Leaf('int', 41)))
+        if conf is not None and conf == gdata.Leaf("int", 39):
+            if memory is not None and memory == gdata.Leaf("int", 40):
+                update_dynstate(GDataWrapper(gdata.Leaf("int", 41)))
+            elif memory is not None and memory == gdata.Leaf("int", 42):
+                t.success()
 
 class DynstateTransform(ttt.TransformFunction):
     def transform_wrapper(self, cfg: gdata.Node, memory: ?gdata.Node, dynstate: ?gdata.Node):
-        if dynstate is not None and isinstance(dynstate, gdata.Leaf):
-            _dynstate: gdata.Leaf = dynstate
-            t = _dynstate.t
-            val = _dynstate.val
-            if t == 'int' and isinstance(val, int):
-                if val == 41:
-                    return (gdata.Leaf('int', 42), memory)
-
+        if dynstate is not None and dynstate == gdata.Leaf("int", 41):
+            return (cfg, gdata.Leaf("int", 42))
+        elif cfg is not None and cfg == gdata.Leaf("int", 39):
+            return (cfg, gdata.Leaf("int", 40))
         return (cfg, memory)
 
 actor transform_dynstate(t: testing.AsyncT):
@@ -663,6 +655,6 @@ actor transform_dynstate(t: testing.AsyncT):
 
     router = ttt.Transform(DynstateTransform, DynstateActorCtor) ([], None)
     s1 = ttt.Session("s1", router, None)
-    s1.edit_config(gdata.Leaf("int", 40))
+    s1.edit_config(gdata.Leaf("int", 39))
 
 ########################

@@ -930,9 +930,9 @@ class _TransformTransaction(_TransformTransactionBase):
 
     def finalize(self, tid):
         #print('####', tid, '(_TransformTransaction)', self.path, 'finalize', actorid(), err=True)
-        config = self.output
-        if config is not None:
-            self.function.on_conf(config, self.memory)
+        # Run transform.on_conf only When we have an updated running config
+        if self.running:
+            self.function.on_conf(self.get(), self.memory)
 
 class TransformFunction(object):
     transform_wrapper: mut(gdata.Node, ?gdata.Node, ?gdata.Node) -> (gdata.Node, ?gdata.Node)
@@ -941,6 +941,7 @@ class TransformFunction(object):
     logger: logging.Logger
 
     def __init__(self, log_handler: ?logging.Handler=None):
+        self._on_conf = None
         self.logger = logging.Logger(log_handler)
 
     def transform_wrapper(self, cfg, memory, dynstate):
@@ -1058,9 +1059,12 @@ class _RFSTransaction(_TransformTransactionBase):
 
     def finalize(self, tid):
         #print('####', tid, '(_TransformTransaction)', self.path, 'finalize', actorid(), err=True)
-        config = self.output
-        if config is not None:
-            self.function.on_conf(config, self.memory)
+        # Run transform.on_conf only When we have an updated running config and there is actual output (i.e. the transform function was run)
+        if self.running:
+            output = self.output
+            if output is not None:
+                if not (isinstance(output, gdata.Container) and not output.presence):
+                    self.function.on_conf(self.get(), self.memory)
 
 class DeviceInfo(object):
     name: str
@@ -1077,6 +1081,7 @@ class RFSFunction(object):
     logger: logging.Logger
 
     def __init__(self, log_handler: ?logging.Handler=None):
+        self._on_conf = None
         self.logger = logging.Logger(log_handler)
 
     def transform_wrapper(self, cfg, di, memory, dynstate):
