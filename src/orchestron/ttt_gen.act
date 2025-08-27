@@ -119,13 +119,15 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
                             transform_extra_typed_params += ", dynstate: ?%s" % dynstate_class
                             transform_actor_fq = transform + "Transform"
                             transform_actor_ctor = transform_name + "TransformCtor"
+                            transform_actor_extra_params = ", ttt.expect(params.dev, \"Missing expected DeviceMgr param to {transform_actor_fq}.\")" if ext.name == "rfs-transform" else ""
                             memory_conv = ", %s.from_gdata(m) if m is not None else None" % memory_class if memory_class is not None else ""
-                            act_defs.append("""def %s(update_dynstate: proc(?yang.adata.MNode) -> None) -> ?proc(yang.gdata.Node, ?yang.gdata.Node) -> None:
-    def _update_dynstate(dynstate: ?%s):
-        update_dynstate(dynstate)
-    act = %s(_update_dynstate)
+                            act_defs.append("""def %s(params: ttt.TransformActorParams) -> ?proc(yang.gdata.Node, ?yang.gdata.Node) -> None:
+    _update_dynstate = params.update_dynstate
+    def update_dynstate_type_wrapper(dynstate: ?%s):
+        _update_dynstate(dynstate)
+    act = %s(update_dynstate_type_wrapper%s)
     return proc lambda c, m: act.on_conf(%s.from_gdata(c)%s)
-""" % (transform_actor_ctor, dynstate_class, transform_actor_fq, input_class, memory_conv))
+""" % (transform_actor_ctor, dynstate_class, transform_actor_fq, transform_actor_extra_params, input_class, memory_conv))
                         else:
                             transform_actor_ctor = "None"
                         if memory_class is not None:

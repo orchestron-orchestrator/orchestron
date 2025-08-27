@@ -94,6 +94,11 @@ def split_key_str(key_str: str) -> list[str]:
 
     return result
 
+def expect[T](t: ?T, errmsg: str) -> T:
+    if t is not None:
+        return t
+    raise ValueError(errmsg)
+
 ##################### Node & Transactions #####################
 
 class YieldState(object):
@@ -150,7 +155,7 @@ actor Transaction(impl: _Transaction):
     def get():
         return impl.get()
 
-    def init_dynstate(node: Node, act: proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None):
+    def init_dynstate(node: Node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None):
         impl.init_dynstate(node, act, update_dynstate)
 
     def update_dynstate(dynstate: ?yang.adata.MNode):
@@ -167,7 +172,7 @@ class _Transaction(object):
     wait_complete_cont : proc(actself: Transaction, res: value) -> None
     get: proc() -> gdata.Node
 
-    proc def init_dynstate(self, node: Node, act: proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?yang.adata.MNode)->None):
+    proc def init_dynstate(self, node: Node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?yang.adata.MNode)->None):
         pass
 
     proc def update_dynstate(self, dynstate: ?gdata.Node) -> None:
@@ -867,7 +872,13 @@ class _TransformTransactionBase(_Transaction):
             return gdata.Container()
 
 
-def Transform(function, act: ?(proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+class TransformActorParams:
+    def __init__(self, update_dynstate: proc(?yang.adata.MNode) -> None, dev: ?odev.DeviceMgr):
+        self.update_dynstate = update_dynstate
+        self.dev = dev
+
+
+def Transform(function, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
     proc def _create_transform_node(path, lower):
         transform = _Transform(path, function, lower, log_handler)
         node = Node(transform)
@@ -881,7 +892,7 @@ class _Transform(_TransformBase):
         self.path = path
         self.transaction = TransformTransaction(path, function, lower, log_handler)
 
-    proc def init_dynstate(self, node, act):
+    proc def init_dynstate(self, node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None):
         self.transaction.init_dynstate(node, act)
 
 def TransformTransaction(path, function, lower, log_handler):
@@ -918,7 +929,7 @@ class _TransformTransaction(_TransformTransactionBase):
     def update_memory(self, newmem):
         self.memory = newmem
 
-    proc def init_dynstate(self, node, act, update_dynstate):
+    proc def init_dynstate(self, node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate):
         self.node = node
         self.function.init_dynstate(act, update_dynstate)
 
@@ -950,8 +961,8 @@ class TransformFunction(object):
     def transform_xml(self, cfg, memory, dynstate):
         return gdata.Container(), None
 
-    proc def init_dynstate(self, act: proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?yang.adata.MNode)->None):
-        self._on_conf = act(update_dynstate)
+    proc def init_dynstate(self, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?yang.adata.MNode)->None):
+        self._on_conf = act(TransformActorParams(update_dynstate, None))
 
     proc def on_conf(self, conf: gdata.Node, memory: ?gdata.Node):
         _on_conf = self._on_conf
@@ -960,7 +971,7 @@ class TransformFunction(object):
 
 ################# RFSTransform ###################
 
-def RFSTransform(function, dev_registry: odev.DeviceRegistry, act: ?(proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+def RFSTransform(function, dev_registry: odev.DeviceRegistry, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
     proc def _create_rfs_transform_node(path, lower):
         rfs_transform = _RFSTransform(path, function, dev_registry, lower, log_handler)
         node = Node(rfs_transform)
@@ -975,7 +986,7 @@ class _RFSTransform(_TransformBase):
         self.path = path
         self.transaction = RFSTransaction(path, function, dev_registry, lower, log_handler)
 
-    proc def init_dynstate(self, node, act):
+    proc def init_dynstate(self, node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None):
         self.transaction.init_dynstate(node, act)
 
 def RFSTransaction(path, function, dev_registry, lower, log_handler):
@@ -1047,9 +1058,9 @@ class _RFSTransaction(_TransformTransactionBase):
     def update_memory(self, newmem):
         self.memory = newmem
 
-    proc def init_dynstate(self, node, act, update_dynstate):
+    proc def init_dynstate(self, node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate):
         self.node = node
-        self.function.init_dynstate(act, update_dynstate)
+        self.function.init_dynstate(act, update_dynstate, self.dev)
 
     proc def update_dynstate(self, dynstate):
         self.dynstate = dynstate
@@ -1090,8 +1101,8 @@ class RFSFunction(object):
     def transform_xml(self, cfg, di, memory, dynstate):
         return (gdata.Container(), None)
 
-    proc def init_dynstate(self, act: proc(proc(?yang.adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?yang.adata.MNode)->None):
-        self._on_conf = act(update_dynstate)
+    proc def init_dynstate(self, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?yang.adata.MNode)->None, dev: odev.DeviceMgr):
+        self._on_conf = act(TransformActorParams(update_dynstate, dev))
 
     proc def on_conf(self, conf: gdata.Node, memory: ?gdata.Node):
         _on_conf = self._on_conf
