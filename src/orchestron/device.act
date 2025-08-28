@@ -888,10 +888,13 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                 _log.debug("Device.configure: fetching current config from running")
                 c.get_config(on_fetched, "running")
 
-        def on_fetched(c: netconf.Client, r: ?xml.Node):
-            _log.debug("Device.configure.on_fetched", {"r": r.encode() if r is not None else "None"})
-            if r is not None:
-                # TODO: inspect returned value for ok/errors
+        def on_fetched(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+            _log.debug("Device.configure.on_fetched", {"r": r.encode() if r is not None else "None", "error": error})
+            if error is not None:
+                _log.error("Device.configure: error fetching config", {"error": error})
+                # TODO: should be a more specific (transient?) error
+                abort(Exception("Failed to fetch config: " + str(error.error_message)))
+            elif r is not None:
                 current = schema.from_xml(r.children[0])
                 if current is not None:
                     _log.debug("Device.configure: computing diff")
@@ -917,50 +920,38 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                 _log.error("Device.configure: device disconnected during get-config")
                 abort(NotConnectedError())
 
-        def on_edited(c: netconf.Client, r: ?xml.Node):
-            _log.debug("Device.configure.on_edited", {"r": r.encode() if r is not None else "None"})
-            if r is not None:
-                # TODO: inspect returned value for ok/errors
+        def on_edited(c: netconf.Client, error: ?netconf.NetconfError):
+            _log.debug("Device.configure.on_edited", {"error": error})
+            if error is not None:
+                _log.error("Device.configure: edit-config error", {"error": error})
+                abort(ConfigError("Failed to edit config: " + str(error.error_message), conf=new_conf, target_conf=new_conf))
+            else:
                 if target_datastore() == "candidate":
                     _log.debug("Device.configure: committing to candidate")
                     c.commit(on_committed)
                 else:
                     _log.debug("Device.configure: edit-config complete (writable-running)")
                     complete(c)
-            else:
-                _log.error("Device.configure: device disconnected during edit-config")
-                abort(NotConnectedError())
 
-        def on_committed(c: netconf.Client, r: ?xml.Node):
-            _log.debug("Device.configure.on_committed", {"r": r.encode() if r is not None else "None"})
-            if r is not None:
-                # Check for errors in commit response
-                has_error = False
+        def on_committed(c: netconf.Client, error: ?netconf.NetconfError):
+            _log.debug("Device.configure.on_committed", {"error": error})
+            if error is not None:
+                _log.error("Device.configure: commit error", {"error": error})
+                # Check error tag to determine type
                 error_tag = None
-                for child in r.children:
-                    if child.tag == "rpc-error":
-                        has_error = True
-                        _log.error("Device.configure: commit error", {"error": child.encode()})
-                        # Extract error-tag to determine the type of error
-                        for error_child in child.children:
-                            if error_child.tag == "error-tag":
-                                error_tag = error_child.text
-                                break
-                        break
+                rpc_error = error.rpc_error
+                if rpc_error is not None and len(rpc_error) > 0:
+                    error_tag = rpc_error[0].error_tag
 
-                if has_error:
-                    _log.debug("Device.configure: discarding changes after failed commit")
-                    # Check if the error is due to locked datastore
-                    if error_tag == "in-use":
-                        c.discard_changes(lambda c, r: abort(LockedError("Datastore is locked")))
-                    else:
-                        c.discard_changes(lambda c, r: abort(ConfigError("Commit failed", conf=new_conf, target_conf=new_conf)))
+                _log.debug("Device.configure: discarding changes after failed commit")
+                # Check if the error is due to locked datastore
+                if error_tag == "in-use":
+                    c.discard_changes(lambda c, e: abort(LockedError("Datastore is locked")))
                 else:
-                    _log.debug("Device.configure: commit successful")
-                    complete(c)
+                    c.discard_changes(lambda c, e: abort(ConfigError("Commit failed: " + str(error.error_message), conf=new_conf, target_conf=new_conf)))
             else:
-                _log.error("Device.configure: device disconnected during commit")
-                abort(NotConnectedError())
+                _log.debug("Device.configure: commit successful")
+                complete(c)
 
         def complete(c: netconf.Client):
             """Successfully complete the transaction"""
@@ -1021,7 +1012,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
             # TODO: feels redundant to refetch whole config here from device,
             # running_conf should really be target_conf at this point - keeping this for now though
             if client is not None and error is None:
-                client.get_config(_on_get_config)
+                client.get_config(lambda c, r, e: _on_get_config(c, r, e, None))
 
         # Start the transaction by locking the datastore(s)
         # Lock running if it's writable (to prevent others from directly editing it)
@@ -1097,9 +1088,13 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
     def is_nokia_srl():
         return "srl_nokia-aaa" in modset
 
-    def _on_get_config(c, r, cb: ?action(?yang.gdata.Node, ?Exception) -> None=None):
-        _log.debug("Device._on_get_config")
-        if r is not None:
+    def _on_get_config(c, r, error: ?netconf.NetconfError, cb: ?action(?yang.gdata.Node, ?Exception) -> None=None):
+        _log.debug("Device._on_get_config", {"error": error})
+        if error is not None:
+            _log.error("Device._on_get_config: error", {"error": error.error_message})
+            if cb is not None:
+                cb(None, ValueError("Failed to get config: " + str(error.error_message)))
+        elif r is not None:
             _log.debug("Device._on_get_config: r is not None")
             if r.tag == "rpc-reply" and len(r.children) == 1 and r.children[0].tag == "data":
                 _log.debug("Device._on_get_config", {"r": r.encode()})
@@ -1116,7 +1111,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
     def fetch_config(done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
         _log.debug("Device._fetch_config")
         if client is not None:
-            client.get_config(lambda c, r: _on_get_config(c, r, done))
+            client.get_config(lambda c, r, e: _on_get_config(c, r, e, done))
 
     def get_config():
         return running_conf
