@@ -1,6 +1,7 @@
 import testing
 import logging
 
+import orchestron.device as odev
 import orchestron.ttt as ttt
 #import orchestron.gdata as gdata
 import yang.gdata as gdata
@@ -649,8 +650,8 @@ class DynstateTransform(ttt.TransformFunction):
         return (cfg, memory)
 
 actor transform_dynstate(t: testing.AsyncT):
-    def DynstateActorCtor(update_dynstate: proc(?adata.MNode) -> None) -> ?proc(gdata.Node, ?gdata.Node) -> None:
-        act = DynstateActor(update_dynstate, t)
+    def DynstateActorCtor(params: ttt.TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None:
+        act = DynstateActor(params.update_dynstate, t)
         return act.on_conf
 
     router = ttt.Transform(DynstateTransform, DynstateActorCtor) ([], None)
