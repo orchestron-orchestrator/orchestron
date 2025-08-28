@@ -139,7 +139,7 @@ actor _test_netconf_double_commit(t: testing.EnvT):
     without first establishing a new session.
     """
     log = logging.Logger(t.log_handler)
-    
+
     var adapter: ?orchestron.device.NetconfAdapter = None
     var first_config_sent = False
     var second_config_sent = False
@@ -190,7 +190,7 @@ actor _test_netconf_double_commit(t: testing.EnvT):
         t.success()
     else:
         log.info("Testing double commit issue with NETCONF")
-        
+
         # Create DeviceMgr and NetconfAdapter
         dev_types = {}
         dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf)
@@ -324,8 +324,10 @@ actor _test_netconf_adapter(t: testing.EnvT):
                 log.info("Getting current config to check banner state")
                 c.get_config(on_setup_get_config, datastore="running")
 
-        def on_setup_get_config(c: netconf.Client, r: ?xml.Node):
-            if r is not None:
+        def on_setup_get_config(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+            if error is not None:
+                t.failure(error)
+            elif r is not None:
                 config_xml = r.encode()
                 # Extract current banner if it exists
                 if "<banner" in config_xml and "</banner>" in config_xml:
@@ -362,24 +364,13 @@ actor _test_netconf_adapter(t: testing.EnvT):
                 log.error("Failed to get initial config")
                 t.failure(ValueError("Failed to get initial config"))
 
-        def on_setup_edit_config(c: netconf.Client, r: ?xml.Node):
-            if r is not None:
-                # Check for errors
-                has_error = False
-                for child in r.children:
-                    if child.tag == "rpc-error":
-                        has_error = True
-                        log.error("Failed to reset config", {"error": child.encode()})
-
-                if not has_error:
-                    log.info("Configuration reset successful")
-                    c.close(on_setup_close)
-                else:
-                    log.error("Failed to reset configuration")
-                    t.failure(ValueError("Failed to reset configuration"))
+        def on_setup_edit_config(c: netconf.Client, error: ?netconf.NetconfError):
+            if error is not None:
+                log.error("Failed to reset config", {"error": error.error_message})
+                t.failure(error)
             else:
-                log.error("No response from edit-config")
-                t.failure(ValueError("No response from edit-config"))
+                log.info("Configuration reset successful")
+                c.close(on_setup_close)
 
         def on_setup_close():
             log.info("Setup complete, starting NetconfAdapter test")
@@ -455,8 +446,10 @@ actor _test_netconf_adapter(t: testing.EnvT):
                 # Get the running config
                 c.get_config(on_verify_get_config, datastore="running")
 
-        def on_verify_get_config(c: netconf.Client, r: ?xml.Node):
-            if r is not None:
+        def on_verify_get_config(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+            if error is not None:
+                t.failure(error)
+            elif r is not None:
                 log.info("Retrieved device configuration for verification", {"conf": r.encode()})
                 config_xml = r.encode()
 

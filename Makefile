@@ -4,7 +4,7 @@ build: src/orchestron/device_meta_config.act
 
 .PHONY: build-ldep
 build-ldep: src/orchestron/device_meta_config.act
-	$(MAKE) build DEP_OVERRIDES="--dep yang=../acton-yang"
+	$(MAKE) build DEP_OVERRIDES="--dep yang=../acton-yang --dep netconf=../netconf"
 
 .PHONY: gen
 gen: src/orchestron/device_meta_config.act
