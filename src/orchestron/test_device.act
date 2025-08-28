@@ -15,7 +15,7 @@ run_test = False
 test_port = 42830
 test_address = "localhost"
 test_username = "admin"
-test_password = "admin"
+test_password = "Admin1"
 
 
 def create_test_dmc() -> dmc.orchestron_rfs__device_entry:
@@ -153,7 +153,7 @@ actor _test_netconf_double_commit(t: testing.EnvT):
                 test_config1 = create_simple_gdata_config()
                 log.info("Sending FIRST configuration", {"xml": test_config1.to_xmlstr(pretty=False)})
 
-                def on_first_configure_done(error: ?Exception):
+                def on_first_configure_done(error, resulting_config):
                     if error is not None:
                         log.error("FIRST configure failed", {"error": str(error)})
                         t.failure(error)
@@ -162,7 +162,7 @@ actor _test_netconf_double_commit(t: testing.EnvT):
                         # Immediately send second configuration without closing the connection
                         send_second_config()
 
-                adapter.configure(on_first_configure_done, test_config1)
+                adapter.configure(on_first_configure_done, test_config1, test_config1, None)
 
     def send_second_config():
         if adapter is not None and not second_config_sent:
@@ -171,7 +171,7 @@ actor _test_netconf_double_commit(t: testing.EnvT):
             test_config2 = create_second_gdata_config()
             log.info("Sending SECOND configuration", {"xml": test_config2.to_xmlstr(pretty=False)})
 
-            def on_second_configure_done(error: ?Exception):
+            def on_second_configure_done(error, resulting_config):
                 if error is not None:
                     log.error("SECOND configure failed - THIS IS THE BUG!", {"error": str(error)})
                     # Check if this is the expected error
@@ -183,7 +183,7 @@ actor _test_netconf_double_commit(t: testing.EnvT):
                     log.info("✓ SECOND configuration sent successfully - bug is fixed!")
                     t.success()
 
-            adapter.configure(on_second_configure_done, test_config2)
+            adapter.configure(on_second_configure_done, test_config2, test_config2, None)
 
     if not run_test:
         print("Skipping test - set run_test = True to enable")
@@ -395,7 +395,7 @@ actor _test_netconf_adapter(t: testing.EnvT):
             test_config = create_simple_gdata_config()
             log.info("Prepared configuration to send", {"xml": test_config.to_xmlstr(pretty=False)})
 
-            def on_configure_done(error: ?Exception):
+            def on_configure_done(error, resulting_config):
                 if error is not None:
                     log.error("Configure failed", {"error": str(error)})
                     t.failure(error)
@@ -406,7 +406,7 @@ actor _test_netconf_adapter(t: testing.EnvT):
                     verify_configuration()
 
             log.info("Sending configuration to device through adapter")
-            adapter.configure(on_configure_done, test_config)
+            adapter.configure(on_configure_done, test_config, test_config, None)
 
     def start_adapter_test():
         log.info("Starting NetconfAdapter test with clean device state")
@@ -490,6 +490,89 @@ actor _test_netconf_adapter(t: testing.EnvT):
     # Start the test by first setting up and verifying the server
     if run_test:
         setup_test()
+    else:
+        print("Skipping test")
+        # TODO: there should be a t.skip()
+        t.success()
+
+
+actor _test_netconf_adapter_resync(t: testing.EnvT):
+    """Test NetconfAdapter instantiation, connection, and fetching configuration
+
+    This test requires a running crpd instance
+    Run with:
+
+    docker run -d --name crpd --privileged -p 2222:22 -p 42830:830 ghcr.io/orchestron-orchestrator/respnet/crpd:24.4R1.9
+
+    Then configure
+    docker exec -it crpd cli
+    > configure
+    # set system services netconf ssh
+    # set system root-authentication plain-text-password
+    enter password twice..
+    # set system login user admin class super-user authentication plain-text-password
+    enter password twice
+    # commit
+
+    The test will:
+    1. TBD...
+    """
+    log = logging.Logger(t.log_handler)
+
+    var adapter: ?orchestron.device.NetconfAdapter = None
+    var verification_client: ?netconf.Client = None
+
+    # Create a mock DeviceMgr
+    dev_types = {}
+    var initial_banner_text = ""
+
+    def on_reconf(name: str):
+        log.info("Reconf callback", {"name": name})
+        if adapter is not None:
+            def on_fetch_config_done(new_conf: ?yang.gdata.Node, error: ?Exception):
+                if error is not None:
+                    log.error("Configure failed", {"error": str(error)})
+                    t.failure(error)
+                if new_conf is not None:
+                    dev_txid = new_conf.txid
+                    if dev_txid is not None:
+                        log.info("Fantastic, we got a txid")
+                        t.success()
+                    else:
+                        log.info("No txid from device :/")
+                        t.failure(ValueError("txid not set"))
+
+            log.info("Sending configuration to device through adapter")
+            adapter.fetch_config(on_fetch_config_done)
+
+    def start_adapter_test():
+        log.info("Starting NetconfAdapter test with clean device state")
+
+        # Create DeviceMgr and NetconfAdapter
+        dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf)
+
+        # Create a simple device schema
+        schema = orchestron.device.DeviceSchema(
+            "test",
+            set(),
+            orchestron.device.MockRoot,
+            from_gdata=orchestron.device.MockRoot.from_gdata
+        )
+
+        # Create test DeviceMetaConfig
+        test_dmc = create_test_dmc()
+
+        # Create the NetconfAdapter - this will trigger connection
+        local_adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, t.log_handler, t.env.auth)
+        adapter = local_adapter
+        if local_adapter is not None:
+            local_adapter.set_dmc(test_dmc)
+
+        log.info("NetconfAdapter created, waiting for connection and reconf callback...")
+
+    # Start the test by first setting up and verifying the server
+    if run_test:
+        start_adapter_test()
     else:
         print("Skipping test")
         # TODO: there should be a t.skip()

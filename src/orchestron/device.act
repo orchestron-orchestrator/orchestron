@@ -1,4 +1,5 @@
 import diff
+import hash.wyhash as wyhash
 import json
 import logging
 import testing
@@ -124,6 +125,10 @@ class LockedError(TransientError):
     """The device is locked, i.e. it is not possible to configure it at the moment
     """
 
+class TxidMismatchError(TransientError):
+    """The device's txid doesn't match the expected txid, configuration drift detected
+    """
+
 class ConfigError(PermanentError):
     """Configuration error, i.e. the device rejected the configuration
 
@@ -237,6 +242,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
     # Orchestron's intended target configuration, that we want on the device.
     var target_conf: ?yang.gdata.Node = None
+    # The device's current running configuration, as we know it.
+    var running_conf: ?yang.gdata.Node = None
 
     # The device's meta configuration, like address, credentials, etc.
     var dmc: DeviceMetaConfig = DeviceMetaConfig(name, Credentials("", None))
@@ -266,6 +273,10 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     # configuration and we need to retry, we will retry with a new
     # configuration.
 
+    # The last successfully sent diff. We use this to detect and break infinite
+    # loops in the device config reconciliation loop
+    var last_sent_diff: ?yang.gdata.Node = None
+
     var reconfigure_id = 0
 
     # TTT transactions can optionally request, through wait_complete(tid, cb), to
@@ -279,11 +290,9 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
     def on_connect(new_modset: dict[str, ModCap]):
         _log.debug("Device connected", {"new_modset": new_modset})
+        resync()
         if modset_eq(modset, new_modset):
             _log.debug("Supported modules unchanged")
-            if modset != {}:
-                _log.debug("Sending config")
-                _send_config()
         else:
             _log.debug("New supported modules, triggering RFS reconf", {"name": name})
             modset = new_modset
@@ -326,7 +335,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         This function manages the transaction queue and calls the adapter's
         configure method with the current target configuration.
         """
-        def on_done(error: ?Exception):
+        def on_configured(error: ?Exception, resulting_config, new_diff, new_config, old_config):
             """Handle transaction completion
 
             This callback is called when the adapter finishes the configuration
@@ -364,7 +373,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                 elif isinstance(error, TransientError):
                     _log.debug("Transient error", {"error": error})
                     if isinstance(error, BusyError):
-                        _log.debug("DeviceAdapter busy, this should never happen")
+                        _log.debug("DeviceAdapter busy, ignoring this error as adapter will trigger us once it is done with current operation")
+                        return
 
                     if len(pending_txids) > 0:
                         _log.debug("New intended configuration available, retrying with latest config")
@@ -380,13 +390,22 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
                 else:
                     _log.debug("Unhandled error", {"error": error})
-                    # Uh, this is indicative of programmer error and we should fix it, but let's do stupid retry as well
+                    # Uh, this is indicative of programmer error and we should fix it, but let's do naive retry as well
                     pending_txids.update(current_txids)
                     current_txids = set()
                     after 1: _send_config()
 
             else:
                 _log.debug("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids})
+                # Update running_conf with the result from the device (which has the new txid)
+                if resulting_config is not None:
+                    _log.debug("Updating running_conf with new txid", {"txid": resulting_config.txid})
+                    running_conf = resulting_config
+                else:
+                    _log.warning("No resulting_config returned from adapter, using target_conf")
+                    running_conf = target_conf
+
+                last_sent_diff = new_diff
                 for tid,callback in callbacks.items():
                     if tid in current_txids:
                         callback(True)
@@ -399,14 +418,34 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         # Check if we already have a transaction in progress
         if len(current_txids) > 0:
             _log.debug("DeviceMgr._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
-        else:
-            if target_conf is not None:
+            return
+
+        # Check if there is an actual diff right now
+        if running_conf is not None and target_conf is not None:
+            target_conf2 = config_fixer(running_conf, target_conf)
+            config_diff = yang.gdata.diff(running_conf, target_conf2) if target_conf2 is not None else None
+            if config_diff is not None:
+                if last_sent_diff is not None:
+                    if config_diff == last_sent_diff:
+                        _log.info("Reconciliation loop detected, target diff is same as last diff sent, stopping", {"diff": config_diff})
+                        return
+                # Actually send the configuration
                 current_txids = pending_txids
                 pending_txids = set()
-                _log.debug("DeviceMgr._send_config: sending intended target configuration", {"txids": current_txids})
-                adapter.configure(on_done, target_conf)
+                _log.debug("DeviceMgr._send_config: sending intended target configuration", {"txids": current_txids, "diff": config_diff})
+                adapter.configure(lambda e, c: on_configured(e, c, config_diff, target_conf, running_conf), config_diff, target_conf, running_conf)
             else:
-                _log.debug("_send_config: target_conf not set")
+                _log.debug("DeviceMgr.configure: no diff between running and target config, nothing to do", {"txids": pending_txids})
+                for tid,callback in callbacks.items():
+                    if tid in pending_txids:
+                        callback(True)
+                        del callbacks[tid]
+                pending_txids = set()
+        else:
+            if running_conf is None:
+                _log.debug("No running config, cannot compute diff")
+            if target_conf is None:
+                _log.debug("No target config, cannot compute diff")
 
     def configure(new_conf: ?yang.gdata.Node, conf_modset_id: ?str, tid: str="0"):
         pending_txids.add(tid)
@@ -446,6 +485,51 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         if cb is not None:
             wait_complete(new_tid, cb_wrapper)
 
+    def resync():
+        """Ensure our view of the device running configuration is in sync with the real device
+
+        Attempts to efficiently ensure we are in sync by using txid. If the
+        device supports txid, we can avoid fetching the full config if the
+        txid matches our cached version. If the device does not support txid,
+        we have to fetch the full config and diff it against our cached version.
+        """
+        def on_fetch_config_done(new_conf: ?yang.gdata.Node, err: ?Exception) -> None:
+            if err is not None:
+                _log.error("Error fetching config from device", {"error": err})
+            elif new_conf is not None:
+                _log.debug()
+                new_txid = new_conf.txid
+                txid_updated = False
+                running_conf_txid = None
+                if running_conf is not None:
+                    running_conf_txid = running_conf.txid
+                    if running_conf_txid is not None:
+                        if new_txid is not None:
+                            if new_txid != running_conf_txid:
+                                _log.debug("DeviceMgr._on_update_config: device txid changed", {"old_txid": running_conf_txid, "new_txid": new_txid, "conf": truncate_conf(new_conf)})
+                                txid_updated = True
+                            else:
+                                _log.debug("DeviceMgr._on_update_config: device txid unchanged", {"txid": new_txid})
+                        else:
+                            _log.debug("DeviceMgr._on_update_config: txid not set in config from adapter, BUG?", {"conf": repr(new_conf)})
+                    else:
+                        _log.debug("DeviceMgr._on_update_config: txid not set in local config, BUG?", {"conf": repr(running_conf)})
+                        txid_updated = True
+                else:
+                    _log.debug("DeviceMgr._on_update_config: no local running config, considered txid update", {"new_txid": new_txid})
+                    txid_updated = True
+
+                if txid_updated:
+                    if running_conf != new_conf:
+                        running_conf = new_conf
+                        _log.debug("DeviceMgr._on_update_config: got new running config, reconfiguring device", {"new_txid": new_txid})
+                        _send_config()
+                    else:
+                        _log.debug("DeviceMgr._on_update_config: got same config but with differing txid", {"new_txid": new_txid, "old_txid": running_conf_txid})
+
+        _log.debug("DeviceMgr.resync: starting resync", {"local_device_txid": running_conf.txid if running_conf is not None else None})
+        adapter.fetch_config(on_fetch_config_done)
+
     def wait_complete(tid: str, done: action(value)->None):
         if tid not in current_txids | pending_txids:
             _log.debug("DeviceMgr.wait_complete: transaction id not found, calling done", {"tid": tid})
@@ -469,11 +553,11 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         """
         return adapter.get_config()
 
-    # TODO: make cb non-optional
     def fetch_config(done: action(?yang.gdata.Node, ?Exception) -> None) -> None:
         """Fetch the current configuration from the device
         """
         adapter.fetch_config(done)
+
 
     def get_schema():
         return schema
@@ -493,8 +577,10 @@ class DeviceAdapter(object):
     ## Configure the device with the given configuration
     ##
     ## :param done: callback to call when the configuration is done
+    ## :param new_diff: the diff to apply (computed by DeviceMgr)
     ## :param new_conf: the new configuration to apply
-    configure: proc(done: action(?Exception) -> None, new_conf: yang.gdata.Node) -> None
+    ## :param running_conf: the current running configuration (with txid)
+    configure: proc(done: action(?Exception, ?yang.gdata.Node) -> None, new_diff: yang.gdata.Node, new_conf: yang.gdata.Node, running_conf: ?yang.gdata.Node) -> None
 
     get_capabilities: proc() -> list[str]
 
@@ -523,9 +609,9 @@ class NoAdapter(DeviceAdapter):
     def set_dmc(self, new_dmc):
         self._log.debug("NoAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_json()})
 
-    def configure(self, done, new_conf):
+    def configure(self, done, new_diff, new_conf, running_conf):
         # The NoAdapter cannot configure anything, so we just call done() with False
-        done(NotConnectedError())
+        done(NotConnectedError(), None)
 
     def get_capabilities(self):
         return []
@@ -533,7 +619,7 @@ class NoAdapter(DeviceAdapter):
     def get_modules(self):
         return {}
 
-    def fetch_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None = None):
+    def fetch_config(self, done: action(?yang.gdata.Node, ?Exception) -> None):
         pass
 
     def get_config(self):
@@ -559,8 +645,8 @@ class MockAdapter(DeviceAdapter):
     def set_dmc(self, new_dmc: DeviceMetaConfig):
         self._driver.set_dmc(new_dmc)
 
-    def configure(self, done, new_conf):
-        return self._driver.configure(done, new_conf)
+    def configure(self, done, new_diff, new_conf, running_conf):
+        return self._driver.configure(done, new_diff, new_conf, running_conf)
 
     def get_capabilities(self) -> list[str]:
         return self._driver.get_capabilities()
@@ -625,18 +711,19 @@ actor MockDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Hand
         if len(modset) > 0:
             _log.debug("Mock capabilities set, \"connecting\"...")
             conn_state = CONNECTED
+            running_conf = yang.gdata.Container()
             dev.on_connect(modset)
         else:
             _log.debug("No mock capabilities set, idling as not connected")
 
-    def configure(done, new_conf):
+    def configure(done, new_diff, new_conf, running_conf):
         if conn_state == CONNECTED:
             _log.debug("MockAdapter.configure: device 'connected', responding done")
             running_conf = new_conf
-            done(None)
+            done(None, new_conf)
         else:
             _log.debug("MockAdapter.configure: device not connected")
-            done(NotConnectedError())
+            done(NotConnectedError(), None)
 
     def get_capabilities():
         return []
@@ -645,8 +732,7 @@ actor MockDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Hand
         return modset
 
     def fetch_config(done):
-        if done is not None:
-            done(running_conf, None)
+        done(running_conf, None)
 
     def get_config():
         return running_conf
@@ -668,8 +754,8 @@ class NetconfAdapter(DeviceAdapter):
     def set_dmc(self, new_dmc: DeviceMetaConfig):
         self._driver.set_dmc(new_dmc)
 
-    def configure(self, done, new_conf):
-        return self._driver.configure(done, new_conf)
+    def configure(self, done, new_diff, new_conf, running_conf):
+        return self._driver.configure(done, new_diff, new_conf, running_conf)
 
     def get_capabilities(self) -> list[str]:
         return self._driver.get_capabilities()
@@ -677,7 +763,7 @@ class NetconfAdapter(DeviceAdapter):
     def get_modules(self) -> dict[str, ModCap]:
         return self._driver.get_modules()
 
-    def fetch_config(self, done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
+    def fetch_config(self, done: action(?yang.gdata.Node, ?Exception) -> None) -> None:
         self._driver.fetch_config(done)
 
     def get_config(self):
@@ -852,7 +938,133 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         new_dmc = dmc
         close(lambda: _connect(new_dmc))
 
-    def configure(done: action(?Exception) -> None, new_conf: yang.gdata.Node):
+    def attach_txid(conf: yang.gdata.Node, new_txid) -> yang.gdata.Node:
+        """Attach a txid to a configuration node"""
+        if isinstance(conf, yang.gdata.Container):
+            return yang.gdata.Container(
+                children=conf.children,
+                presence=conf.presence,
+                ns=conf.ns,
+                module=conf.module,
+                txid=new_txid)
+        raise ValueError("Can only attach txid to Container")
+
+    def get_txid(done: action(netconf.Client, str, ?yang.gdata.Node) -> None):
+        """Get txid from device
+
+        Dispatches to device-specific txid retrieval methods.
+        Returns client, txid as string, and optionally the full config if it was fetched.
+        """
+        _log.debug("Device.get_txid: fetching txid")
+
+        if client is None:
+            _log.error("Device.get_txid: no client connection")
+            raise NotConnectedError()
+
+        if is_junos():
+            get_txid_junos(done)
+        else:
+            get_txid_generic(done)
+
+    def get_txid_junos(done: action(netconf.Client, str, ?yang.gdata.Node) -> None):
+        """Get txid for JUNOS devices - try to extract junos:commit-seconds first"""
+        _log.debug("Device.get_txid_junos: fetching minimal config for txid")
+
+        def on_junos_txid_data(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+            """Process JUNOS config data to extract txid"""
+            if error is not None:
+                _log.error("Device.get_txid_junos: error fetching config", {"error": error})
+                # Fall back to generic method on error
+                get_txid_generic(done)
+            elif r is not None:
+                _log.debug("Device.get_txid_junos: got minimal config response")
+                # Extract current config and try to get junos:commit-seconds
+                data_tag = r.children[0] if len(r.children) > 0 else None
+                if data_tag is not None:
+                    # Try to extract JUNOS txid from attributes
+                    txid = extract_txid(data_tag)
+                    if txid is not None:
+                        _log.debug("Device.get_txid_junos: extracted JUNOS txid", {"txid": txid})
+                        # Return client and txid string, no config since we only have a subtree
+                        done(c, txid, None)
+                    else:
+                        _log.warning("Device.get_txid_junos: no junos:commit-seconds found, falling back to generic")
+                        # Fallback to generic method - fetch full config and hash
+                        get_txid_generic(done)
+                else:
+                    _log.error("Device.get_txid_junos: no data in response")
+                    get_txid_generic(done)
+            else:
+                _log.error("Device.get_txid_junos: no response")
+                get_txid_generic(done)
+
+        # Fetch minimal config with JUNOS filter to get txid
+        # We need to fetch a valid configuration node that actually exists.
+        # Since we are communicating over NETCONF/SSH, we can safely fetch
+        # the netconf ssh node, knowing that it should always exist
+        filter = xml.Node("filter", children=[
+            xml.Node("configuration", children=[
+                xml.Node("system", children=[
+                    xml.Node("services", children=[
+                        xml.Node("netconf", children=[
+                            xml.Node("ssh")
+                            ])
+                        ])
+                    ])
+                ])
+            ])
+        if client is not None:
+            client.get_config(on_junos_txid_data, "running", filter)
+        else:
+            raise NotConnectedError()
+
+    def get_txid_generic(done: action(netconf.Client, str, ?yang.gdata.Node) -> None):
+        """Get txid for generic devices - fetch full config and hash it"""
+        _log.debug("Device.get_txid_generic: fetching full config for hash")
+
+        def on_generic_txid_data(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+            if error is not None:
+                _log.error("Device.get_txid_generic: error fetching config", {"error": error})
+                # Can't recover from this, return empty txid
+                done(c, "", None)
+            elif r is not None:
+                _log.debug("Device.get_txid_generic: got full config")
+                # Extract current config and compute hash
+                data_tag = r.children[0] if len(r.children) > 0 else None
+                if data_tag is not None:
+                    current = schema.from_xml(data_tag)
+                    if current is not None:
+                        # Compute hash of the entire config as txid
+                        current_xml_bytes = current.to_xmlstr().encode()
+                        conf_hash = str(wyhash.hash(0, current_xml_bytes))
+                        _log.debug("Device.get_txid_generic: computed config hash", {"hash": conf_hash})
+
+                        # Attach txid to config
+                        current_with_txid = attach_txid(current, conf_hash)
+
+                        # Update running_conf since we have the full config
+                        running_conf = current_with_txid
+                        _log.debug("Device.get_txid_generic: updated running_conf")
+
+                        # Return client, txid and full config
+                        done(c, conf_hash, current_with_txid)
+                    else:
+                        _log.error("Device.get_txid_generic: failed to parse config")
+                        done(c, "", None)
+                else:
+                    _log.error("Device.get_txid_generic: no data in response")
+                    done(c, "", None)
+            else:
+                _log.error("Device.get_txid_generic: no response")
+                done(c, "", None)
+
+        # Fetch full config for hashing
+        if client is not None:
+            client.get_config(on_generic_txid_data, "running")
+        else:
+            raise NotConnectedError()
+
+    def configure(done, new_diff, new_conf, old_conf):
         """Configure the device with a new configuration
 
         This starts a multi-step transaction process:
@@ -869,10 +1081,10 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         if state != CONNECTED:
             if state == DISCONNECTED:
                 _log.debug("Device.configure: device not connected, cannot send configuration")
-                done(NotConnectedError())
+                done(NotConnectedError(), None)
             else:
                 _log.debug("Device.configure: Already in transaction, cannot send configuration")
-                done(BusyError())
+                done(BusyError(), None)
             return
 
         # Set transaction state
@@ -889,9 +1101,9 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                     _log.debug("Device.configure: locking candidate datastore")
                     c.lock(on_locked_candidate, "candidate")
                 else:
-                    # Just running is enough, fetch the config
-                    _log.debug("Device.configure: fetching current config from running")
-                    c.get_config(on_fetched, "running")
+                    # Just running is enough, get the txid
+                    _log.debug("Device.configure: getting txid")
+                    get_txid(on_txid_received)
 
         def on_locked_candidate(c: netconf.Client, error: ?netconf.NetconfError):
             """Callback after locking candidate datastore"""
@@ -903,40 +1115,39 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                 else:
                     abort(error)
             else:
-                _log.debug("Device.configure: fetching current config from running")
-                c.get_config(on_fetched, "running")
+                _log.debug("Device.configure: getting txid before configuration")
+                get_txid(on_txid_received)
 
-        def on_fetched(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
-            _log.debug("Device.configure.on_fetched", {"r": r.encode() if r is not None else "None", "error": error})
-            if error is not None:
-                _log.error("Device.configure: error fetching config", {"error": error})
-                # TODO: should be a more specific (transient?) error
-                abort(Exception("Failed to fetch config: " + str(error.error_message)))
-            elif r is not None:
-                current = schema.from_xml(r.children[0])
-                if current is not None:
-                    _log.debug("Device.configure: computing diff")
-                    try:
-                        new_conf2 = config_fixer(current, new_conf)
-                        d = yang.gdata.diff(current, new_conf2)
-                        xml_diff = d.to_xmlstr(pretty=False) if d is not None else ""
-                        if xml_diff != "":
-                            _log.debug("Device.configure: sending diff", {"diff": xml_diff})
-                            c.edit_config(xml_diff, on_edited, target_datastore())
-                        else:
-                            _log.debug("Device.configure: no changes needed")
-                            complete(c)
-                    except ValueError as exc:
-                        _log.error("Device.configure: Failed to compute diff", {"current": current.prsrc(), "target": new_conf.prsrc(), "exc": exc})
-                        # TODO: should be DeviceError
-                        abort(ValueError("Failed to compute diff"))
-                else:
-                    _log.error("Device.configure: failed to parse config", {"current": current, "target": new_conf})
-                    # TODO: should be DeviceError
-                    abort(ValueError("Failed to parse config"))
+        def on_txid_received(c: netconf.Client, current_txid: str, current_conf: ?yang.gdata.Node):
+            """Called after txid has been retrieved from device"""
+            # Check if txid matches our expected
+            expected_txid = old_conf.txid if old_conf is not None else None
+
+            _log.debug("Device.configure: validating txid", {"expected": expected_txid, "current": current_txid})
+
+            if expected_txid is not None and current_txid != expected_txid:
+                _log.error("Device.configure: txid mismatch - configuration drift detected",
+                          {"expected": expected_txid, "current": current_txid})
+                abort(TxidMismatchError(f"Configuration drift detected: expected txid {expected_txid}, got {current_txid}"))
             else:
-                _log.error("Device.configure: device disconnected during get-config")
-                abort(NotConnectedError())
+                # txid matches or no expected txid, proceed with configuration
+                # If we got a full config from get_txid_generic, update our running_conf
+                if current_conf is not None:
+                    _log.debug("Device.configure: using updated running_conf from get_txid_generic")
+                    running_conf = current_conf
+
+                # Use the diff provided by DeviceMgr
+                xml_diff = new_diff.to_xmlstr(pretty=False)
+                if xml_diff != "":
+                    _log.debug("Device.configure: sending diff", {"diff": xml_diff})
+                    if client is not None:
+                        client.edit_config(xml_diff, on_edited, target_datastore())
+                else:
+                    _log.debug("Device.configure: no changes needed")
+                    if client is not None:
+                        complete(client)
+                    else:
+                        abort(NotConnectedError())
 
         def on_edited(c: netconf.Client, error: ?netconf.NetconfError):
             _log.debug("Device.configure.on_edited", {"error": error})
@@ -973,27 +1184,52 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
 
         def complete(c: netconf.Client):
             """Successfully complete the transaction"""
-            _log.debug("Device.configure: transaction complete, unlocking")
+            _log.debug("Device.configure: transaction complete, fetching new txid")
 
-            def on_candidate_unlocked(c2: netconf.Client, e: ?netconf.NetconfError):
-                # If we locked running, unlock it after candidate (reverse order of locking)
-                if has_writable_running():
-                    c2.unlock(lambda c3, e2: finish(e if e is not None else e2), "running")
+            def on_resulting_txid(c: netconf.Client, txid: str, final_conf: ?yang.gdata.Node):
+                """Called with the new txid after configuration is complete"""
+                _log.debug("Device.configure: got new txid", {"txid": txid})
+                # If we got a full config, update our running_conf
+                if final_conf is not None:
+                    running_conf = final_conf
+                    finish_with_config(final_conf)
                 else:
-                    finish(e)
+                    # For JUNOS, we only got the txid, so create a config with
+                    # the new txid based on the target config we just applied.
+                    # Note how we take an optimistic view here and assume that
+                    # the device operatores correctly, i.e. that applying the
+                    # diff we sent to it will result in its running
+                    # configuration being exactly like our target configuration.
+                    # There are many situations in real life that voids this,
+                    # e.g. platform-specific config mutations.
+                    new_conf_with_txid = attach_txid(new_conf, txid)
+                    running_conf = new_conf_with_txid
+                    finish_with_config(new_conf_with_txid)
 
-            if use_locks():
-                if target_datastore() == "candidate":
-                    # Unlock candidate first
-                    c.unlock(on_candidate_unlocked, "candidate")
-                elif has_writable_running():
-                    # Just unlock running (we were using writable-running)
-                    c.unlock(lambda c, e: finish(e), "running")
+            def finish_with_config(conf):
+                """Finish with unlocking and calling done with the config"""
+                def on_candidate_unlocked(c2: netconf.Client, e: ?netconf.NetconfError):
+                    # If we locked running, unlock it after candidate (reverse order of locking)
+                    if has_writable_running():
+                        c2.unlock(lambda c3, e2: finish(e if e is not None else e2, conf), "running")
+                    else:
+                        finish(e, conf)
+
+                if use_locks():
+                    if target_datastore() == "candidate":
+                        # Unlock candidate first
+                        c.unlock(on_candidate_unlocked, "candidate")
+                    elif has_writable_running():
+                        # Just unlock running (we were using writable-running)
+                        c.unlock(lambda c3, e: finish(e, conf), "running")
+                    else:
+                        # Shouldn't happen, but handle gracefully
+                        finish(None, conf)
                 else:
-                    # Shouldn't happen, but handle gracefully
-                    finish()
-            else:
-                finish()
+                    finish(None, conf)
+
+            # Get the new txid after configuration
+            get_txid(on_resulting_txid)
 
         def abort(err: Exception):
             """Abort and cleanup the transaction"""
@@ -1019,18 +1255,18 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
             else:
                 finish(err)
 
-        def finish(error: ?Exception=None):
+        def finish(error: ?Exception=None, final_conf: ?yang.gdata.Node=None):
             """Final cleanup and state reset"""
             _log.debug("Device.configure: finishing transaction", {"error": error})
             # Reset state to CONNECTED
             state = CONNECTED
             # Call the done callback
-            done(error)
-            # Refresh running_conf if successful
-            # TODO: feels redundant to refetch whole config here from device,
-            # running_conf should really be target_conf at this point - keeping this for now though
-            if client is not None and error is None:
-                client.get_config(lambda c, r, e: _on_get_config(c, r, e, None))
+            if error is not None:
+                done(error, None)
+            else:
+                # Return the final config with its new txid
+                result_conf = final_conf if final_conf is not None else new_conf
+                done(None, result_conf)
 
         # Start the transaction by locking the datastore(s)
         # Lock running if it's writable (to prevent others from directly editing it)
@@ -1048,8 +1284,8 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                     _log.error("Device.configure: No lockable datastore available")
                     abort(ValueError("No lockable datastore available"))
             else:
-                _log.error("Device.configure: Not using locks, getting config")
-                client.get_config(on_fetched, "running")
+                _log.debug("Device.configure: Not using locks, getting txid")
+                get_txid(on_txid_received)
 
 
     def get_capabilities():
@@ -1103,33 +1339,56 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
     def has_writable_running():
         return "urn:ietf:params:netconf:capability:writable-running:1.0" in modset
 
+    def is_junos():
+        for m in modset.values():
+            if "junos" in m.name:
+                return True
+        return False
+
     def is_nokia_srl():
         return "srl_nokia-aaa" in modset
 
-    def _on_get_config(c, r, error: ?netconf.NetconfError, cb: ?action(?yang.gdata.Node, ?Exception) -> None=None):
-        _log.debug("Device._on_get_config", {"error": error})
-        if error is not None:
-            _log.error("Device._on_get_config: error", {"error": error.error_message})
-            if cb is not None:
-                cb(None, ValueError("Failed to get config: " + str(error.error_message)))
-        elif r is not None:
-            _log.debug("Device._on_get_config: r is not None")
-            if r.tag == "rpc-reply" and len(r.children) == 1 and r.children[0].tag == "data":
-                _log.debug("Device._on_get_config", {"r": r.encode()})
-                running_conf = schema.from_xml(r.children[0])
-                if cb is not None:
-                    cb(running_conf, None)
-            else:
-                _log.error("Device._on_get_config", {"r": r.encode()})
-                if cb is not None:
-                    cb(None, ValueError("Unexpected response to <get-config>"))
+    def fetch_config(done: action(?yang.gdata.Node, ?Exception) -> None) -> None:
+        def on_get_config(c, r, error):
+            if error is not None:
+                _log.error("Device._on_get_config: error", {"error": error.error_message})
+                # TODO: refine this error handling, at least down to transient vs permanent
+                done(None, ValueError("Failed to get config: " + str(error.error_message)))
+            elif r is not None:
+                if r.tag == "rpc-reply" and len(r.children) == 1 and r.children[0].tag == "data":
+                    _log.debug("Device.on_get_config", {"r": r.encode()})
+                    data_tag = r.children[0]
+                    txid = None
+                    # JUNOS response looks like this
+                    # <data>\n<configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm" junos:commit-seconds="1756279893" junos:commit-localtime="2025-08-27 07:31:33 UTC" junos:commit-user="root">
+                    # We want to extract the junos:commit-seconds and attach as txid on the root node in running_conf
+                    new_conf = schema.from_xml(r.children[0])
+                    if new_conf is not None:
+                        if new_conf.txid is None:
+                            txid = extract_txid(data_tag)
+                            if txid is not None:
+                                # attach new txid by constructing new root Node since gdata.Node is immutable
+                                _log.debug("Device.on_get_config: attaching extracted txid to new_conf", {"txid": txid})
+                                new_conf = attach_txid(new_conf, txid)
+                            else:
+                                # No txid in response, fallback to hashing the XML
+                                new_conf_xml_bytes = new_conf.to_xmlstr().encode()
+                                conf_hash = str(wyhash.hash(0, new_conf_xml_bytes))
+                                _log.debug("Device.on_get_config: computed txid hash from config", {"txid": conf_hash})
+                                new_conf = attach_txid(new_conf, conf_hash)
+                        else:
+                            _log.debug("Device.on_get_config: parsed config already has txid", {"txid": new_conf.txid})
 
-    # TODO: done callback should not be optional
-    # TODO: move _on_get_config to nested function under fetch_config
-    def fetch_config(done: ?action(?yang.gdata.Node, ?Exception) -> None) -> None:
+                    # Save our own (in Adapter) view of the device's running configuration
+                    running_conf = new_conf
+                    done(running_conf, None)
+                else:
+                    _log.error("Device.on_get_config", {"r": r.encode()})
+                    done(None, ValueError("Unexpected response to <get-config>"))
+
         _log.debug("Device._fetch_config")
         if client is not None:
-            client.get_config(lambda c, r, e: _on_get_config(c, r, e, done))
+            client.get_config(on_get_config)
 
     def get_config():
         return running_conf
@@ -1226,7 +1485,20 @@ def _test_parse_cap_xr_hostname():
     testing.assertEqual(mod.revision, "2021-04-21")
     testing.assertEqual(mod.feature, [])
 
-def config_fixer(current: yang.gdata.Node, new: yang.gdata.Node):
+def extract_txid(conf: ?xml.Node) -> ?str:
+    """Attempt to extract a txid from configuration
+
+    On JUNOS we use commit-seconds, which is a proprietary extension that JUNOS
+    sets as an XML attribute on the configuration XML tag
+    """
+    if conf is not None:
+        if len(conf.children) == 1 and conf.children[0].tag == "configuration":
+            configuration_tag = conf.children[0]
+            for attr_name, attr_value in configuration_tag.attributes:
+                if attr_name == "junos:commit-seconds":
+                    return attr_value
+
+def config_fixer(old: ?yang.gdata.Node, new: yang.gdata.Node):
     # Fix up config. On IOS XR we need to bring with us the Mgmt interface
     # configuration that exists on the device. We run XRds for testing using
     # containerlab and containerlab configures the IP addresses as part of a
@@ -1237,25 +1509,26 @@ def config_fixer(current: yang.gdata.Node, new: yang.gdata.Node):
     # connectivity to it. This code simply finds if there is a
     # MgmtEth0/RP0/CPU0/0 interface in the currently running configuraton on the
     # device and then brings that over into the new target config.
-    def get_xr_mgmt_interface(n: yang.gdata.Node) -> yang.gdata.Node:
-        xr_interfaces = n.children["interfaces"]
-        if xr_interfaces.ns != "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg":
-            raise ValueError("No XR interfaces found")
-        xr_interface = xr_interfaces.children["interface"]
-        if isinstance(xr_interface, yang.gdata.List):
-            for elem in xr_interface.elements:
-                if_name = elem.get_leaf("interface-name").val
-                if isinstance(if_name, str):
-                    if if_name == "MgmtEth0/RP0/CPU0/0":
-                        return yang.gdata.Container({
-  'interfaces': yang.gdata.Container({
-    'interface': yang.gdata.List(['interface-name'], elements=[elem])
-  }, ns='http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg', module='Cisco-IOS-XR-um-interface-cfg')
-})
+    def get_xr_mgmt_interface(n: ?yang.gdata.Node) -> yang.gdata.Node:
+        if n is not None:
+            xr_interfaces = n.children["interfaces"]
+            if xr_interfaces.ns != "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg":
+                raise ValueError("No XR interfaces found")
+            xr_interface = xr_interfaces.children["interface"]
+            if isinstance(xr_interface, yang.gdata.List):
+                for elem in xr_interface.elements:
+                    if_name = elem.get_leaf("interface-name").val
+                    if isinstance(if_name, str):
+                        if if_name == "MgmtEth0/RP0/CPU0/0":
+                            return yang.gdata.Container({
+    'interfaces': yang.gdata.Container({
+        'interface': yang.gdata.List(['interface-name'], elements=[elem])
+    }, ns='http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg', module='Cisco-IOS-XR-um-interface-cfg')
+    })
         raise ValueError("No XR mgmt interface found")
 
     try:
-        mgmt_intf_cfg = get_xr_mgmt_interface(current)
+        mgmt_intf_cfg = get_xr_mgmt_interface(old)
         new2 = yang.gdata.patch(new, mgmt_intf_cfg)
         if new2 is not None:
             return new2
