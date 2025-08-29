@@ -1074,7 +1074,7 @@ class _RFSTransaction(_TransformTransactionBase):
         if self.running:
             output = self.output
             if output is not None:
-                if not (isinstance(output, gdata.Container) and not output.presence):
+                if not (isinstance(output, gdata.Container) and not output.presence and len(output.children) == 0):
                     self.function.on_conf(self.get(), self.memory)
 
 class DeviceInfo(object):
