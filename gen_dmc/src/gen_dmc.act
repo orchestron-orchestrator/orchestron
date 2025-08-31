@@ -6,9 +6,10 @@ import yang
 actor main(env):
     wfc = file.WriteFileCap(file.FileCap(env.cap))
 
-    y = yang.compile([oyang.rfs, oyang.ietf_inet_types])
+    schema_yang = [oyang.rfs, oyang.ietf_inet_types]
+    y = yang.compile(schema_yang)
     ydev = y.get("device")
-    src = ydev.prdaclass(gen_json=False, gen_xml=False).encode()
+    src = ydev.prdaclass(schema_yang=schema_yang, gen_json=False, gen_xml=False).encode()
 
     wf = file.WriteFile(wfc, "src/orchestron/device_meta_config.act")
     await async wf.write(src)
