@@ -308,6 +308,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         adapter = device_type.adapter_type(self, device_type.schema, new_dmc, _log_handler, wcap)
                         _log.info("DeviceMgr.set_dmc: using adapter", {"adapter": adapter})
                         adapter.set_dmc(new_dmc)
+                        schema = device_type.schema
                     else:
                         _log.warning("DeviceMgr.set_dmc: configured device type not available in system", {"device_type": new_dmc_type})
                 else:
