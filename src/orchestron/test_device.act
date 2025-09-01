@@ -108,6 +108,20 @@ def create_simple_gdata_config() -> yang.gdata.Node:
 
     return yang.gdata.Container(config_children)
 
+def create_crpd_gdata_config(seq) -> yang.gdata.Node:
+    system = yang.gdata.Container({
+        "login": yang.gdata.Container({
+            "announcement": yang.gdata.Leaf("string", "Test banner from Orchestron, seq: {seq}")
+        })
+    })
+    config_children = {
+        "system": system
+    }
+    config_configuration = {
+        "configuration": yang.gdata.Container(config_children, ns="http://xml.juniper.net/xnm/1.1/xnm")
+    }
+    return yang.gdata.Container(config_configuration)
+
 
 def _test_gdata_to_xml():
     """Test function to visualize the gdata configuration as XML"""
@@ -494,6 +508,7 @@ actor _test_netconf_adapter(t: testing.EnvT):
         print("Skipping test")
         # TODO: there should be a t.skip()
         t.success()
+
 
 
 actor _test_netconf_adapter_resync(t: testing.EnvT):
