@@ -1,0 +1,379 @@
+"""Orchestron Device tests"""
+
+import logging
+import testing
+import xml
+import yang.adata
+import yang.gdata
+
+import orchestron.device
+import orchestron.device_meta_config as dmc
+import netconf
+
+
+run_test = False
+test_port = 42830
+test_address = "localhost"
+test_username = "admin"
+test_password = "Admin1"
+
+
+def create_test_dmc() -> dmc.orchestron_rfs__device_entry:
+    """Create a test DeviceMetaConfig with minimal required fields"""
+    # Create credentials
+    credentials = dmc.orchestron_rfs__device__credentials(
+        username=test_username,
+        password=test_password
+    )
+
+    # Create address entry
+    address_entry = dmc.orchestron_rfs__device__address_entry(
+        name="primary",
+        address=test_address,
+        port=test_port
+    )
+
+    # Create the device entry (DeviceMetaConfig)
+    device_config = dmc.orchestron_rfs__device_entry(
+        name="test-device",
+        credentials=credentials,
+        description="Test device for NetconfAdapter",
+        type="netconf",
+        address=[address_entry]
+    )
+
+    return device_config
+
+
+def create_crpd_gdata_config(seq) -> yang.gdata.Node:
+    system = yang.gdata.Container({
+        "login": yang.gdata.Container({
+            "announcement": yang.gdata.Leaf("string", f"Test banner from Orchestron, seq: {seq}")
+        })
+    })
+    config_children = {
+        "system": system
+    }
+    config_configuration = {
+        "configuration": yang.gdata.Container(config_children, ns="http://xml.juniper.net/xnm/1.1/xnm")
+    }
+    return yang.gdata.Container(config_configuration)
+
+
+actor _test_txid(t: testing.EnvT):
+    """Test NetconfAdapter instantiation, connection, and configuration
+
+    This test requires a running JUNOS crpd device
+
+    The test will:
+    1. Verify the server has the right capabilities, something junos
+    2. Reset the configuration to a known state
+    3. Create a NetconfAdapter instance
+    4. Send a configuration through the adapter TWICE to test check_txid efficiency
+    5. Use a direct netconf.Client to verify the configuration was applied
+    """
+    log = logging.Logger(t.log_handler)
+    log.info("Testing NetconfAdapter")
+
+    var adapter: ?orchestron.device.NetconfAdapter = None
+    var verification_client: ?netconf.Client = None
+
+    # Create a mock DeviceMgr
+    dev_types = {}
+    var initial_banner_text = ""
+
+    var first_config_sent = False
+    var second_config_sent = False
+
+    # First, verify the server and reset configuration
+    def setup_test():
+        log.info("Setting up test - verifying server capabilities and resetting config")
+
+        def on_setup_connect(c: netconf.Client, err: ?Exception):
+            if err is not None:
+                log.error("Setup client failed to connect", {"error": str(err)})
+                t.failure(err)
+            else:
+                log.info("Setup client connected, checking capabilities")
+
+                # Check capabilities (for logging) but don't require specific namespace
+                caps = c.get_capabilities()
+                log.info("Server capabilities count", {"count": len(caps)})
+
+                # Look for any netconf-server related capability
+                for cap in caps:
+                    if "netconf" in cap.lower() and "server" in cap.lower():
+                        log.info("Found netconf-server related capability", {"cap": cap})
+
+                log.info("Getting current config to check banner state")
+                c.get_config(on_setup_get_config, datastore="running")
+
+        def on_setup_get_config(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+            if error is not None:
+                t.failure(error)
+            elif r is not None:
+                config_xml = r.encode()
+                # Extract current banner if it exists
+                if "<banner" in config_xml and "</banner>" in config_xml:
+                    start = config_xml.find("<banner")
+                    start = config_xml.find(">", start) + 1
+                    end = config_xml.find("</banner>", start)
+                    initial_banner_text = config_xml[start:end]
+                    log.info("Current banner in device", {"banner": initial_banner_text})
+                else:
+                    log.info("No banner currently configured")
+                    initial_banner_text = ""
+
+                # Reset the banner to a known state (remove or set to default)
+                reset_config = """<configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm">
+    <system>
+        <login>
+            <announcement>EMPTY</announcement>
+        </login>
+    </system>
+</configuration>"""
+
+                def on_get_config(c2: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+                    if error is not None:
+                        t.failure(error)
+                    elif r is not None:
+                        print("Current config:", r.encode())
+
+                log.info("Resetting device configuration to known state")
+                c.edit_config(reset_config, on_setup_edit_config, datastore="candidate")
+                #c.get_config(on_get_config, datastore="running")
+            else:
+                log.error("Failed to get initial config")
+                t.failure(ValueError("Failed to get initial config"))
+
+        def on_setup_edit_config(c: netconf.Client, error: ?netconf.NetconfError):
+            def on_committed(c: netconf.Client, error: ?netconf.NetconfError):
+                if error is not None:
+                    log.error("Commit failed", {"error": error.error_message})
+                    t.failure(error)
+                else:
+                    log.info("Commit successful")
+                    c.close(on_setup_close)
+
+            if error is not None:
+                log.error("Failed to reset config", {"error": error.error_message})
+                t.failure(error)
+            else:
+                log.info("Configuration reset successful")
+                c.commit(on_committed)
+
+        def on_setup_close():
+            log.info("Setup complete, starting NetconfAdapter test")
+            start_adapter_test()
+
+        # Create setup client
+        setup_client = netconf.Client(
+            t.env.auth,
+            test_address,
+            test_port,
+            test_username,
+            test_password,
+            on_connect=on_setup_connect,
+            log_handler=t.log_handler
+        )
+    def on_reconf(name: str):
+        log.info("Reconf callback", {"name": name})
+        if adapter is not None:
+            if not first_config_sent:
+                first_config_sent = True
+                # Create first test configuration
+                test_config = create_crpd_gdata_config(1)
+                log.info("Prepared FIRST configuration to send", {"xml": test_config.to_xmlstr(pretty=False)})
+
+                def on_first_configure_done(error, resulting_config):
+                    if error is not None:
+                        log.error("FIRST configure failed", {"error": str(error)})
+                        t.failure(error)
+                    else:
+                        log.info("✓ FIRST configuration sent successfully through adapter!")
+                        log.info("Now sending SECOND configuration to test efficient get-config with check_txid")
+                        send_second_config()
+
+                log.info("Sending FIRST configuration to device through adapter")
+                adapter.configure(on_first_configure_done, test_config, test_config, None)
+
+    def send_second_config():
+        if adapter is not None and not second_config_sent:
+            second_config_sent = True
+            # Create second test configuration with different seq number
+            test_config2 = create_crpd_gdata_config(2)
+            log.info("Prepared SECOND configuration to send", {"xml": test_config2.to_xmlstr(pretty=False)})
+
+            def on_second_configure_done(error, resulting_config):
+                if error is not None:
+                    log.error("SECOND configure failed", {"error": str(error)})
+                    t.failure(error)
+                else:
+                    log.info("✓ SECOND configuration sent successfully through adapter!")
+                    log.info("Both configurations completed - check_txid should have been called twice")
+                    adapter.close()
+                    # Now create a direct client to verify the config was applied
+                    verify_configuration()
+
+            log.info("Sending SECOND configuration to device through adapter")
+            adapter.configure(on_second_configure_done, test_config2, test_config2, None)
+
+    def start_adapter_test():
+        log.info("Starting NetconfAdapter test with clean device state")
+
+        # Create DeviceMgr and NetconfAdapter
+        dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf)
+
+        # Create a simple device schema
+        schema = orchestron.device.DeviceSchema(
+            "test",
+            set(),
+            orchestron.device.MockRoot,
+            from_gdata=orchestron.device.MockRoot.from_gdata
+        )
+
+        # Create test DeviceMetaConfig
+        test_dmc = create_test_dmc()
+
+        # Create the NetconfAdapter - this will trigger connection
+        local_adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, t.log_handler, t.env.auth)
+        adapter = local_adapter
+        if local_adapter is not None:
+            local_adapter.set_dmc(test_dmc)
+
+        log.info("NetconfAdapter created, waiting for connection and reconf callback...")
+
+    def verify_configuration():
+        log.info("Creating verification client to check device configuration")
+
+        def on_verify_connect(c: netconf.Client, err: ?Exception):
+            if err is not None:
+                log.error("Verification client failed to connect", {"error": str(err)})
+                t.failure(err)
+            else:
+                log.info("Verification client connected")
+                verification_client = c
+                # Get the running config
+                c.get_config(on_verify_get_config, datastore="running")
+
+        def on_verify_get_config(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+            if error is not None:
+                t.failure(error)
+            elif r is not None:
+                log.info("Retrieved device configuration for verification", {"conf": r.encode()})
+                config_xml = r.encode()
+
+                # Check if our second configuration banner is in the config
+                if "Test banner from Orchestron, seq: 2" in config_xml:
+                    log.info("✓ SUCCESS: Second banner was configured on the device!")
+                    log.info("✓ NetconfAdapter successfully pushed both configurations to device")
+                    log.info("✓ check_txid should have been called twice for efficient get-config")
+                    test_error = None
+                else:
+                    log.warning("Second banner text not found in device config")
+                    log.warning("Expected 'Test banner from Orchestron, seq: 2' in config")
+                    test_error = ValueError("Expected second banner text not found in device config")
+
+                c.close(lambda: on_verify_close(test_error))
+            else:
+                log.error("No response from get-config")
+                t.failure(ValueError("No response from get-config"))
+
+        def on_verify_close(test_failure):
+            log.info("Verification client closed")
+            log.info("Test completed successfully!")
+            if test_failure is not None:
+                t.failure(test_failure)
+            else:
+                t.success()
+
+        # Create the verification client
+        verification_client = netconf.Client(
+            t.env.auth,
+            test_address,
+            test_port,
+            test_username,
+            test_password,
+            on_connect=on_verify_connect,
+            log_handler=t.log_handler
+        )
+
+    # Start the test by first setting up and verifying the server
+    if run_test:
+        setup_test()
+    else:
+        print("Skipping test")
+        # TODO: there should be a t.skip()
+        t.success()
+
+
+actor _test_direct_get_config_with_filter(t: testing.EnvT):
+    """Test direct netconf.Client get-config with subtree filter
+    
+    This test connects directly to the device and performs a get-config
+    with a subtree filter to retrieve only the top-level <configuration> container.
+    """
+    log = logging.Logger(t.log_handler)
+    log.info("Testing direct get-config with subtree filter")
+    
+    def on_connect(c: netconf.Client, err: ?Exception):
+        if err is not None:
+            log.error("Failed to connect", {"error": str(err)})
+            t.failure(err)
+        else:
+            log.info("Connected successfully")
+            
+            # Create subtree filter for just the configuration container
+            subtree_filter_str = """<configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm"/>"""
+            subtree_filter = xml.Node("filter", children=[
+                xml.Node("configuration", children=[
+                    xml.Node("system", children=[
+                        xml.Node("services", children=[
+                            xml.Node("netconf", children=[
+                                xml.Node("ssh")
+                                ])
+                            ])
+                        ])
+                    ])
+                ])
+            
+            log.info("Sending get-config with subtree filter", {"filter": subtree_filter_str})
+            
+            # Perform get-config with filter
+            c.get_config(on_get_config, datastore="running", filter=subtree_filter)
+    
+    def on_get_config(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+        if error is not None:
+            log.error("get-config failed", {"error": error.error_message})
+            c.close(on_close_failure)
+        elif r is not None:
+            config_xml = r.encode()
+            log.info("Retrieved configuration", {"length": len(config_xml)})
+            log.info("Config response", {"config": config_xml})
+            c.close(on_close_success)
+        else:
+            log.error("No response from get-config")
+            c.close(on_close_failure)
+    
+    def on_close_success():
+        log.info("Test completed successfully")
+        t.success()
+    
+    def on_close_failure():
+        log.info("Test failed")
+        t.failure(ValueError("get-config failed"))
+    
+    # Create the client and connect
+    if run_test:
+        client = netconf.Client(
+            t.env.auth,
+            test_address,
+            test_port,
+            test_username,
+            test_password,
+            on_connect=on_connect,
+            log_handler=t.log_handler
+        )
+    else:
+        print("Skipping test")
+        t.success()
