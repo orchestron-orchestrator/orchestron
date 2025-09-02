@@ -110,6 +110,12 @@ rfs = r"""module orchestron-rfs {
         }
       }
     }
+    container debug {
+      leaf connection {
+        type boolean;
+        default "false";
+      }
+    }
   }
 
   list rfs {
