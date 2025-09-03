@@ -264,6 +264,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     # in-transit to the device. When len(pending_txids) > 0, we need to
     # send the latest configuration after the current transaction is done.
     var pending_txids = set()
+    var reconf_txids = set()
     # Note how target_conf always only reflects the very latest configuration
     # that we received from the TTT transaction engine. When the device is ready
     # to receive configuration (we are connected, have said hello, gotten
@@ -405,6 +406,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         cb(True)
                         del callbacks[tid]
                     pending_txids.discard(tid)
+                    reconf_txids.discard(tid)
                 current_txids = set()
                 if len(pending_txids) > 0:
                     _log.debug("Configuration changed during in-progress transaction, running again...")
@@ -426,6 +428,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         return
                 # Actually send the configuration
                 current_txids.update(pending_txids)
+                current_txids.update(reconf_txids)
                 _log.debug("DeviceMgr._send_config: sending intended target configuration", {"txids": current_txids, "diff": config_diff})
                 adapter.configure(lambda e, c: on_configured(e, c, config_diff, target_conf, running_conf), config_diff, target_conf, running_conf)
             else:
@@ -443,16 +446,17 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                 _log.debug("No target config, cannot compute diff")
 
     def configure(new_conf: ?yang.gdata.Node, conf_modset_id: ?str, tid: str="0"):
-        pending_txids.add(tid)
         if new_conf is not None and conf_modset_id is not None:
             if conf_modset_id != modset_id:
                 _log.debug("DeviceMgr.configure: modset_id mismatch, ignoring configuration", {"conf_modset_id": str(conf_modset_id), "modset_id": str(modset_id)})
                 return
             _log.debug("DeviceMgr.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
+            pending_txids.add(tid)
             target_conf = new_conf
             _send_config()
         elif new_conf is None and conf_modset_id is None:
             _log.debug("DeviceMgr.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
+            reconf_txids.add(tid)
         else:
             _log.debug("DeviceMgr.configure: invalid input", {"conf_modset_id": str(conf_modset_id), "new_conf": truncate_conf(new_conf), "tid": tid})
 
@@ -502,7 +506,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         adapter.fetch_config(on_fetch_config_done)
 
     def wait_complete(tid: str, done: action(value)->None):
-        if tid not in current_txids | pending_txids:
+        if tid not in current_txids | pending_txids | reconf_txids:
             _log.debug("DeviceMgr.wait_complete: transaction id not found, calling done", {"tid": tid})
             done(True) # Assume tid is very old and has already completed, thus respond immediately
         else:
