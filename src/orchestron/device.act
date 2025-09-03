@@ -245,11 +245,6 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     mock = True if wcap is None else False
     _log.debug("DeviceMgr starting up", {"name": name, "mock": mock})
 
-    # Orchestron's intended target configuration, that we want on the device.
-    var target_conf: ?yang.gdata.Node = None
-    # The device's current running configuration, as we know it.
-    var running_conf: ?yang.gdata.Node = None
-
     # The device's meta configuration, like address, credentials, etc.
     var dmc: DeviceMetaConfig = DeviceMetaConfig(name, Credentials("", None))
 
@@ -260,6 +255,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     var modset: dict[str, ModCap] = {}
     var modset_id: ?str = None
 
+    # The device's current running configuration, as we know it.
+    var running_conf: ?yang.gdata.Node = None
 
     # New configuration received from the transaction engine via the
     # DeviceMgr.configure() method are stored in a configuration queue, which
@@ -267,19 +264,32 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     # and modset_id. Any new configuration is appended and we consume the queue
     # when sending configuration to the device.
     var confq: dict[str, ConfigItem] = {}
+
+    # target_conf is the last successfully applied configuration of the device
+    # We dequeue configuration from the confq and send to the device. Once that
+    # configuration has been successfully applied to thedevice, we remove it
+    # from the confq and call the associated callbacks for the tids in the
+    # ConfigItem. We also save that config in target_conf, so that if we have
+    # the need to reconfigure the device, like after the running_conf has
+    # updated, we do that with the latest config that we sent to the device,
+    # i.e. target_conf.
+    var target_conf: ?yang.gdata.Node = None
+
     # current_txids are the ids of the transactions that are currently
     # in-transit, which also means that we can determine if we have an
     # outstanding transaction by checking len(current_txids) > 0.
     var current_txids = set()
+    # reconf is a special kind of operation, where an initial transaction
+    # intends to configure devices but those devices have no known modset and
+    # thus the RFS transforms cannot produce device configuration. It is still
+    # valid to await completion of such a transaction and the intent means "we
+    # want to await that the RFS transform intended (future) output has reached
+    # the device". Those transactions register for the future reconf and we keep
+    # track of those in reconf_txids. The next successfuly sent configuration to
+    # the device will call the reconf_txids on completion so they in turn can
+    # notify their clients that the configuration now has reached the devices.
     var reconf_txids = set()
-    # Note how target_conf always only reflects the very latest configuration
-    # that we received from the TTT transaction engine. When the device is ready
-    # to receive configuration (we are connected, have said hello, gotten
-    # capabilities, do not have an outstanding transaction), we will send the
-    # target_conf. A snapshot is taken and sent to the device. We do not keep
-    # that particular version. If later the device failed to commit the
-    # configuration and we need to retry, we will retry with a new
-    # configuration.
+
 
     # The last successfully sent diff. We use this to detect and break infinite
     # loops in the device config reconciliation loop
@@ -341,6 +351,16 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         This function manages the transaction queue and calls the adapter's
         configure method with the current target configuration.
         """
+        # Check if we already have a transaction in progress
+        if len(current_txids) > 0:
+            _log.debug("DeviceMgr._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
+            return
+
+        last_confq = None
+        for id, ci in confq.items():
+            last_confq = ci.conf
+        send_conf = last_confq if last_confq is not None else target_conf
+
         def on_configured(error: ?Exception, resulting_config, new_diff, new_config, old_config):
             """Handle transaction completion
 
@@ -398,6 +418,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
             else:
                 _log.debug("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids})
+                target_conf = send_conf
                 # Update running_conf with the result from the device (which has the new txid)
                 if resulting_config is not None:
                     _log.debug("Updating running_conf with new txid", {"txid": resulting_config.txid})
@@ -419,18 +440,10 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                     _log.debug("Configuration changed during in-progress transaction, running again...")
                     _send_config()
 
-        # Check if we already have a transaction in progress
-        if len(current_txids) > 0:
-            _log.debug("DeviceMgr._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
-            return
-
-        for id, ci in confq.items():
-            target_conf = ci.conf
-
         # Check if there is an actual diff right now
-        if running_conf is not None and target_conf is not None:
-            target_conf2 = config_fixer(running_conf, target_conf)
-            config_diff = yang.gdata.diff(running_conf, target_conf2) if target_conf2 is not None else None
+        if running_conf is not None and send_conf is not None:
+            send_conf2 = config_fixer(running_conf, send_conf)
+            config_diff = yang.gdata.diff(running_conf, send_conf2) if send_conf2 is not None else None
             if config_diff is not None:
                 if last_sent_diff is not None:
                     if config_diff == last_sent_diff:
@@ -440,7 +453,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                 current_txids.update(confq.keys())
                 current_txids.update(reconf_txids)
                 _log.debug("DeviceMgr._send_config: sending intended target configuration", {"txids": current_txids, "diff": config_diff})
-                adapter.configure(lambda e, c: on_configured(e, c, config_diff, target_conf, running_conf), config_diff, target_conf, running_conf)
+                adapter.configure(lambda e, c: on_configured(e, c, config_diff, send_conf, running_conf), config_diff, send_conf, running_conf)
             else:
                 _log.debug("DeviceMgr.configure: no diff between running and target config, nothing to do", {"pending_tids": confq.keys()})
                 for tid in confq.keys():
@@ -452,8 +465,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         else:
             if running_conf is None:
                 _log.debug("No running config, cannot compute diff")
-            if target_conf is None:
-                _log.debug("No target config, cannot compute diff")
+            if send_conf is None:
+                _log.debug("No send config, cannot compute diff")
 
     def configure(new_conf: ?yang.gdata.Node, conf_modset_id: ?str, tid: str="0"):
         if new_conf is not None and conf_modset_id is not None:
