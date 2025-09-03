@@ -342,7 +342,6 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
             if error is not None:
                 if isinstance(error, NotConnectedError):
                     _log.debug("Device not connected, no need to retry - waiting for reconnect")
-                    pending_txids.update(current_txids)
                     current_txids = set()
 
                 elif isinstance(error, PermanentError):
@@ -351,21 +350,20 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         _log.debug("Configuration failed due to bad config", {"error": error})
 
                     # Got a permanent error, giving up
-                    for tid,callback in callbacks.items():
-                        if tid in current_txids:
-                            callback(error)
+                    for tid in current_txids:
+                        cb = callbacks.get(tid)
+                        if cb is not None:
+                            cb(error)
                             del callbacks[tid]
 
                     # TODO: uh, what else? we need to bubble up this sort of error state to an operator somehow
 
-                    if len(pending_txids) > 0:
+                    if len(pending_txids) > len(current_txids):
                         _log.debug("New intended configuration available, retrying with latest config")
-                        pending_txids.update(current_txids)
                         current_txids = set()
                         _send_config()
                     else:
                         _log.debug("No new intended configuration available, no point in retrying with same conf")
-                        pending_txids.update(current_txids)
                         current_txids = set()
 
                 elif isinstance(error, TransientError):
@@ -374,22 +372,19 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         _log.debug("DeviceAdapter busy, ignoring this error as adapter will trigger us once it is done with current operation")
                         return
 
-                    if len(pending_txids) > 0:
+                    if len(pending_txids) > len(current_txids):
                         _log.debug("New intended configuration available, retrying with latest config")
-                        pending_txids.update(current_txids)
                         current_txids = set()
                         _send_config()
                     else:
                         retry_in = 1
                         _log.debug("No new intended configuration available. Scheduling retry of current config", {"retry_in": retry_in})
-                        pending_txids.update(current_txids)
                         current_txids = set()
                         after retry_in: _send_config()
 
                 else:
                     _log.debug("Unhandled error", {"error": error})
                     # Uh, this is indicative of programmer error and we should fix it, but let's do naive retry as well
-                    pending_txids.update(current_txids)
                     current_txids = set()
                     after 1: _send_config()
 
@@ -404,10 +399,12 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                     running_conf = target_conf
 
                 last_sent_diff = new_diff
-                for tid,callback in callbacks.items():
-                    if tid in current_txids:
-                        callback(True)
+                for tid in current_txids:
+                    cb = callbacks.get(tid)
+                    if cb is not None:
+                        cb(True)
                         del callbacks[tid]
+                    pending_txids.discard(tid)
                 current_txids = set()
                 if len(pending_txids) > 0:
                     _log.debug("Configuration changed during in-progress transaction, running again...")
@@ -428,15 +425,15 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         _log.info("Reconciliation loop detected, target diff is same as last diff sent, stopping", {"diff": config_diff})
                         return
                 # Actually send the configuration
-                current_txids = pending_txids
-                pending_txids = set()
+                current_txids.update(pending_txids)
                 _log.debug("DeviceMgr._send_config: sending intended target configuration", {"txids": current_txids, "diff": config_diff})
                 adapter.configure(lambda e, c: on_configured(e, c, config_diff, target_conf, running_conf), config_diff, target_conf, running_conf)
             else:
                 _log.debug("DeviceMgr.configure: no diff between running and target config, nothing to do", {"txids": pending_txids})
-                for tid,callback in callbacks.items():
-                    if tid in pending_txids:
-                        callback(True)
+                for tid in pending_txids:
+                    cb = callbacks.get(tid)
+                    if cb is not None:
+                        cb(True)
                         del callbacks[tid]
                 pending_txids = set()
         else:
