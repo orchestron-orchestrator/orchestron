@@ -361,7 +361,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
             last_confq = ci.conf
         send_conf = last_confq if last_confq is not None else target_conf
 
-        def on_configured(error: ?Exception, resulting_config, new_diff, new_config, old_config):
+        def on_configured(error: ?Exception, resulting_config, new_diff):
             """Handle transaction completion
 
             This callback is called when the adapter finishes the configuration
@@ -418,14 +418,14 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
             else:
                 _log.debug("Configuration successfully applied on device, calling callbacks...", {"current_tids": current_tids})
+                # Since we successfuly sent the configuration from the confq to
+                # the device, we updated target_conf so any later resync /
+                # reconfigurations will use the latest target configuration
                 target_conf = send_conf
-                # Update running_conf with the result from the device (which has the new devicetxid)
-                if resulting_config is not None:
-                    _log.debug("Updating running_conf with new device txid", {"device_txid": resulting_config.txid})
-                    running_conf = resulting_config
-                else:
-                    _log.warning("No resulting_config returned from adapter, using target_conf")
-                    running_conf = target_conf
+                # The device adapters gives us back the resulting config on the
+                # device, including an updated txid. We update our view of the
+                # device's running to this new resulting config.
+                running_conf = resulting_config
 
                 last_sent_diff = new_diff
                 for tid in current_tids:
@@ -443,17 +443,17 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         # Check if there is an actual diff right now
         if running_conf is not None and send_conf is not None:
             send_conf2 = config_fixer(running_conf, send_conf)
-            config_diff = yang.gdata.diff(running_conf, send_conf2) if send_conf2 is not None else None
-            if config_diff is not None:
+            send_diff = yang.gdata.diff(running_conf, send_conf2) if send_conf2 is not None else None
+            if send_diff is not None:
                 if last_sent_diff is not None:
-                    if config_diff == last_sent_diff:
-                        _log.info("Reconciliation loop detected, target diff is same as last diff sent, stopping", {"diff": config_diff})
+                    if send_diff == last_sent_diff:
+                        _log.info("Reconciliation loop detected, target diff is same as last diff sent, stopping", {"diff": send_diff})
                         return
                 # Actually send the configuration
                 current_tids.update(confq.keys())
                 current_tids.update(reconf_tids)
-                _log.debug("DeviceMgr._send_config: sending intended target configuration", {"current_tids": current_tids, "diff": config_diff})
-                adapter.configure(lambda e, c: on_configured(e, c, config_diff, send_conf, running_conf), config_diff, send_conf, running_conf)
+                _log.debug("DeviceMgr._send_config: sending intended target configuration", {"current_tids": current_tids, "diff": send_diff})
+                adapter.configure(lambda e, c: on_configured(e, c, send_diff), send_diff, send_conf, running_conf)
             else:
                 _log.debug("DeviceMgr.configure: no diff between running and target config, nothing to do", {"pending_tids": confq.keys()})
                 for tid in confq.keys():
