@@ -183,6 +183,8 @@ actor DeviceRegistry(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, 
     """
     var devices = {}
 
+    var devices_needing_approval = {}
+
     action def _dummy_reconf(name: str):
         # Dummy reconf callback, used to avoid None
         pass
@@ -191,12 +193,37 @@ actor DeviceRegistry(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, 
 
     def get(name: str) -> DeviceMgr:
         if name not in devices:
-            devices[name] = DeviceMgr(dev_types, wcap, name, log_handler, reconf_cb)
+            devices[name] = DeviceMgr(dev_types, wcap, name, log_handler, reconf_cb, self)
         dev = devices[name]
         return dev
 
+    def list():
+        return devices.keys()
+
     def on_reconf(on_reconf: action(str) -> None):
         reconf_cb = on_reconf
+
+    def register_needs_approval(name: str):
+        """Register that a device has pending configurations needing approval"""
+        dev = devices.get(name)
+        if dev is not None:
+            devices_needing_approval[name] = dev
+
+    def unregister_needs_approval(name: str):
+        """Unregister a device from needing approval
+
+        For example when all configs are approved or rejected or approval-required has been disabled
+        """
+        del devices_needing_approval[name]
+
+    def get_devices_needing_approval() -> dict[str, DeviceMgr]:
+        """Get devices that have pending approvals
+
+        Returns a dictionary mapping device name to DeviceMgr instance
+        for devices that currently need approval. Clients can then
+        directly query each DeviceMgr for details.
+        """
+        return devices_needing_approval
 
 def truncate_conf(conf: ?yang.gdata.Node) -> str:
     """Truncate the configuration to a short string for logging
@@ -209,13 +236,16 @@ def truncate_conf(conf: ?yang.gdata.Node) -> str:
         return sc
     return r"{}"
 
-class ConfigItem():
+class ConfigItem(object):
+    approved: ?bool
+
     def __init__(self, tid: str, conf: yang.gdata.Node, modset_id: ?str):
         self.tid = tid
         self.conf = conf
         self.modset_id = modset_id
+        self.approved = None
 
-actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None):
+actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None, registry: ?DeviceRegistry=None):
     """Device Manager manages a device and represents that device, as an
     abstract device, in the system. Platform specific handling is implemented in
     the DeviceAdapter, i.e.  in subclasses of DeviceAdapter, like NetconfDriver
@@ -300,6 +330,44 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     # of those callbacks keyed by tid.
     var callbacks: dict[str, action(value)->None] = {}
 
+    # Track whether we currently have config items in confq that need approval.
+    # When we transition this we also register and / unregister with
+    # DeviceRegistry through _update_approval_state()
+    var needs_approval = False
+
+    def _update_approval_state():
+        if not dmc.approval_required:
+            if needs_approval:
+                needs_approval = False
+                if registry is not None:
+                    registry.unregister_needs_approval(name)
+            return
+
+        # Check if there are any items in confq that need approval
+        has_pending_approval = False
+        for id, ci in confq.items():
+            if ci.approved is None:
+                has_pending_approval = True
+                break
+
+        # Update state and notify registry if state changed
+        if has_pending_approval and not needs_approval:
+            needs_approval = True
+            if registry is not None:
+                registry.register_needs_approval(name)
+        elif not has_pending_approval and needs_approval:
+            needs_approval = False
+            if registry is not None:
+                registry.unregister_needs_approval(name)
+
+    def get_device_txid() -> str:
+        """Get the device txid from our view of the device's running config"""
+        if running_conf is not None:
+            rc_txid = running_conf.txid
+            if rc_txid is not None:
+                return rc_txid
+        return ""
+
     def on_modset_update(new_modset: dict[str, ModCap]):
         _log.debug("Modset updated", {"new_modset": new_modset})
         on_reconf(name)
@@ -343,7 +411,19 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
         adapter.set_dmc(new_dmc)
 
+        if dmc is not None and new_dmc is not None:
+            old_dmcg = dmc.to_gdata()
+            new_dmcg = new_dmc.to_gdata()
+            if old_dmcg is not None and new_dmcg is not None:
+                if yang.gdata.diff(old_dmcg, new_dmcg) is not None:
+                    # Configuration that affects our behavior, like
+                    # approval-required might have changed, so attempt to
+                    # send the configuration again
+                    after 0: _send_config()
+
         dmc = new_dmc
+        _update_approval_state()
+
 
     def _send_config():
         """Send configuration to the device adapter
@@ -357,9 +437,40 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
             return
 
         last_confq = None
+        # Track which tids we'll process if we actually send config
+        pending_tids = []
+        # We want to grab as much approved configuration as possible. To be
+        # considered, all items from the head of the queue must have an approval
+        # status. Any item without an approval status stops the processing.
+        # Note however how we skip past items that are rejected if a later item
+        # is approved. This is initially surprising since we deal with
+        # cumulative configurations, but it does make sense since the later
+        # transaction might have negated the earlier rejected configuration.
         for id, ci in confq.items():
-            last_confq = ci.conf
+            ci_approved = ci.approved
+            if dmc.approval_required:
+                ci_approved = ci.approved
+                if ci_approved is not None:
+                    if ci_approved:
+                        pending_tids.append(ci.tid)
+                        last_confq = ci.conf
+                    else:
+                        _log.debug("DeviceMgr._send_config: configuration not approved, skipping", {"confq_id": id, "tid": ci.tid})
+                else:
+                    _log.debug("DeviceMgr._send_config: configuration requires approval, stopping", {"confq_id": id, "tid": ci.tid})
+                    break
+            else:
+                pending_tids.append(ci.tid)
+                last_confq = ci.conf
         send_conf = last_confq if last_confq is not None else target_conf
+        if len(pending_tids) > 0:
+            # got work to do, pass and continue further
+            pass
+        else:
+            if dmc.approval_required and len(confq) > 0:
+                # there must be something pending approval
+                _log.debug("DeviceMgr._send_config: device requires approval and we have pending configuration needing approval")
+            return
 
         def on_configured(error: ?Exception, resulting_config, new_diff):
             """Handle transaction completion
@@ -399,6 +510,17 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                     if isinstance(error, BusyError):
                         _log.debug("DeviceAdapter busy, ignoring this error as adapter will trigger us once it is done with current operation")
                         return
+                    if isinstance(error, TxidMismatchError):
+                        _log.debug("Device txid mismatch, re-syncing device")
+                        # Clear approval state so we can re-approve the configuration
+                        for tid in current_tids:
+                            ci = confq.get(tid)
+                            if ci is not None:
+                                ci.approved = None
+                        current_tids = set()
+                        _update_approval_state()
+                        resync()
+                        return
 
                     if len(confq) > len(current_tids):
                         _log.debug("New intended configuration available, retrying with latest config")
@@ -436,6 +558,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                     reconf_tids.discard(tid)
                     del confq[tid]
                 current_tids = set()
+                _update_approval_state()
                 if len(confq) > 0:
                     _log.debug("Configuration changed during in-progress transaction, running again...")
                     _send_config()
@@ -450,18 +573,20 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         _log.info("Reconciliation loop detected, target diff is same as last diff sent, stopping", {"diff": send_diff})
                         return
                 # Actually send the configuration
-                current_tids.update(confq.keys())
+                current_tids = set(pending_tids)
                 current_tids.update(reconf_tids)
                 _log.debug("DeviceMgr._send_config: sending intended target configuration", {"current_tids": current_tids, "diff": send_diff})
                 adapter.configure(lambda e, c: on_configured(e, c, send_diff), send_diff, send_conf, running_conf)
             else:
-                _log.debug("DeviceMgr.configure: no diff between running and target config, nothing to do", {"pending_tids": confq.keys()})
-                for tid in confq.keys():
+                _log.debug("DeviceMgr.configure: no diff between running and target config, nothing to do", {"pending_tids": pending_tids})
+                # No diff, so complete the pending transactions immediately
+                for tid in pending_tids:
                     cb = callbacks.get(tid)
                     if cb is not None:
                         cb(True)
                         del callbacks[tid]
-                confq = {}
+                    del confq[tid]
+                _update_approval_state()
         else:
             if running_conf is None:
                 _log.debug("No running config, cannot compute diff")
@@ -475,6 +600,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                 return
             _log.debug("DeviceMgr.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
             confq[tid] = ConfigItem(tid, new_conf, modset_id)
+            _update_approval_state()
             _send_config()
         elif new_conf is None and conf_modset_id is None:
             _log.debug("DeviceMgr.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
@@ -528,6 +654,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         adapter.fetch_config(on_fetch_config_done)
 
     def wait_complete(tid: str, done: action(value) -> None):
+        _log.debug("DeviceMgr.wait_complete: confq", {"confq": list(confq.keys())})
         if tid not in current_tids | set(confq.keys()) | reconf_tids:
             _log.debug("DeviceMgr.wait_complete: transaction id not found, calling done", {"tid": tid})
             done(True) # Assume tid is very old and has already completed, thus respond immediately
@@ -555,12 +682,77 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         """
         adapter.fetch_config(done)
 
-
     def get_schema():
         return schema
 
     def rpc_xml(cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node):
         adapter.rpc_xml(cb, xml_rpc)
+
+    def list_confq():
+        return confq
+
+    def get_confq(id: str) -> (ci: ConfigItem, running_conf: yang.gdata.Node):
+        _log.debug("DeviceMgr.get_confq: checking confq for id", {"id": id, "confq": list(confq.keys())})
+        if len(confq) == 0:
+            raise ValueError("Configuration queue is empty")
+        first_key = next(confq.keys())
+
+        if id == first_key:
+            if running_conf is not None:
+                return (ci=confq[first_key], running_conf=running_conf)
+            else:
+                raise ValueError("No device running configuration available for diffing")
+
+        # non-head item
+        previous_ci = None
+        for tid, ci in confq.items():
+            if tid == id and previous_ci is not None:
+                return (ci=confq[first_key], running_conf=previous_ci.conf)
+            previous_ci = ci
+        raise ValueError("No such configuration id ({id}) in queue")
+
+    def set_confq_approval(id: str, device_txid: str, approved: bool):
+        _log.debug("DeviceMgr.set_confq_approval: setting approval", {"id": id, "approved": approved})
+        _log.debug("DeviceMgr.set_confq_approval: checking confq for id", {"id": id, "confq": list(confq.keys())})
+        if len(confq) == 0:
+            raise ValueError("Configuration queue is empty")
+        first_key = next(confq.keys())
+        if id != first_key:
+            raise ValueError("Configuration id not at head of queue")
+
+        if device_txid != get_device_txid():
+            raise ValueError("Device txid does not match current device txid")
+
+        if approved:
+            _log.debug("DeviceMgr.set_confq_approval: approving configuration", {"id": id})
+            ci = confq[first_key]
+            ci.approved = True
+        else:
+            # TODO: ideally we would allow setting approval on non-head items.
+            # Each non-head item woud be presented as a diff between the
+            # previous item in the queue and that item. This is valid as long as
+            # the previous items get approved and applied without txid
+            # mismatches. If we get a txid mismatch, we have to clear all
+            # pending items as any approval is basically voided. I think we need
+            # a log of events on each ConfigItem to convey this to the user
+            # though, otherwise it is too confusing that an approved item suddenly
+            # goes back to unapproved.
+            _log.debug("DeviceMgr.set_confq_approval: rejecting configuration", {"id": id})
+            del confq[first_key]
+        _update_approval_state()
+        if approved:
+            _send_config()
+
+    def get_pending_approvals() -> dict[str, ConfigItem]:
+        """Get list of configuration items in approval queue
+
+        Returns all items in the queue when approval is required.
+        This includes pending (None), approved (True), and rejected (False) items.
+        """
+        if dmc.approval_required:
+            return confq
+        return {}
+
 
 
 class DeviceAdapter(object):

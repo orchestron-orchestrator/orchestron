@@ -101,6 +101,12 @@ def src_yang():
       }
     }
 
+    leaf approval-required {
+      description "Require approval of each individual configuration change to this device";
+      type boolean;
+      default "false";
+    }
+
     container mock {
       leaf-list preset {
         type enumeration {
@@ -1036,6 +1042,7 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
 
 
 
+
 class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
     name: str
     namespace: str
@@ -1232,10 +1239,11 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
     address: orchestron_rfs__device__address
     credentials: orchestron_rfs__device__credentials
     initial_credentials: orchestron_rfs__device__initial_credentials
+    approval_required: bool
     mock: orchestron_rfs__device__mock
     debug: orchestron_rfs__device__debug
 
-    mut def __init__(self, name: str, credentials: orchestron_rfs__device__credentials, description: ?str, type: ?str, address: list[orchestron_rfs__device__address_entry]=[], initial_credentials: list[orchestron_rfs__device__initial_credentials_entry]=[], mock: ?orchestron_rfs__device__mock=None, debug: ?orchestron_rfs__device__debug=None):
+    mut def __init__(self, name: str, credentials: orchestron_rfs__device__credentials, description: ?str, type: ?str, address: list[orchestron_rfs__device__address_entry]=[], initial_credentials: list[orchestron_rfs__device__initial_credentials_entry]=[], approval_required: ?bool=None, mock: ?orchestron_rfs__device__mock=None, debug: ?orchestron_rfs__device__debug=None):
         self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
         self.name = name
         self.description = description
@@ -1243,6 +1251,7 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         self.address = orchestron_rfs__device__address(elements=address)
         self.credentials = credentials
         self.initial_credentials = orchestron_rfs__device__initial_credentials(elements=initial_credentials)
+        self.approval_required = approval_required if approval_required is not None else False
         self.mock = mock if mock is not None else orchestron_rfs__device__mock()
         self.debug = debug if debug is not None else orchestron_rfs__device__debug()
 
@@ -1266,6 +1275,9 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         _initial_credentials = self.initial_credentials
         if _initial_credentials is not None:
             children['initial-credentials'] = _initial_credentials.to_gdata()
+        _approval_required = self.approval_required
+        if _approval_required is not None:
+            children['approval-required'] = yang.gdata.Leaf('boolean', _approval_required)
         _mock = self.mock
         if _mock is not None:
             children['mock'] = _mock.to_gdata()
@@ -1276,7 +1288,7 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device_entry:
-        return orchestron_rfs__device_entry(name=n.get_str('name'), description=n.get_opt_str('description'), type=n.get_opt_str('type'), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list('address')), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_cnt('credentials')), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_cnt('mock')), debug=orchestron_rfs__device__debug.from_gdata(n.get_opt_cnt('debug')))
+        return orchestron_rfs__device_entry(name=n.get_str('name'), description=n.get_opt_str('description'), type=n.get_opt_str('type'), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list('address')), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_cnt('credentials')), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')), approval_required=n.get_opt_bool('approval-required'), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_cnt('mock')), debug=orchestron_rfs__device__debug.from_gdata(n.get_opt_cnt('debug')))
 
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
@@ -1311,6 +1323,9 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
             list_elem = 'initial_credentials_element = {self_name}.initial_credentials.create({repr(_element.username)}, {repr(_element.password)}, {repr(_element.key)})'
             res.append(list_elem)
             res.extend(_element.prsrc('initial_credentials_element', False, list_element=True).splitlines())
+        _approval_required = self.approval_required
+        if _approval_required is not None:
+            leaves.append('{self_name}.approval_required = {repr(_approval_required)}')
         _mock = self.mock
         if _mock is not None:
             res.extend(_mock.prsrc('{self_name}.mock', False).splitlines())
