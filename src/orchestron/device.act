@@ -209,6 +209,12 @@ def truncate_conf(conf: ?yang.gdata.Node) -> str:
         return sc
     return r"{}"
 
+class ConfigItem():
+    def __init__(self, tid: str, conf: yang.gdata.Node, modset_id: ?str):
+        self.tid = tid
+        self.conf = conf
+        self.modset_id = modset_id
+
 actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None):
     """Device Manager manages a device and represents that device, as an
     abstract device, in the system. Platform specific handling is implemented in
@@ -224,11 +230,10 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     the wait_complete(tid). The device configuration interaction is serial,
     which means that we are either idling or have configuration in-transit to
     the device. If new configuration is received from TTT while we have
-    configuration in-transit to the device, the new configuration is queued up
-    and the associated transactions added to pending_txids. Once acknowledgement
-    is received from the device, and thus the in-transit commit has concluded,
-    the pending transactions, represented by target_conf, can be pushed to the
-    device.
+    configuration in-transit to the device, the new configuration and their
+    associated tid is queued up in confq. Once acknowledgement is received from
+    the device, and thus the in-transit commit has concluded, the pending
+    configurations in confq, can be pushed to the device.
 
     The device interaction is entirely asynchronous.
     """
@@ -255,15 +260,17 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     var modset: dict[str, ModCap] = {}
     var modset_id: ?str = None
 
+
+    # New configuration received from the transaction engine via the
+    # DeviceMgr.configure() method are stored in a configuration queue, which
+    # uses ConfigItem to track the configuration including the associated tid
+    # and modset_id. Any new configuration is appended and we consume the queue
+    # when sending configuration to the device.
+    var confq: dict[str, ConfigItem] = {}
     # current_txids are the ids of the transactions that are currently
     # in-transit, which also means that we can determine if we have an
     # outstanding transaction by checking len(current_txids) > 0.
     var current_txids = set()
-    # pending_txids are the ids of the transactions that are pending, which
-    # means these transactions arrived while we already had configuration
-    # in-transit to the device. When len(pending_txids) > 0, we need to
-    # send the latest configuration after the current transaction is done.
-    var pending_txids = set()
     var reconf_txids = set()
     # Note how target_conf always only reflects the very latest configuration
     # that we received from the TTT transaction engine. When the device is ready
@@ -359,7 +366,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
                     # TODO: uh, what else? we need to bubble up this sort of error state to an operator somehow
 
-                    if len(pending_txids) > len(current_txids):
+                    if len(confq) > len(current_txids):
                         _log.debug("New intended configuration available, retrying with latest config")
                         current_txids = set()
                         _send_config()
@@ -373,7 +380,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         _log.debug("DeviceAdapter busy, ignoring this error as adapter will trigger us once it is done with current operation")
                         return
 
-                    if len(pending_txids) > len(current_txids):
+                    if len(confq) > len(current_txids):
                         _log.debug("New intended configuration available, retrying with latest config")
                         current_txids = set()
                         _send_config()
@@ -405,10 +412,10 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                     if cb is not None:
                         cb(True)
                         del callbacks[tid]
-                    pending_txids.discard(tid)
                     reconf_txids.discard(tid)
+                    del confq[tid]
                 current_txids = set()
-                if len(pending_txids) > 0:
+                if len(confq) > 0:
                     _log.debug("Configuration changed during in-progress transaction, running again...")
                     _send_config()
 
@@ -416,6 +423,9 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         if len(current_txids) > 0:
             _log.debug("DeviceMgr._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
             return
+
+        for id, ci in confq.items():
+            target_conf = ci.conf
 
         # Check if there is an actual diff right now
         if running_conf is not None and target_conf is not None:
@@ -427,18 +437,18 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         _log.info("Reconciliation loop detected, target diff is same as last diff sent, stopping", {"diff": config_diff})
                         return
                 # Actually send the configuration
-                current_txids.update(pending_txids)
+                current_txids.update(confq.keys())
                 current_txids.update(reconf_txids)
                 _log.debug("DeviceMgr._send_config: sending intended target configuration", {"txids": current_txids, "diff": config_diff})
                 adapter.configure(lambda e, c: on_configured(e, c, config_diff, target_conf, running_conf), config_diff, target_conf, running_conf)
             else:
-                _log.debug("DeviceMgr.configure: no diff between running and target config, nothing to do", {"txids": pending_txids})
-                for tid in pending_txids:
+                _log.debug("DeviceMgr.configure: no diff between running and target config, nothing to do", {"pending_tids": confq.keys()})
+                for tid in confq.keys():
                     cb = callbacks.get(tid)
                     if cb is not None:
                         cb(True)
                         del callbacks[tid]
-                pending_txids = set()
+                confq = {}
         else:
             if running_conf is None:
                 _log.debug("No running config, cannot compute diff")
@@ -451,8 +461,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                 _log.debug("DeviceMgr.configure: modset_id mismatch, ignoring configuration", {"conf_modset_id": str(conf_modset_id), "modset_id": str(modset_id)})
                 return
             _log.debug("DeviceMgr.configure: received new intended configuration", {"tid": tid, "new_conf": truncate_conf(new_conf)})
-            pending_txids.add(tid)
-            target_conf = new_conf
+            confq[tid] = ConfigItem(tid, new_conf, modset_id)
             _send_config()
         elif new_conf is None and conf_modset_id is None:
             _log.debug("DeviceMgr.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
@@ -505,8 +514,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         _log.debug("DeviceMgr.resync: starting resync", {"local_device_txid": running_conf.txid if running_conf is not None else None})
         adapter.fetch_config(on_fetch_config_done)
 
-    def wait_complete(tid: str, done: action(value)->None):
-        if tid not in current_txids | pending_txids | reconf_txids:
+    def wait_complete(tid: str, done: action(value) -> None):
+        if tid not in current_txids | set(confq.keys()) | reconf_txids:
             _log.debug("DeviceMgr.wait_complete: transaction id not found, calling done", {"tid": tid})
             done(True) # Assume tid is very old and has already completed, thus respond immediately
         else:
