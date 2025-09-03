@@ -275,20 +275,20 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     # i.e. target_conf.
     var target_conf: ?yang.gdata.Node = None
 
-    # current_txids are the ids of the transactions that are currently
+    # current_tids are the ids of the transactions that are currently
     # in-transit, which also means that we can determine if we have an
-    # outstanding transaction by checking len(current_txids) > 0.
-    var current_txids = set()
+    # outstanding transaction by checking len(current_tids) > 0.
+    var current_tids = set()
     # reconf is a special kind of operation, where an initial transaction
     # intends to configure devices but those devices have no known modset and
     # thus the RFS transforms cannot produce device configuration. It is still
     # valid to await completion of such a transaction and the intent means "we
     # want to await that the RFS transform intended (future) output has reached
     # the device". Those transactions register for the future reconf and we keep
-    # track of those in reconf_txids. The next successfuly sent configuration to
-    # the device will call the reconf_txids on completion so they in turn can
+    # track of those in reconf_tids. The next successfuly sent configuration to
+    # the device will call the reconf_tids on completion so they in turn can
     # notify their clients that the configuration now has reached the devices.
-    var reconf_txids = set()
+    var reconf_tids = set()
 
 
     # The last successfully sent diff. We use this to detect and break infinite
@@ -352,8 +352,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         configure method with the current target configuration.
         """
         # Check if we already have a transaction in progress
-        if len(current_txids) > 0:
-            _log.debug("DeviceMgr._send_config: there is currently an outstanding configuration, skipping", {"txids": current_txids})
+        if len(current_tids) > 0:
+            _log.debug("DeviceMgr._send_config: there is currently an outstanding configuration, skipping", {"current_tids": current_tids})
             return
 
         last_confq = None
@@ -370,7 +370,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
             if error is not None:
                 if isinstance(error, NotConnectedError):
                     _log.debug("Device not connected, no need to retry - waiting for reconnect")
-                    current_txids = set()
+                    current_tids = set()
 
                 elif isinstance(error, PermanentError):
                     _log.debug("Permanent error pushing configuration to device", {"error": error})
@@ -378,7 +378,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         _log.debug("Configuration failed due to bad config", {"error": error})
 
                     # Got a permanent error, giving up
-                    for tid in current_txids:
+                    for tid in current_tids:
                         cb = callbacks.get(tid)
                         if cb is not None:
                             cb(error)
@@ -386,13 +386,13 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
                     # TODO: uh, what else? we need to bubble up this sort of error state to an operator somehow
 
-                    if len(confq) > len(current_txids):
+                    if len(confq) > len(current_tids):
                         _log.debug("New intended configuration available, retrying with latest config")
-                        current_txids = set()
+                        current_tids = set()
                         _send_config()
                     else:
                         _log.debug("No new intended configuration available, no point in retrying with same conf")
-                        current_txids = set()
+                        current_tids = set()
 
                 elif isinstance(error, TransientError):
                     _log.debug("Transient error", {"error": error})
@@ -400,42 +400,42 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         _log.debug("DeviceAdapter busy, ignoring this error as adapter will trigger us once it is done with current operation")
                         return
 
-                    if len(confq) > len(current_txids):
+                    if len(confq) > len(current_tids):
                         _log.debug("New intended configuration available, retrying with latest config")
-                        current_txids = set()
+                        current_tids = set()
                         _send_config()
                     else:
                         retry_in = 1
                         _log.debug("No new intended configuration available. Scheduling retry of current config", {"retry_in": retry_in})
-                        current_txids = set()
+                        current_tids = set()
                         after retry_in: _send_config()
 
                 else:
                     _log.debug("Unhandled error", {"error": error})
                     # Uh, this is indicative of programmer error and we should fix it, but let's do naive retry as well
-                    current_txids = set()
+                    current_tids = set()
                     after 1: _send_config()
 
             else:
-                _log.debug("Configuration successfully applied on device, calling callbacks...", {"txids": current_txids})
+                _log.debug("Configuration successfully applied on device, calling callbacks...", {"current_tids": current_tids})
                 target_conf = send_conf
-                # Update running_conf with the result from the device (which has the new txid)
+                # Update running_conf with the result from the device (which has the new devicetxid)
                 if resulting_config is not None:
-                    _log.debug("Updating running_conf with new txid", {"txid": resulting_config.txid})
+                    _log.debug("Updating running_conf with new device txid", {"device_txid": resulting_config.txid})
                     running_conf = resulting_config
                 else:
                     _log.warning("No resulting_config returned from adapter, using target_conf")
                     running_conf = target_conf
 
                 last_sent_diff = new_diff
-                for tid in current_txids:
+                for tid in current_tids:
                     cb = callbacks.get(tid)
                     if cb is not None:
                         cb(True)
                         del callbacks[tid]
-                    reconf_txids.discard(tid)
+                    reconf_tids.discard(tid)
                     del confq[tid]
-                current_txids = set()
+                current_tids = set()
                 if len(confq) > 0:
                     _log.debug("Configuration changed during in-progress transaction, running again...")
                     _send_config()
@@ -450,9 +450,9 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         _log.info("Reconciliation loop detected, target diff is same as last diff sent, stopping", {"diff": config_diff})
                         return
                 # Actually send the configuration
-                current_txids.update(confq.keys())
-                current_txids.update(reconf_txids)
-                _log.debug("DeviceMgr._send_config: sending intended target configuration", {"txids": current_txids, "diff": config_diff})
+                current_tids.update(confq.keys())
+                current_tids.update(reconf_tids)
+                _log.debug("DeviceMgr._send_config: sending intended target configuration", {"current_tids": current_tids, "diff": config_diff})
                 adapter.configure(lambda e, c: on_configured(e, c, config_diff, send_conf, running_conf), config_diff, send_conf, running_conf)
             else:
                 _log.debug("DeviceMgr.configure: no diff between running and target config, nothing to do", {"pending_tids": confq.keys()})
@@ -478,7 +478,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
             _send_config()
         elif new_conf is None and conf_modset_id is None:
             _log.debug("DeviceMgr.configure: transaction registered intent to configure but awaiting reconf", {"tid": tid})
-            reconf_txids.add(tid)
+            reconf_tids.add(tid)
         else:
             _log.debug("DeviceMgr.configure: invalid input", {"conf_modset_id": str(conf_modset_id), "new_conf": truncate_conf(new_conf), "tid": tid})
 
@@ -528,7 +528,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         adapter.fetch_config(on_fetch_config_done)
 
     def wait_complete(tid: str, done: action(value) -> None):
-        if tid not in current_txids | set(confq.keys()) | reconf_txids:
+        if tid not in current_tids | set(confq.keys()) | reconf_tids:
             _log.debug("DeviceMgr.wait_complete: transaction id not found, calling done", {"tid": tid})
             done(True) # Assume tid is very old and has already completed, thus respond immediately
         else:
@@ -576,7 +576,7 @@ class DeviceAdapter(object):
     ## :param done: callback to call when the configuration is done
     ## :param new_diff: the diff to apply (computed by DeviceMgr)
     ## :param new_conf: the new configuration to apply
-    ## :param running_conf: the current running configuration (with txid)
+    ## :param running_conf: the current running configuration (with device txid)
     configure: proc(done: action(?Exception, ?yang.gdata.Node) -> None, new_diff: yang.gdata.Node, new_conf: yang.gdata.Node, running_conf: ?yang.gdata.Node) -> None
 
     get_capabilities: proc() -> list[str]
