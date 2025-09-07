@@ -665,8 +665,18 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                         sync_diff = gdata_diff(running_conf, new_conf)
                         conf_log.append(LogItem("Fetched configuration from device", sync_diff, None))
                         running_conf = new_conf
-                        _log.debug("DeviceMgr._on_update_config: got new running config, reconfiguring device", {"new_txid": new_txid})
-                        _send_config()
+
+                        if dmc.approval_required and target_conf is not None:
+                            _log.debug("DeviceMgr.wait_complete: device requires approval, adding new config item to queue")
+                            conf_item = ConfigItem("resync", target_conf, modset_id)
+                            new_confq = {conf_item.tid: conf_item}
+                            for d, c in confq.items():
+                                new_confq[d] = c
+                            confq = new_confq
+                            _update_approval_state()
+                        else:
+                            _log.debug("DeviceMgr._on_update_config: got new running config, reconfiguring device", {"new_txid": new_txid})
+                            _send_config()
                     else:
                         _log.debug("DeviceMgr._on_update_config: got same config but with differing txid", {"new_txid": new_txid, "old_txid": running_conf_txid})
 
