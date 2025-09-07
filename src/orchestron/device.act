@@ -343,6 +343,22 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     var needs_approval = False
     var conf_log: list[LogItem] = []
 
+    def get_state():
+        """Get the device state information"""
+        has_running = False
+        has_target = False
+        if running_conf is not None:
+            has_running = True
+        if target_conf is not None:
+            has_target = True
+
+        return (
+            has_running_config=has_running,
+            has_target_config=has_target,
+            queue_length=len(confq),
+            pending_approvals=len(get_pending_approvals())
+        )
+
     def _update_approval_state():
         if not dmc.approval_required:
             if needs_approval:
@@ -375,6 +391,15 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
             if rc_txid is not None:
                 return rc_txid
         return ""
+
+    def get_dmc():
+        return dmc
+
+    def get_running_conf():
+        return running_conf
+
+    def get_target_conf():
+        return target_conf
 
     def on_modset_update(new_modset: dict[str, ModCap]):
         _log.debug("Modset updated", {"new_modset": new_modset})
