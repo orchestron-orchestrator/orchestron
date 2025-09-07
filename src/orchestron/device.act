@@ -3,6 +3,7 @@ import hash.wyhash as wyhash
 import json
 import logging
 import testing
+import time
 import xml
 
 import yang
@@ -245,6 +246,12 @@ class ConfigItem(object):
         self.modset_id = modset_id
         self.approved = None
 
+class LogItem():
+    def __init__(self, event: str, conf_diff: ?yang.gdata.Node, modset_id: ?str):
+        self.ts = time.now()
+        self.event = event
+        self.conf_diff = conf_diff
+
 actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None, registry: ?DeviceRegistry=None):
     """Device Manager manages a device and represents that device, as an
     abstract device, in the system. Platform specific handling is implemented in
@@ -334,6 +341,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     # When we transition this we also register and / unregister with
     # DeviceRegistry through _update_approval_state()
     var needs_approval = False
+    var conf_log: list[LogItem] = []
 
     def _update_approval_state():
         if not dmc.approval_required:
@@ -549,6 +557,10 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                 # device's running to this new resulting config.
                 running_conf = resulting_config
 
+                conf_log.append(LogItem("sent", new_diff, None))
+                for _ in range(max([0, len(conf_log)-20])):
+                    del conf_log[0]
+
                 last_sent_diff = new_diff
                 for tid in current_tids:
                     cb = callbacks.get(tid)
@@ -644,6 +656,14 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
                 if txid_updated:
                     if running_conf != new_conf:
+                        # TODO: yang.gdata.diff doesn't handle None as first argument, it trivially could & should
+                        def gdata_diff(a: ?yang.gdata.Node, b: yang.gdata.Node) -> ?yang.gdata.Node:
+                            if a is not None:
+                                return yang.gdata.diff(a, b)
+                            else:
+                                return b
+                        sync_diff = gdata_diff(running_conf, new_conf)
+                        conf_log.append(LogItem("Fetched configuration from device", sync_diff, None))
                         running_conf = new_conf
                         _log.debug("DeviceMgr._on_update_config: got new running config, reconfiguring device", {"new_txid": new_txid})
                         _send_config()
@@ -752,6 +772,9 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         if dmc.approval_required:
             return confq
         return {}
+
+    def get_conf_log():
+        return conf_log
 
 
 
