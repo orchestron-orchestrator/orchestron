@@ -131,11 +131,16 @@ def src_yang():
         }
       }
     }
+
     container debug {
       leaf connection {
         type boolean;
         default "false";
       }
+    }
+
+    container state {
+      config false;
     }
   }
 
