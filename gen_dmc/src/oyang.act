@@ -86,6 +86,12 @@ rfs = r"""module orchestron-rfs {
       }
     }
 
+    leaf approval-required {
+      description "Require approval of each individual configuration change to this device";
+      type boolean;
+      default "false";
+    }
+
     container mock {
       leaf-list preset {
         type enumeration {
@@ -110,11 +116,16 @@ rfs = r"""module orchestron-rfs {
         }
       }
     }
+
     container debug {
       leaf connection {
         type boolean;
         default "false";
       }
+    }
+
+    container state {
+      config false;
     }
   }
 
