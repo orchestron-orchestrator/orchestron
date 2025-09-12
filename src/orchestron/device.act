@@ -681,13 +681,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
                 if txid_updated:
                     if running_conf != new_conf:
-                        # TODO: yang.gdata.diff doesn't handle None as first argument, it trivially could & should
-                        def gdata_diff(a: ?yang.gdata.Node, b: yang.gdata.Node) -> ?yang.gdata.Node:
-                            if a is not None:
-                                return yang.gdata.diff(a, b)
-                            else:
-                                return b
-                        sync_diff = gdata_diff(running_conf, new_conf)
+                        sync_diff = yang.gdata.diff(running_conf, new_conf)
                         conf_log.append(LogItem("Fetched configuration from device", sync_diff, None))
                         running_conf = new_conf
 
