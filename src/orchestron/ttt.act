@@ -764,7 +764,8 @@ class _TransformTransactionBase(_Transaction):
         self.output = None
         self.locker = None
         self.pending = []
-        self.me = '(src_' + str(self)[-10:-1] + ')'
+        self.me = ''  # Initialize first before any self reference
+        self.me = '(src_' + str(self)[-10:-1] + ')'  # Now safe to use str(self)
 
     def configure(self, tid, diff, out: ?Session, force=False):
         #print('####', tid, '(Transform)', self.path, 'configure', actorid(), self.me, err=True)
@@ -906,6 +907,9 @@ class _TransformTransaction(_TransformTransactionBase):
     lower: ?Layer
 
     def __init__(self, path, function: proc(?logging.Handler) -> TransformFunction, lower: ?Layer, log_handler):
+        self.memory = None
+        self.dynstate = None
+        self.node = None
         _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
         self.lower = lower
@@ -1002,6 +1006,10 @@ class _RFSTransaction(_TransformTransactionBase):
     lower: ?Layer
 
     def __init__(self, path, function: proc(?logging.Handler) -> RFSFunction, dev_registry: odev.DeviceRegistry, lower: ?Layer, log_handler):
+        self.memory = None
+        self.dynstate = None
+        self.node = None
+        self.devname = ""  # Initialize before parent init
         _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
         if len(path) < 3:
