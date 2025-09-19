@@ -2,7 +2,14 @@ import yang.adata
 import yang.gdata as gdata
 import orchestron.device as odev
 from orchestron.device_meta_config import orchestron_rfs__device_entry as DeviceMetaConfig
-import xml, logging
+import xml, logging, lmdb
+
+#### placeholders ##############################
+def to_db_key(path: list[str]) -> bytes:
+    return b""
+def to_db_value(cfg_per_src: dict[str, gdata.Node]) -> bytes:
+    return b""
+################################################
 
 def per_src(cfg_per_src: dict[str, gdata.Node]):
     return "\n".join([f"        '{src}': {cfg.prsrc(True, 4, src)}" for src,cfg in cfg_per_src.items()])
@@ -99,13 +106,6 @@ def expect[T](t: ?T, errmsg: str) -> T:
         return t
     raise ValueError(errmsg)
 
-##################### Database stub ###########################
-
-actor Db():
-    def put(path: list[str], data: dict[str,gdata.Node]):
-        # Empty data means delete
-        pass
-
 ##################### Node & Transactions #####################
 
 class YieldState(object):
@@ -150,8 +150,8 @@ actor Transaction(impl: _Transaction):
     def lock_cont(res):
         impl.lock_cont(self, res)
 
-    def commit(tid, ok, db):
-        impl.commit(tid, ok, db)
+    def commit(tid, ok, dbtr):
+        impl.commit(tid, ok, dbtr)
 
     def wait_complete(tid, done):
         impl.wait_complete(self, tid, done)
@@ -174,7 +174,7 @@ class _Transaction(object):
     # yield action
     lock : proc(actself: Transaction, tid: str, out: ?Session, done: action(value) -> None) -> None
     lock_cont : proc(actself: Transaction, res: value) -> None
-    commit: proc(tid: str, ok: bool, db: ?Db) -> None
+    commit: proc(tid: str, ok: bool, dbtr: ?lmdb.WriteTransaction) -> None
     wait_complete: proc(actself: Transaction, tid: str, done: action(value) -> None) -> None
     wait_complete_cont : proc(actself: Transaction, res: value) -> None
     get: proc() -> gdata.Node
@@ -187,7 +187,7 @@ class _Transaction(object):
 
 ####################### Layer ########################
 
-actor Layer(name: str, rootgen: proc(list[str], ?Layer)->Node, lower: ?Layer, db: ?Db):
+actor Layer(name: str, rootgen: proc(list[str], ?Layer)->Node, lower: ?Layer, db: ?lmdb.Db):
     root = rootgen([f"({name})"], lower)
 
     def newsession():
@@ -203,7 +203,7 @@ actor Layer(name: str, rootgen: proc(list[str], ?Layer)->Node, lower: ?Layer, db
         return root.get()
 
 
-actor Session(name: str, rootnode: Node, lowerlayer: ?Layer, db: ?Db):
+actor Session(name: str, rootnode: Node, lowerlayer: ?Layer, db: ?lmdb.Db):
     root: Transaction = rootnode.newtrans()
     lower: ?Session = lowerlayer.newsession() if lowerlayer is not None else None
     
@@ -233,7 +233,11 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer, db: ?Db):
     def edit_config_cont(res):
         #print('####', tid_state, '(Layer)', name, 'edit_config_cont', err=True)
         if tid_state is not None:
-            commit(tid_state, isinstance(res, str) and res == 'Ok', db)
+            ok = isinstance(res, str) and res == 'Ok'
+            dbtr = db.begin_write() if ok and db is not None else None
+            commit(tid_state, ok, dbtr)
+            if dbtr is not None:
+                dbtr.commit()
             if done_cont is not None:
                 #print('   #', tid_state, '(Layer)', name, 'EDIT_CONFIG DONE', res, err=True)
                 done_cont(res)
@@ -305,11 +309,11 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer, db: ?Db):
             lock_cont(rr)
         lock_cont = None
 
-    def commit(tid, ok, db):
+    def commit(tid, ok, dbtr):
         #print('####', tid, '(Layer)', name, 'commit', ok, err=True)
-        await async root.commit(tid, ok, db)
+        await async root.commit(tid, ok, dbtr)
         if lower is not None:
-            await async lower.commit(tid, ok, db)
+            await async lower.commit(tid, ok, dbtr)
 
     def wait_complete(done:action(value)->None):
         #print('####', tid_state, '(Layer)', name, 'wait_complete', err=True)
@@ -448,12 +452,12 @@ class _ContainerTransaction(_Transaction):
             #print('#### ...... (Container)', self.path, 'lock_cont empty state!!!', err=True)
             pass
 
-    proc def commit(self, tid, ok, db):
+    proc def commit(self, tid, ok, dbtr):
         #print('####', tid, '(Container)', self.path, 'commit', ok, err=True)
         msgs = []
         for child in self.accum.keys():
             #print('   #', tid, '(Container)', self.path, 'COMMIT CHILD', child, err=True)
-            msgs.append( async self.elems[child].commit(tid, ok, db) )
+            msgs.append( async self.elems[child].commit(tid, ok, dbtr) )
         for msg in msgs:
             await msg
         #print('   #', tid, '(Container)', self.path, 'COMMIT DONE', err=True)
@@ -674,12 +678,12 @@ class _ListTransaction(_Transaction):
             pass
             #print('#### ...... (List)', self.path, 'lock_cont empty state!!!', err=True)
 
-    def commit(self, tid, ok, db):
+    def commit(self, tid, ok, dbtr):
         #print('####', tid, '(List)', self.path, 'commit', ok, err=True)
         msgs = []
         for key,tr in self.elems.items():
             #print('   #', tid, '(List)', self.path, 'COMMIT ELEMENT', key, err=True)
-            msgs.append( async tr.commit(tid, ok, db) )
+            msgs.append( async tr.commit(tid, ok, dbtr) )
         for msg in msgs:
             await msg
         deletes = set()
@@ -843,7 +847,7 @@ class _TransformTransactionBase(_Transaction):
     def lock_cont (self, actself, res):
         pass
 
-    def commit(self, tid, ok, db):
+    def commit(self, tid, ok, dbtr):
         #print('####', tid, '(Transform)', self.path, 'commit', ok, err=True)
         self.diffs.pop(tid)
         candidate = self.candidates.pop_def(tid, {})
@@ -858,8 +862,8 @@ class _TransformTransactionBase(_Transaction):
                     #print('   #', tid, '(Transform)', self.path, 'INVALIDATING', set(self.candidates.keys()), err=True)
                     self.candidates = {}
                 self.finalize(tid)
-                if db is not None:
-                    db.put(self.path, self.running)
+                if dbtr is not None:
+                    dbtr.put(to_db_key(self.path), to_db_value(self.running))
             else:
                 #print('   #', tid, '(Transform)', self.path, 'ABORTING', err=True)
                 pass
