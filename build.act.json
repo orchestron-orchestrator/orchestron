@@ -1,5 +1,10 @@
 {
     "dependencies": {
+        "acton_lmdb": {
+            "repo_url": "https://github.com/orchestron-orchestrator/acton-lmdb.git",
+            "url": "https://github.com/orchestron-orchestrator/acton-lmdb/archive/1b798d4b9340ea06e0dc11825a0316f4da348532.zip",
+            "hash": "1220aff33e0a6109f830c2d5a77528b3d6b147394caaf375594157459f1b05270e0e"
+        },
         "netconf": {
             "repo_url": "https://github.com/orchestron-orchestrator/netconf.git",
             "url": "https://github.com/orchestron-orchestrator/netconf/archive/ec9358d5629e102dd3a9161713c0ab360d3df188.zip",
