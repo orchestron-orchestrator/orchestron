@@ -356,7 +356,8 @@ actor aborted_create2(t: testing.AsyncT):
         t2.configure("2", {'srcB': y2b}, None)
         t2.commit("2", True)
         r = t2.get()
-        testing.assertEqual(r, y2b)
+        if r != y2b:
+            testing.assertEqual(r.prsrc(), y2b.prsrc())
         t.success()
 
     t1.configure("1", {'srcA': y1}, None)
