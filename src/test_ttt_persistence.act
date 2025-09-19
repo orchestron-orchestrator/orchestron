@@ -1,0 +1,982 @@
+import testing
+import file
+import json
+
+import lmdb
+import orchestron.db as odb
+import orchestron.ttt as ttt
+import yang.gdata as gdata
+
+
+TEST_NS = "urn:test:persistence"
+SHIFT_NS_A = "urn:test:persistence:shift:a"
+SHIFT_NS_B = "urn:test:persistence:shift:b"
+SHIFT_NS_C = "urn:test:persistence:shift:c"
+REMOVED_NS_OLD = "urn:test:persistence:removed:old"
+REMOVED_NS_LIVE = "urn:test:persistence:removed:live"
+
+def q(n: str) -> gdata.Id:
+    return gdata.Id(TEST_NS, n)
+
+def qa_shift(n: str) -> gdata.Id:
+    return gdata.Id(SHIFT_NS_A, n)
+
+def qb_shift(n: str) -> gdata.Id:
+    return gdata.Id(SHIFT_NS_B, n)
+
+def qc_shift(n: str) -> gdata.Id:
+    return gdata.Id(SHIFT_NS_C, n)
+
+def qold_removed(n: str) -> gdata.Id:
+    return gdata.Id(REMOVED_NS_OLD, n)
+
+def qlive_removed(n: str) -> gdata.Id:
+    return gdata.Id(REMOVED_NS_LIVE, n)
+
+def expect[T](t: ?T, errmsg: str) -> T:
+    if t is not None:
+        return t
+    raise ValueError(errmsg)
+
+def is_ttt_db_key(key: bytes) -> bool:
+    return key == odb.META_KEY or key.startswith(odb.META_KEY + odb.PATH_SEPARATOR)
+
+def ttt_db_snapshot(read_txn: lmdb.ReadTransaction) -> str:
+    codec = odb.read_key_codec(read_txn)
+    cursor = read_txn.cursor()
+    lines = []
+    kv = cursor.seek_prefix(b"ttt")
+    while kv is not None:
+        entry = expect(kv, "Missing expected LMDB cursor entry")
+        if not is_ttt_db_key(entry.key):
+            break
+        lines.append(odb.format_key_debug(entry.key, codec))
+        lines.append(entry.value.decode())
+        kv = cursor.next()
+    return "\n\n".join(lines) + "\n"
+
+
+persist_cfg = gdata.Container({
+    q("value"): gdata.Leaf(42)
+})
+
+persist_cfg_updated = gdata.Container({
+    q("value"): gdata.Leaf(84)
+})
+
+foo_cfg = gdata.Container({
+    q("value"): gdata.Leaf(101)
+})
+
+foobar_cfg = gdata.Container({
+    q("value"): gdata.Leaf(202)
+})
+
+struct_tree = gdata.Container({
+    q("items"): gdata.List([q("name")], [
+        gdata.Container({
+            q("name"): gdata.Leaf("a"),
+            q("value"): gdata.Leaf(1)
+        }),
+        gdata.Container({
+            q("name"): gdata.Leaf("b"),
+            q("value"): gdata.Leaf(2)
+        })
+    ])
+})
+
+struct_tree_updated = gdata.Container({
+    q("items"): gdata.List([q("name")], [
+        gdata.Container({
+            q("name"): gdata.Leaf("a"),
+            q("value"): gdata.Leaf(10)
+        }),
+        gdata.Container({
+            q("name"): gdata.Leaf("b"),
+            q("value"): gdata.Leaf(2)
+        }),
+        gdata.Container({
+            q("name"): gdata.Leaf("c"),
+            q("value"): gdata.Leaf(3)
+        })
+    ])
+})
+
+empty_struct_tree = gdata.Container({
+    q("items"): gdata.List([q("name")], [])
+})
+
+deleted_struct_tree = gdata.Container({
+    q("items"): gdata.Absent()
+})
+
+overlap_base_cfg = gdata.Container({
+    q("value"): gdata.Leaf(1)
+})
+
+overlap_t1_diff = gdata.Container({
+    q("value"): gdata.Leaf(2)
+})
+
+overlap_t2_diff = gdata.Container({
+    q("extra"): gdata.Leaf(7)
+})
+
+overlap_expected_cfg = gdata.Container({
+    q("value"): gdata.Leaf(2),
+    q("extra"): gdata.Leaf(7)
+})
+
+oversized_list_key = "k" * 600
+
+oversized_struct_tree = gdata.Container({
+    q("items"): gdata.List([q("name")], [
+        gdata.Container({
+            q("name"): gdata.Leaf(oversized_list_key),
+            q("value"): gdata.Leaf(1)
+        })
+    ])
+})
+
+struct_root = ttt.Container({
+    q("items"): ttt.List(
+        ttt.Container({
+            q("value"): ttt.Transform(ttt.PassThrough)
+        }),
+        [q("name")]
+    )
+})
+
+struct_keys_tree = gdata.Container({
+    q("items"): gdata.List([q("name")], [
+        gdata.Container({
+            q("name"): gdata.Leaf("a")
+        }),
+        gdata.Container({
+            q("name"): gdata.Leaf("b")
+        })
+    ])
+})
+
+struct_keys_root = ttt.Container({
+    q("items"): ttt.List(
+        ttt.Container({}),
+        [q("name")]
+    )
+})
+
+struct_delete_tree = gdata.Container({
+    q("items"): gdata.List([q("name")], [
+        gdata.Container({
+            q("name"): gdata.Leaf("a"),
+            q("value"): gdata.Container({
+                q("wrapped"): gdata.Leaf(1)
+            })
+        }),
+        gdata.Container({
+            q("name"): gdata.Leaf("b"),
+            q("value"): gdata.Container({
+                q("wrapped"): gdata.Leaf(2)
+            })
+        })
+    ])
+})
+
+memory_cfg = gdata.Leaf(42)
+memory_cfg_updated = gdata.Leaf(0)
+stateful_cfg = gdata.Leaf(39)
+stateful_cfg_updated = gdata.Leaf(50)
+db_escape_char = chr(28)
+db_qualifier_char = chr(29)
+db_attribute_char = chr(30)
+db_path_char = chr(31)
+escaped_layer_name = "struct" + db_path_char + "layer"
+escaped_list_key = "a" + db_path_char + "b" + db_attribute_char + "c" + db_qualifier_char + "d" + db_escape_char + "e"
+escaped_attr = "running" + db_path_char + db_attribute_char + db_qualifier_char + db_escape_char
+escaped_src = "src" + db_path_char + db_attribute_char + db_qualifier_char + db_escape_char + "tail"
+
+escaped_struct_tree = gdata.Container({
+    q("items"): gdata.List([q("name")], [
+        gdata.Container({
+            q("name"): gdata.Leaf(escaped_list_key),
+            q("value"): gdata.Leaf(7)
+        })
+    ])
+})
+
+escaped_struct_tree_updated = gdata.Container({
+    q("items"): gdata.List([q("name")], [
+        gdata.Container({
+            q("name"): gdata.Leaf(escaped_list_key),
+            q("value"): gdata.Leaf(8)
+        })
+    ])
+})
+
+qualified_tree = gdata.Container({
+    qa_shift("branch"): gdata.Container({
+        qb_shift("value"): gdata.Leaf(11)
+    }),
+    qb_shift("branch"): gdata.Container({
+        qa_shift("value"): gdata.Leaf(22)
+    }),
+    qc_shift("branch"): gdata.Container({
+        qa_shift("value"): gdata.Container()
+    })
+})
+
+qualified_tree_updated = gdata.Container({
+    qa_shift("branch"): gdata.Container({
+        qb_shift("value"): gdata.Leaf(11)
+    }),
+    qb_shift("branch"): gdata.Container({
+        qa_shift("value"): gdata.Leaf(33)
+    }),
+    qc_shift("branch"): gdata.Container({
+        qa_shift("value"): gdata.Leaf(44)
+    })
+})
+
+qualified_root = ttt.Container({
+    qa_shift("branch"): ttt.Container({
+        qb_shift("value"): ttt.Transform(ttt.PassThrough)
+    }),
+    qb_shift("branch"): ttt.Container({
+        qa_shift("value"): ttt.Transform(ttt.PassThrough)
+    }),
+    qc_shift("branch"): ttt.Container({
+        qa_shift("value"): ttt.Transform(ttt.PassThrough)
+    })
+})
+
+removed_live_tree = gdata.Container({
+    qlive_removed("items"): gdata.List([qlive_removed("name")], [
+        gdata.Container({
+            qlive_removed("name"): gdata.Leaf("a"),
+            qlive_removed("value"): gdata.Leaf(7)
+        })
+    ])
+})
+
+removed_live_tree_updated = gdata.Container({
+    qlive_removed("items"): gdata.List([qlive_removed("name")], [
+        gdata.Container({
+            qlive_removed("name"): gdata.Leaf("a"),
+            qlive_removed("value"): gdata.Leaf(8)
+        })
+    ])
+})
+
+removed_live_root = ttt.Container({
+    qlive_removed("items"): ttt.List(
+        ttt.Container({
+            qlive_removed("value"): ttt.Transform(ttt.PassThrough)
+        }),
+        [qlive_removed("name")]
+    )
+})
+
+
+class PersistMemoryTransform(ttt.TransformFunction):
+    def transform_wrapper(self, cfg: gdata.Node, memory: ?gdata.Node, dynstate: ?gdata.Node):
+        if memory is not None and memory == gdata.Leaf(42):
+            return (cfg, memory)
+        if cfg == gdata.Leaf(42):
+            return (cfg, gdata.Leaf(42))
+        raise AssertionError("Expected restored transform memory")
+
+
+class PersistDynstateTransform(ttt.TransformFunction):
+    def transform_wrapper(self, cfg: gdata.Node, memory: ?gdata.Node, dynstate: ?gdata.Node):
+        if dynstate is not None and dynstate == gdata.Leaf(41):
+            if memory is not None and memory == gdata.Leaf(40):
+                return (cfg, gdata.Leaf(42))
+            if memory is not None and memory == gdata.Leaf(42):
+                return (cfg, memory)
+        elif cfg == stateful_cfg:
+            return (cfg, gdata.Leaf(40))
+        raise AssertionError("Expected restored transform dynstate")
+
+
+actor db_key_codec_escapes_reserved_bytes(t: testing.AsyncT):
+    path = [escaped_layer_name, "node" + db_attribute_char + "attr", escaped_list_key]
+    key = odb.to_attr_key(path, escaped_attr, escaped_src)
+    parsed = odb.parse_attr_key(key)
+    testing.assertEqual(parsed.0, path)
+    testing.assertEqual(parsed.1, escaped_attr)
+    testing.assertEqual(expect(parsed.2, "Missing escaped qualifier"), escaped_src)
+    testing.assertEqual(key.find(odb.ESCAPE) != -1, True)
+    t.success()
+
+actor db_key_codec_round_trips_qualified_segments(t: testing.AsyncT):
+    codec = odb.KeyCodec([SHIFT_NS_B, SHIFT_NS_A])
+    path = ["qualified", qa_shift("branch"), "list-key", qb_shift("value")]
+    key = odb.to_attr_key(path, odb.ATTR_RUNNING, "_", codec)
+    parsed = odb.parse_attr_key(key, codec)
+    testing.assertEqual(parsed.0, ["qualified", odb.qualified_name(qa_shift("branch")), "list-key", odb.qualified_name(qb_shift("value"))])
+    testing.assertEqual(parsed.1, odb.ATTR_RUNNING)
+    testing.assertEqual(expect(parsed.2, "Missing expected running source"), "_")
+    t.success()
+
+actor TransformWriteFlow(t: testing.EnvT, fs: file.FS, db_path: str, db: lmdb.Db, layer: ttt.Layer):
+    def after_commit_cb(_r: value) -> None:
+        after_commit()
+        return None
+
+    def after_commit() -> None:
+        read_txn = db.begin_read()
+        snapshot = ttt_db_snapshot(read_txn)
+
+        await async read_txn.commit()
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success(snapshot)
+
+
+def write_structural_list_element(write_txn: lmdb.WriteTransaction, codec: odb.KeyCodec, layer_name: str, list_id: gdata.Id, key_id: gdata.Id, value_id: gdata.Id, element_key: str, value_node: gdata.Node) -> None:
+    element_path = [layer_name, list_id, element_key]
+    key_leaves = gdata.Container({
+        key_id: gdata.Leaf(element_key)
+    })
+    write_txn.put(odb.to_attr_key(element_path, odb.ATTR_KEYS, None, codec), key_leaves.to_json_str(pretty=False).encode())
+    write_txn.put(odb.to_attr_key(element_path + [value_id], odb.ATTR_OUTPUT, None, codec), value_node.to_json_str(pretty=False).encode())
+    write_txn.put(odb.to_attr_key(element_path + [value_id], odb.ATTR_RUNNING, "_", codec), value_node.to_json_str(pretty=False).encode())
+
+
+actor StructuralListWriteFlow(t: testing.EnvT, fs: file.FS, db_path: str, db: lmdb.Db, layer: ttt.Layer):
+    def after_commit_cb(_r: value) -> None:
+        after_commit()
+        return None
+
+    def after_commit() -> None:
+        read_txn = db.begin_read()
+        snapshot = ttt_db_snapshot(read_txn)
+
+        await async read_txn.commit()
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success(snapshot)
+
+
+actor StatefulTransformWriteFlow(t: testing.EnvT, fs: file.FS, db_path: str, db: lmdb.Db):
+    var completed = False
+
+    def after_settled() -> None:
+        if completed:
+            return
+        completed = True
+        read_txn = db.begin_read()
+        snapshot = ttt_db_snapshot(read_txn)
+
+        await async read_txn.commit()
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success(snapshot)
+
+
+actor BusyWriterWaitFlow(t: testing.EnvT, fs: file.FS, db_path: str, db: lmdb.Db, layer: ttt.Layer, held_txn: lmdb.WriteTransaction):
+    var released = False
+
+    def release_writer() -> None:
+        if released:
+            return
+        released = True
+        await async held_txn.abort()
+
+    def after_commit(r: value) -> None:
+        if not isinstance(r, ttt.CfgOk):
+            raise AssertionError("Expected successful completion after waiting for busy DB writer, got {r}")
+        testing.assertEqual(released, True)
+        testing.assertEqual(layer.get(), persist_cfg)
+        read_txn = db.begin_read()
+        testing.assertEqual(read_txn.get(odb.META_KEY) is not None, True)
+        await async read_txn.commit()
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+actor persist_transform_record(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_persist_transform_")
+    cap = file.WriteFileCap(fc)
+    db = lmdb.Db(cap, db_path)
+    layer: ttt.Layer = ttt.Layer("single", ttt.Transform(ttt.PassThrough), None, db)
+    flow = TransformWriteFlow(t, fs, db_path, db, layer)
+    layer.edit_config(persist_cfg, flow.after_commit_cb)
+
+
+actor wait_for_busy_db_writer_then_commit(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_wait_busy_writer_")
+    cap = file.WriteFileCap(fc)
+    db = lmdb.Db(cap, db_path)
+    held_txn = db.begin_write()
+    layer: ttt.Layer = ttt.Layer("single", ttt.Transform(ttt.PassThrough), None, db)
+    flow = BusyWriterWaitFlow(t, fs, db_path, db, layer, held_txn)
+    after 0.05: flow.release_writer()
+    layer.edit_config(persist_cfg, None, flow.after_commit)
+
+
+actor dbuffer_refreshes_on_lock_reconfigure(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_dbuffer_refresh_")
+    cap = file.WriteFileCap(fc)
+    db = lmdb.Db(cap, db_path)
+    node: ttt.Node = ttt.Transform(ttt.PassThrough)(ttt.Path("single:"), None)
+    tr: ttt.Transaction = node.newtrans()
+    seedbuf: odb.Buffer = odb.Buffer()
+    t1buf: odb.Buffer = odb.Buffer()
+    t2buf: odb.Buffer = odb.Buffer()
+
+    def is_cfg_ok(r: value) -> bool:
+        return isinstance(r, ttt.CfgOk)
+
+    def after_t1_lock(r: value) -> None:
+        if not is_cfg_ok(r):
+            raise AssertionError("Expected successful t1 lock after reconfigure, got {r}")
+        write_txn = db.begin_write()
+        dbtr = odb.WriteTransaction(write_txn)
+        t1buf1: odb.Buffer = t1buf
+        await async t1buf1.flush_to_db(dbtr)
+        await async write_txn.commit()
+
+        read_txn = db.begin_read()
+        running_raw = read_txn.get(odb.to_attr_key(["single"], odb.ATTR_RUNNING, "_"))
+        output_raw = read_txn.get(odb.to_attr_key(["single"], odb.ATTR_OUTPUT))
+        testing.assertEqual(expect(running_raw, "Missing buffered running record").decode(), overlap_expected_cfg.to_json_str(pretty=False))
+        testing.assertEqual(expect(output_raw, "Missing buffered output record").decode(), overlap_expected_cfg.to_json_str(pretty=False))
+        await async read_txn.commit()
+
+        tr.commit("1", True)
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    def after_t2_lock(r: value) -> None:
+        if not is_cfg_ok(r):
+            raise AssertionError("Expected successful t2 lock, got {r}")
+        tr.commit("2", True)
+        tr.lock("1", None, after_t1_lock, t1buf)
+
+    def after_seed_lock(r: value) -> None:
+        if not is_cfg_ok(r):
+            raise AssertionError("Expected successful seed lock, got {r}")
+        tr.commit("0", True)
+        r1 = tr.configure("1", {"_": overlap_t1_diff}, None, False, t1buf)
+        if not is_cfg_ok(r1):
+            raise AssertionError("Expected successful t1 configure, got {r1}")
+        r2 = tr.configure("2", {"_": overlap_t2_diff}, None, False, t2buf)
+        if not is_cfg_ok(r2):
+            raise AssertionError("Expected successful t2 configure, got {r2}")
+        tr.lock("2", None, after_t2_lock, t2buf)
+
+    r0 = tr.configure("0", {"_": overlap_base_cfg}, None, False, seedbuf)
+    if not is_cfg_ok(r0):
+        raise AssertionError("Expected successful seed configure, got {r0}")
+    tr.lock("0", None, after_seed_lock, seedbuf)
+
+
+actor persist_structural_list_snapshot(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_persist_struct_")
+    cap = file.WriteFileCap(fc)
+    db = lmdb.Db(cap, db_path)
+    layer: ttt.Layer = ttt.Layer("struct", struct_root, None, db)
+    flow = StructuralListWriteFlow(t, fs, db_path, db, layer)
+    layer.edit_config(struct_tree, flow.after_commit_cb)
+
+
+actor persist_structural_list_escaped_snapshot(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_persist_struct_escaped_")
+    cap = file.WriteFileCap(fc)
+    db = lmdb.Db(cap, db_path)
+    layer: ttt.Layer = ttt.Layer(escaped_layer_name, struct_root, None, db)
+    flow = StructuralListWriteFlow(t, fs, db_path, db, layer)
+    layer.edit_config(escaped_struct_tree, flow.after_commit_cb)
+
+
+actor persist_transform_state_snapshot(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_persist_stateful_")
+    cap = file.WriteFileCap(fc)
+    db = lmdb.Db(cap, db_path)
+    var root: ?ttt.Node = None
+    flow = StatefulTransformWriteFlow(t, fs, db_path, db)
+
+    def rootgen(path, lower):
+        root = ttt.Transform(PersistDynstateTransform)(path, lower)
+        return expect(root, "Missing captured stateful transform root")
+
+    def after_recompute(r: value) -> None:
+        if not (isinstance(r, str) and r == "Ok"):
+            raise AssertionError("Expected successful dynstate recompute for snapshot, got {r}")
+        flow.after_settled()
+
+    def after_initial_commit(r: value) -> None:
+        if not isinstance(r, ttt.CfgOk):
+            raise AssertionError("Expected successful initial stateful completion, got {r}")
+        root1 = expect(root, "Missing captured stateful transform root")
+        root1.newtrans().restore(odb.ATTR_DYNSTATE, None, gdata.Leaf(41).to_json_str(pretty=False).encode())
+        ttt.Session("persist_stateful", root1, None, db).recompute(after_recompute)
+
+    layer: ttt.Layer = ttt.Layer("stateful", rootgen, None, db)
+    layer.edit_config(stateful_cfg, None, after_initial_commit)
+
+
+actor restore_transform_round_trip(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_transform_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var restored = ttt.Layer("single", ttt.Transform(ttt.PassThrough), None, db)
+
+    def after_recommit(_r: value) -> None:
+        testing.assertEqual(restored.get(), persist_cfg_updated)
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    def after_initial_commit(_r: value) -> None:
+        await async db.close()
+        db = lmdb.Db(cap, db_path)
+        restored = ttt.Layer("single", ttt.Transform(ttt.PassThrough), None, db)
+        await async restored.load_from_db()
+        testing.assertEqual(restored.get(), persist_cfg)
+        restored.edit_config(persist_cfg_updated, None, after_recommit)
+
+    restored.edit_config(persist_cfg, after_initial_commit)
+
+
+actor reject_restore_into_nonempty_tree(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_nonempty_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var restored = ttt.Layer("single", ttt.Transform(ttt.PassThrough), None, db)
+
+    def cleanup_success() -> None:
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    def after_second_load_failure(e: Exception) -> None:
+        testing.assertEqual(str(e), "ValueError: TTT restore requires an empty tree in layer single")
+        cleanup_success()
+
+    def after_first_load() -> None:
+        testing.assertEqual(restored.get(), persist_cfg)
+        try:
+            await async restored.load_from_db()
+            await async db.close()
+            await async fs.rmtree(db_path)
+            await async fs.rmdir(db_path)
+            t.failure(AssertionError("Expected second load_from_db to reject a non-empty tree"))
+        except ValueError as e:
+            after_second_load_failure(e)
+
+    def after_initial_commit(_r: value) -> None:
+        await async db.close()
+        db = lmdb.Db(cap, db_path)
+        restored = ttt.Layer("single", ttt.Transform(ttt.PassThrough), None, db)
+        await async restored.load_from_db()
+        after_first_load()
+
+    restored.edit_config(persist_cfg, after_initial_commit)
+
+
+actor reject_db_persist_failure_without_committing_memory(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_persist_fail_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var layer = ttt.Layer("struct", struct_root, None, db)
+
+    def after_recovery(r: value) -> None:
+        if not isinstance(r, ttt.CfgOk):
+            raise AssertionError("Expected successful recovery completion after DB persist failure, got {r}")
+        testing.assertEqual(layer.get(), struct_tree)
+        read_txn = db.begin_read()
+        testing.assertEqual(read_txn.get(odb.META_KEY) is not None, True)
+        await async read_txn.commit()
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    def after_failure_settled() -> None:
+        testing.assertEqual(layer.get(), empty_struct_tree)
+        layer.edit_config(struct_tree, None, after_recovery)
+
+    def after_failure(r: value) -> None:
+        testing.assertEqual(isinstance(r, lmdb.LMDBKeySizeError), True)
+        read_txn = db.begin_read()
+        testing.assertEqual(read_txn.get(odb.META_KEY), None)
+        await async read_txn.commit()
+        after 0.01: after_failure_settled()
+
+    layer.edit_config(oversized_struct_tree, after_failure)
+
+
+actor restore_transform_memory_round_trip(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_memory_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var restored = ttt.Layer("memory", ttt.Transform(PersistMemoryTransform), None, db)
+
+    def after_recommit(r: value) -> None:
+        if not isinstance(r, ttt.CfgOk):
+            raise AssertionError("Expected successful recommit completion after restore, got {r}")
+        testing.assertEqual(restored.get(), memory_cfg_updated)
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    def after_initial_commit(r: value) -> None:
+        if not (isinstance(r, str) and r == "Ok"):
+            raise AssertionError("Expected successful initial commit for memory restore, got {r}")
+        await async db.close()
+        db = lmdb.Db(cap, db_path)
+        restored = ttt.Layer("memory", ttt.Transform(PersistMemoryTransform), None, db)
+        await async restored.load_from_db()
+        testing.assertEqual(restored.get(), memory_cfg)
+        restored.edit_config(memory_cfg_updated, None, after_recommit)
+
+    restored.edit_config(memory_cfg, after_initial_commit)
+
+
+actor restore_transform_dynstate_round_trip(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_dynstate_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var root: ?ttt.Node = None
+    var restored = ttt.Layer("stateful", ttt.Transform(PersistDynstateTransform), None, db)
+
+    def rootgen(path, lower):
+        root = ttt.Transform(PersistDynstateTransform)(path, lower)
+        return expect(root, "Missing captured stateful transform root")
+
+    def after_recommit(r: value) -> None:
+        if not isinstance(r, ttt.CfgOk):
+            raise AssertionError("Expected successful dynstate recommit completion after restore, got {r}")
+        testing.assertEqual(restored.get(), stateful_cfg_updated)
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    def after_seed_recompute(r: value) -> None:
+        if not (isinstance(r, str) and r == "Ok"):
+            raise AssertionError("Expected successful dynstate seed recompute, got {r}")
+        await async db.close()
+        db = lmdb.Db(cap, db_path)
+        restored = ttt.Layer("stateful", ttt.Transform(PersistDynstateTransform), None, db)
+        await async restored.load_from_db()
+        testing.assertEqual(restored.get(), stateful_cfg)
+        restored.edit_config(stateful_cfg_updated, None, after_recommit)
+
+    def after_initial_commit(r: value) -> None:
+        if not isinstance(r, ttt.CfgOk):
+            raise AssertionError("Expected successful initial dynstate completion, got {r}")
+        root1 = expect(root, "Missing captured stateful transform root")
+        root1.newtrans().restore(odb.ATTR_DYNSTATE, None, gdata.Leaf(41).to_json_str(pretty=False).encode())
+        ttt.Session("restore_stateful", root1, None, db).recompute(after_seed_recompute)
+
+    restored = ttt.Layer("stateful", rootgen, None, db)
+    restored.edit_config(stateful_cfg, None, after_initial_commit)
+
+
+actor restore_structural_list_round_trip(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_struct_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var restored = ttt.Layer("struct", struct_root, None, db)
+
+    def after_recommit(_r: value) -> None:
+        testing.assertEqual(restored.get(), struct_tree_updated)
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    def after_initial_commit(_r: value) -> None:
+        await async db.close()
+        db = lmdb.Db(cap, db_path)
+        restored = ttt.Layer("struct", struct_root, None, db)
+        await async restored.load_from_db()
+        testing.assertEqual(restored.get(), struct_tree)
+        restored.edit_config(struct_tree_updated, None, after_recommit)
+
+    restored.edit_config(struct_tree, after_initial_commit)
+
+
+actor restore_structural_list_delete_round_trip(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_struct_delete_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var restored = ttt.Layer("struct", struct_root, None, db)
+
+    def after_delete_commit(_r: value) -> None:
+        await async db.close()
+        db = lmdb.Db(cap, db_path)
+        restored = ttt.Layer("struct", struct_root, None, db)
+        await async restored.load_from_db()
+        actual = restored.get().prsrc(True)
+        expected = empty_struct_tree.prsrc(True)
+        if actual != expected:
+            read_txn = db.begin_read()
+            snapshot = ttt_db_snapshot(read_txn)
+            await async read_txn.commit()
+            raise AssertionError("Expected empty restored list after delete.\nSnapshot:\n{snapshot}\nActual:\n{actual}")
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    def after_initial_commit(_r: value) -> None:
+        await async db.close()
+        db = lmdb.Db(cap, db_path)
+        restored = ttt.Layer("struct", struct_root, None, db)
+        await async restored.load_from_db()
+        actual = restored.get().prsrc(True)
+        expected = struct_delete_tree.prsrc(True)
+        if actual != expected:
+            read_txn = db.begin_read()
+            snapshot = ttt_db_snapshot(read_txn)
+            await async read_txn.commit()
+            raise AssertionError("Unexpected restored list before delete.\nSnapshot:\n{snapshot}\nActual:\n{actual}")
+        restored.edit_config(deleted_struct_tree, None, after_delete_commit)
+
+    restored.edit_config(struct_delete_tree, after_initial_commit)
+
+
+actor restore_structural_list_escaped_round_trip(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_struct_escaped_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var restored = ttt.Layer(escaped_layer_name, struct_root, None, db)
+
+    def after_recommit(_r: value) -> None:
+        testing.assertEqual(restored.get(), escaped_struct_tree_updated)
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    def after_initial_commit(_r: value) -> None:
+        await async db.close()
+        db = lmdb.Db(cap, db_path)
+        restored = ttt.Layer(escaped_layer_name, struct_root, None, db)
+        await async restored.load_from_db()
+        testing.assertEqual(restored.get(), escaped_struct_tree)
+        restored.edit_config(escaped_struct_tree_updated, None, after_recommit)
+
+    restored.edit_config(escaped_struct_tree, after_initial_commit)
+
+
+actor restore_layer_stack_round_trip(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_layers_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var restored_lower = ttt.Layer("lower", ttt.Transform(ttt.PassThrough), None, db)
+    var restored_top = ttt.Layer("upper", ttt.Transform(ttt.PassThrough), restored_lower, db)
+
+    def after_initial_commit(_r: value) -> None:
+        await async db.close()
+        db = lmdb.Db(cap, db_path)
+        restored_lower = ttt.Layer("lower", ttt.Transform(ttt.PassThrough), None, db)
+        restored_top = ttt.Layer("upper", ttt.Transform(ttt.PassThrough), restored_lower, db)
+        await async restored_top.load_from_db()
+        testing.assertEqual(restored_top.get(), persist_cfg)
+        testing.assertEqual(restored_lower.get(), persist_cfg)
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    restored_top.edit_config(persist_cfg, after_initial_commit)
+
+
+actor restore_exact_layer_name_prefix_round_trip(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_exact_layer_prefix_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var foo_layer = ttt.Layer("foo", ttt.Transform(ttt.PassThrough), None, db)
+    var foobar_layer = ttt.Layer("foobar", ttt.Transform(ttt.PassThrough), None, db)
+
+    def cleanup_success() -> None:
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    def after_foobar_commit(r: value) -> None:
+        if not isinstance(r, ttt.CfgOk):
+            raise AssertionError("Expected successful foobar completion, got {r}")
+        await async db.close()
+        db = lmdb.Db(cap, db_path)
+        foo_layer = ttt.Layer("foo", ttt.Transform(ttt.PassThrough), None, db)
+        foobar_layer = ttt.Layer("foobar", ttt.Transform(ttt.PassThrough), None, db)
+        await async foo_layer.load_from_db()
+        await async foobar_layer.load_from_db()
+        testing.assertEqual(foo_layer.get(), foo_cfg)
+        testing.assertEqual(foobar_layer.get(), foobar_cfg)
+        cleanup_success()
+
+    def after_foo_commit(r: value) -> None:
+        if not isinstance(r, ttt.CfgOk):
+            raise AssertionError("Expected successful foo completion, got {r}")
+        foobar_layer.edit_config(foobar_cfg, None, after_foobar_commit)
+
+    foo_layer.edit_config(foo_cfg, None, after_foo_commit)
+
+
+actor restore_qualified_namespace_shift_round_trip(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_ns_shift_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var restored = ttt.Layer("shift", qualified_root, None, db)
+
+    def write_transform_state(write_txn: lmdb.WriteTransaction, codec: odb.KeyCodec, path: list[value], value: gdata.Node) -> None:
+        write_txn.put(odb.to_attr_key(path, odb.ATTR_OUTPUT, None, codec), value.to_json_str(pretty=False).encode())
+        write_txn.put(odb.to_attr_key(path, odb.ATTR_RUNNING, "_", codec), value.to_json_str(pretty=False).encode())
+
+    def after_recommit(_r: value) -> None:
+        read_txn = db.begin_read()
+        codec = odb.read_key_codec(read_txn)
+        testing.assertEqual(codec.namespaces, [SHIFT_NS_B, SHIFT_NS_A, SHIFT_NS_C])
+        testing.assertEqual(restored.get(), qualified_tree_updated)
+        await async read_txn.commit()
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    write_txn = db.begin_write()
+    codec = odb.KeyCodec([SHIFT_NS_B, SHIFT_NS_A])
+    write_txn.put(odb.META_KEY, json.encode({"version": odb.VERSION, "namespaces": codec.namespaces}, pretty=False).encode())
+    write_transform_state(write_txn, codec, ["shift", qa_shift("branch"), qb_shift("value")], gdata.Leaf(11))
+    write_transform_state(write_txn, codec, ["shift", qb_shift("branch"), qa_shift("value")], gdata.Leaf(22))
+    await async write_txn.commit()
+
+    await async restored.load_from_db()
+    testing.assertEqual(restored.get(), qualified_tree)
+    restored.edit_config(qualified_tree_updated, None, after_recommit)
+
+
+actor restore_removed_namespace_gap_round_trip(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_removed_ns_gap_")
+    cap = file.WriteFileCap(fc)
+    var db = lmdb.Db(cap, db_path)
+    var restored = ttt.Layer("removed", removed_live_root, None, db)
+
+    def after_recommit(_r: value) -> None:
+        read_txn = db.begin_read()
+        codec = odb.read_key_codec(read_txn)
+        testing.assertEqual(codec.namespaces, [REMOVED_NS_OLD, REMOVED_NS_LIVE])
+        testing.assertEqual(restored.get(), removed_live_tree_updated)
+        await async read_txn.commit()
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.success()
+
+    write_txn = db.begin_write()
+    codec = odb.KeyCodec([REMOVED_NS_OLD, REMOVED_NS_LIVE])
+    write_txn.put(odb.META_KEY, json.encode({"version": odb.VERSION, "namespaces": codec.namespaces}, pretty=False).encode())
+    write_structural_list_element(write_txn, codec, "removed", qlive_removed("items"), qlive_removed("name"), qlive_removed("value"), "a", gdata.Leaf(7))
+    await async write_txn.commit()
+
+    await async restored.load_from_db()
+    testing.assertEqual(restored.get(), removed_live_tree)
+    restored.edit_config(removed_live_tree_updated, None, after_recommit)
+
+
+actor reject_removed_namespace_with_persisted_list_data(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_removed_ns_data_")
+    cap = file.WriteFileCap(fc)
+    db = lmdb.Db(cap, db_path)
+    write_txn = db.begin_write()
+    codec = odb.KeyCodec([REMOVED_NS_OLD, REMOVED_NS_LIVE])
+    write_txn.put(odb.META_KEY, json.encode({"version": odb.VERSION, "namespaces": codec.namespaces}, pretty=False).encode())
+    write_structural_list_element(write_txn, codec, "removed", qold_removed("items"), qold_removed("name"), qold_removed("value"), "legacy", gdata.Leaf(1))
+    await async write_txn.commit()
+
+    layer = ttt.Layer("removed", removed_live_root, None, db)
+
+    try:
+        await async layer.load_from_db()
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.failure(AssertionError("Expected load_from_db to reject persisted data under a removed namespace"))
+    except ValueError as e:
+        err = str(e)
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        testing.assertEqual("Unable to route persisted child items#{REMOVED_NS_OLD}" in err, True)
+        t.success()
+
+
+actor reject_persistence_version_mismatch(t: testing.EnvT):
+    fc = file.FileCap(t.env.cap)
+    fs = file.FS(fc)
+    db_path = fs.mktmpdir("test_ttt_restore_bad_version_")
+    cap = file.WriteFileCap(fc)
+    db = lmdb.Db(cap, db_path)
+    write_txn = db.begin_write()
+    write_txn.put(odb.META_KEY, json.encode({"version": 0}, pretty=False).encode())
+    await async write_txn.commit()
+    layer = ttt.Layer("single", ttt.Transform(ttt.PassThrough), None, db)
+
+    try:
+        await async layer.load_from_db()
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        t.failure(AssertionError("Expected load_from_db to reject unsupported persistence version"))
+    except ValueError as e:
+        err = str(e)
+        await async db.close()
+        await async fs.rmtree(db_path)
+        await async fs.rmdir(db_path)
+        testing.assertEqual(err, "ValueError: Unsupported TTT persistence version 0, expected 1")
+        t.success()

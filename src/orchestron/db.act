@@ -1,0 +1,437 @@
+import yang.gdata as gdata
+import lmdb
+import json
+
+VERSION = 1
+META_KEY = b"ttt"
+ESCAPE = b"\x1c"
+PATH_SEPARATOR = b"\x1f"
+ATTRIBUTE_SEPARATOR = b"\x1e"
+QUALIFIER_SEPARATOR = b"\x1d"
+NAMESPACE_ID_BASE = 0x20
+NAMESPACE_ID_LIMIT = 224
+PLAIN_SEGMENT_ID = b"\x00"
+ESCAPED_ESCAPE = b"e"
+ESCAPED_PATH_SEPARATOR = b"p"
+ESCAPED_ATTRIBUTE_SEPARATOR = b"a"
+ESCAPED_QUALIFIER_SEPARATOR = b"q"
+ATTR_KEYS = "keys"
+ATTR_DYNSTATE = "dynstate"
+ATTR_MEMORY = "memory"
+ATTR_OUTPUT = "output"
+ATTR_RUNNING = "running"
+WRITE_RETRY_DELAY = 0.001
+
+def expect[T](t: ?T, errmsg: str) -> T:
+    if t is not None:
+        return t
+    raise ValueError(errmsg)
+
+# Qualified path segments are encoded as:
+#   namespace-id byte + encoded local name
+# Plain string path segments use namespace-id byte 0. Qualified segments use a
+# compact namespace table index encoded into one byte, with the URI recovered
+# from the namespace list stored in the DB metadata record.
+class KeyCodec(object):
+    """Encode and decode qualified names in TTT DB path segments
+
+    Qualified names have a namespace in addition to the local name. Namespaces
+    are long and unwieldy text strings. Since there are typically rather few
+    namespaces in use in a given persisted dataset, we assign an integer index
+    to each namespace and encode it in the first byte in the qualified name path
+    segment. Plain string segments, such as list keys and the layer name, use
+    namespace-id byte 0. The namespace table is stored in the DB metadata record
+    as a list of namespaces in the order of their assigned namespace ids. The
+    ids are only valid in the local DB.
+
+    The path uses separator characters to delineate path segments, attribute
+    names, and qualifiers. Namespace IDs start at 0x20, which is above all the
+    separator characters, to avoid conflicts which makes the parser simpler.
+    """
+    namespaces: list[str]
+    namespace_indexes: dict[str, int]
+
+    def __init__(self, namespaces: list[str]):
+        self.namespaces = []
+        self.namespace_indexes = {}
+        for ns in namespaces:
+            if ns in self.namespace_indexes:
+                continue
+            if len(self.namespaces) >= NAMESPACE_ID_LIMIT:
+                raise ValueError("TTT persistence metadata exceeds namespace capacity of {NAMESPACE_ID_LIMIT}")
+            self.namespace_indexes[ns] = len(self.namespaces)
+            self.namespaces.append(ns)
+
+    def get_nsid_prefix(self, namespace: str) -> bytes:
+        """Return the one-byte namespace prefix for a qualified path segment."""
+        def _namespace_byte(index: int) -> bytes:
+            """Map a qualified-namespace table index to its one-byte DB encoding."""
+            if 0 <= index and index < NAMESPACE_ID_LIMIT:
+                return bytes([NAMESPACE_ID_BASE + index])
+            raise ValueError("TTT persistence supports at most {NAMESPACE_ID_LIMIT} qualified namespaces, got index {index}")
+
+        index = self.namespace_indexes.get(namespace)
+        if index is None:
+            if len(self.namespaces) >= NAMESPACE_ID_LIMIT:
+                raise ValueError("TTT persistence supports at most {NAMESPACE_ID_LIMIT} qualified namespaces")
+            index1 = len(self.namespaces)
+            self.namespace_indexes[namespace] = index1
+            self.namespaces.append(namespace)
+            return _namespace_byte(index1)
+        return _namespace_byte(expect(index, "Missing expected namespace index for {namespace}"))
+
+    def decode_id(self, raw: bytes) -> ?gdata.Id:
+        if len(raw) == 0 or raw[0] == PLAIN_SEGMENT_ID[0]:
+            return None
+        prefix = raw[0]
+        if prefix < NAMESPACE_ID_BASE or prefix >= NAMESPACE_ID_BASE + NAMESPACE_ID_LIMIT:
+            raise ValueError("Invalid namespace id byte 0x{_hex_byte(prefix)} in TTT persistence key")
+        index = prefix - NAMESPACE_ID_BASE
+        if index >= len(self.namespaces):
+            raise ValueError("Unknown namespace id byte 0x{_hex_byte(prefix)} in TTT persistence key")
+        return gdata.Id(self.namespaces[index], _decode_text(raw[1:]))
+
+class WriteTransaction(object):
+    txn: lmdb.WriteTransaction
+    codec: KeyCodec
+
+    def __init__(self, txn: lmdb.WriteTransaction):
+        self.txn = txn
+        self.codec = _key_codec_from_raw(txn.get(META_KEY))
+
+class BufferOp(object):
+    path: list[value]
+    attr: str
+    qualifier: ?str
+    value: ?bytes
+
+    def __init__(self, path: list[value], attr: str, qualifier: ?str, value: ?bytes):
+        self.path = path
+        self.attr = attr
+        self.qualifier = qualifier
+        self.value = value
+
+def slot_key(path: list[value], kind: str) -> str:
+    def encode_segment(segment: value) -> value:
+        if isinstance(segment, str):
+            return {"type": "str", "value": segment}
+        if isinstance(segment, gdata.Id):
+            return {"type": "id", "q": segment.q, "name": segment.name}
+        raise ValueError("Unsupported TTT persistence buffer path component: {type(segment)}")
+
+    return json.encode({
+        "kind": kind,
+        "path": [encode_segment(segment) for segment in path]
+    }, pretty=False)
+
+def put_op(path: list[value], attr: str, node: gdata.Node, qualifier: ?str=None) -> BufferOp:
+    return BufferOp(path, attr, qualifier, node.to_json_str(pretty=False).encode())
+
+def del_op(path: list[value], attr: str, qualifier: ?str=None) -> BufferOp:
+    return BufferOp(path, attr, qualifier, None)
+
+def opt_ops(path: list[value], attr: str, node: ?gdata.Node, qualifier: ?str=None) -> list[BufferOp]:
+    if node is not None:
+        return [put_op(path, attr, expect(node, "Missing expected node for DB buffer op"), qualifier)]
+    return [del_op(path, attr, qualifier)]
+
+actor Buffer():
+    """Buffer of database operations
+    All DB operations in a TTT transaction are first written to an in-memory
+    buffer - a Buffer. The buffer is flushed to the DB at commit time. This
+    avoids keeping an actual DB transaction open for the entire duration of the
+    TTT transaction. This has a number of benefits
+    - We simplify error and retry logic since writes to the buffer are
+      infallable, and any DB errors can be handled at the point of flushing the
+      buffer, without having to repeat the transform / transaction logic.
+    - The encoding work is carried out at the same time as the transform
+      functions are run, which means it can run concurrently and optimistically
+      outside any locks (although it might be necessary to rerun once under the
+      lock)
+    - Avoids long-running DB transactions. Most DB engines do better with
+      short-lived transactions and since TTT handles conflicts on its own, it is
+      unnecessary to expose the duration of the internal TTT transaction to the
+      underlying database engine
+      - LMDB only allows 1 write transaction at a time, so it would basically
+        wreck the concurrency of the TTT engine
+    """
+    var ops_by_slot: dict[str, list[BufferOp]] = {}
+
+    def replace(slot: str, ops: list[BufferOp]) -> None:
+        if len(ops) == 0:
+            if slot in ops_by_slot:
+                del ops_by_slot[slot]
+            return
+        ops_by_slot[slot] = ops
+
+    def flush_to_db(wtr: WriteTransaction) -> None:
+        put_msgs = []
+        delete_msgs = []
+        for slot in sorted(ops_by_slot.keys()):
+            for op in ops_by_slot[slot]:
+                key = to_attr_key(op.path, op.attr, op.qualifier, wtr.codec)
+                val = op.value
+                if val is not None:
+                    put_msgs.append(async wtr.txn.put(key, val))
+                else:
+                    delete_msgs.append(async wtr.txn.delete(key))
+        for msg in put_msgs:
+            await msg
+        for msg in delete_msgs:
+            await msg
+
+def _encode_text(text: str) -> bytes:
+    raw = text.encode()
+    if raw.find(ESCAPE) == -1 and raw.find(PATH_SEPARATOR) == -1 and raw.find(ATTRIBUTE_SEPARATOR) == -1 and raw.find(QUALIFIER_SEPARATOR) == -1:
+        return raw
+    return raw.replace(ESCAPE, ESCAPE + ESCAPED_ESCAPE).replace(PATH_SEPARATOR, ESCAPE + ESCAPED_PATH_SEPARATOR).replace(ATTRIBUTE_SEPARATOR, ESCAPE + ESCAPED_ATTRIBUTE_SEPARATOR).replace(QUALIFIER_SEPARATOR, ESCAPE + ESCAPED_QUALIFIER_SEPARATOR)
+
+def _decode_text(raw: bytes) -> str:
+    if raw.find(ESCAPE) == -1:
+        return raw.decode()
+    return raw.replace(ESCAPE + ESCAPED_PATH_SEPARATOR, PATH_SEPARATOR).replace(ESCAPE + ESCAPED_ATTRIBUTE_SEPARATOR, ATTRIBUTE_SEPARATOR).replace(ESCAPE + ESCAPED_QUALIFIER_SEPARATOR, QUALIFIER_SEPARATOR).replace(ESCAPE + ESCAPED_ESCAPE, ESCAPE).decode()
+
+def _hex_byte(n: int) -> str:
+    h = hex(n)[2:]
+    return "0" + h if len(h) == 1 else h
+
+def _format_text_debug(text: str) -> str:
+    res = ""
+    for c in text:
+        o = ord(c)
+        if c == "\\":
+            res += "\\\\"
+        elif o < 32 or o == 127:
+            res += "\\x" + _hex_byte(o)
+        else:
+            res += c
+    return res
+
+def qualified_name(id: gdata.Id) -> str:
+    return id.name + "#" + id.q
+
+def _encode_segment(segment: value, codec: ?KeyCodec=None) -> bytes:
+    if isinstance(segment, str):
+        return PLAIN_SEGMENT_ID + _encode_text(segment)
+    if isinstance(segment, gdata.Id):
+        if codec is None:
+            raise ValueError("Missing DB key codec for qualified persistence path segment {segment}")
+        return expect(codec, "Missing DB key codec for persistence path encoding").get_nsid_prefix(segment.q) + _encode_text(segment.name)
+    raise ValueError("Unsupported path component in persistence key: {type(segment)}")
+
+def to_key(path: list[value], codec: ?KeyCodec=None) -> bytes:
+    if len(path) == 0:
+        raise ValueError("Persistence node key requires a non-empty path")
+    return META_KEY + b"".join([
+        PATH_SEPARATOR + _encode_segment(segment, codec)
+        for segment in path
+    ])
+
+def to_attr_key(path: list[value], attr: str, qualifier: ?str=None, codec: ?KeyCodec=None) -> bytes:
+    key = to_key(path, codec) + ATTRIBUTE_SEPARATOR + _encode_text(attr)
+    if qualifier is not None:
+        key += QUALIFIER_SEPARATOR + _encode_text(qualifier)
+    return key
+
+def _canonical_namespaces(namespaces: list[str]) -> list[str]:
+    seen = set()
+    res = []
+    for namespace in namespaces:
+        if namespace not in seen:
+            seen.add(namespace)
+            res.append(namespace)
+    return res
+
+def _encode_metadata(codec: KeyCodec) -> bytes:
+    return json.encode({"version": VERSION, "namespaces": _canonical_namespaces(codec.namespaces)}, pretty=False).encode()
+
+proc def write_metadata(wtr: WriteTransaction) -> None:
+    wtr.txn.put(META_KEY, _encode_metadata(wtr.codec))
+
+def _decode_record(raw: bytes) -> dict[str, ?value]:
+    decoded = json.decode(raw.decode())
+    if isinstance(decoded, dict):
+        return decoded
+    raise ValueError("Expected persistence metadata record dict")
+
+def _decode_id_data(data: value) -> gdata.Id:
+    if isinstance(data, dict):
+        q = data.get("q")
+        name = data.get("name")
+        if isinstance(q, str) and isinstance(name, str):
+            return gdata.Id(q, name)
+    raise ValueError("Invalid gdata id encoding in persistence: {data}")
+
+def _decode_leaflist_entry_data(data: value) -> gdata.LeafListEntry:
+    if isinstance(data, dict):
+        op = data.get("op")
+        value_data = data.get("value")
+        if isinstance(op, str) and isinstance(value_data, dict):
+            value = gdata.value_from_json(value_data)
+            if op == "merge":
+                return gdata.LeafListEntryMerge(value)
+            if op == "remove":
+                return gdata.LeafListEntryRemove(value)
+            if op == "create":
+                return gdata.LeafListEntryCreate(value)
+            if op == "delete":
+                return gdata.LeafListEntryDelete(value)
+            if op == "replace":
+                return gdata.LeafListEntryReplace(value)
+    raise ValueError("Invalid gdata leaf-list entry encoding in persistence: {data}")
+
+def _decode_gdata_node_data(data: value) -> gdata.Node:
+    if isinstance(data, dict):
+        node_type = data.get("type")
+        ns, module, txid = gdata.node_meta_from_json(data)
+
+        if node_type == "Container":
+            presence = False
+            presence_data = data.get("presence")
+            if isinstance(presence_data, bool):
+                presence = presence_data
+            return gdata.Container(children=gdata.node_children_from_json(data), presence=presence, ns=ns, module=module, txid=txid)
+
+        if node_type == "List":
+            keys = []
+            keys_data = data.get("keys")
+            if isinstance(keys_data, list):
+                for key_data in keys_data:
+                    keys.append(_decode_id_data(key_data))
+            elif keys_data is not None:
+                raise ValueError("Invalid gdata list keys encoding in persistence: {keys_data}")
+
+            elements = []
+            elements_data = data.get("elements")
+            if isinstance(elements_data, list):
+                for element_data in elements_data:
+                    elements.append(_decode_gdata_node_data(element_data))
+            else:
+                raise ValueError("Invalid gdata list elements encoding in persistence: {elements_data}")
+
+            user_order = False
+            user_order_data = data.get("user_order")
+            if isinstance(user_order_data, bool):
+                user_order = user_order_data
+
+            return gdata.List(keys=keys, elements=elements, user_order=user_order, ns=ns, module=module, txid=txid)
+
+        if node_type == "Leaf":
+            return gdata.Leaf(gdata.node_value_from_json(data, "Leaf"), ns=ns, module=module, txid=txid)
+
+        if node_type == "LeafList":
+            entries = []
+            entries_data = data.get("entries")
+            if isinstance(entries_data, list):
+                for entry_data in entries_data:
+                    entries.append(_decode_leaflist_entry_data(entry_data))
+            elif entries_data is not None:
+                raise ValueError("Invalid gdata leaf-list encoding in persistence: {entries_data}")
+
+            user_order = False
+            user_order_data = data.get("user_order")
+            if isinstance(user_order_data, bool):
+                user_order = user_order_data
+
+            return gdata.LeafList(entries=entries, user_order=user_order, ns=ns, module=module, txid=txid)
+
+        if node_type == "Absent":
+            return gdata.Absent(children=gdata.node_children_from_json(data), ns=ns, module=module, txid=txid)
+
+        if node_type == "Delete":
+            return gdata.Delete(children=gdata.node_children_from_json(data), ns=ns, module=module, txid=txid)
+
+        if node_type == "Create":
+            return gdata.Create(children=gdata.node_children_from_json(data), ns=ns, module=module, txid=txid)
+
+        if node_type == "CreateLeaf":
+            return gdata.CreateLeaf(gdata.node_value_from_json(data, "CreateLeaf"), ns=ns, module=module, txid=txid)
+
+        if node_type == "Replace":
+            return gdata.Replace(children=gdata.node_children_from_json(data), ns=ns, module=module, txid=txid)
+
+        if node_type == "ReplaceLeaf":
+            return gdata.ReplaceLeaf(gdata.node_value_from_json(data, "ReplaceLeaf"), ns=ns, module=module, txid=txid)
+
+        raise ValueError("Unsupported gdata node type in persistence: {node_type}")
+
+    raise ValueError("Expected dict for persisted gdata node, got {type(data)}")
+
+def decode_node_bytes(raw: bytes) -> gdata.Node:
+    return _decode_gdata_node_data(json.decode(raw.decode()))
+
+def _decode_namespaces(record: dict[str, ?value]) -> list[str]:
+    namespaces = []
+    namespaces_data = record.get("namespaces")
+    if namespaces_data is None:
+        return namespaces
+    if isinstance(namespaces_data, list):
+        for namespace in namespaces_data:
+            if namespace is None:
+                continue
+            if isinstance(namespace, str):
+                namespaces.append(namespace)
+            else:
+                raise ValueError("Invalid TTT persistence metadata namespace entry: {namespace}")
+        return namespaces
+    raise ValueError("Invalid TTT persistence metadata: namespaces must be a list")
+
+def _key_codec_from_raw(raw: ?bytes) -> KeyCodec:
+    if raw is None:
+        return KeyCodec([])
+    record = _decode_record(expect(raw, "Missing persistence metadata bytes"))
+    version = record.get("version")
+    if isinstance(version, int):
+        if version != VERSION:
+            raise ValueError("Unsupported TTT persistence version {version}, expected {VERSION}")
+        return KeyCodec(_decode_namespaces(record))
+    raise ValueError("Invalid TTT persistence metadata: missing integer version")
+
+def read_key_codec(txn: lmdb.ReadTransaction) -> KeyCodec:
+    return _key_codec_from_raw(txn.get(META_KEY))
+
+def _parse_attr_key_bytes(key: bytes) -> (list[bytes], bytes, ?bytes):
+    prefix = META_KEY + PATH_SEPARATOR
+    if not key.startswith(prefix):
+        raise ValueError("Unexpected persistence key outside TTT namespace: {key}")
+
+    rest = key[len(prefix):]
+    attr_pos = rest.find(ATTRIBUTE_SEPARATOR)
+    if attr_pos == -1:
+        raise ValueError("Missing persistence attribute separator in key: {key}")
+
+    path_bytes = rest[:attr_pos]
+    attr_bytes = rest[attr_pos + len(ATTRIBUTE_SEPARATOR):]
+    path = path_bytes.split(PATH_SEPARATOR)
+    if len(path) == 0:
+        raise ValueError("Missing persistence path in key: {key}")
+
+    qual_pos = attr_bytes.find(QUALIFIER_SEPARATOR)
+    if qual_pos == -1:
+        return path, attr_bytes, None
+    return path, attr_bytes[:qual_pos], attr_bytes[qual_pos + len(QUALIFIER_SEPARATOR):]
+
+def parse_attr_key(key: bytes, codec: ?KeyCodec=None) -> (list[str], str, ?str):
+    path_bytes, attr_bytes, qualifier_bytes = _parse_attr_key_bytes(key)
+    codec1 = codec if codec is not None else KeyCodec([])
+    path = []
+    for segment_bytes in path_bytes:
+        decoded_id = codec1.decode_id(segment_bytes)
+        if decoded_id is not None:
+            path.append(qualified_name(expect(decoded_id, "Missing decoded Id persistence path segment")))
+        else:
+            if len(segment_bytes) == 0 or segment_bytes[0] != PLAIN_SEGMENT_ID[0]:
+                raise ValueError("Missing plain-string segment namespace id byte in TTT persistence key")
+            path.append(_decode_text(segment_bytes[1:]))
+    if qualifier_bytes is None:
+        return path, _decode_text(attr_bytes), None
+    return path, _decode_text(attr_bytes), _decode_text(expect(qualifier_bytes, "Missing persistence qualifier bytes"))
+
+def format_key_debug(key: bytes, codec: ?KeyCodec=None) -> str:
+    if key == META_KEY:
+        return "ttt"
+    path, attr, qualifier = parse_attr_key(key, codec)
+    rendered = "ttt/" + "/".join([_format_text_debug(segment) for segment in path]) + "@" + _format_text_debug(attr)
+    if qualifier is not None:
+        return rendered + "[" + _format_text_debug(qualifier) + "]"
+    return rendered

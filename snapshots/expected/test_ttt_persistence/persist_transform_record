@@ -1,0 +1,11 @@
+ttt
+
+{"version":1,"namespaces":[]}
+
+ttt/single@output
+
+{"type":"Container","children":[{"id":{"q":"urn:test:persistence","name":"value"},"node":{"type":"Leaf","value":{"type":"int","value":42}}}]}
+
+ttt/single@running[_]
+
+{"type":"Container","children":[{"id":{"q":"urn:test:persistence","name":"value"},"node":{"type":"Leaf","value":{"type":"int","value":42}}}]}
