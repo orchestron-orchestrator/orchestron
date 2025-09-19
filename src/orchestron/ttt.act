@@ -300,9 +300,9 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
 
     def commit(tid, ok):
         #print('####', tid, '(Layer)', name, 'commit', ok, err=True)
-        root.commit(tid, ok)
+        await async root.commit(tid, ok)
         if lower is not None:
-            lower.commit(tid, ok)
+            await async lower.commit(tid, ok)
 
     def wait_complete(done:action(value)->None):
         #print('####', tid_state, '(Layer)', name, 'wait_complete', err=True)
@@ -443,9 +443,12 @@ class _ContainerTransaction(_Transaction):
 
     proc def commit(self, tid, ok):
         #print('####', tid, '(Container)', self.path, 'commit', ok, err=True)
+        msgs = []
         for child in self.accum.keys():
             #print('   #', tid, '(Container)', self.path, 'COMMIT CHILD', child, err=True)
-            self.elems[child].commit(tid, ok)
+            msgs.append( async self.elems[child].commit(tid, ok) )
+        for msg in msgs:
+            await msg
         #print('   #', tid, '(Container)', self.path, 'COMMIT DONE', err=True)
         self.accum = {}
 
@@ -666,9 +669,12 @@ class _ListTransaction(_Transaction):
 
     def commit(self, tid, ok):
         #print('####', tid, '(List)', self.path, 'commit', ok, err=True)
+        msgs = []
         for key,tr in self.elems.items():
             #print('   #', tid, '(List)', self.path, 'COMMIT ELEMENT', key, err=True)
-            tr.commit(tid, ok)
+            msgs.append( async tr.commit(tid, ok) )
+        for msg in msgs:
+            await msg
         deletes = set()
         for key,res in self.accum.items():
             if isinstance(res, str) and res == 'Empty':
