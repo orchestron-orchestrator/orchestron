@@ -186,6 +186,8 @@ actor DeviceRegistry(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, 
 
     var devices_needing_approval = {}
 
+    var schema_registry = SchemaRegistry()
+
     action def _dummy_reconf(name: str):
         # Dummy reconf callback, used to avoid None
         pass
@@ -194,7 +196,7 @@ actor DeviceRegistry(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, 
 
     def get(name: str) -> DeviceMgr:
         if name not in devices:
-            devices[name] = DeviceMgr(dev_types, wcap, name, log_handler, reconf_cb, self)
+            devices[name] = DeviceMgr(dev_types, wcap, name, log_handler, reconf_cb, self, schema_registry)
         dev = devices[name]
         return dev
 
@@ -226,6 +228,28 @@ actor DeviceRegistry(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, 
         """
         return devices_needing_approval
 
+
+actor SchemaRegistry():
+    var store: dict[u64, yang.schema.DRoot] = {}
+
+    def _list_hash(l: list[str]):
+        """All built-in types (int, str, list, dict, etc.) already implement this protocol.""" # O RLY
+        h = hasher()
+        for le in l:
+            h.update(le.encode())
+        return h.finalize()
+
+    def add_schema(yang_src: list[str]):
+        content_hash = _list_hash(yang_src)
+        if content_hash not in store:
+            compiled_schema = yang.compile(yang_src)
+            store[content_hash] = compiled_schema
+
+    def get_schema(yang_src: list[str]):
+        content_hash = _list_hash(yang_src)
+        return store.get(content_hash)
+
+
 def truncate_conf(conf: ?yang.gdata.Node) -> str:
     """Truncate the configuration to a short string for logging
     """
@@ -252,7 +276,7 @@ class LogItem():
         self.event = event
         self.conf_diff = conf_diff
 
-actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None, registry: ?DeviceRegistry=None):
+actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None, device_registry: ?DeviceRegistry=None, schema_registry: ?SchemaRegistry=None):
     """Device Manager manages a device and represents that device, as an
     abstract device, in the system. Platform specific handling is implemented in
     the DeviceAdapter, i.e.  in subclasses of DeviceAdapter, like NetconfDriver
@@ -339,7 +363,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
     # Track whether we currently have config items in confq that need approval.
     # When we transition this we also register and / unregister with
-    # DeviceRegistry through _update_approval_state()
+    # DeviceDevice_Registry through _update_approval_state()
     var needs_approval = False
     var conf_log: list[LogItem] = []
 
@@ -363,8 +387,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         if not dmc.approval_required:
             if needs_approval:
                 needs_approval = False
-                if registry is not None:
-                    registry.unregister_needs_approval(name)
+                if device_registry is not None:
+                    device_registry.unregister_needs_approval(name)
             return
 
         # Check if there are any items in confq that need approval
@@ -374,15 +398,15 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
                 has_pending_approval = True
                 break
 
-        # Update state and notify registry if state changed
+        # Update state and notify device_registry if state changed
         if has_pending_approval and not needs_approval:
             needs_approval = True
-            if registry is not None:
-                registry.register_needs_approval(name)
+            if device_registry is not None:
+                device_registry.register_needs_approval(name)
         elif not has_pending_approval and needs_approval:
             needs_approval = False
-            if registry is not None:
-                registry.unregister_needs_approval(name)
+            if device_registry is not None:
+                device_registry.unregister_needs_approval(name)
 
     def get_device_txid() -> str:
         """Get the device txid from our view of the device's running config"""
