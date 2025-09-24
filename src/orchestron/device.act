@@ -10,6 +10,7 @@ import yang
 import yang.schema
 import yang.adata
 import yang.gdata
+import yang.gen3
 
 from orchestron.device_meta_config import \
     orchestron_rfs__device_entry as DeviceMetaConfig, \
@@ -34,7 +35,7 @@ class DeviceType(object):
     ## Adapter type, i.e. the DeviceAdapter subclass to use
     # TODO: why is @property needed here?
     @property
-    adapter_type: proc(DeviceMgr, DeviceMetaConfig, logging.Handler, ?WorldCap) -> DeviceAdapter
+    adapter_type: proc(DeviceMgr, DeviceMetaConfig, SchemaRegistry, logging.Handler, ?WorldCap) -> DeviceAdapter
 
     def __init__(self, name: str, adapter_type):
         self.name = name
@@ -155,7 +156,7 @@ actor DeviceRegistry(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, 
 
     def get(name: str) -> DeviceMgr:
         if name not in devices:
-            devices[name] = DeviceMgr(dev_types, wcap, name, log_handler, reconf_cb, self, schema_registry)
+            devices[name] = DeviceMgr(dev_types, wcap, name, log_handler, reconf_cb, schema_registry, self)
         dev = devices[name]
         return dev
 
@@ -191,7 +192,7 @@ actor DeviceRegistry(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, 
 actor SchemaRegistry():
     var store: dict[u64, yang.schema.DRoot] = {}
 
-    def _list_hash(l: list[str]):
+    def _list_hash(l):
         """All built-in types (int, str, list, dict, etc.) already implement this protocol.""" # O RLY
         h = hasher()
         for le in l:
@@ -203,10 +204,11 @@ actor SchemaRegistry():
         if content_hash not in store:
             compiled_schema = yang.compile(yang_src)
             store[content_hash] = compiled_schema
+        return content_hash
 
-    def get_schema(yang_src: list[str]):
-        content_hash = _list_hash(yang_src)
-        return store.get(content_hash)
+    def get_schema(content_hash):
+        if content_hash is not None:
+            return store.get(content_hash)
 
 
 def truncate_conf(conf: ?yang.gdata.Node) -> str:
@@ -235,7 +237,7 @@ class LogItem():
         self.event = event
         self.conf_diff = conf_diff
 
-actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None, device_registry: ?DeviceRegistry=None, schema_registry: ?SchemaRegistry=None):
+actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None, schema_registry: SchemaRegistry, device_registry: ?DeviceRegistry=None):
     """Device Manager manages a device and represents that device, as an
     abstract device, in the system. Platform specific handling is implemented in
     the DeviceAdapter, i.e.  in subclasses of DeviceAdapter, like NetconfDriver
@@ -268,11 +270,13 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     # The device's meta configuration, like address, credentials, etc.
     var dmc: DeviceMetaConfig = DeviceMetaConfig(name, Credentials("", None))
 
-    var adapter: DeviceAdapter = MockAdapter(self, _log_handler, wcap) if mock else NoAdapter(self, _log_handler, wcap)
+    var adapter: DeviceAdapter = MockAdapter(self, schema_registry, _log_handler, wcap) if mock else NoAdapter(self, schema_registry, _log_handler, wcap)
 
     # The modules supported by the device.
     var modset: dict[str, ModCap] = {}
     var modset_id: ?str = None
+
+    var schema_hash = None
 
     # The device's current running configuration, as we know it.
     var running_conf: ?yang.gdata.Node = None
@@ -387,8 +391,8 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         _log.debug("Modset updated", {"new_modset": new_modset})
         on_reconf(name)
 
-    def on_connect(new_modset: dict[str, ModCap]):
-        _log.debug("Device connected", {"new_modset": new_modset})
+    def on_connect(new_modset: dict[str, ModCap], new_schema_hash):
+        _log.debug("Device connected", {"new_modset": new_modset, "new_schema_hash": new_schema_hash})
         resync()
         if modset_eq(modset, new_modset):
             _log.debug("Supported modules unchanged")
@@ -396,6 +400,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
             _log.debug("New supported modules, triggering RFS reconf", {"name": name})
             modset = new_modset
             modset_id = hash_modset(modset)
+            schema_hash = new_schema_hash
             on_reconf(name)
             return
 
@@ -413,7 +418,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
                     device_type = dev_types.get(new_dmc_type)
                     if device_type is not None:
-                        adapter = device_type.adapter_type(self, new_dmc, _log_handler, wcap)
+                        adapter = device_type.adapter_type(self, new_dmc, schema_registry, _log_handler, wcap)
                         _log.info("DeviceMgr.set_dmc: using adapter", {"adapter": adapter})
                         adapter.set_dmc(new_dmc)
                     else:
@@ -712,6 +717,9 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         """
         adapter.fetch_config(done)
 
+    def get_schema():
+        return schema_registry.get_schema(schema_hash)
+
     def rpc_xml(cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node):
         adapter.rpc_xml(cb, xml_rpc)
 
@@ -818,8 +826,9 @@ class DeviceAdapter(object):
 
 
 class NoAdapter(DeviceAdapter):
-    def __init__(self, dev: DeviceMgr, log_handler, wcap):
+    def __init__(self, dev: DeviceMgr, schema_registry: SchemaRegistry, log_handler, wcap):
         self._dev = dev
+        self._schema_registry = schema_registry
         self._log_handler = log_handler
         self._wcap = wcap
         self._log = logging.Logger(self._log_handler)
@@ -850,8 +859,9 @@ class NoAdapter(DeviceAdapter):
 class MockAdapter(DeviceAdapter):
     """Mock device adapter
     """
-    def __init__(self, dev: DeviceMgr, log_handler, wcap: ?WorldCap):
+    def __init__(self, dev: DeviceMgr, schema_registry: SchemaRegistry, log_handler, wcap: ?WorldCap):
         self._dev = dev
+        self._schema_registry = schema_registry
         self._log_handler = log_handler
         self._wcap = wcap
         self._log = logging.Logger(self._log_handler)
@@ -929,7 +939,7 @@ actor MockDriver(dev: DeviceMgr, log_handler: logging.Handler, wcap: ?WorldCap):
             _log.debug("Mock capabilities set, \"connecting\"...")
             conn_state = CONNECTED
             running_conf = yang.gdata.Container()
-            dev.on_connect(modset)
+            dev.on_connect(modset, 42)
         else:
             _log.debug("No mock capabilities set, idling as not connected")
 
@@ -960,11 +970,12 @@ actor MockDriver(dev: DeviceMgr, log_handler: logging.Handler, wcap: ?WorldCap):
 
 class NetconfAdapter(DeviceAdapter):
 
-    def __init__(self, dev: DeviceMgr, init_dmc: DeviceMetaConfig, log_handler, wcap: ?WorldCap):
+    def __init__(self, dev: DeviceMgr, init_dmc: DeviceMetaConfig, schema_registry: SchemaRegistry, log_handler, wcap: ?WorldCap):
         self._dev = dev
+        self._schema_registry = schema_registry
         self._log_handler = log_handler
         self._wcap = wcap
-        self._driver = NetconfDriver(self._dev, init_dmc, self._log_handler, self._wcap)
+        self._driver = NetconfDriver(self._dev, init_dmc, self._schema_registry, self._log_handler, self._wcap)
 
     def set_dmc(self, new_dmc: DeviceMetaConfig):
         self._driver.set_dmc(new_dmc)
@@ -993,7 +1004,7 @@ class NetconfAdapter(DeviceAdapter):
         return self._driver.rpc_xml(cb, xml_rpc)
 
 
-actor NetconfDriver(dev: DeviceMgr, init_dmc: DeviceMetaConfig, log_handler: logging.Handler, wcap: ?WorldCap):
+actor NetconfDriver(dev: DeviceMgr, init_dmc: DeviceMetaConfig, schema_registry: SchemaRegistry, log_handler: logging.Handler, wcap: ?WorldCap):
     """NETCONF device adapter
 
     It is possible to configure a device using different transaction commit
@@ -1054,6 +1065,7 @@ actor NetconfDriver(dev: DeviceMgr, init_dmc: DeviceMetaConfig, log_handler: log
     var state: int = DISCONNECTED
 
     var modset: dict[str, ModCap] = {}
+    var schema_hash = None
 
     NS_NC_1_0 = "urn:ietf:params:xml:ns:netconf:base:1.0"
 
@@ -1062,12 +1074,42 @@ actor NetconfDriver(dev: DeviceMgr, init_dmc: DeviceMetaConfig, log_handler: log
             _log.debug("Device._on_connect: ignoring connection from old client")
             return
 
+        schemas = []
+        sw = time.Stopwatch()
+        def schema_download(index: int, total: int, schema_id: (identifier: str, namespace: ?str, version: ?str, format: str), schema_data, error):
+            if error is not None:
+                _log.error("Device._on_connect: error downloading schema", {"error": str(error), "identifier": schema_id.identifier})
+            elif schema_data is None:
+                _log.error("Device._on_conenct: error downloading schema", {"error": "empty schema data", "identifier": schema_id.identifier})
+            elif schema_data is not None:
+                # Skip models:
+                # - junos-rpc: all RPC modules use an undefined grouping?!
+                # - openconfig: on Cisco IOS XRd openconfig-mpls.yang doesn't compile because submodule overrides prefix of parent import
+                if schema_id.identifier.startswith("junos-rpc") or "openconfig" in schema_id.identifier:
+                    _log.debug("Device._on_connect: skipped schema", {"index": index, "total": total, "identifier": schema_id.identifier})
+                else:
+                    _log.debug("Device._on_connect: downloaded schema", {"index": index, "total": total, "identifier": schema_id.identifier})
+                    schemas.append(schema_data)
+
+        def download_complete(error):
+            if error is not None:
+                _log.error("Device._on_connect: error downloading schemas", {"error": str(err)})
+                modset = {}
+                after 1: c.restart()
+            else:
+                _log.debug("Device._on_connect: finished downloading schemas", {"duration": sw.elapsed().to_float()})
+                sw.reset()
+                schema_hash = schema_registry.add_schema(schemas)
+                _log.debug("Device._on_connect: compiled schemas", {"duration": sw.elapsed().to_float()})
+                dev.on_connect(modset, schema_hash)
+
         if err is not None:
             if state == CONNECTING:
                 _log.error("Device._on_connect: error connecting to device", {"error": str(err)})
             else:
                 _log.debug("Device._on_connect: connection failed", {"error": str(err)})
             modset = {}
+            schema_hash = None
             if client is not None:
                 after 1: client.restart()
             return
@@ -1085,7 +1127,8 @@ actor NetconfDriver(dev: DeviceMgr, init_dmc: DeviceMetaConfig, log_handler: log
             if not modset_eq(modset, new_modset):
                 modset = new_modset
 
-            dev.on_connect(modset)
+            sg = netconf.SchemaGetter(c)
+            sg.download(schema_download, download_complete, "all")
 
     def _on_notif(c, n):
         if client is not None and c is not client:
@@ -1251,10 +1294,9 @@ actor NetconfDriver(dev: DeviceMgr, init_dmc: DeviceMetaConfig, log_handler: log
                 # Extract current config and compute hash
                 data_tag = r.children[0] if len(r.children) > 0 else None
                 if data_tag is not None:
-                    # TODO: gen3!
-                    #current = schema.from_xml(data_tag)
-                    current = None
-                    if current is not None:
+                    schema = schema_registry.get_schema(schema_hash)
+                    if schema is not None:
+                        current = yang.gen3.from_xml(schema, data_tag, loose=True)
                         # Compute hash of the entire config as txid
                         current_xml_bytes = current.to_xmlstr().encode()
                         conf_hash = str(wyhash.hash(0, current_xml_bytes))
@@ -1583,10 +1625,9 @@ actor NetconfDriver(dev: DeviceMgr, init_dmc: DeviceMetaConfig, log_handler: log
                     # JUNOS response looks like this
                     # <data>\n<configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm" junos:commit-seconds="1756279893" junos:commit-localtime="2025-08-27 07:31:33 UTC" junos:commit-user="root">
                     # We want to extract the junos:commit-seconds and attach as txid on the root node in running_conf
-                    # TODO: gen3!
-                    #new_conf = schema.from_xml(r.children[0])
-                    new_conf = None
-                    if new_conf is not None:
+                    schema = schema_registry.get_schema(schema_hash)
+                    if schema is not None:
+                        new_conf = yang.gen3.from_xml(schema, r.children[0], loose=True)
                         if new_conf.txid is None:
                             txid = extract_txid(data_tag)
                             if txid is not None:
@@ -1602,9 +1643,12 @@ actor NetconfDriver(dev: DeviceMgr, init_dmc: DeviceMetaConfig, log_handler: log
                         else:
                             _log.debug("Device.on_get_config: parsed config already has txid", {"txid": new_conf.txid})
 
-                    # Save our own (in Adapter) view of the device's running configuration
-                    running_conf = new_conf
-                    done(running_conf, None)
+                        # Save our own (in Adapter) view of the device's running configuration
+                        running_conf = new_conf
+                        done(running_conf, None)
+                    else:
+                        running_conf = None
+                        done(None, Exception("No schemas compiled for schema_hash: {schema_hash}"))
                 else:
                     _log.error("Device.on_get_config", {"r": r.encode()})
                     done(None, ValueError("Unexpected response to <get-config>"))
