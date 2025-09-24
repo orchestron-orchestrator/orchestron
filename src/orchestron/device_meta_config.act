@@ -655,6 +655,10 @@ class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address__initial_credentials_entry:
         return orchestron_rfs__device__address__initial_credentials_entry(username=n.get_str('username'), password=n.get_str('password'), key=n.get_str('key'))
 
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__address__initial_credentials_entry.from_gdata(self.to_gdata())
+
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
         if top:
@@ -713,6 +717,16 @@ class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
             return [orchestron_rfs__device__address__initial_credentials_entry.from_gdata(e) for e in n.elements]
         return []
 
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self.elements:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device__address__initial_credentials(elements=copied_elements)
+
 
 class orchestron_rfs__device__address_entry(yang.adata.MNode):
     name: str
@@ -746,6 +760,10 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
         return orchestron_rfs__device__address_entry(name=n.get_str('name'), address=n.get_str('address'), port=n.get_opt_int('port'), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__address_entry.from_gdata(self.to_gdata())
 
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
@@ -809,6 +827,16 @@ class orchestron_rfs__device__address(yang.adata.MNode):
             return [orchestron_rfs__device__address_entry.from_gdata(e) for e in n.elements]
         return []
 
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self.elements:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device__address(elements=copied_elements)
+
 
 
 
@@ -836,6 +864,10 @@ class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__credentials__key_entry:
         return orchestron_rfs__device__credentials__key_entry(key=n.get_str('key'), private_key=n.get_opt_str('private-key'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__credentials__key_entry.from_gdata(self.to_gdata())
 
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
@@ -892,6 +924,16 @@ class orchestron_rfs__device__credentials__key(yang.adata.MNode):
             return [orchestron_rfs__device__credentials__key_entry.from_gdata(e) for e in n.elements]
         return []
 
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self.elements:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device__credentials__key(elements=copied_elements)
+
 
 class orchestron_rfs__device__credentials(yang.adata.MNode):
     username: str
@@ -922,6 +964,10 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
         if n is not None:
             return orchestron_rfs__device__credentials(username=n.get_str('username'), password=n.get_opt_str('password'), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_opt_list('key')))
         raise ValueError('Missing required subtree orchestron_rfs__device__credentials')
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__credentials.from_gdata(self.to_gdata())
 
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
@@ -983,6 +1029,10 @@ class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__initial_credentials_entry:
         return orchestron_rfs__device__initial_credentials_entry(username=n.get_str('username'), password=n.get_str('password'), key=n.get_str('key'))
 
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__initial_credentials_entry.from_gdata(self.to_gdata())
+
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
         if top:
@@ -1041,6 +1091,16 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
             return [orchestron_rfs__device__initial_credentials_entry.from_gdata(e) for e in n.elements]
         return []
 
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self.elements:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device__initial_credentials(elements=copied_elements)
+
 
 
 
@@ -1080,6 +1140,10 @@ class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__mock__module_entry:
         return orchestron_rfs__device__mock__module_entry(name=n.get_str('name'), namespace=n.get_str('namespace'), revision=n.get_opt_str('revision'), feature=n.get_opt_strs('feature'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__mock__module_entry.from_gdata(self.to_gdata())
 
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
@@ -1139,6 +1203,16 @@ class orchestron_rfs__device__mock__module(yang.adata.MNode):
             return [orchestron_rfs__device__mock__module_entry.from_gdata(e) for e in n.elements]
         return []
 
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self.elements:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device__mock__module(elements=copied_elements)
+
 
 class orchestron_rfs__device__mock(yang.adata.MNode):
     preset: list[str]
@@ -1164,6 +1238,10 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
         if n is not None:
             return orchestron_rfs__device__mock(preset=n.get_opt_strs('preset'), module=orchestron_rfs__device__mock__module.from_gdata(n.get_opt_list('module')))
         return orchestron_rfs__device__mock()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__mock.from_gdata(self.to_gdata())
 
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
@@ -1214,6 +1292,10 @@ class orchestron_rfs__device__debug(yang.adata.MNode):
         if n is not None:
             return orchestron_rfs__device__debug(connection=n.get_opt_bool('connection'))
         return orchestron_rfs__device__debug()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__debug.from_gdata(self.to_gdata())
 
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
@@ -1294,6 +1376,10 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device_entry:
         return orchestron_rfs__device_entry(name=n.get_str('name'), description=n.get_opt_str('description'), type=n.get_opt_str('type'), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list('address')), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_cnt('credentials')), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')), approval_required=n.get_opt_bool('approval-required'), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_cnt('mock')), debug=orchestron_rfs__device__debug.from_gdata(n.get_opt_cnt('debug')))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device_entry.from_gdata(self.to_gdata())
 
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
@@ -1382,6 +1468,16 @@ class orchestron_rfs__device(yang.adata.MNode):
         if n is not None:
             return [orchestron_rfs__device_entry.from_gdata(e) for e in n.elements]
         return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self.elements:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device(elements=copied_elements)
 
 
 schema_namespaces: set[str] = {
