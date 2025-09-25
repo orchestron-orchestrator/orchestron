@@ -174,7 +174,8 @@ actor _test_txid(t: testing.EnvT):
             test_username,
             test_password,
             on_connect=on_setup_connect,
-            log_handler=t.log_handler
+            log_handler=t.log_handler,
+            skip_host_key_check=True
         )
     def on_reconf(name: str):
         log.info("Reconf callback", {"name": name})
@@ -295,7 +296,8 @@ actor _test_txid(t: testing.EnvT):
             test_username,
             test_password,
             on_connect=on_verify_connect,
-            log_handler=t.log_handler
+            log_handler=t.log_handler,
+            skip_host_key_check=True
         )
 
     # Start the test by first setting up and verifying the server
@@ -372,7 +374,8 @@ actor _test_direct_get_config_with_filter(t: testing.EnvT):
             test_username,
             test_password,
             on_connect=on_connect,
-            log_handler=t.log_handler
+            log_handler=t.log_handler,
+            skip_host_key_check=True
         )
     else:
         print("Skipping test")
