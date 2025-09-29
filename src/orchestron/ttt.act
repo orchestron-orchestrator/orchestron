@@ -552,7 +552,11 @@ actor ListState(path, template: proc(list[str], ?Layer) -> Node, ns: ?str, modul
             provisional = set()
 
     def all():
-        return dict(elems.items())
+        #print('====', 'all:', elems.keys(), 'provosional:', provisional, "active:", active)
+        if provisional:
+            return {k: elems[k] for k in elems if k not in provisional}
+        else:
+            return dict(elems.items())
 
 
 class _ListTransaction(_Transaction):
