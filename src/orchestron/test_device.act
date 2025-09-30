@@ -398,7 +398,8 @@ actor _test_netconf_adapter(t: testing.EnvT):
             test_username,
             test_password,
             on_connect=on_setup_connect,
-            log_handler=t.log_handler
+            log_handler=t.log_handler,
+            skip_host_key_check=True
         )
 
     def on_reconf(name: str):
@@ -498,7 +499,8 @@ actor _test_netconf_adapter(t: testing.EnvT):
             test_username,
             test_password,
             on_connect=on_verify_connect,
-            log_handler=t.log_handler
+            log_handler=t.log_handler,
+            skip_host_key_check=True
         )
 
     # Start the test by first setting up and verifying the server
