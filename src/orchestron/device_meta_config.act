@@ -139,6 +139,13 @@ def src_yang():
       }
     }
 
+    container feature-flags {
+      leaf runtime-schema-fetch {
+        type boolean;
+        default false;
+      }
+    }
+
     container state {
       config false;
     }
@@ -1334,6 +1341,53 @@ class orchestron_rfs__device__debug(yang.adata.MNode):
         return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'debug'])
 
 
+
+class orchestron_rfs__device__feature_flags(yang.adata.MNode):
+    runtime_schema_fetch: bool
+
+    mut def __init__(self, runtime_schema_fetch: ?bool=None):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.runtime_schema_fetch = runtime_schema_fetch if runtime_schema_fetch is not None else False
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _runtime_schema_fetch = self.runtime_schema_fetch
+        if _runtime_schema_fetch is not None:
+            children['runtime-schema-fetch'] = yang.gdata.Leaf('boolean', _runtime_schema_fetch)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__feature_flags:
+        if n is not None:
+            return orchestron_rfs__device__feature_flags(runtime_schema_fetch=n.get_opt_bool('runtime-schema-fetch'))
+        return orchestron_rfs__device__feature_flags()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__feature_flags.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /device/feature-flags')
+            res.append('{self_name} = orchestron_rfs__device__feature_flags()')
+        leaves = []
+        _runtime_schema_fetch = self.runtime_schema_fetch
+        if _runtime_schema_fetch is not None:
+            leaves.append('{self_name}.runtime_schema_fetch = {repr(_runtime_schema_fetch)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/feature-flags'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'feature-flags'])
+
+
 class orchestron_rfs__device_entry(yang.adata.MNode):
     name: str
     description: ?str
@@ -1344,8 +1398,9 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
     approval_required: bool
     mock: orchestron_rfs__device__mock
     debug: orchestron_rfs__device__debug
+    feature_flags: orchestron_rfs__device__feature_flags
 
-    mut def __init__(self, name: str, credentials: orchestron_rfs__device__credentials, description: ?str, type: ?str, address: list[orchestron_rfs__device__address_entry]=[], initial_credentials: list[orchestron_rfs__device__initial_credentials_entry]=[], approval_required: ?bool=None, mock: ?orchestron_rfs__device__mock=None, debug: ?orchestron_rfs__device__debug=None):
+    mut def __init__(self, name: str, credentials: orchestron_rfs__device__credentials, description: ?str, type: ?str, address: list[orchestron_rfs__device__address_entry]=[], initial_credentials: list[orchestron_rfs__device__initial_credentials_entry]=[], approval_required: ?bool=None, mock: ?orchestron_rfs__device__mock=None, debug: ?orchestron_rfs__device__debug=None, feature_flags: ?orchestron_rfs__device__feature_flags=None):
         self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
         self.name = name
         self.description = description
@@ -1356,6 +1411,7 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         self.approval_required = approval_required if approval_required is not None else False
         self.mock = mock if mock is not None else orchestron_rfs__device__mock()
         self.debug = debug if debug is not None else orchestron_rfs__device__debug()
+        self.feature_flags = feature_flags if feature_flags is not None else orchestron_rfs__device__feature_flags()
 
     mut def to_gdata(self) -> yang.gdata.Node:
         children = {}
@@ -1386,11 +1442,14 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         _debug = self.debug
         if _debug is not None:
             children['debug'] = _debug.to_gdata()
+        _feature_flags = self.feature_flags
+        if _feature_flags is not None:
+            children['feature-flags'] = _feature_flags.to_gdata()
         return yang.gdata.Container(children)
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device_entry:
-        return orchestron_rfs__device_entry(name=n.get_str('name'), description=n.get_opt_str('description'), type=n.get_opt_str('type'), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list('address')), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_cnt('credentials')), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')), approval_required=n.get_opt_bool('approval-required'), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_cnt('mock')), debug=orchestron_rfs__device__debug.from_gdata(n.get_opt_cnt('debug')))
+        return orchestron_rfs__device_entry(name=n.get_str('name'), description=n.get_opt_str('description'), type=n.get_opt_str('type'), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list('address')), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_cnt('credentials')), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')), approval_required=n.get_opt_bool('approval-required'), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_cnt('mock')), debug=orchestron_rfs__device__debug.from_gdata(n.get_opt_cnt('debug')), feature_flags=orchestron_rfs__device__feature_flags.from_gdata(n.get_opt_cnt('feature-flags')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -1438,6 +1497,9 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         _debug = self.debug
         if _debug is not None:
             res.extend(_debug.prsrc('{self_name}.debug', False).splitlines())
+        _feature_flags = self.feature_flags
+        if _feature_flags is not None:
+            res.extend(_feature_flags.prsrc('{self_name}.feature_flags', False).splitlines())
         if leaves:
             if not list_element:
                res = ['', '# Container: /device'] + leaves + res
