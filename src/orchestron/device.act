@@ -1202,7 +1202,11 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
             if not modset_eq(modset, new_modset):
                 modset = new_modset
 
-            c.list_schemas(list_schemas)
+            if dmc.feature_flags.runtime_schema_fetch:
+                c.list_schemas(list_schemas)
+            else:
+                schema_hash = None
+                dev.on_connect(modset, schema_hash)
 
     def _on_notif(c, n):
         if client is not None and c is not client:
@@ -1369,9 +1373,14 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
                 data_tag = r.children[0] if len(r.children) > 0 else None
                 if data_tag is not None:
                     current = None
-                    fetched_schema = schema_registry.get_schema(schema_hash)
-                    if fetched_schema is not None:
-                        current = yang.gen3.from_data(fetched_schema, data_tag, loose=True)
+                    if dmc.feature_flags.runtime_schema_fetch:
+                        fetched_schema = schema_registry.get_schema(schema_hash)
+                        if fetched_schema is not None:
+                            current = yang.gen3.from_data(fetched_schema, data_tag, loose=True)
+                        else:
+                            _log.error("Device.get_txid_generic: no schemas compiled", {"schema_hash": schema_hash})
+                    else:
+                        current = yang.gen3.from_data(bundled_schema.src_dnode, data_tag, loose=True)
                     if current is not None:
                         # Compute hash of the entire config as txid
                         current_xml_bytes = current.to_xmlstr().encode()
@@ -1702,9 +1711,14 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
                     # <data>\n<configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm" junos:commit-seconds="1756279893" junos:commit-localtime="2025-08-27 07:31:33 UTC" junos:commit-user="root">
                     # We want to extract the junos:commit-seconds and attach as txid on the root node in running_conf
                     new_conf = None
-                    fetched_schema = schema_registry.get_schema(schema_hash)
-                    if fetched_schema is not None:
-                        new_conf = yang.gen3.from_data(fetched_schema, r.children[0], loose=True)
+                    if dmc.feature_flags.runtime_schema_fetch:
+                        fetched_schema = schema_registry.get_schema(schema_hash)
+                        if fetched_schema is not None:
+                            new_conf = yang.gen3.from_data(fetched_schema, r.children[0], loose=True)
+                        else:
+                            _log.error("Device.on_get_config: no schemas compiled", {"schema_hash": schema_hash})
+                    else:
+                        new_conf = yang.gen3.from_data(bundled_schema.src_dnode, r.children[0], loose=True)
                     if new_conf is not None:
                         if new_conf.txid is None:
                             txid = extract_txid(data_tag)
@@ -1726,10 +1740,7 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
                         done(running_conf, None)
                     else:
                         running_conf = None
-                        if fetched_schema is None:
-                            done(None, Exception(f"No schemas compiled for schema_hash: {schema_hash}"))
-                        else:
-                            done(None, Exception("Failed to parse configuration from device"))
+                        done(None, Exception("Failed to parse configuration from device"))
                 else:
                     _log.error("Device.on_get_config", {"r": r.encode()})
                     done(None, ValueError("Unexpected response to <get-config>"))
