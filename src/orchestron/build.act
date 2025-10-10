@@ -132,7 +132,7 @@ class CompiledSysSpec(object):
             from_xml={modname}.from_xml
         ),
 """
-        syssrc += "device_types = {{\n"
+        syssrc += "device_types: dict[str, odev.DeviceType] = {{\n"
         syssrc += syssrc_devtypes
         syssrc += "}}\n"
         if _maybe_write_file(fc, "{output_dir}/{self.name}/sysspec.act", syssrc):
