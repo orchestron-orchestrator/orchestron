@@ -1,6 +1,6 @@
 .PHONY: build
 build: src/orchestron/device_meta_config.act
-	acton build --dev $(DEP_OVERRIDES)
+	acton build $(DEP_OVERRIDES)
 
 .PHONY: build-ldep
 build-ldep: src/orchestron/device_meta_config.act
@@ -18,7 +18,7 @@ src/orchestron/device_meta_config.act: gen_dmc/out/bin/gen_dmc src/orchestron/ya
 
 gen_dmc/out/bin/gen_dmc: gen_dmc/src/gen_dmc.act src/orchestron/yang.act
 	cp -a src/orchestron/yang.act gen_dmc/src/oyang.act
-	cd gen_dmc && acton build --dev $(subst ../,../../,$(DEP_OVERRIDES))
+	cd gen_dmc && acton build $(subst ../,../../,$(DEP_OVERRIDES))
 
 .PHONY: test
 test:
