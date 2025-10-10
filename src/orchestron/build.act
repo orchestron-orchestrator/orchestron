@@ -52,6 +52,12 @@ class CompiledSysSpec(object):
         self.dev_types = {dev_type.name: dev_type for dev_type in device_types}
 
     def gen_app(self, fc: file.FileCap, output_dir: str):
+        fs = file.FS(fc)
+        fs.mkdir(output_dir)
+        fs.mkdir(file.join_path([output_dir, self.name]))
+        fs.mkdir(file.join_path([output_dir, self.name, "layers"]))
+        await async fs.mkdir(file.join_path([output_dir, self.name, "devices"]))
+
         tttsrc = "# WARNING WARNING WARNING WARNING WARNING\n"
         tttsrc += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
         tttsrc += "# WARNING WARNING WARNING WARNING WARNING\n\n"
