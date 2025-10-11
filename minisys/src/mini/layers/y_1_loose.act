@@ -1,0 +1,2920 @@
+import base64
+import json
+import xml
+import yang
+import yang.adata
+import yang.gdata
+import yang.gen3
+from yang.identity import complete_and_validate_identityref
+from yang.identityref import Identityref, PartialIdentityref
+from yang.schema import DIdentity
+
+# == This file is generated ==
+
+
+def src_yang():
+    res = []
+    res.append(r"""module mini-rfs {
+    yang-version "1.1";
+    namespace "http://example.com/mini-rfs";
+    prefix "mini-rfs";
+
+    import orchestron-rfs {
+        prefix orfs;
+    }
+    import ietf-inet-types {
+      prefix inet;
+    }
+
+    augment "/orfs:rfs" {
+        // TODO: should really be a P-container
+        list base-config {
+            key name;
+
+            orchestron:rfs-transform mini.rfs.BaseConfig;
+
+            leaf name {
+                type string;
+            }
+
+            leaf ipv4-address {
+                type string;
+                mandatory true;
+            }
+        }
+
+        list ntp-server {
+            key name;
+
+            orchestron:rfs-transform mini.rfs.NtpServer;
+
+            leaf name {
+                type string;
+            }
+
+        }
+  }
+}
+""")
+    res.append(r"""module orchestron-rfs {
+  yang-version "1.1";
+  namespace "http://orchestron.org/yang/orchestron-rfs.yang";
+  prefix "orfs";
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  description "RFS services";
+
+  list device {
+    key name;
+
+    orchestron:device;
+
+    leaf name {
+      type string;
+    }
+
+    leaf description {
+      type string;
+    }
+
+    leaf type {
+      type string;
+    }
+
+    list address {
+      key name;
+      leaf name {
+        description "Name of address, e.g. 'loopback' or 'OOB'";
+        type string;
+      }
+      leaf address {
+        type inet:host;
+        mandatory true;
+      }
+      leaf port {
+        type uint16;
+      }
+      list initial-credentials {
+        key "username password key";
+        leaf username {
+          type string;
+        }
+        leaf password {
+          type string;
+        }
+        leaf key {
+          type string;
+        }
+      }
+    }
+
+    container credentials {
+      leaf username {
+        type string;
+        mandatory true;
+      }
+      leaf password {
+        type string;
+      }
+      list key {
+        key key;
+        leaf key {
+          type string;
+        }
+        leaf private-key {
+          type string;
+        }
+      }
+    }
+
+    list initial-credentials {
+      key "username password key";
+      leaf username {
+        type string;
+      }
+      leaf password {
+        type string;
+      }
+      leaf key {
+        type string;
+      }
+    }
+
+    leaf approval-required {
+      description "Require approval of each individual configuration change to this device";
+      type boolean;
+      default "false";
+    }
+
+    container mock {
+      leaf-list preset {
+        type enumeration {
+          enum cisco-ios-xr;
+          enum juniper-junos;
+        }
+      }
+      list module {
+        key "name";
+        leaf name {
+          type string;
+        }
+        leaf namespace {
+          type string;
+          mandatory true;
+        }
+        leaf revision {
+          type string;
+        }
+        leaf-list feature {
+          type string;
+        }
+      }
+    }
+
+    container debug {
+      leaf connection {
+        type boolean;
+        default "false";
+      }
+    }
+
+    container state {
+      config false;
+    }
+  }
+
+  list rfs {
+    key name;
+
+    leaf name {
+      description "Device name";
+      type string;
+    }
+
+    // Augment
+  }
+}
+""")
+    res.append(r"""module ietf-inet-types {
+
+  namespace "urn:ietf:params:xml:ns:yang:ietf-inet-types";
+  prefix "inet";
+
+  organization
+   "IETF NETMOD (NETCONF Data Modeling Language) Working Group";
+
+  contact
+   "WG Web:   <http://tools.ietf.org/wg/netmod/>
+    WG List:  <mailto:netmod@ietf.org>
+
+    WG Chair: David Kessens
+              <mailto:david.kessens@nsn.com>
+
+    WG Chair: Juergen Schoenwaelder
+              <mailto:j.schoenwaelder@jacobs-university.de>
+
+    Editor:   Juergen Schoenwaelder
+              <mailto:j.schoenwaelder@jacobs-university.de>";
+
+  description
+   "This module contains a collection of generally useful derived
+    YANG data types for Internet addresses and related things.
+
+    Copyright (c) 2013 IETF Trust and the persons identified as
+    authors of the code.  All rights reserved.
+
+    Redistribution and use in source and binary forms, with or
+    without modification, is permitted pursuant to, and subject
+    to the license terms contained in, the Simplified BSD License
+    set forth in Section 4.c of the IETF Trust's Legal Provisions
+    Relating to IETF Documents
+    (http://trustee.ietf.org/license-info).
+
+    This version of this YANG module is part of RFC 6991; see
+    the RFC itself for full legal notices.";
+
+  revision 2013-07-15 {
+    description
+     "This revision adds the following new data types:
+      - ip-address-no-zone
+      - ipv4-address-no-zone
+      - ipv6-address-no-zone";
+    reference
+     "RFC 6991: Common YANG Data Types";
+  }
+
+  revision 2010-09-24 {
+    description
+     "Initial revision.";
+    reference
+     "RFC 6021: Common YANG Data Types";
+  }
+
+  /*** collection of types related to protocol fields ***/
+
+  typedef ip-version {
+    type enumeration {
+      enum unknown {
+        value "0";
+        description
+         "An unknown or unspecified version of the Internet
+          protocol.";
+      }
+      enum ipv4 {
+        value "1";
+        description
+         "The IPv4 protocol as defined in RFC 791.";
+      }
+      enum ipv6 {
+        value "2";
+        description
+         "The IPv6 protocol as defined in RFC 2460.";
+      }
+    }
+    description
+     "This value represents the version of the IP protocol.
+
+      In the value set and its semantics, this type is equivalent
+      to the InetVersion textual convention of the SMIv2.";
+    reference
+     "RFC  791: Internet Protocol
+      RFC 2460: Internet Protocol, Version 6 (IPv6) Specification
+      RFC 4001: Textual Conventions for Internet Network Addresses";
+  }
+
+  typedef dscp {
+    type uint8 {
+      range "0..63";
+    }
+    description
+     "The dscp type represents a Differentiated Services Code Point
+      that may be used for marking packets in a traffic stream.
+      In the value set and its semantics, this type is equivalent
+      to the Dscp textual convention of the SMIv2.";
+    reference
+     "RFC 3289: Management Information Base for the Differentiated
+                Services Architecture
+      RFC 2474: Definition of the Differentiated Services Field
+                (DS Field) in the IPv4 and IPv6 Headers
+      RFC 2780: IANA Allocation Guidelines For Values In
+                the Internet Protocol and Related Headers";
+  }
+
+  typedef ipv6-flow-label {
+    type uint32 {
+      range "0..1048575";
+    }
+    description
+     "The ipv6-flow-label type represents the flow identifier or Flow
+      Label in an IPv6 packet header that may be used to
+      discriminate traffic flows.
+
+      In the value set and its semantics, this type is equivalent
+      to the IPv6FlowLabel textual convention of the SMIv2.";
+    reference
+     "RFC 3595: Textual Conventions for IPv6 Flow Label
+      RFC 2460: Internet Protocol, Version 6 (IPv6) Specification";
+  }
+
+  typedef port-number {
+    type uint16 {
+      range "0..65535";
+    }
+    description
+     "The port-number type represents a 16-bit port number of an
+      Internet transport-layer protocol such as UDP, TCP, DCCP, or
+      SCTP.  Port numbers are assigned by IANA.  A current list of
+      all assignments is available from <http://www.iana.org/>.
+
+      Note that the port number value zero is reserved by IANA.  In
+      situations where the value zero does not make sense, it can
+      be excluded by subtyping the port-number type.
+      In the value set and its semantics, this type is equivalent
+      to the InetPortNumber textual convention of the SMIv2.";
+    reference
+     "RFC  768: User Datagram Protocol
+      RFC  793: Transmission Control Protocol
+      RFC 4960: Stream Control Transmission Protocol
+      RFC 4340: Datagram Congestion Control Protocol (DCCP)
+      RFC 4001: Textual Conventions for Internet Network Addresses";
+  }
+
+  /*** collection of types related to autonomous systems ***/
+
+  typedef as-number {
+    type uint32;
+    description
+     "The as-number type represents autonomous system numbers
+      which identify an Autonomous System (AS).  An AS is a set
+      of routers under a single technical administration, using
+      an interior gateway protocol and common metrics to route
+      packets within the AS, and using an exterior gateway
+      protocol to route packets to other ASes.  IANA maintains
+      the AS number space and has delegated large parts to the
+      regional registries.
+
+      Autonomous system numbers were originally limited to 16
+      bits.  BGP extensions have enlarged the autonomous system
+      number space to 32 bits.  This type therefore uses an uint32
+      base type without a range restriction in order to support
+      a larger autonomous system number space.
+
+      In the value set and its semantics, this type is equivalent
+      to the InetAutonomousSystemNumber textual convention of
+      the SMIv2.";
+    reference
+     "RFC 1930: Guidelines for creation, selection, and registration
+                of an Autonomous System (AS)
+      RFC 4271: A Border Gateway Protocol 4 (BGP-4)
+      RFC 4001: Textual Conventions for Internet Network Addresses
+      RFC 6793: BGP Support for Four-Octet Autonomous System (AS)
+                Number Space";
+  }
+
+  /*** collection of types related to IP addresses and hostnames ***/
+
+  typedef ip-address {
+    type union {
+      type inet:ipv4-address;
+      type inet:ipv6-address;
+    }
+    description
+     "The ip-address type represents an IP address and is IP
+      version neutral.  The format of the textual representation
+      implies the IP version.  This type supports scoped addresses
+      by allowing zone identifiers in the address format.";
+    reference
+     "RFC 4007: IPv6 Scoped Address Architecture";
+  }
+
+  typedef ipv4-address {
+    type string {
+      pattern
+        '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}'
+      +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+      + '(%[\\p{N}\\p{L}]+)?';
+    }
+    description
+      "The ipv4-address type represents an IPv4 address in
+       dotted-quad notation.  The IPv4 address may include a zone
+       index, separated by a % sign.
+
+       The zone index is used to disambiguate identical address
+       values.  For link-local addresses, the zone index will
+       typically be the interface index number or the name of an
+       interface.  If the zone index is not present, the default
+       zone of the device will be used.
+
+       The canonical format for the zone index is the numerical
+       format";
+  }
+
+  typedef ipv6-address {
+    type string {
+      pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
+            + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
+            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}'
+            + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
+            + '(%[\\p{N}\\p{L}]+)?';
+      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|'
+            + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
+            + '(%.+)?';
+    }
+    description
+     "The ipv6-address type represents an IPv6 address in full,
+      mixed, shortened, and shortened-mixed notation.  The IPv6
+      address may include a zone index, separated by a % sign.
+
+      The zone index is used to disambiguate identical address
+      values.  For link-local addresses, the zone index will
+      typically be the interface index number or the name of an
+      interface.  If the zone index is not present, the default
+      zone of the device will be used.
+
+      The canonical format of IPv6 addresses uses the textual
+      representation defined in Section 4 of RFC 5952.  The
+      canonical format for the zone index is the numerical
+      format as described in Section 11.2 of RFC 4007.";
+    reference
+     "RFC 4291: IP Version 6 Addressing Architecture
+      RFC 4007: IPv6 Scoped Address Architecture
+      RFC 5952: A Recommendation for IPv6 Address Text
+                Representation";
+  }
+
+  typedef ip-address-no-zone {
+    type union {
+      type inet:ipv4-address-no-zone;
+      type inet:ipv6-address-no-zone;
+    }
+    description
+     "The ip-address-no-zone type represents an IP address and is
+      IP version neutral.  The format of the textual representation
+      implies the IP version.  This type does not support scoped
+      addresses since it does not allow zone identifiers in the
+      address format.";
+    reference
+     "RFC 4007: IPv6 Scoped Address Architecture";
+  }
+
+  typedef ipv4-address-no-zone {
+    type inet:ipv4-address {
+      pattern '[0-9\\.]*';
+    }
+    description
+      "An IPv4 address without a zone index.  This type, derived from
+       ipv4-address, may be used in situations where the zone is
+       known from the context and hence no zone index is needed.";
+  }
+
+  typedef ipv6-address-no-zone {
+    type inet:ipv6-address {
+      pattern '[0-9a-fA-F:\\.]*';
+    }
+    description
+      "An IPv6 address without a zone index.  This type, derived from
+       ipv6-address, may be used in situations where the zone is
+       known from the context and hence no zone index is needed.";
+    reference
+     "RFC 4291: IP Version 6 Addressing Architecture
+      RFC 4007: IPv6 Scoped Address Architecture
+      RFC 5952: A Recommendation for IPv6 Address Text
+                Representation";
+  }
+
+  typedef ip-prefix {
+    type union {
+      type inet:ipv4-prefix;
+      type inet:ipv6-prefix;
+    }
+    description
+     "The ip-prefix type represents an IP prefix and is IP
+      version neutral.  The format of the textual representations
+      implies the IP version.";
+  }
+
+  typedef ipv4-prefix {
+    type string {
+      pattern
+         '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}'
+       +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+       + '/(([0-9])|([1-2][0-9])|(3[0-2]))';
+    }
+    description
+     "The ipv4-prefix type represents an IPv4 address prefix.
+      The prefix length is given by the number following the
+      slash character and must be less than or equal to 32.
+
+      A prefix length value of n corresponds to an IP address
+      mask that has n contiguous 1-bits from the most
+      significant bit (MSB) and all other bits set to 0.
+
+      The canonical format of an IPv4 prefix has all bits of
+      the IPv4 address set to zero that are not part of the
+      IPv4 prefix.";
+  }
+
+  typedef ipv6-prefix {
+    type string {
+      pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
+            + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
+            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}'
+            + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
+            + '(/(([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))';
+      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|'
+            + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
+            + '(/.+)';
+    }
+
+    description
+     "The ipv6-prefix type represents an IPv6 address prefix.
+      The prefix length is given by the number following the
+      slash character and must be less than or equal to 128.
+
+      A prefix length value of n corresponds to an IP address
+      mask that has n contiguous 1-bits from the most
+      significant bit (MSB) and all other bits set to 0.
+
+      The IPv6 address should have all bits that do not belong
+      to the prefix set to zero.
+
+      The canonical format of an IPv6 prefix has all bits of
+      the IPv6 address set to zero that are not part of the
+      IPv6 prefix.  Furthermore, the IPv6 address is represented
+      as defined in Section 4 of RFC 5952.";
+    reference
+     "RFC 5952: A Recommendation for IPv6 Address Text
+                Representation";
+  }
+
+  /*** collection of domain name and URI types ***/
+
+  typedef domain-name {
+    type string {
+      pattern
+        '((([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){0,61})?[a-zA-Z0-9]\\.)*'
+      + '([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){0,61})?[a-zA-Z0-9]\\.?)'
+      + '|\\.';
+      length "1..253";
+    }
+    description
+     "The domain-name type represents a DNS domain name.  The
+      name SHOULD be fully qualified whenever possible.
+
+      Internet domain names are only loosely specified.  Section
+      3.5 of RFC 1034 recommends a syntax (modified in Section
+      2.1 of RFC 1123).  The pattern above is intended to allow
+      for current practice in domain name use, and some possible
+      future expansion.  It is designed to hold various types of
+      domain names, including names used for A or AAAA records
+      (host names) and other records, such as SRV records.  Note
+      that Internet host names have a stricter syntax (described
+      in RFC 952) than the DNS recommendations in RFCs 1034 and
+      1123, and that systems that want to store host names in
+      schema nodes using the domain-name type are recommended to
+      adhere to this stricter standard to ensure interoperability.
+
+      The encoding of DNS names in the DNS protocol is limited
+      to 255 characters.  Since the encoding consists of labels
+      prefixed by a length bytes and there is a trailing NULL
+      byte, only 253 characters can appear in the textual dotted
+      notation.
+
+      The description clause of schema nodes using the domain-name
+      type MUST describe when and how these names are resolved to
+      IP addresses.  Note that the resolution of a domain-name value
+      may require to query multiple DNS records (e.g., A for IPv4
+      and AAAA for IPv6).  The order of the resolution process and
+      which DNS record takes precedence can either be defined
+      explicitly or may depend on the configuration of the
+      resolver.
+
+      Domain-name values use the US-ASCII encoding.  Their canonical
+      format uses lowercase US-ASCII characters.  Internationalized
+      domain names MUST be A-labels as per RFC 5890.";
+    reference
+     "RFC  952: DoD Internet Host Table Specification
+      RFC 1034: Domain Names - Concepts and Facilities
+      RFC 1123: Requirements for Internet Hosts -- Application
+                and Support
+      RFC 2782: A DNS RR for specifying the location of services
+                (DNS SRV)
+      RFC 5890: Internationalized Domain Names in Applications
+                (IDNA): Definitions and Document Framework";
+  }
+
+  typedef host {
+    type union {
+      type inet:ip-address;
+      type inet:domain-name;
+    }
+    description
+     "The host type represents either an IP address or a DNS
+      domain name.";
+  }
+
+  typedef uri {
+    type string;
+    description
+     "The uri type represents a Uniform Resource Identifier
+      (URI) as defined by STD 66.
+
+      Objects using the uri type MUST be in US-ASCII encoding,
+      and MUST be normalized as described by RFC 3986 Sections
+      6.2.1, 6.2.2.1, and 6.2.2.2.  All unnecessary
+      percent-encoding is removed, and all case-insensitive
+      characters are set to lowercase except for hexadecimal
+      digits, which are normalized to uppercase as described in
+      Section 6.2.2.1.
+
+      The purpose of this normalization is to help provide
+      unique URIs.  Note that this normalization is not
+      sufficient to provide uniqueness.  Two URIs that are
+      textually distinct after this normalization may still be
+      equivalent.
+
+      Objects using the uri type may restrict the schemes that
+      they permit.  For example, 'data:' and 'urn:' schemes
+      might not be appropriate.
+
+      A zero-length URI is not a valid URI.  This can be used to
+      express 'URI absent' where required.
+
+      In the value set and its semantics, this type is equivalent
+      to the Uri SMIv2 textual convention defined in RFC 5017.";
+    reference
+     "RFC 3986: Uniform Resource Identifier (URI): Generic Syntax
+      RFC 3305: Report from the Joint W3C/IETF URI Planning Interest
+                Group: Uniform Resource Identifiers (URIs), URLs,
+                and Uniform Resource Names (URNs): Clarifications
+                and Recommendations
+      RFC 5017: MIB Textual Conventions for Uniform Resource
+                Identifiers (URIs)";
+  }
+
+}
+""")
+    return res
+
+
+mut def from_json_orchestron_rfs__device__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__description(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__description(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__type(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__type(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__address__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__address__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__address__address(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('union', val)
+
+mut def from_xml_orchestron_rfs__device__address__address(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('union', val)
+
+mut def from_json_orchestron_rfs__device__address__port(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('uint16', val)
+
+mut def from_xml_orchestron_rfs__device__address__port(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('uint16', val)
+
+mut def from_json_orchestron_rfs__device__address__initial_credentials__username(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__address__initial_credentials__username(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__address__initial_credentials__password(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__address__initial_credentials__password(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__address__initial_credentials__key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__address__initial_credentials__key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNode):
+    username: str
+    password: str
+    key: str
+
+    mut def __init__(self, username: str, password: str, key: str):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.username = username
+        self.password = password
+        self.key = key
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _username = self.username
+        if _username is not None:
+            children['username'] = yang.gdata.Leaf('string', _username)
+        _password = self.password
+        if _password is not None:
+            children['password'] = yang.gdata.Leaf('string', _password)
+        _key = self.key
+        if _key is not None:
+            children['key'] = yang.gdata.Leaf('string', _key)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address__initial_credentials_entry:
+        return orchestron_rfs__device__address__initial_credentials_entry(username=n.get_str('username'), password=n.get_str('password'), key=n.get_str('key'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__address__initial_credentials_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /device/address/initial-credentials')
+            res.append('{self_name} = orchestron_rfs__device__address__initial_credentials({repr(self.username)}, {repr(self.password)}, {repr(self.key)})')
+        leaves = []
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/address/initial-credentials'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-rfs:device', 'address', 'initial-credentials'])
+
+class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
+    elements: list[orchestron_rfs__device__address__initial_credentials_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._name = 'initial-credentials'
+        self.elements = elements
+
+    mut def create(self, username, password, key):
+        for e in self:
+            match = True
+            if e.username != username:
+                match = False
+                continue
+            if e.password != password:
+                match = False
+                continue
+            if e.key != key:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = orchestron_rfs__device__address__initial_credentials_entry(username, password, key)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['username', 'password', 'key'], elements)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device__address__initial_credentials_entry]:
+        if n is not None:
+            return [orchestron_rfs__device__address__initial_credentials_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device__address__initial_credentials(elements=copied_elements)
+
+extension orchestron_rfs__device__address__initial_credentials(Iterable[orchestron_rfs__device__address__initial_credentials_entry]):
+    def __iter__(self) -> Iterator[orchestron_rfs__device__address__initial_credentials_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_orchestron_rfs__device__address__initial_credentials_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_username = yang.gdata.from_xml_str(node, 'username')
+    yang.gdata.maybe_add(children, 'username', from_xml_orchestron_rfs__device__address__initial_credentials__username, child_username)
+    child_password = yang.gdata.from_xml_str(node, 'password')
+    yang.gdata.maybe_add(children, 'password', from_xml_orchestron_rfs__device__address__initial_credentials__password, child_password)
+    child_key = yang.gdata.from_xml_str(node, 'key')
+    yang.gdata.maybe_add(children, 'key', from_xml_orchestron_rfs__device__address__initial_credentials__key, child_key)
+    return yang.gdata.Container(children)
+
+mut def from_xml_orchestron_rfs__device__address__initial_credentials(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_orchestron_rfs__device__address__initial_credentials_element(e) for e in nodes]
+    return yang.gdata.List(keys=['username', 'password', 'key'], elements=elements)
+
+mut def from_json_path_orchestron_rfs__device__address__initial_credentials_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        val = from_json_orchestron_rfs__device__address__initial_credentials_element(jd_dict)
+        if op == "merge":
+            return val
+        elif op == "remove":
+            return yang.gdata.Absent(val.key_children(['username', 'password', 'key']))
+        raise ValueError("Invalid operation")
+    elif len(path) > 1:
+        keys = path[0].split(",")
+        point = path[1]
+        rest_path = path[2:]
+        children: dict[str, yang.gdata.Node] = {}
+        children['username'] = from_json_orchestron_rfs__device__address__initial_credentials__username(keys[0])
+        children['password'] = from_json_orchestron_rfs__device__address__initial_credentials__password(keys[1])
+        children['key'] = from_json_orchestron_rfs__device__address__initial_credentials__key(keys[2])
+        return yang.gdata.Container(children)
+    raise ValueError("unreachable - no keys to list element")
+
+mut def from_json_path_orchestron_rfs__device__address__initial_credentials(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        # Check that all keys are present in payload.
+        # If present, they must equal the keys in the path
+        # If not present, fill in from path
+        for key in ['username', 'password', 'key']:
+            if key not in jd_dict:
+                jd_dict[key] = keys.pop(0)
+            else:
+                if str(jd_dict[key]) != keys.pop(0):
+                    raise ValueError("Key value mismatch between path and payload")
+        element = from_json_orchestron_rfs__device__address__initial_credentials_element(jd_dict)
+        elements = []
+        if op == "merge":
+            elements.append(element)
+        elif op == "remove":
+            elements.append(yang.gdata.Absent(element.key_children(['username', 'password', 'key'])))
+        return yang.gdata.List(['username', 'password', 'key'], elements)
+    elif len(path) > 1:
+        return yang.gdata.List(['username', 'password', 'key'], [from_json_path_orchestron_rfs__device__address__initial_credentials_element(jd, path, op)])
+    raise ValueError("Unable to resolve path, no keys provided")
+
+mut def from_json_orchestron_rfs__device__address__initial_credentials_element(jd: dict[str, ?value]) -> yang.gdata.Node:
+    children = {}
+    child_username = yang.gdata.take_json_str(jd, 'username')
+    yang.gdata.maybe_add(children, 'username', from_json_orchestron_rfs__device__address__initial_credentials__username, child_username)
+    child_password = yang.gdata.take_json_str(jd, 'password')
+    yang.gdata.maybe_add(children, 'password', from_json_orchestron_rfs__device__address__initial_credentials__password, child_password)
+    child_key = yang.gdata.take_json_str(jd, 'key')
+    yang.gdata.maybe_add(children, 'key', from_json_orchestron_rfs__device__address__initial_credentials__key, child_key)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__device__address__initial_credentials(jd: list[dict[str, ?value]]) -> yang.gdata.List:
+    elements = [from_json_orchestron_rfs__device__address__initial_credentials_element(e) for e in jd if isinstance(e, dict)]
+    return yang.gdata.List(keys=['username', 'password', 'key'], elements=elements)
+
+class orchestron_rfs__device__address_entry(yang.adata.MNode):
+    name: str
+    address: ?str
+    port: ?int
+    initial_credentials: orchestron_rfs__device__address__initial_credentials
+
+    mut def __init__(self, name: str, address: ?str, port: ?int, initial_credentials: list[orchestron_rfs__device__address__initial_credentials_entry]=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.name = name
+        self.address = address
+        self.port = port
+        self.initial_credentials = orchestron_rfs__device__address__initial_credentials(elements=initial_credentials)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _address = self.address
+        if _address is not None:
+            children['address'] = yang.gdata.Leaf('union', _address)
+        _port = self.port
+        if _port is not None:
+            children['port'] = yang.gdata.Leaf('uint16', _port)
+        _initial_credentials = self.initial_credentials
+        if _initial_credentials is not None:
+            children['initial-credentials'] = _initial_credentials.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
+        return orchestron_rfs__device__address_entry(name=n.get_str('name'), address=n.get_opt_str('address'), port=n.get_opt_int('port'), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__address_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /device/address')
+            res.append('{self_name} = orchestron_rfs__device__address({repr(self.name)})')
+        leaves = []
+        _address = self.address
+        if _address is not None:
+            leaves.append('{self_name}.address = {repr(_address)}')
+        _port = self.port
+        if _port is not None:
+            leaves.append('{self_name}.port = {repr(_port)}')
+        _initial_credentials = self.initial_credentials
+        for _element in _initial_credentials:
+            res.append('')
+            res.append("# List /device/address/initial-credentials element: {_element.to_gdata().key_str(['username', 'password', 'key'])}")
+            list_elem = 'initial_credentials_element = {self_name}.initial_credentials.create({repr(_element.username)}, {repr(_element.password)}, {repr(_element.key)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('initial_credentials_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/address'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-rfs:device', 'address'])
+
+class orchestron_rfs__device__address(yang.adata.MNode):
+    elements: list[orchestron_rfs__device__address_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._name = 'address'
+        self.elements = elements
+
+    mut def create(self, name, address):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = orchestron_rfs__device__address_entry(name, address)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device__address_entry]:
+        if n is not None:
+            return [orchestron_rfs__device__address_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device__address(elements=copied_elements)
+
+extension orchestron_rfs__device__address(Iterable[orchestron_rfs__device__address_entry]):
+    def __iter__(self) -> Iterator[orchestron_rfs__device__address_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_orchestron_rfs__device__address_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_orchestron_rfs__device__address__name, child_name)
+    child_address = yang.gdata.from_xml_opt_str(node, 'address')
+    yang.gdata.maybe_add(children, 'address', from_xml_orchestron_rfs__device__address__address, child_address)
+    child_port = yang.gdata.from_xml_opt_int(node, 'port')
+    yang.gdata.maybe_add(children, 'port', from_xml_orchestron_rfs__device__address__port, child_port)
+    child_initial_credentials = yang.gdata.from_xml_opt_list(node, 'initial-credentials')
+    yang.gdata.maybe_add(children, 'initial-credentials', from_xml_orchestron_rfs__device__address__initial_credentials, child_initial_credentials)
+    return yang.gdata.Container(children)
+
+mut def from_xml_orchestron_rfs__device__address(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_orchestron_rfs__device__address_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements)
+
+mut def from_json_path_orchestron_rfs__device__address_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        val = from_json_orchestron_rfs__device__address_element(jd_dict)
+        if op == "merge":
+            return val
+        elif op == "remove":
+            return yang.gdata.Absent(val.key_children(['name']))
+        raise ValueError("Invalid operation")
+    elif len(path) > 1:
+        keys = path[0].split(",")
+        point = path[1]
+        rest_path = path[2:]
+        children: dict[str, yang.gdata.Node] = {}
+        children['name'] = from_json_orchestron_rfs__device__address__name(keys[0])
+        if point == 'address':
+            raise ValueError("Invalid json path to non-inner node")
+        if point == 'port':
+            raise ValueError("Invalid json path to non-inner node")
+        if point == 'initial-credentials':
+            children['initial-credentials'] = from_json_path_orchestron_rfs__device__address__initial_credentials(jd, rest_path, op)
+        return yang.gdata.Container(children)
+    raise ValueError("unreachable - no keys to list element")
+
+mut def from_json_path_orchestron_rfs__device__address(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        # Check that all keys are present in payload.
+        # If present, they must equal the keys in the path
+        # If not present, fill in from path
+        for key in ['name']:
+            if key not in jd_dict:
+                jd_dict[key] = keys.pop(0)
+            else:
+                if str(jd_dict[key]) != keys.pop(0):
+                    raise ValueError("Key value mismatch between path and payload")
+        element = from_json_orchestron_rfs__device__address_element(jd_dict)
+        elements = []
+        if op == "merge":
+            elements.append(element)
+        elif op == "remove":
+            elements.append(yang.gdata.Absent(element.key_children(['name'])))
+        return yang.gdata.List(['name'], elements)
+    elif len(path) > 1:
+        return yang.gdata.List(['name'], [from_json_path_orchestron_rfs__device__address_element(jd, path, op)])
+    raise ValueError("Unable to resolve path, no keys provided")
+
+mut def from_json_orchestron_rfs__device__address_element(jd: dict[str, ?value]) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.take_json_str(jd, 'name')
+    yang.gdata.maybe_add(children, 'name', from_json_orchestron_rfs__device__address__name, child_name)
+    child_address = yang.gdata.take_json_opt_str(jd, 'address')
+    yang.gdata.maybe_add(children, 'address', from_json_orchestron_rfs__device__address__address, child_address)
+    child_port = yang.gdata.take_json_opt_int(jd, 'port')
+    yang.gdata.maybe_add(children, 'port', from_json_orchestron_rfs__device__address__port, child_port)
+    child_initial_credentials = yang.gdata.take_json_opt_list(jd, 'initial-credentials')
+    yang.gdata.maybe_add(children, 'initial-credentials', from_json_orchestron_rfs__device__address__initial_credentials, child_initial_credentials)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__device__address(jd: list[dict[str, ?value]]) -> yang.gdata.List:
+    elements = [from_json_orchestron_rfs__device__address_element(e) for e in jd if isinstance(e, dict)]
+    return yang.gdata.List(keys=['name'], elements=elements)
+
+mut def from_json_orchestron_rfs__device__credentials__username(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__credentials__username(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__credentials__password(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__credentials__password(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__credentials__key__key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__credentials__key__key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__credentials__key__private_key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__credentials__key__private_key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
+    key: str
+    private_key: ?str
+
+    mut def __init__(self, key: str, private_key: ?str):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.key = key
+        self.private_key = private_key
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _key = self.key
+        if _key is not None:
+            children['key'] = yang.gdata.Leaf('string', _key)
+        _private_key = self.private_key
+        if _private_key is not None:
+            children['private-key'] = yang.gdata.Leaf('string', _private_key)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__credentials__key_entry:
+        return orchestron_rfs__device__credentials__key_entry(key=n.get_str('key'), private_key=n.get_opt_str('private-key'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__credentials__key_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /device/credentials/key')
+            res.append('{self_name} = orchestron_rfs__device__credentials__key({repr(self.key)})')
+        leaves = []
+        _private_key = self.private_key
+        if _private_key is not None:
+            leaves.append('{self_name}.private_key = {repr(_private_key)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/credentials/key'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-rfs:device', 'credentials', 'key'])
+
+class orchestron_rfs__device__credentials__key(yang.adata.MNode):
+    elements: list[orchestron_rfs__device__credentials__key_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._name = 'key'
+        self.elements = elements
+
+    mut def create(self, key):
+        for e in self:
+            match = True
+            if e.key != key:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = orchestron_rfs__device__credentials__key_entry(key)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['key'], elements)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device__credentials__key_entry]:
+        if n is not None:
+            return [orchestron_rfs__device__credentials__key_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device__credentials__key(elements=copied_elements)
+
+extension orchestron_rfs__device__credentials__key(Iterable[orchestron_rfs__device__credentials__key_entry]):
+    def __iter__(self) -> Iterator[orchestron_rfs__device__credentials__key_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_orchestron_rfs__device__credentials__key_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_key = yang.gdata.from_xml_str(node, 'key')
+    yang.gdata.maybe_add(children, 'key', from_xml_orchestron_rfs__device__credentials__key__key, child_key)
+    child_private_key = yang.gdata.from_xml_opt_str(node, 'private-key')
+    yang.gdata.maybe_add(children, 'private-key', from_xml_orchestron_rfs__device__credentials__key__private_key, child_private_key)
+    return yang.gdata.Container(children)
+
+mut def from_xml_orchestron_rfs__device__credentials__key(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_orchestron_rfs__device__credentials__key_element(e) for e in nodes]
+    return yang.gdata.List(keys=['key'], elements=elements)
+
+mut def from_json_path_orchestron_rfs__device__credentials__key_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        val = from_json_orchestron_rfs__device__credentials__key_element(jd_dict)
+        if op == "merge":
+            return val
+        elif op == "remove":
+            return yang.gdata.Absent(val.key_children(['key']))
+        raise ValueError("Invalid operation")
+    elif len(path) > 1:
+        keys = path[0].split(",")
+        point = path[1]
+        rest_path = path[2:]
+        children: dict[str, yang.gdata.Node] = {}
+        children['key'] = from_json_orchestron_rfs__device__credentials__key__key(keys[0])
+        if point == 'private-key':
+            raise ValueError("Invalid json path to non-inner node")
+        return yang.gdata.Container(children)
+    raise ValueError("unreachable - no keys to list element")
+
+mut def from_json_path_orchestron_rfs__device__credentials__key(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        # Check that all keys are present in payload.
+        # If present, they must equal the keys in the path
+        # If not present, fill in from path
+        for key in ['key']:
+            if key not in jd_dict:
+                jd_dict[key] = keys.pop(0)
+            else:
+                if str(jd_dict[key]) != keys.pop(0):
+                    raise ValueError("Key value mismatch between path and payload")
+        element = from_json_orchestron_rfs__device__credentials__key_element(jd_dict)
+        elements = []
+        if op == "merge":
+            elements.append(element)
+        elif op == "remove":
+            elements.append(yang.gdata.Absent(element.key_children(['key'])))
+        return yang.gdata.List(['key'], elements)
+    elif len(path) > 1:
+        return yang.gdata.List(['key'], [from_json_path_orchestron_rfs__device__credentials__key_element(jd, path, op)])
+    raise ValueError("Unable to resolve path, no keys provided")
+
+mut def from_json_orchestron_rfs__device__credentials__key_element(jd: dict[str, ?value]) -> yang.gdata.Node:
+    children = {}
+    child_key = yang.gdata.take_json_str(jd, 'key')
+    yang.gdata.maybe_add(children, 'key', from_json_orchestron_rfs__device__credentials__key__key, child_key)
+    child_private_key = yang.gdata.take_json_opt_str(jd, 'private-key')
+    yang.gdata.maybe_add(children, 'private-key', from_json_orchestron_rfs__device__credentials__key__private_key, child_private_key)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__device__credentials__key(jd: list[dict[str, ?value]]) -> yang.gdata.List:
+    elements = [from_json_orchestron_rfs__device__credentials__key_element(e) for e in jd if isinstance(e, dict)]
+    return yang.gdata.List(keys=['key'], elements=elements)
+
+class orchestron_rfs__device__credentials(yang.adata.MNode):
+    username: ?str
+    password: ?str
+    key: orchestron_rfs__device__credentials__key
+
+    mut def __init__(self, username: ?str, password: ?str, key: list[orchestron_rfs__device__credentials__key_entry]=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.username = username
+        self.password = password
+        self.key = orchestron_rfs__device__credentials__key(elements=key)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _username = self.username
+        if _username is not None:
+            children['username'] = yang.gdata.Leaf('string', _username)
+        _password = self.password
+        if _password is not None:
+            children['password'] = yang.gdata.Leaf('string', _password)
+        _key = self.key
+        if _key is not None:
+            children['key'] = _key.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__credentials:
+        if n is not None:
+            return orchestron_rfs__device__credentials(username=n.get_opt_str('username'), password=n.get_opt_str('password'), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_opt_list('key')))
+        raise ValueError('Missing required subtree orchestron_rfs__device__credentials')
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__credentials.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /device/credentials')
+            res.append('{self_name} = orchestron_rfs__device__credentials()')
+        leaves = []
+        _username = self.username
+        if _username is not None:
+            leaves.append('{self_name}.username = {repr(_username)}')
+        _password = self.password
+        if _password is not None:
+            leaves.append('{self_name}.password = {repr(_password)}')
+        _key = self.key
+        for _element in _key:
+            res.append('')
+            res.append("# List /device/credentials/key element: {_element.to_gdata().key_str(['key'])}")
+            list_elem = 'key_element = {self_name}.key.create({repr(_element.key)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('key_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/credentials'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-rfs:device', 'credentials'])
+
+
+mut def from_xml_orchestron_rfs__device__credentials(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_username = yang.gdata.from_xml_opt_str(node, 'username')
+    yang.gdata.maybe_add(children, 'username', from_xml_orchestron_rfs__device__credentials__username, child_username)
+    child_password = yang.gdata.from_xml_opt_str(node, 'password')
+    yang.gdata.maybe_add(children, 'password', from_xml_orchestron_rfs__device__credentials__password, child_password)
+    child_key = yang.gdata.from_xml_opt_list(node, 'key')
+    yang.gdata.maybe_add(children, 'key', from_xml_orchestron_rfs__device__credentials__key, child_key)
+    return yang.gdata.Container(children)
+
+mut def from_json_path_orchestron_rfs__device__credentials(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    # path handling
+    if len(path) > 0:
+        point = path[0]
+        rest_path = path[1:]
+        if point == 'username':
+            raise ValueError("Invalid json path to non-inner node")
+        if point == 'password':
+            raise ValueError("Invalid json path to non-inner node")
+        if point == 'key':
+            child = {'key': from_json_path_orchestron_rfs__device__credentials__key(jd, rest_path, op) }
+            return yang.gdata.Container(child)
+        raise ValueError("Invalid path")
+    elif len(path) == 0:
+        if op == "merge":
+            return from_json_orchestron_rfs__device__credentials(yang.gdata.unwrap_dict(jd))
+        elif op == "remove":
+            return yang.gdata.Absent()
+        raise ValueError("Invalid operation")
+    raise ValueError("Unable to resolve path")
+
+mut def from_json_orchestron_rfs__device__credentials(jd: dict[str, ?value]) -> yang.gdata.Container:
+    children = {}
+    child_username = yang.gdata.take_json_opt_str(jd, 'username')
+    yang.gdata.maybe_add(children, 'username', from_json_orchestron_rfs__device__credentials__username, child_username)
+    child_password = yang.gdata.take_json_opt_str(jd, 'password')
+    yang.gdata.maybe_add(children, 'password', from_json_orchestron_rfs__device__credentials__password, child_password)
+    child_key = yang.gdata.take_json_opt_list(jd, 'key')
+    yang.gdata.maybe_add(children, 'key', from_json_orchestron_rfs__device__credentials__key, child_key)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__device__initial_credentials__username(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__initial_credentials__username(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__initial_credentials__password(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__initial_credentials__password(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__initial_credentials__key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__initial_credentials__key(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
+    username: str
+    password: str
+    key: str
+
+    mut def __init__(self, username: str, password: str, key: str):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.username = username
+        self.password = password
+        self.key = key
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _username = self.username
+        if _username is not None:
+            children['username'] = yang.gdata.Leaf('string', _username)
+        _password = self.password
+        if _password is not None:
+            children['password'] = yang.gdata.Leaf('string', _password)
+        _key = self.key
+        if _key is not None:
+            children['key'] = yang.gdata.Leaf('string', _key)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__initial_credentials_entry:
+        return orchestron_rfs__device__initial_credentials_entry(username=n.get_str('username'), password=n.get_str('password'), key=n.get_str('key'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__initial_credentials_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /device/initial-credentials')
+            res.append('{self_name} = orchestron_rfs__device__initial_credentials({repr(self.username)}, {repr(self.password)}, {repr(self.key)})')
+        leaves = []
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/initial-credentials'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-rfs:device', 'initial-credentials'])
+
+class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
+    elements: list[orchestron_rfs__device__initial_credentials_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._name = 'initial-credentials'
+        self.elements = elements
+
+    mut def create(self, username, password, key):
+        for e in self:
+            match = True
+            if e.username != username:
+                match = False
+                continue
+            if e.password != password:
+                match = False
+                continue
+            if e.key != key:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = orchestron_rfs__device__initial_credentials_entry(username, password, key)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['username', 'password', 'key'], elements)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device__initial_credentials_entry]:
+        if n is not None:
+            return [orchestron_rfs__device__initial_credentials_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device__initial_credentials(elements=copied_elements)
+
+extension orchestron_rfs__device__initial_credentials(Iterable[orchestron_rfs__device__initial_credentials_entry]):
+    def __iter__(self) -> Iterator[orchestron_rfs__device__initial_credentials_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_orchestron_rfs__device__initial_credentials_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_username = yang.gdata.from_xml_str(node, 'username')
+    yang.gdata.maybe_add(children, 'username', from_xml_orchestron_rfs__device__initial_credentials__username, child_username)
+    child_password = yang.gdata.from_xml_str(node, 'password')
+    yang.gdata.maybe_add(children, 'password', from_xml_orchestron_rfs__device__initial_credentials__password, child_password)
+    child_key = yang.gdata.from_xml_str(node, 'key')
+    yang.gdata.maybe_add(children, 'key', from_xml_orchestron_rfs__device__initial_credentials__key, child_key)
+    return yang.gdata.Container(children)
+
+mut def from_xml_orchestron_rfs__device__initial_credentials(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_orchestron_rfs__device__initial_credentials_element(e) for e in nodes]
+    return yang.gdata.List(keys=['username', 'password', 'key'], elements=elements)
+
+mut def from_json_path_orchestron_rfs__device__initial_credentials_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        val = from_json_orchestron_rfs__device__initial_credentials_element(jd_dict)
+        if op == "merge":
+            return val
+        elif op == "remove":
+            return yang.gdata.Absent(val.key_children(['username', 'password', 'key']))
+        raise ValueError("Invalid operation")
+    elif len(path) > 1:
+        keys = path[0].split(",")
+        point = path[1]
+        rest_path = path[2:]
+        children: dict[str, yang.gdata.Node] = {}
+        children['username'] = from_json_orchestron_rfs__device__initial_credentials__username(keys[0])
+        children['password'] = from_json_orchestron_rfs__device__initial_credentials__password(keys[1])
+        children['key'] = from_json_orchestron_rfs__device__initial_credentials__key(keys[2])
+        return yang.gdata.Container(children)
+    raise ValueError("unreachable - no keys to list element")
+
+mut def from_json_path_orchestron_rfs__device__initial_credentials(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        # Check that all keys are present in payload.
+        # If present, they must equal the keys in the path
+        # If not present, fill in from path
+        for key in ['username', 'password', 'key']:
+            if key not in jd_dict:
+                jd_dict[key] = keys.pop(0)
+            else:
+                if str(jd_dict[key]) != keys.pop(0):
+                    raise ValueError("Key value mismatch between path and payload")
+        element = from_json_orchestron_rfs__device__initial_credentials_element(jd_dict)
+        elements = []
+        if op == "merge":
+            elements.append(element)
+        elif op == "remove":
+            elements.append(yang.gdata.Absent(element.key_children(['username', 'password', 'key'])))
+        return yang.gdata.List(['username', 'password', 'key'], elements)
+    elif len(path) > 1:
+        return yang.gdata.List(['username', 'password', 'key'], [from_json_path_orchestron_rfs__device__initial_credentials_element(jd, path, op)])
+    raise ValueError("Unable to resolve path, no keys provided")
+
+mut def from_json_orchestron_rfs__device__initial_credentials_element(jd: dict[str, ?value]) -> yang.gdata.Node:
+    children = {}
+    child_username = yang.gdata.take_json_str(jd, 'username')
+    yang.gdata.maybe_add(children, 'username', from_json_orchestron_rfs__device__initial_credentials__username, child_username)
+    child_password = yang.gdata.take_json_str(jd, 'password')
+    yang.gdata.maybe_add(children, 'password', from_json_orchestron_rfs__device__initial_credentials__password, child_password)
+    child_key = yang.gdata.take_json_str(jd, 'key')
+    yang.gdata.maybe_add(children, 'key', from_json_orchestron_rfs__device__initial_credentials__key, child_key)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__device__initial_credentials(jd: list[dict[str, ?value]]) -> yang.gdata.List:
+    elements = [from_json_orchestron_rfs__device__initial_credentials_element(e) for e in jd if isinstance(e, dict)]
+    return yang.gdata.List(keys=['username', 'password', 'key'], elements=elements)
+
+mut def from_json_orchestron_rfs__device__approval_required(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('boolean', val)
+
+mut def from_xml_orchestron_rfs__device__approval_required(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('boolean', val)
+
+mut def from_json_orchestron_rfs__device__mock__preset(val: list[value]) -> yang.gdata.LeafList:
+    return yang.gdata.LeafList('enumeration', val)
+
+mut def from_xml_orchestron_rfs__device__mock__preset(val: list[value]) -> yang.gdata.LeafList:
+    return yang.gdata.LeafList('enumeration', val)
+
+mut def from_json_orchestron_rfs__device__mock__module__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__mock__module__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__mock__module__namespace(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__mock__module__namespace(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__mock__module__revision(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__device__mock__module__revision(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__device__mock__module__feature(val: list[value]) -> yang.gdata.LeafList:
+    return yang.gdata.LeafList('string', val)
+
+mut def from_xml_orchestron_rfs__device__mock__module__feature(val: list[value]) -> yang.gdata.LeafList:
+    return yang.gdata.LeafList('string', val)
+
+class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
+    name: str
+    namespace: ?str
+    revision: ?str
+    feature: list[str]
+
+    mut def __init__(self, name: str, namespace: ?str, revision: ?str, feature: ?list[str]=None):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.name = name
+        self.namespace = namespace
+        self.revision = revision
+        self.feature = feature if feature is not None else []
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _namespace = self.namespace
+        if _namespace is not None:
+            children['namespace'] = yang.gdata.Leaf('string', _namespace)
+        _revision = self.revision
+        if _revision is not None:
+            children['revision'] = yang.gdata.Leaf('string', _revision)
+        _feature = self.feature
+        if _feature is not None:
+            children['feature'] = yang.gdata.LeafList('string', _feature)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__mock__module_entry:
+        return orchestron_rfs__device__mock__module_entry(name=n.get_str('name'), namespace=n.get_opt_str('namespace'), revision=n.get_opt_str('revision'), feature=n.get_opt_strs('feature'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__mock__module_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /device/mock/module')
+            res.append('{self_name} = orchestron_rfs__device__mock__module({repr(self.name)})')
+        leaves = []
+        _namespace = self.namespace
+        if _namespace is not None:
+            leaves.append('{self_name}.namespace = {repr(_namespace)}')
+        _revision = self.revision
+        if _revision is not None:
+            leaves.append('{self_name}.revision = {repr(_revision)}')
+        _feature = self.feature
+        if len(_feature) != 0:
+            leaves.append('{self_name}.feature = {repr(_feature)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/mock/module'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-rfs:device', 'mock', 'module'])
+
+class orchestron_rfs__device__mock__module(yang.adata.MNode):
+    elements: list[orchestron_rfs__device__mock__module_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._name = 'module'
+        self.elements = elements
+
+    mut def create(self, name, namespace):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = orchestron_rfs__device__mock__module_entry(name, namespace)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device__mock__module_entry]:
+        if n is not None:
+            return [orchestron_rfs__device__mock__module_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device__mock__module(elements=copied_elements)
+
+extension orchestron_rfs__device__mock__module(Iterable[orchestron_rfs__device__mock__module_entry]):
+    def __iter__(self) -> Iterator[orchestron_rfs__device__mock__module_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_orchestron_rfs__device__mock__module_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_orchestron_rfs__device__mock__module__name, child_name)
+    child_namespace = yang.gdata.from_xml_opt_str(node, 'namespace')
+    yang.gdata.maybe_add(children, 'namespace', from_xml_orchestron_rfs__device__mock__module__namespace, child_namespace)
+    child_revision = yang.gdata.from_xml_opt_str(node, 'revision')
+    yang.gdata.maybe_add(children, 'revision', from_xml_orchestron_rfs__device__mock__module__revision, child_revision)
+    child_feature = yang.gdata.from_xml_opt_strs(node, 'feature')
+    yang.gdata.maybe_add(children, 'feature', from_xml_orchestron_rfs__device__mock__module__feature, child_feature)
+    return yang.gdata.Container(children)
+
+mut def from_xml_orchestron_rfs__device__mock__module(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_orchestron_rfs__device__mock__module_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements)
+
+mut def from_json_path_orchestron_rfs__device__mock__module_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        val = from_json_orchestron_rfs__device__mock__module_element(jd_dict)
+        if op == "merge":
+            return val
+        elif op == "remove":
+            return yang.gdata.Absent(val.key_children(['name']))
+        raise ValueError("Invalid operation")
+    elif len(path) > 1:
+        keys = path[0].split(",")
+        point = path[1]
+        rest_path = path[2:]
+        children: dict[str, yang.gdata.Node] = {}
+        children['name'] = from_json_orchestron_rfs__device__mock__module__name(keys[0])
+        if point == 'namespace':
+            raise ValueError("Invalid json path to non-inner node")
+        if point == 'revision':
+            raise ValueError("Invalid json path to non-inner node")
+        if point == 'feature':
+            raise ValueError("Invalid json path to non-inner node")
+        return yang.gdata.Container(children)
+    raise ValueError("unreachable - no keys to list element")
+
+mut def from_json_path_orchestron_rfs__device__mock__module(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        # Check that all keys are present in payload.
+        # If present, they must equal the keys in the path
+        # If not present, fill in from path
+        for key in ['name']:
+            if key not in jd_dict:
+                jd_dict[key] = keys.pop(0)
+            else:
+                if str(jd_dict[key]) != keys.pop(0):
+                    raise ValueError("Key value mismatch between path and payload")
+        element = from_json_orchestron_rfs__device__mock__module_element(jd_dict)
+        elements = []
+        if op == "merge":
+            elements.append(element)
+        elif op == "remove":
+            elements.append(yang.gdata.Absent(element.key_children(['name'])))
+        return yang.gdata.List(['name'], elements)
+    elif len(path) > 1:
+        return yang.gdata.List(['name'], [from_json_path_orchestron_rfs__device__mock__module_element(jd, path, op)])
+    raise ValueError("Unable to resolve path, no keys provided")
+
+mut def from_json_orchestron_rfs__device__mock__module_element(jd: dict[str, ?value]) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.take_json_str(jd, 'name')
+    yang.gdata.maybe_add(children, 'name', from_json_orchestron_rfs__device__mock__module__name, child_name)
+    child_namespace = yang.gdata.take_json_opt_str(jd, 'namespace')
+    yang.gdata.maybe_add(children, 'namespace', from_json_orchestron_rfs__device__mock__module__namespace, child_namespace)
+    child_revision = yang.gdata.take_json_opt_str(jd, 'revision')
+    yang.gdata.maybe_add(children, 'revision', from_json_orchestron_rfs__device__mock__module__revision, child_revision)
+    child_feature = yang.gdata.take_json_opt_strs(jd, 'feature')
+    yang.gdata.maybe_add(children, 'feature', from_json_orchestron_rfs__device__mock__module__feature, child_feature)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__device__mock__module(jd: list[dict[str, ?value]]) -> yang.gdata.List:
+    elements = [from_json_orchestron_rfs__device__mock__module_element(e) for e in jd if isinstance(e, dict)]
+    return yang.gdata.List(keys=['name'], elements=elements)
+
+class orchestron_rfs__device__mock(yang.adata.MNode):
+    preset: list[str]
+    module: orchestron_rfs__device__mock__module
+
+    mut def __init__(self, preset: ?list[str]=None, module: list[orchestron_rfs__device__mock__module_entry]=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.preset = preset if preset is not None else []
+        self.module = orchestron_rfs__device__mock__module(elements=module)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _preset = self.preset
+        if _preset is not None:
+            children['preset'] = yang.gdata.LeafList('enumeration', _preset)
+        _module = self.module
+        if _module is not None:
+            children['module'] = _module.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__mock:
+        if n is not None:
+            return orchestron_rfs__device__mock(preset=n.get_opt_strs('preset'), module=orchestron_rfs__device__mock__module.from_gdata(n.get_opt_list('module')))
+        return orchestron_rfs__device__mock()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__mock.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /device/mock')
+            res.append('{self_name} = orchestron_rfs__device__mock()')
+        leaves = []
+        _preset = self.preset
+        if len(_preset) != 0:
+            leaves.append('{self_name}.preset = {repr(_preset)}')
+        _module = self.module
+        for _element in _module:
+            res.append('')
+            res.append("# List /device/mock/module element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'module_element = {self_name}.module.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('module_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/mock'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-rfs:device', 'mock'])
+
+
+mut def from_xml_orchestron_rfs__device__mock(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_preset = yang.gdata.from_xml_opt_strs(node, 'preset')
+    yang.gdata.maybe_add(children, 'preset', from_xml_orchestron_rfs__device__mock__preset, child_preset)
+    child_module = yang.gdata.from_xml_opt_list(node, 'module')
+    yang.gdata.maybe_add(children, 'module', from_xml_orchestron_rfs__device__mock__module, child_module)
+    return yang.gdata.Container(children)
+
+mut def from_json_path_orchestron_rfs__device__mock(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    # path handling
+    if len(path) > 0:
+        point = path[0]
+        rest_path = path[1:]
+        if point == 'preset':
+            raise ValueError("Invalid json path to non-inner node")
+        if point == 'module':
+            child = {'module': from_json_path_orchestron_rfs__device__mock__module(jd, rest_path, op) }
+            return yang.gdata.Container(child)
+        raise ValueError("Invalid path")
+    elif len(path) == 0:
+        if op == "merge":
+            return from_json_orchestron_rfs__device__mock(yang.gdata.unwrap_dict(jd))
+        elif op == "remove":
+            return yang.gdata.Absent()
+        raise ValueError("Invalid operation")
+    raise ValueError("Unable to resolve path")
+
+mut def from_json_orchestron_rfs__device__mock(jd: dict[str, ?value]) -> yang.gdata.Container:
+    children = {}
+    child_preset = yang.gdata.take_json_opt_strs(jd, 'preset')
+    yang.gdata.maybe_add(children, 'preset', from_json_orchestron_rfs__device__mock__preset, child_preset)
+    child_module = yang.gdata.take_json_opt_list(jd, 'module')
+    yang.gdata.maybe_add(children, 'module', from_json_orchestron_rfs__device__mock__module, child_module)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__device__debug__connection(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('boolean', val)
+
+mut def from_xml_orchestron_rfs__device__debug__connection(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('boolean', val)
+
+class orchestron_rfs__device__debug(yang.adata.MNode):
+    connection: ?bool
+
+    mut def __init__(self, connection: ?bool):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.connection = connection
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _connection = self.connection
+        if _connection is not None:
+            children['connection'] = yang.gdata.Leaf('boolean', _connection)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__debug:
+        if n is not None:
+            return orchestron_rfs__device__debug(connection=n.get_opt_bool('connection'))
+        return orchestron_rfs__device__debug()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device__debug.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /device/debug')
+            res.append('{self_name} = orchestron_rfs__device__debug()')
+        leaves = []
+        _connection = self.connection
+        if _connection is not None:
+            leaves.append('{self_name}.connection = {repr(_connection)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device/debug'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-rfs:device', 'debug'])
+
+
+mut def from_xml_orchestron_rfs__device__debug(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_connection = yang.gdata.from_xml_opt_bool(node, 'connection')
+    yang.gdata.maybe_add(children, 'connection', from_xml_orchestron_rfs__device__debug__connection, child_connection)
+    return yang.gdata.Container(children)
+
+mut def from_json_path_orchestron_rfs__device__debug(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    # path handling
+    if len(path) > 0:
+        point = path[0]
+        rest_path = path[1:]
+        if point == 'connection':
+            raise ValueError("Invalid json path to non-inner node")
+        raise ValueError("Invalid path")
+    elif len(path) == 0:
+        if op == "merge":
+            return from_json_orchestron_rfs__device__debug(yang.gdata.unwrap_dict(jd))
+        elif op == "remove":
+            return yang.gdata.Absent()
+        raise ValueError("Invalid operation")
+    raise ValueError("Unable to resolve path")
+
+mut def from_json_orchestron_rfs__device__debug(jd: dict[str, ?value]) -> yang.gdata.Container:
+    children = {}
+    child_connection = yang.gdata.take_json_opt_bool(jd, 'connection')
+    yang.gdata.maybe_add(children, 'connection', from_json_orchestron_rfs__device__debug__connection, child_connection)
+    return yang.gdata.Container(children)
+
+class orchestron_rfs__device_entry(yang.adata.MNode):
+    name: str
+    description: ?str
+    type: ?str
+    address: orchestron_rfs__device__address
+    credentials: orchestron_rfs__device__credentials
+    initial_credentials: orchestron_rfs__device__initial_credentials
+    approval_required: ?bool
+    mock: orchestron_rfs__device__mock
+    debug: orchestron_rfs__device__debug
+
+    mut def __init__(self, name: str, description: ?str, type: ?str, address: list[orchestron_rfs__device__address_entry]=[], credentials: ?orchestron_rfs__device__credentials=None, initial_credentials: list[orchestron_rfs__device__initial_credentials_entry]=[], approval_required: ?bool, mock: ?orchestron_rfs__device__mock=None, debug: ?orchestron_rfs__device__debug=None):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.name = name
+        self.description = description
+        self.type = type
+        self.address = orchestron_rfs__device__address(elements=address)
+        self.credentials = credentials if credentials is not None else orchestron_rfs__device__credentials()
+        self.initial_credentials = orchestron_rfs__device__initial_credentials(elements=initial_credentials)
+        self.approval_required = approval_required
+        self.mock = mock if mock is not None else orchestron_rfs__device__mock()
+        self.debug = debug if debug is not None else orchestron_rfs__device__debug()
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _description = self.description
+        if _description is not None:
+            children['description'] = yang.gdata.Leaf('string', _description)
+        _type = self.type
+        if _type is not None:
+            children['type'] = yang.gdata.Leaf('string', _type)
+        _address = self.address
+        if _address is not None:
+            children['address'] = _address.to_gdata()
+        _credentials = self.credentials
+        if _credentials is not None:
+            children['credentials'] = _credentials.to_gdata()
+        _initial_credentials = self.initial_credentials
+        if _initial_credentials is not None:
+            children['initial-credentials'] = _initial_credentials.to_gdata()
+        _approval_required = self.approval_required
+        if _approval_required is not None:
+            children['approval-required'] = yang.gdata.Leaf('boolean', _approval_required)
+        _mock = self.mock
+        if _mock is not None:
+            children['mock'] = _mock.to_gdata()
+        _debug = self.debug
+        if _debug is not None:
+            children['debug'] = _debug.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device_entry:
+        return orchestron_rfs__device_entry(name=n.get_str('name'), description=n.get_opt_str('description'), type=n.get_opt_str('type'), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list('address')), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_opt_cnt('credentials')), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')), approval_required=n.get_opt_bool('approval-required'), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_cnt('mock')), debug=orchestron_rfs__device__debug.from_gdata(n.get_opt_cnt('debug')))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__device_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /device')
+            res.append('{self_name} = orchestron_rfs__device({repr(self.name)})')
+        leaves = []
+        _description = self.description
+        if _description is not None:
+            leaves.append('{self_name}.description = {repr(_description)}')
+        _type = self.type
+        if _type is not None:
+            leaves.append('{self_name}.type = {repr(_type)}')
+        _address = self.address
+        for _element in _address:
+            res.append('')
+            res.append("# List /device/address element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'address_element = {self_name}.address.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('address_element', False, list_element=True).splitlines())
+        _credentials = self.credentials
+        if _credentials is not None:
+            res.extend(_credentials.prsrc('{self_name}.credentials', False).splitlines())
+        _initial_credentials = self.initial_credentials
+        for _element in _initial_credentials:
+            res.append('')
+            res.append("# List /device/initial-credentials element: {_element.to_gdata().key_str(['username', 'password', 'key'])}")
+            list_elem = 'initial_credentials_element = {self_name}.initial_credentials.create({repr(_element.username)}, {repr(_element.password)}, {repr(_element.key)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('initial_credentials_element', False, list_element=True).splitlines())
+        _approval_required = self.approval_required
+        if _approval_required is not None:
+            leaves.append('{self_name}.approval_required = {repr(_approval_required)}')
+        _mock = self.mock
+        if _mock is not None:
+            res.extend(_mock.prsrc('{self_name}.mock', False).splitlines())
+        _debug = self.debug
+        if _debug is not None:
+            res.extend(_debug.prsrc('{self_name}.debug', False).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /device'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-rfs:device'])
+
+class orchestron_rfs__device(yang.adata.MNode):
+    elements: list[orchestron_rfs__device_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._name = 'device'
+        self.elements = elements
+
+    mut def create(self, name):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = orchestron_rfs__device_entry(name)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements, ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device_entry]:
+        if n is not None:
+            return [orchestron_rfs__device_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__device(elements=copied_elements)
+
+extension orchestron_rfs__device(Iterable[orchestron_rfs__device_entry]):
+    def __iter__(self) -> Iterator[orchestron_rfs__device_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_orchestron_rfs__device_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_orchestron_rfs__device__name, child_name)
+    child_description = yang.gdata.from_xml_opt_str(node, 'description')
+    yang.gdata.maybe_add(children, 'description', from_xml_orchestron_rfs__device__description, child_description)
+    child_type = yang.gdata.from_xml_opt_str(node, 'type')
+    yang.gdata.maybe_add(children, 'type', from_xml_orchestron_rfs__device__type, child_type)
+    child_address = yang.gdata.from_xml_opt_list(node, 'address')
+    yang.gdata.maybe_add(children, 'address', from_xml_orchestron_rfs__device__address, child_address)
+    child_credentials = yang.gdata.from_xml_opt_cnt(node, 'credentials')
+    yang.gdata.maybe_add(children, 'credentials', from_xml_orchestron_rfs__device__credentials, child_credentials)
+    child_initial_credentials = yang.gdata.from_xml_opt_list(node, 'initial-credentials')
+    yang.gdata.maybe_add(children, 'initial-credentials', from_xml_orchestron_rfs__device__initial_credentials, child_initial_credentials)
+    child_approval_required = yang.gdata.from_xml_opt_bool(node, 'approval-required')
+    yang.gdata.maybe_add(children, 'approval-required', from_xml_orchestron_rfs__device__approval_required, child_approval_required)
+    child_mock = yang.gdata.from_xml_opt_cnt(node, 'mock')
+    yang.gdata.maybe_add(children, 'mock', from_xml_orchestron_rfs__device__mock, child_mock)
+    child_debug = yang.gdata.from_xml_opt_cnt(node, 'debug')
+    yang.gdata.maybe_add(children, 'debug', from_xml_orchestron_rfs__device__debug, child_debug)
+    return yang.gdata.Container(children)
+
+mut def from_xml_orchestron_rfs__device(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_orchestron_rfs__device_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements, ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
+
+mut def from_json_path_orchestron_rfs__device_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        val = from_json_orchestron_rfs__device_element(jd_dict)
+        if op == "merge":
+            return val
+        elif op == "remove":
+            return yang.gdata.Absent(val.key_children(['name']))
+        raise ValueError("Invalid operation")
+    elif len(path) > 1:
+        keys = path[0].split(",")
+        point = path[1]
+        rest_path = path[2:]
+        children: dict[str, yang.gdata.Node] = {}
+        children['name'] = from_json_orchestron_rfs__device__name(keys[0])
+        if point == 'description':
+            raise ValueError("Invalid json path to non-inner node")
+        if point == 'type':
+            raise ValueError("Invalid json path to non-inner node")
+        if point == 'address':
+            children['address'] = from_json_path_orchestron_rfs__device__address(jd, rest_path, op)
+        if point == 'credentials':
+            children['credentials'] = from_json_path_orchestron_rfs__device__credentials(jd, rest_path, op)
+        if point == 'initial-credentials':
+            children['initial-credentials'] = from_json_path_orchestron_rfs__device__initial_credentials(jd, rest_path, op)
+        if point == 'approval-required':
+            raise ValueError("Invalid json path to non-inner node")
+        if point == 'mock':
+            children['mock'] = from_json_path_orchestron_rfs__device__mock(jd, rest_path, op)
+        if point == 'debug':
+            children['debug'] = from_json_path_orchestron_rfs__device__debug(jd, rest_path, op)
+        return yang.gdata.Container(children)
+    raise ValueError("unreachable - no keys to list element")
+
+mut def from_json_path_orchestron_rfs__device(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        # Check that all keys are present in payload.
+        # If present, they must equal the keys in the path
+        # If not present, fill in from path
+        for key in ['name']:
+            if key not in jd_dict:
+                jd_dict[key] = keys.pop(0)
+            else:
+                if str(jd_dict[key]) != keys.pop(0):
+                    raise ValueError("Key value mismatch between path and payload")
+        element = from_json_orchestron_rfs__device_element(jd_dict)
+        elements = []
+        if op == "merge":
+            elements.append(element)
+        elif op == "remove":
+            elements.append(yang.gdata.Absent(element.key_children(['name'])))
+        return yang.gdata.List(['name'], elements, ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
+    elif len(path) > 1:
+        return yang.gdata.List(['name'], [from_json_path_orchestron_rfs__device_element(jd, path, op)], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
+    raise ValueError("Unable to resolve path, no keys provided")
+
+mut def from_json_orchestron_rfs__device_element(jd: dict[str, ?value]) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.take_json_str(jd, 'name')
+    yang.gdata.maybe_add(children, 'name', from_json_orchestron_rfs__device__name, child_name)
+    child_description = yang.gdata.take_json_opt_str(jd, 'description')
+    yang.gdata.maybe_add(children, 'description', from_json_orchestron_rfs__device__description, child_description)
+    child_type = yang.gdata.take_json_opt_str(jd, 'type')
+    yang.gdata.maybe_add(children, 'type', from_json_orchestron_rfs__device__type, child_type)
+    child_address = yang.gdata.take_json_opt_list(jd, 'address')
+    yang.gdata.maybe_add(children, 'address', from_json_orchestron_rfs__device__address, child_address)
+    child_credentials = yang.gdata.take_json_opt_cnt(jd, 'credentials')
+    yang.gdata.maybe_add(children, 'credentials', from_json_orchestron_rfs__device__credentials, child_credentials)
+    child_initial_credentials = yang.gdata.take_json_opt_list(jd, 'initial-credentials')
+    yang.gdata.maybe_add(children, 'initial-credentials', from_json_orchestron_rfs__device__initial_credentials, child_initial_credentials)
+    child_approval_required = yang.gdata.take_json_opt_bool(jd, 'approval-required')
+    yang.gdata.maybe_add(children, 'approval-required', from_json_orchestron_rfs__device__approval_required, child_approval_required)
+    child_mock = yang.gdata.take_json_opt_cnt(jd, 'mock')
+    yang.gdata.maybe_add(children, 'mock', from_json_orchestron_rfs__device__mock, child_mock)
+    child_debug = yang.gdata.take_json_opt_cnt(jd, 'debug')
+    yang.gdata.maybe_add(children, 'debug', from_json_orchestron_rfs__device__debug, child_debug)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__device(jd: list[dict[str, ?value]]) -> yang.gdata.List:
+    elements = [from_json_orchestron_rfs__device_element(e) for e in jd if isinstance(e, dict)]
+    return yang.gdata.List(keys=['name'], elements=elements, ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
+
+mut def from_json_orchestron_rfs__rfs__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__rfs__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__rfs__base_config__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__rfs__base_config__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_json_orchestron_rfs__rfs__base_config__ipv4_address(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__rfs__base_config__ipv4_address(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+class orchestron_rfs__rfs__base_config_entry(yang.adata.MNode):
+    name: str
+    ipv4_address: ?str
+
+    mut def __init__(self, name: str, ipv4_address: ?str):
+        self._ns = 'http://example.com/mini-rfs'
+        self.name = name
+        self.ipv4_address = ipv4_address
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _ipv4_address = self.ipv4_address
+        if _ipv4_address is not None:
+            children['ipv4-address'] = yang.gdata.Leaf('string', _ipv4_address)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs__base_config_entry:
+        return orchestron_rfs__rfs__base_config_entry(name=n.get_str('name'), ipv4_address=n.get_opt_str('ipv4-address'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__rfs__base_config_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /rfs/base-config')
+            res.append('{self_name} = orchestron_rfs__rfs__base_config({repr(self.name)})')
+        leaves = []
+        _ipv4_address = self.ipv4_address
+        if _ipv4_address is not None:
+            leaves.append('{self_name}.ipv4_address = {repr(_ipv4_address)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /rfs/base-config'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['mini-rfs:rfs', 'base-config'])
+
+class orchestron_rfs__rfs__base_config(yang.adata.MNode):
+    elements: list[orchestron_rfs__rfs__base_config_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://example.com/mini-rfs'
+        self._name = 'base-config'
+        self.elements = elements
+
+    mut def create(self, name, ipv4_address):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = orchestron_rfs__rfs__base_config_entry(name, ipv4_address)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements, ns='http://example.com/mini-rfs', module='mini-rfs')
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__rfs__base_config_entry]:
+        if n is not None:
+            return [orchestron_rfs__rfs__base_config_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__rfs__base_config(elements=copied_elements)
+
+extension orchestron_rfs__rfs__base_config(Iterable[orchestron_rfs__rfs__base_config_entry]):
+    def __iter__(self) -> Iterator[orchestron_rfs__rfs__base_config_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_orchestron_rfs__rfs__base_config_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_orchestron_rfs__rfs__base_config__name, child_name)
+    child_ipv4_address = yang.gdata.from_xml_opt_str(node, 'ipv4-address')
+    yang.gdata.maybe_add(children, 'ipv4-address', from_xml_orchestron_rfs__rfs__base_config__ipv4_address, child_ipv4_address)
+    return yang.gdata.Container(children)
+
+mut def from_xml_orchestron_rfs__rfs__base_config(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_orchestron_rfs__rfs__base_config_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements, ns='http://example.com/mini-rfs', module='mini-rfs')
+
+mut def from_json_path_orchestron_rfs__rfs__base_config_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        val = from_json_orchestron_rfs__rfs__base_config_element(jd_dict)
+        if op == "merge":
+            return val
+        elif op == "remove":
+            return yang.gdata.Absent(val.key_children(['name']))
+        raise ValueError("Invalid operation")
+    elif len(path) > 1:
+        keys = path[0].split(",")
+        point = path[1]
+        rest_path = path[2:]
+        children: dict[str, yang.gdata.Node] = {}
+        children['name'] = from_json_orchestron_rfs__rfs__base_config__name(keys[0])
+        if point == 'ipv4-address':
+            raise ValueError("Invalid json path to non-inner node")
+        return yang.gdata.Container(children)
+    raise ValueError("unreachable - no keys to list element")
+
+mut def from_json_path_orchestron_rfs__rfs__base_config(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        # Check that all keys are present in payload.
+        # If present, they must equal the keys in the path
+        # If not present, fill in from path
+        for key in ['name']:
+            if key not in jd_dict:
+                jd_dict[key] = keys.pop(0)
+            else:
+                if str(jd_dict[key]) != keys.pop(0):
+                    raise ValueError("Key value mismatch between path and payload")
+        element = from_json_orchestron_rfs__rfs__base_config_element(jd_dict)
+        elements = []
+        if op == "merge":
+            elements.append(element)
+        elif op == "remove":
+            elements.append(yang.gdata.Absent(element.key_children(['name'])))
+        return yang.gdata.List(['name'], elements, ns='http://example.com/mini-rfs', module='mini-rfs')
+    elif len(path) > 1:
+        return yang.gdata.List(['name'], [from_json_path_orchestron_rfs__rfs__base_config_element(jd, path, op)], ns='http://example.com/mini-rfs', module='mini-rfs')
+    raise ValueError("Unable to resolve path, no keys provided")
+
+mut def from_json_orchestron_rfs__rfs__base_config_element(jd: dict[str, ?value]) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.take_json_str(jd, 'name')
+    yang.gdata.maybe_add(children, 'name', from_json_orchestron_rfs__rfs__base_config__name, child_name)
+    child_ipv4_address = yang.gdata.take_json_opt_str(jd, 'ipv4-address')
+    yang.gdata.maybe_add(children, 'ipv4-address', from_json_orchestron_rfs__rfs__base_config__ipv4_address, child_ipv4_address)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__rfs__base_config(jd: list[dict[str, ?value]]) -> yang.gdata.List:
+    elements = [from_json_orchestron_rfs__rfs__base_config_element(e) for e in jd if isinstance(e, dict)]
+    return yang.gdata.List(keys=['name'], elements=elements, ns='http://example.com/mini-rfs', module='mini-rfs')
+
+mut def from_json_orchestron_rfs__rfs__ntp_server__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_orchestron_rfs__rfs__ntp_server__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+class orchestron_rfs__rfs__ntp_server_entry(yang.adata.MNode):
+    name: str
+
+    mut def __init__(self, name: str):
+        self._ns = 'http://example.com/mini-rfs'
+        self.name = name
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs__ntp_server_entry:
+        return orchestron_rfs__rfs__ntp_server_entry(name=n.get_str('name'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__rfs__ntp_server_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /rfs/ntp-server')
+            res.append('{self_name} = orchestron_rfs__rfs__ntp_server({repr(self.name)})')
+        leaves = []
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /rfs/ntp-server'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['mini-rfs:rfs', 'ntp-server'])
+
+class orchestron_rfs__rfs__ntp_server(yang.adata.MNode):
+    elements: list[orchestron_rfs__rfs__ntp_server_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://example.com/mini-rfs'
+        self._name = 'ntp-server'
+        self.elements = elements
+
+    mut def create(self, name):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = orchestron_rfs__rfs__ntp_server_entry(name)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements, ns='http://example.com/mini-rfs', module='mini-rfs')
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__rfs__ntp_server_entry]:
+        if n is not None:
+            return [orchestron_rfs__rfs__ntp_server_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__rfs__ntp_server(elements=copied_elements)
+
+extension orchestron_rfs__rfs__ntp_server(Iterable[orchestron_rfs__rfs__ntp_server_entry]):
+    def __iter__(self) -> Iterator[orchestron_rfs__rfs__ntp_server_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_orchestron_rfs__rfs__ntp_server_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_orchestron_rfs__rfs__ntp_server__name, child_name)
+    return yang.gdata.Container(children)
+
+mut def from_xml_orchestron_rfs__rfs__ntp_server(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_orchestron_rfs__rfs__ntp_server_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements, ns='http://example.com/mini-rfs', module='mini-rfs')
+
+mut def from_json_path_orchestron_rfs__rfs__ntp_server_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        val = from_json_orchestron_rfs__rfs__ntp_server_element(jd_dict)
+        if op == "merge":
+            return val
+        elif op == "remove":
+            return yang.gdata.Absent(val.key_children(['name']))
+        raise ValueError("Invalid operation")
+    elif len(path) > 1:
+        keys = path[0].split(",")
+        point = path[1]
+        rest_path = path[2:]
+        children: dict[str, yang.gdata.Node] = {}
+        children['name'] = from_json_orchestron_rfs__rfs__ntp_server__name(keys[0])
+        return yang.gdata.Container(children)
+    raise ValueError("unreachable - no keys to list element")
+
+mut def from_json_path_orchestron_rfs__rfs__ntp_server(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        # Check that all keys are present in payload.
+        # If present, they must equal the keys in the path
+        # If not present, fill in from path
+        for key in ['name']:
+            if key not in jd_dict:
+                jd_dict[key] = keys.pop(0)
+            else:
+                if str(jd_dict[key]) != keys.pop(0):
+                    raise ValueError("Key value mismatch between path and payload")
+        element = from_json_orchestron_rfs__rfs__ntp_server_element(jd_dict)
+        elements = []
+        if op == "merge":
+            elements.append(element)
+        elif op == "remove":
+            elements.append(yang.gdata.Absent(element.key_children(['name'])))
+        return yang.gdata.List(['name'], elements, ns='http://example.com/mini-rfs', module='mini-rfs')
+    elif len(path) > 1:
+        return yang.gdata.List(['name'], [from_json_path_orchestron_rfs__rfs__ntp_server_element(jd, path, op)], ns='http://example.com/mini-rfs', module='mini-rfs')
+    raise ValueError("Unable to resolve path, no keys provided")
+
+mut def from_json_orchestron_rfs__rfs__ntp_server_element(jd: dict[str, ?value]) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.take_json_str(jd, 'name')
+    yang.gdata.maybe_add(children, 'name', from_json_orchestron_rfs__rfs__ntp_server__name, child_name)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__rfs__ntp_server(jd: list[dict[str, ?value]]) -> yang.gdata.List:
+    elements = [from_json_orchestron_rfs__rfs__ntp_server_element(e) for e in jd if isinstance(e, dict)]
+    return yang.gdata.List(keys=['name'], elements=elements, ns='http://example.com/mini-rfs', module='mini-rfs')
+
+class orchestron_rfs__rfs_entry(yang.adata.MNode):
+    name: str
+    base_config: orchestron_rfs__rfs__base_config
+    ntp_server: orchestron_rfs__rfs__ntp_server
+
+    mut def __init__(self, name: str, base_config: list[orchestron_rfs__rfs__base_config_entry]=[], ntp_server: list[orchestron_rfs__rfs__ntp_server_entry]=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self.name = name
+        self.base_config = orchestron_rfs__rfs__base_config(elements=base_config)
+        self.ntp_server = orchestron_rfs__rfs__ntp_server(elements=ntp_server)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _base_config = self.base_config
+        if _base_config is not None:
+            children['base-config'] = _base_config.to_gdata()
+        _ntp_server = self.ntp_server
+        if _ntp_server is not None:
+            children['ntp-server'] = _ntp_server.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs_entry:
+        return orchestron_rfs__rfs_entry(name=n.get_str('name'), base_config=orchestron_rfs__rfs__base_config.from_gdata(n.get_opt_list('base-config')), ntp_server=orchestron_rfs__rfs__ntp_server.from_gdata(n.get_opt_list('ntp-server')))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__rfs_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /rfs')
+            res.append('{self_name} = orchestron_rfs__rfs({repr(self.name)})')
+        leaves = []
+        _base_config = self.base_config
+        for _element in _base_config:
+            res.append('')
+            res.append("# List /rfs/base-config element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'base_config_element = {self_name}.base_config.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('base_config_element', False, list_element=True).splitlines())
+        _ntp_server = self.ntp_server
+        for _element in _ntp_server:
+            res.append('')
+            res.append("# List /rfs/ntp-server element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'ntp_server_element = {self_name}.ntp_server.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('ntp_server_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /rfs'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-rfs:rfs'])
+
+class orchestron_rfs__rfs(yang.adata.MNode):
+    elements: list[orchestron_rfs__rfs_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._name = 'rfs'
+        self.elements = elements
+
+    mut def create(self, name):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = orchestron_rfs__rfs_entry(name)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements, ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__rfs_entry]:
+        if n is not None:
+            return [orchestron_rfs__rfs_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return orchestron_rfs__rfs(elements=copied_elements)
+
+extension orchestron_rfs__rfs(Iterable[orchestron_rfs__rfs_entry]):
+    def __iter__(self) -> Iterator[orchestron_rfs__rfs_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_orchestron_rfs__rfs_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_orchestron_rfs__rfs__name, child_name)
+    child_base_config = yang.gdata.from_xml_opt_list(node, 'base-config', 'http://example.com/mini-rfs')
+    yang.gdata.maybe_add(children, 'base-config', from_xml_orchestron_rfs__rfs__base_config, child_base_config)
+    child_ntp_server = yang.gdata.from_xml_opt_list(node, 'ntp-server', 'http://example.com/mini-rfs')
+    yang.gdata.maybe_add(children, 'ntp-server', from_xml_orchestron_rfs__rfs__ntp_server, child_ntp_server)
+    return yang.gdata.Container(children)
+
+mut def from_xml_orchestron_rfs__rfs(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_orchestron_rfs__rfs_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements, ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
+
+mut def from_json_path_orchestron_rfs__rfs_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        val = from_json_orchestron_rfs__rfs_element(jd_dict)
+        if op == "merge":
+            return val
+        elif op == "remove":
+            return yang.gdata.Absent(val.key_children(['name']))
+        raise ValueError("Invalid operation")
+    elif len(path) > 1:
+        keys = path[0].split(",")
+        point = path[1]
+        rest_path = path[2:]
+        children: dict[str, yang.gdata.Node] = {}
+        children['name'] = from_json_orchestron_rfs__rfs__name(keys[0])
+        if point == 'mini-rfs:base-config':
+            children['base-config'] = from_json_path_orchestron_rfs__rfs__base_config(jd, rest_path, op)
+        if point == 'mini-rfs:ntp-server':
+            children['ntp-server'] = from_json_path_orchestron_rfs__rfs__ntp_server(jd, rest_path, op)
+        return yang.gdata.Container(children)
+    raise ValueError("unreachable - no keys to list element")
+
+mut def from_json_path_orchestron_rfs__rfs(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
+    if len(path) == 1:
+        point = path[0]
+        keys = point.split(",")
+        jd_dict = yang.gdata.unwrap_dict(jd)
+        # Check that all keys are present in payload.
+        # If present, they must equal the keys in the path
+        # If not present, fill in from path
+        for key in ['name']:
+            if key not in jd_dict:
+                jd_dict[key] = keys.pop(0)
+            else:
+                if str(jd_dict[key]) != keys.pop(0):
+                    raise ValueError("Key value mismatch between path and payload")
+        element = from_json_orchestron_rfs__rfs_element(jd_dict)
+        elements = []
+        if op == "merge":
+            elements.append(element)
+        elif op == "remove":
+            elements.append(yang.gdata.Absent(element.key_children(['name'])))
+        return yang.gdata.List(['name'], elements, ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
+    elif len(path) > 1:
+        return yang.gdata.List(['name'], [from_json_path_orchestron_rfs__rfs_element(jd, path, op)], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
+    raise ValueError("Unable to resolve path, no keys provided")
+
+mut def from_json_orchestron_rfs__rfs_element(jd: dict[str, ?value]) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.take_json_str(jd, 'name')
+    yang.gdata.maybe_add(children, 'name', from_json_orchestron_rfs__rfs__name, child_name)
+    child_base_config = yang.gdata.take_json_opt_list(jd, 'base-config', 'mini-rfs')
+    yang.gdata.maybe_add(children, 'base-config', from_json_orchestron_rfs__rfs__base_config, child_base_config)
+    child_ntp_server = yang.gdata.take_json_opt_list(jd, 'ntp-server', 'mini-rfs')
+    yang.gdata.maybe_add(children, 'ntp-server', from_json_orchestron_rfs__rfs__ntp_server, child_ntp_server)
+    return yang.gdata.Container(children)
+
+mut def from_json_orchestron_rfs__rfs(jd: list[dict[str, ?value]]) -> yang.gdata.List:
+    elements = [from_json_orchestron_rfs__rfs_element(e) for e in jd if isinstance(e, dict)]
+    return yang.gdata.List(keys=['name'], elements=elements, ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')
+
+class root(yang.adata.MNode):
+    device: orchestron_rfs__device
+    rfs: orchestron_rfs__rfs
+
+    mut def __init__(self, device: list[orchestron_rfs__device_entry]=[], rfs: list[orchestron_rfs__rfs_entry]=[]):
+        self._ns = ''
+        self.device = orchestron_rfs__device(elements=device)
+        self.rfs = orchestron_rfs__rfs(elements=rfs)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _device = self.device
+        if _device is not None:
+            children['device'] = _device.to_gdata()
+        _rfs = self.rfs
+        if _rfs is not None:
+            children['rfs'] = _rfs.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> root:
+        if n is not None:
+            return root(device=orchestron_rfs__device.from_gdata(n.get_opt_list('device')), rfs=orchestron_rfs__rfs.from_gdata(n.get_opt_list('rfs')))
+        return root()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return root.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /root')
+            res.append('{self_name} = root()')
+        leaves = []
+        _device = self.device
+        for _element in _device:
+            res.append('')
+            res.append("# List /device element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'device_element = {self_name}.device.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('device_element', False, list_element=True).splitlines())
+        _rfs = self.rfs
+        for _element in _rfs:
+            res.append('')
+            res.append("# List /rfs element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'rfs_element = {self_name}.rfs.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('rfs_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /root'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True)
+
+
+mut def from_xml(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_device = yang.gdata.from_xml_opt_list(node, 'device', 'http://orchestron.org/yang/orchestron-rfs.yang')
+    yang.gdata.maybe_add(children, 'device', from_xml_orchestron_rfs__device, child_device)
+    child_rfs = yang.gdata.from_xml_opt_list(node, 'rfs', 'http://orchestron.org/yang/orchestron-rfs.yang')
+    yang.gdata.maybe_add(children, 'rfs', from_xml_orchestron_rfs__rfs, child_rfs)
+    return yang.gdata.Container(children)
+
+def from_xml_gen3(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
+    # WARNING: this wrapper for the gen3.from_xml schema-driven parser compiles the schema on every call!
+    s = yang.compile(src_yang())
+    return yang.gen3.from_xml(s, node, loose=True, root_path=root_path)
+
+mut def from_json_path(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    # path handling
+    if len(path) > 0:
+        point = path[0]
+        rest_path = path[1:]
+        if point == 'orchestron-rfs:device':
+            child = {'device': from_json_path_orchestron_rfs__device(jd, rest_path, op) }
+            return yang.gdata.Container(child)
+        if point == 'orchestron-rfs:rfs':
+            child = {'rfs': from_json_path_orchestron_rfs__rfs(jd, rest_path, op) }
+            return yang.gdata.Container(child)
+        raise ValueError("Invalid path")
+    elif len(path) == 0:
+        if op == "merge":
+            return from_json(yang.gdata.unwrap_dict(jd))
+        elif op == "remove":
+            return yang.gdata.Absent()
+        raise ValueError("Invalid operation")
+    raise ValueError("Unable to resolve path")
+
+mut def from_json(jd: dict[str, ?value]) -> yang.gdata.Container:
+    children = {}
+    child_device = yang.gdata.take_json_opt_list(jd, 'device', 'orchestron-rfs')
+    yang.gdata.maybe_add(children, 'device', from_json_orchestron_rfs__device, child_device)
+    child_rfs = yang.gdata.take_json_opt_list(jd, 'rfs', 'orchestron-rfs')
+    yang.gdata.maybe_add(children, 'rfs', from_json_orchestron_rfs__rfs, child_rfs)
+    return yang.gdata.Container(children)
+
+def from_json_gen3(jd: dict[str, ?value], root_path: list[str]=[]) -> yang.gdata.Container:
+    # WARNING: this wrapper for the gen3.from_json schema-driven parser compiles the schema on every call!
+    s = yang.compile(src_yang())
+    return yang.gen3.from_json(s, jd, loose=True, root_path=root_path)
+
+def from_json_path_gen3(jd: dict[str, ?value], path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    s = yang.compile(src_yang())
+    return yang.gen3.from_json_path(s, jd, path, op, loose=True)
+
+schema_namespaces: set[str] = {
+    'http://example.com/mini-rfs',
+    'http://orchestron.org/yang/orchestron-rfs.yang',
+}
+
+def prsrc_gen3(data, self_name='ad'):
+    # WARNING: this wrapper for the gen3.prsrc schema-driven parser compiles the schema on every call!
+    s = yang.compile(src_yang())
+    return yang.gen3.pradata(s, data, self_name, loose=True)

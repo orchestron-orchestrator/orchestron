@@ -1,0 +1,582 @@
+import argparse
+import file
+import json
+import logging
+import http
+import net
+import xml
+
+import orchestron.device as odev
+import orchestron.ttt as ttt
+import yang.adata
+import yang.gdata
+
+import mini.layers
+import mini.layers.y_0_loose as cfs_layer
+import mini.layers.y_0
+import mini.layers.y_1
+import mini.layers.y_2
+
+import mini.layers.y_0_loose
+import mini.layers.y_1_loose
+import mini.layers.y_2_loose
+
+import mini.sysspec
+
+import testing
+
+class Unreachable(Exception):
+    """Exception raised when code is unreachable."""
+    pass
+
+def rfs_for_device(dev):
+    return yang.gdata.Container({
+        'rfs': yang.gdata.List(["name"], [
+            yang.gdata.Container({
+                "name": yang.gdata.Leaf("string", dev)
+            })
+        ])
+    })
+
+def adata_for_layer(layer, gdata):
+    if layer == 0:
+        return mini.layers.y_0_loose.root.from_gdata(gdata)
+    elif layer == 1:
+        return mini.layers.y_1_loose.root.from_gdata(gdata)
+    elif layer == 2:
+        return mini.layers.y_2_loose.root.from_gdata(gdata)
+    else:
+        raise ValueError("Invalid layer: {layer}")
+
+actor main(env):
+    rfcap = file.ReadFileCap(file.FileCap(env.cap))
+
+    logh = logging.Handler("Otron")
+    logh.add_sink(logging.StdoutSink())
+    logh.set_output_level(logging.TRACE)
+
+    logh_http = logging.Handler("HTTP")
+    logh_http.set_handler(logh)
+    logh_http.set_output_level(logging.DEBUG)
+
+    logh_ttt = logging.Handler("TTT")
+    logh_ttt.set_handler(logh)
+    logh_ttt.set_output_level(logging.INFO)
+
+    logh_dev = logging.Handler("Dev")
+    logh_dev.set_handler(logh)
+
+    log = logging.Logger(logh)
+
+    dev_registry = odev.DeviceRegistry(mini.sysspec.device_types, env.cap, logh_dev)
+    cfs = mini.layers.get_layers(dev_registry, logh_ttt)
+    rfs = cfs.below()
+    dev_registry.on_reconf(lambda dev: rfs.edit_config(rfs_for_device(dev), force=True))
+
+    tcpl_cap = net.TCPListenCap(net.TCPCap(net.NetCap(env.cap)))
+
+    def _on_http_accept(server):
+        server.cb_install(_on_http_server_request, _on_http_server_error)
+
+    def _on_http_server_request(server, request, respond):
+
+        def config_done(result):
+            if isinstance(result, Exception):
+                respond(400, {}, json.encode({"status": "error", "message": str(result)}))
+            else:
+                respond(200, {}, json.encode({"status": "ok"}))
+
+        # Strip query string from path before splitting
+        path_without_query = request.path.split("?")[0] if "?" in request.path else request.path
+        path_elements = path_without_query.split("/")
+
+        if len(path_elements) > 1 and path_elements[1] == "config-queue":
+            if request.method == "GET":
+                if len(path_elements) == 2:
+                    # GET /config-queue - return all devices with pending config queue items
+                    try:
+                        devices_with_queues = []
+
+                        # Get only devices that have pending approvals
+                        devices_needing_approval = dev_registry.get_devices_needing_approval()
+
+                        for dev_name, dev in devices_needing_approval.items():
+                            # Get pending approval items for this device (now returns dict[str, ConfigItem])
+                            pending_items = dev.get_pending_approvals()
+
+                            if len(pending_items) > 0:
+                                # Format queue items for response
+                                formatted_items = []
+                                for queue_id, config_item in pending_items.items():
+                                    formatted_items.append({
+                                        "queue_id": queue_id,
+                                        "tid": config_item.tid,
+                                        "device_txid": dev.get_device_txid(),
+                                        "approved": str(config_item.approved) if config_item.approved is not None else "null"
+                                    })
+
+                                devices_with_queues.append({
+                                    "device_id": dev_name,
+                                    "pending_count": len(pending_items),
+                                    "items": formatted_items
+                                })
+
+                        respond(200, {}, json.encode({"devices": devices_with_queues}))
+                        return
+                    except Exception as e:
+                        log.error("Failed to get config queues", {"error": str(e)})
+                        respond(500, {}, "Failed to get config queues: {e}")
+                        return
+
+            # Other /config-queue operations could go here
+            respond(404, {}, "Not found")
+            return
+
+        if request.method == "GET":
+            # Handle /api/device to list all devices
+            if len(path_elements) == 2 and path_elements[1] == "device":
+                try:
+                    devices = dev_registry.list()
+                    device_names = []
+                    for name in devices:
+                        device_names.append(name)
+                    response_json = json.encode({"devices": device_names})
+                    respond(200, {"Content-Type": "application/json"}, response_json)
+                except Exception as e:
+                    respond(500, {}, f"Error fetching devices: {e}")
+                return
+            
+            if len(path_elements) > 3 and path_elements[1] == "device":
+                def respond_with_data(data: ?yang.gdata.Node, schema: odev.DeviceSchema, accept_header: ?str):
+                    aheader = accept_header if accept_header is not None else "application/yang-data+json"
+                    if data is not None:
+                        if aheader == "application/yang-data+json":
+                            out_data = data.to_json()
+                        elif aheader == "application/yang-data+xml":
+                            out_data = data.to_xmlstr()
+                        elif aheader == "application/yang-data+acton-adata":
+                            adata = schema.from_gdata(data)
+                            out_data = adata.prsrc()
+                        else:
+                            respond(404, {}, "Unsupported media type")
+                            return
+                        respond(200, {"Content-type": aheader}, out_data)
+                    else:
+                        respond(500, {}, "No data")
+
+                try:
+                    dev_name = path_elements[2]
+                    dev = dev_registry.get(dev_name)
+                    if path_elements[3] == "capabilities":
+                        respond(200, {}, str(dev.get_capabilities()))
+                        return
+                    if path_elements[3] == "modules":
+                        txt = r"{"
+                        modset, modset_id = dev.get_modules()
+                        for mod in modset.values():
+                            txt += '{{"name": {mod.name}, "namespace": {mod.namespace}, "revision": {mod.revision}, "feature": {mod.feature}}}, '
+                        txt += r"}"
+                        respond(200, {}, txt)
+                        return
+                    if path_elements[3] == 'diff':
+                        # Parse query params for format
+                        format_type = "json"  # default
+                        if "?" in request.path:
+                            query_string = request.path.split('?', 1)[1]
+                            for param in query_string.split("&"):
+                                if "=" in param:
+                                    kv = param.split("=", 1)
+                                    if kv[0] == "format":
+                                        format_type = kv[1]
+                        
+                        running_conf = dev.get_running_conf()
+                        target_conf = dev.get_target_conf()
+                        
+                        if running_conf is not None and target_conf is not None:
+                            config_diff = yang.gdata.diff(running_conf, target_conf)
+                            if config_diff is not None:
+                                if format_type == "json":
+                                    diff_str = config_diff.to_json()
+                                elif format_type == "xml":
+                                    diff_str = config_diff.to_xmlstr()
+                                elif format_type == "gdata":
+                                    diff_str = config_diff.prsrc()
+                                elif format_type == "adata":
+                                    # adata conversion would need schema
+                                    diff_str = "# Adata format not available for diff"
+                                else:
+                                    diff_str = config_diff.to_json()  # default to json
+                                respond(200, {"Content-Type": "text/plain"}, diff_str)
+                            else:
+                                respond(200, {"Content-Type": "text/plain"}, "# No differences")
+                        else:
+                            respond(200, {"Content-Type": "text/plain"}, "# Configuration not available")
+                        return
+                    if path_elements[3] == 'target':
+                        # Parse query params for format
+                        format_type = "json"  # default
+                        if "?" in request.path:
+                            query_string = request.path.split('?', 1)[1]
+                            for param in query_string.split("&"):
+                                if "=" in param:
+                                    kv = param.split("=", 1)
+                                    if kv[0] == "format":
+                                        format_type = kv[1]
+                        
+                        target_conf = dev.get_target_conf()
+                        if target_conf is not None:
+                            if format_type == "json":
+                                conf_str = target_conf.to_json()
+                            elif format_type == "xml":
+                                conf_str = target_conf.to_xmlstr()
+                            elif format_type == "gdata":
+                                conf_str = target_conf.prsrc()
+                            elif format_type == "adata":
+                                # adata conversion would need schema
+                                conf_str = "# Adata format not available"
+                            else:
+                                conf_str = target_conf.to_json()  # default to json
+                            respond(200, {"Content-Type": "text/plain"}, conf_str)
+                        else:
+                            respond(200, {"Content-Type": "text/plain"}, "# No target configuration available")
+                        return
+                    if path_elements[3] == 'running':
+                        # Parse query params for format
+                        format_type = "json"  # default
+                        if "?" in request.path:
+                            query_string = request.path.split('?', 1)[1]
+                            for param in query_string.split("&"):
+                                if "=" in param:
+                                    kv = param.split("=", 1)
+                                    if kv[0] == "format":
+                                        format_type = kv[1]
+                        
+                        running_conf = dev.get_running_conf()
+                        if running_conf is not None:
+                            if format_type == "json":
+                                conf_str = running_conf.to_json()
+                            elif format_type == "xml":
+                                conf_str = running_conf.to_xmlstr()
+                            elif format_type == "gdata":
+                                conf_str = running_conf.prsrc()
+                            elif format_type == "adata":
+                                # adata conversion would need schema
+                                conf_str = "# Adata format not available"
+                            else:
+                                conf_str = running_conf.to_json()  # default to json
+                            respond(200, {"Content-Type": "text/plain"}, conf_str)
+                        else:
+                            respond(200, {"Content-Type": "text/plain"}, "# No running configuration available")
+                        return
+                    
+                    if path_elements[3] == 'resync':
+                        # Trigger device resync
+                        dev.resync()
+                        respond(200, {"Content-Type": "application/json"}, json.encode({"status": "ok", "message": "Resync initiated"}))
+                        return
+                    
+                    if path_elements[3] == 'info':
+                        # Get device meta configuration and state
+                        dmc = dev.get_dmc()
+                        dev_state = dev.get_state()
+                        
+                        info = {
+                            "name": dev_name,
+                            "type": dmc.type if dmc.type is not None else "unknown",
+                            "approval_required": dmc.approval_required if dmc.approval_required is not None else False,
+                            "has_running_config": dev_state.has_running_config,
+                            "has_target_config": dev_state.has_target_config,
+                            "queue_length": dev_state.queue_length,
+                            "pending_approvals": dev_state.pending_approvals
+                        }
+                        
+                        # Add address information
+                        addresses = []
+                        for addr_entry in dmc.address.elements:
+                            addr_info = {
+                                "name": addr_entry.name,
+                                "address": addr_entry.address
+                            }
+                            if addr_entry.port is not None:
+                                addr_info["port"] = addr_entry.port
+                            addresses.append(addr_info)
+                        info["addresses"] = addresses
+                        
+                        # Add credentials info (just username, not password)
+                        if dmc.credentials is not None:
+                            info["username"] = dmc.credentials.username if dmc.credentials.username is not None else ""
+                        
+                        respond(200, {"Content-Type": "application/json"}, json.encode(info))
+                        return
+                    
+                    if path_elements[3] == 'log':
+                        # Get device configuration log
+                        conf_log = dev.get_conf_log()
+                        log_items = []
+                        
+                        # Parse query params for format
+                        format_type = "xml"  # default
+                        query_params = {}
+                        if "?" in request.path:
+                            query_string = request.path.split('?', 1)[1]
+                            for param in query_string.split("&"):
+                                if "=" in param:
+                                    kv = param.split("=", 1)
+                                    query_params[kv[0]] = kv[1]
+                        format_type = query_params.get_def("format", "xml")
+                        
+                        for item in conf_log:
+                            
+                            # Format the config diff based on format type
+                            diff_str = ""
+                            conf_diff = item.conf_diff
+                            if conf_diff is not None:
+                                if format_type == "json":
+                                    diff_str = conf_diff.to_json()
+                                elif format_type == "xml":
+                                    diff_str = conf_diff.to_xmlstr()
+                                elif format_type == "gdata":
+                                    diff_str = conf_diff.prsrc()
+
+                            log_items.append({
+                                "timestamp": str(item.ts),
+                                "event": item.event,
+                                "conf_diff": diff_str
+                            })
+                        
+                        respond(200, {"Content-Type": "application/json"}, json.encode({"log": log_items}))
+                        return
+                    if path_elements[3] == 'resync':
+                        respond(200, {}, "OK")
+                        return
+
+                    if path_elements[3] == 'q':
+                        if len(path_elements) == 4:
+                            def format_listq(listq):
+                                def format_ci(ci):
+                                    return {"tid": ci.tid}
+
+                                return json.encode({id: format_ci(ci) for id, ci in listq.items()})
+                            respond(200, {}, format_listq(dev.list_confq()))
+                            return
+                        elif len(path_elements) >= 5:
+                            pe = path_elements[4].split('?', 1)
+                            id: str = pe[0]
+                            if len(path_elements) == 5:
+                                format_type = "xml"  # default
+                                query_params = {}
+                                if len(pe) > 1:
+                                    for param in pe[1].split("&"):
+                                        if "=" in param:
+                                            kv = param.split("=", 1)
+                                            query_params[kv[0]] = kv[1]
+                                log.debug("qp", {"query_params": query_params, "split": request.path.split('&')})
+                                format_type = query_params.get_def("format", "xml")
+                                
+                                def format_ci(di: (ci: odev.ConfigItem, running_conf: yang.gdata.Node)):
+                                    config_diff = yang.gdata.diff(di.running_conf, di.ci.conf)
+                                    
+                                    config_diff_str = None
+                                    if config_diff is not None:
+                                        if format_type == "json":
+                                            #config_diff_str = config_diff.to_json()
+                                            config_diff_str = "# JSON diff not available"
+                                        elif format_type == "adata":
+                                            #config_diff_str = str(config_diff.to_adata())
+                                            config_diff_str = "# Adata diff not available"
+                                        elif format_type == "gdata":
+                                            #config_diff_str = str(config_diff.to_adata())
+                                            config_diff_str = config_diff.prsrc()
+                                        else:  # xml is default
+                                            config_diff_str = config_diff.to_xmlstr()
+                                    
+                                    return {
+                                        "tid": di.ci.tid,
+                                        "config_diff": config_diff_str,
+                                        "device_txid": di.running_conf.txid,
+                                        "format": format_type,
+                                    }
+                                respond(200, {}, json.encode(format_ci(dev.get_confq(id))))
+                                return
+
+                    respond(404, {}, "Not found")
+                    return
+                except Exception as e:
+                    log.error(str(e))
+                    respond(404, {}, "Not found")
+                    return
+            elif len(path_elements) == 3 and path_elements[1] == "layer":
+                try:
+                    session = cfs.newsession()
+                    layer_idx = int(path_elements[2])
+                except ValueError:
+                    respond(400, {}, "Bad request, layer index must be an integer")
+                    return
+                else:
+                    if layer_idx > 3:
+                        respond(404, {}, "Unknown layer")
+                        return
+                    for _ in range(layer_idx):
+                        session = session.below()
+                    layer_config: yang.gdata.Node = session.get()
+                    content = ""
+                    if request.headers.get("accept") == "application/yang-data+json":
+                        content = layer_config.to_json()
+                    if request.headers.get("accept") == "application/yang-data+xml":
+                        content = layer_config.to_xmlstr()
+                    if request.headers.get("accept") == "application/yang-data+acton-adata":
+                        adata = adata_for_layer(layer_idx, layer_config)
+                        content = adata.prsrc()
+                    respond(200, {}, content)
+                    return
+            else:
+                respond(404, {}, "Not found")
+                return
+        elif request.method == "DELETE":
+            p = split_restconf_path(request.path)
+            if p[0] == "restconf":
+                input_config = mini.layers.y_0.from_json_path({}, p[1:], "remove")
+                session = cfs.newsession()
+                session.edit_config(input_config, config_done)
+                return
+            respond(404, {}, "")
+            return
+
+        elif request.method in {"POST", "PUT"}:
+            path_segments = request.path.split("/")
+            if len(path_segments) >= 1 and path_segments[1] == "restconf":
+                input_config = None
+
+                if request.headers.get("content-type") == "application/yang-data+json":
+                    json_in = json.decode(request.body.decode())
+                    p = split_restconf_path(request.path)[1:]
+                    input_config = mini.layers.y_0.from_json_path(json_in, p)
+                elif request.headers.get("content-type") == "application/yang-data+xml":
+                    try:
+                        xml_in = xml.decode(request.body.decode())
+                        input_config = cfs_layer.from_xml(xml_in)
+                    except Exception as e:
+                        respond(400, {}, "Error parsing XML: {e}")
+                        return
+                else:
+                    respond(415, {}, "Unsupported media type")
+                    return
+
+                if input_config is not None:
+                    session = cfs.newsession()
+                    if request.headers.get_def("async", "") == "true":
+                        log.info("Client requests async behavior")
+                        session.edit_config(input_config, config_done)
+                    else:
+                        session.edit_config(input_config, None, config_done)
+                    return
+            elif len(path_elements) > 3 and path_elements[1] == "device":
+                try:
+                    dev_name = path_elements[2]
+                    dev = dev_registry.get(dev_name)
+
+                    if path_elements[3] == 'q':
+
+                        if len(path_elements) >= 5:
+                            id = path_elements[4]
+
+                            if len(path_elements) == 6:
+                                if path_elements[5] == "set_approval":
+                                    log.debug("set_approval", {"body": request.body.decode()})
+                                    def parse_confq_approval_request(request) -> (device_txid: str, approved: bool):
+                                        json_in = json.decode(request.body.decode())
+                                        json_device_txid = json_in.get("device_txid")
+                                        json_approved = json_in.get("approved")
+                                        if isinstance(json_device_txid, str) and isinstance(json_approved, bool):
+                                            return (json_device_txid, json_approved)
+                                        else:
+                                            raise ValueError("Invalid request body")
+
+                                    try:
+                                        req = parse_confq_approval_request(request)
+                                        approval_ok = dev.set_confq_approval(id, req.device_txid, req.approved)
+                                        respond(200, {}, json.encode({"status": "ok", "approved": req.approved}))
+                                        return
+                                    except ValueError as e:
+                                        respond(400, {}, str(e))
+                                        return
+
+                                    raise Unreachable()
+                except Exception as e:
+                    log.error(str(e))
+                    respond(500, {}, "Mep {e}")
+                    return
+
+            respond(404, {}, "")
+            return
+        else:
+            respond(405, {}, "Method not allowed")
+            return
+
+    def _on_http_server_error(server, error):
+        print("Error: {error}")
+
+    server = http.Listener(tcpl_cap, "::", 80, _on_http_accept, log_handler=logh_http)
+
+    configs = []
+    env_exit_on_done = env.getenv("EXIT_ON_DONE")
+    exit_on_done = env_exit_on_done if env_exit_on_done is not None else ""
+
+    def _conf_file(session):
+
+        def _conf_file_done(config, result):
+            if isinstance(result, str):
+                log.info("Config file successfully applied", {"config_file": config.filename})
+                _conf_file(session)
+            else:
+                log.error("Error applying config file", {"config_file": config.filename})
+
+        try:
+            config = configs.pop(0)
+            # Grab the first config
+            log.info("Applying config file...", {"config_file": config.filename})
+            input_config = cfs_layer.from_xml(config.config)
+            session.edit_config(input_config, None, lambda result: _conf_file_done(config, result))
+        except IndexError:
+            log.info("All config files applied")
+            # TODO: exit_on_done.lower() once Acton bug is fixed!?
+            if exit_on_done in ["1", "true", "yes"]:
+                log.info("No more config files to apply, exiting..")
+                after 3: _exit()
+
+    def _exit():
+        env.exit(0)
+
+    if len(env.argv) > 1:
+        # Read and apply config files, but paced
+        for i in range(1, len(env.argv)):
+            if i > 0:
+                filename = env.argv[i]
+                f = file.ReadFile(rfcap, filename)
+                nb_input = await async f.read()
+                f.close()
+                try:
+                    configs.append((filename=filename, config=xml.decode(nb_input.decode())))
+                except Exception as e:
+                    print("Error reading config file {filename}: {e}")
+                    env.exit(1)
+
+        # start to apply..
+        after 0.5: _conf_file(cfs.newsession())
+
+    print("Orchestron/mini running..")
+
+
+
+def split_restconf_path(text: str) -> list[str]:
+    # First split by slash
+    parts = text.split('/')
+    # Create a new list to store all elements
+    result = []
+    # For each part, split by equals if it exists
+    for part in parts:
+        if '=' in part:
+            result.extend(part.split('=', 1))
+        elif part != '':
+            result.append(part)
+    return result

@@ -1,0 +1,17 @@
+# WARNING WARNING WARNING WARNING WARNING
+# DO NOT MODIFY THIS FILE!! This file is generated!
+# WARNING WARNING WARNING WARNING WARNING
+
+import logging
+
+import orchestron.device as odev
+import orchestron.ttt as ttt
+import yang.adata
+import yang.gdata
+
+import mini.rfs
+
+
+def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str],?ttt.Layer)->ttt.Node:
+    r = ttt.Container({"device": ttt.List(ttt.Device(dev_registry, log_handler), ['name'], ['string'], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs'), "rfs": ttt.List(ttt.Container({"base-config": ttt.List(ttt.RFSTransform(mini.rfs.BaseConfig, dev_registry, None, lower, log_handler), ['name'], ['string'], ns='http://example.com/mini-rfs', module='mini-rfs'), "ntp-server": ttt.List(ttt.RFSTransform(mini.rfs.NtpServer, dev_registry, None, lower, log_handler), ['name'], ['string'], ns='http://example.com/mini-rfs', module='mini-rfs')}), ['name'], ['string'], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')})
+    return r
