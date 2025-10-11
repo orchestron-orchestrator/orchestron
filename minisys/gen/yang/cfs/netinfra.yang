@@ -1,0 +1,57 @@
+module netinfra {
+  yang-version "1.1";
+  namespace "http://example.com/netinfra";
+  prefix "netinfra";
+  description "Network Infrastructure";
+  revision 2019-01-01 {
+    description "test revision";
+    reference "ref1";
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  container netinfra {
+    description "Network infrastructure";
+    list router {
+      key name;
+
+      orchestron:transform mini.cfs.Router;
+
+      leaf name {
+        type string;
+      }
+      leaf id {
+        type uint32;
+        description "router id";
+        mandatory true;
+      }
+      leaf type {
+        type string;
+        mandatory true;
+      }
+    }
+
+    list ntp-foo {
+      // This is silly nonsense transform. It makes no sense to have a separate
+      // transform for configuring individual NTP servers on a router, it would
+      // be more natural to model as part of the base-config that comes from the
+      // router transform above. Nonetheless, we want a CFS transform that has a
+      // compound key on router and something else. We also just have the
+      // ietf-system model on the device, so this is it. We can use it to test
+      // deletion and see interaction between multiple transforms writing to the
+      // same device config.
+      key "router name";
+
+      orchestron:transform mini.cfs.NtpFoo;
+
+      leaf router {
+        type string;
+      }
+
+      leaf name {
+        type string;
+      }
+    }
+  }
+}

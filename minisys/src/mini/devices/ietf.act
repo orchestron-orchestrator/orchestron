@@ -1,0 +1,4644 @@
+import base64
+import json
+import xml
+import yang
+import yang.adata
+import yang.gdata
+import yang.gen3
+from yang.identity import complete_and_validate_identityref
+from yang.identityref import Identityref, PartialIdentityref
+from yang.schema import DIdentity
+
+# == This file is generated ==
+
+
+_base_ietf_system_authentication_method = DIdentity(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='authentication-method', base=[])
+_base_ietf_system_radius_authentication_type = DIdentity(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='radius-authentication-type', base=[])
+_identities = [
+    _base_ietf_system_authentication_method,
+    DIdentity(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='radius', base=[_base_ietf_system_authentication_method]),
+    DIdentity(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='local-users', base=[_base_ietf_system_authentication_method]),
+    _base_ietf_system_radius_authentication_type,
+    DIdentity(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='radius-pap', base=[_base_ietf_system_radius_authentication_type]),
+    DIdentity(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='radius-chap', base=[_base_ietf_system_radius_authentication_type]),
+]
+
+
+# Identityref constants
+ietf_system_authentication_method = Identityref('authentication-method', ns='urn:ietf:params:xml:ns:yang:ietf-system', mod='ietf-system', pfx='sys')
+ietf_system_radius = Identityref('radius', ns='urn:ietf:params:xml:ns:yang:ietf-system', mod='ietf-system', pfx='sys')
+ietf_system_local_users = Identityref('local-users', ns='urn:ietf:params:xml:ns:yang:ietf-system', mod='ietf-system', pfx='sys')
+ietf_system_radius_authentication_type = Identityref('radius-authentication-type', ns='urn:ietf:params:xml:ns:yang:ietf-system', mod='ietf-system', pfx='sys')
+ietf_system_radius_pap = Identityref('radius-pap', ns='urn:ietf:params:xml:ns:yang:ietf-system', mod='ietf-system', pfx='sys')
+ietf_system_radius_chap = Identityref('radius-chap', ns='urn:ietf:params:xml:ns:yang:ietf-system', mod='ietf-system', pfx='sys')
+
+
+def src_yang():
+    res = []
+    res.append(r"""module iana-crypt-hash {
+  namespace "urn:ietf:params:xml:ns:yang:iana-crypt-hash";
+  prefix ianach;
+
+  organization "IANA";
+  contact
+    "        Internet Assigned Numbers Authority
+
+     Postal: ICANN
+             12025 Waterfront Drive, Suite 300
+             Los Angeles, CA  90094-2536
+             United States
+
+     Tel:    +1 310 301 5800
+     E-Mail: iana@iana.org>";
+  description
+    "This YANG module defines a type for storing passwords
+     using a hash function and features to indicate which hash
+     functions are supported by an implementation.
+
+     The latest revision of this YANG module can be obtained from
+     the IANA web site.
+
+     Requests for new values should be made to IANA via
+     email (iana@iana.org).
+
+     Copyright (c) 2014 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     The initial version of this YANG module is part of RFC 7317;
+     see the RFC itself for full legal notices.";
+
+  revision 2014-08-06 {
+    description
+      "Initial revision.";
+    reference
+      "RFC 7317: A YANG Data Model for System Management";
+  }
+
+  typedef crypt-hash {
+    type string {
+      pattern
+        '$0$.*'
+      + '|$1$[a-zA-Z0-9./]{1,8}$[a-zA-Z0-9./]{22}'
+      + '|$5$(rounds=\d+$)?[a-zA-Z0-9./]{1,16}$[a-zA-Z0-9./]{43}'
+      + '|$6$(rounds=\d+$)?[a-zA-Z0-9./]{1,16}$[a-zA-Z0-9./]{86}';
+    }
+    description
+      "The crypt-hash type is used to store passwords using
+       a hash function.  The algorithms for applying the hash
+       function and encoding the result are implemented in
+       various UNIX systems as the function crypt(3).
+
+       A value of this type matches one of the forms:
+
+         $0$<clear text password>
+         $<id>$<salt>$<password hash>
+         $<id>$<parameter>$<salt>$<password hash>
+
+       The '$0$' prefix signals that the value is clear text.  When
+       such a value is received by the server, a hash value is
+       calculated, and the string '$<id>$<salt>$' or
+       $<id>$<parameter>$<salt>$ is prepended to the result.  This
+       value is stored in the configuration data store.
+       If a value starting with '$<id>$', where <id> is not '0', is
+       received, the server knows that the value already represents a
+       hashed value and stores it 'as is' in the data store.
+
+       When a server needs to verify a password given by a user, it
+       finds the stored password hash string for that user, extracts
+       the salt, and calculates the hash with the salt and given
+       password as input.  If the calculated hash value is the same
+       as the stored value, the password given by the client is
+       accepted.
+
+       This type defines the following hash functions:
+
+         id | hash function | feature
+         ---+---------------+-------------------
+          1 | MD5           | crypt-hash-md5
+          5 | SHA-256       | crypt-hash-sha-256
+          6 | SHA-512       | crypt-hash-sha-512
+
+       The server indicates support for the different hash functions
+       by advertising the corresponding feature.";
+    reference
+      "IEEE Std 1003.1-2008 - crypt() function
+       RFC 1321: The MD5 Message-Digest Algorithm
+       FIPS.180-4.2012: Secure Hash Standard (SHS)";
+  }
+
+  feature crypt-hash-md5 {
+    description
+      "Indicates that the device supports the MD5
+       hash function in 'crypt-hash' values.";
+    reference "RFC 1321: The MD5 Message-Digest Algorithm";
+  }
+
+  feature crypt-hash-sha-256 {
+    description
+      "Indicates that the device supports the SHA-256
+       hash function in 'crypt-hash' values.";
+    reference "FIPS.180-4.2012: Secure Hash Standard (SHS)";
+  }
+
+  feature crypt-hash-sha-512 {
+    description
+      "Indicates that the device supports the SHA-512
+       hash function in 'crypt-hash' values.";
+    reference "FIPS.180-4.2012: Secure Hash Standard (SHS)";
+  }
+
+}
+""")
+    res.append(r"""module ietf-inet-types {
+
+  namespace "urn:ietf:params:xml:ns:yang:ietf-inet-types";
+  prefix "inet";
+
+  organization
+   "IETF NETMOD (NETCONF Data Modeling Language) Working Group";
+
+  contact
+   "WG Web:   <http://tools.ietf.org/wg/netmod/>
+    WG List:  <mailto:netmod@ietf.org>
+
+    WG Chair: David Kessens
+              <mailto:david.kessens@nsn.com>
+
+    WG Chair: Juergen Schoenwaelder
+              <mailto:j.schoenwaelder@jacobs-university.de>
+
+    Editor:   Juergen Schoenwaelder
+              <mailto:j.schoenwaelder@jacobs-university.de>";
+
+  description
+   "This module contains a collection of generally useful derived
+    YANG data types for Internet addresses and related things.
+
+    Copyright (c) 2013 IETF Trust and the persons identified as
+    authors of the code.  All rights reserved.
+
+    Redistribution and use in source and binary forms, with or
+    without modification, is permitted pursuant to, and subject
+    to the license terms contained in, the Simplified BSD License
+    set forth in Section 4.c of the IETF Trust's Legal Provisions
+    Relating to IETF Documents
+    (http://trustee.ietf.org/license-info).
+
+    This version of this YANG module is part of RFC 6991; see
+    the RFC itself for full legal notices.";
+
+  revision 2013-07-15 {
+    description
+     "This revision adds the following new data types:
+      - ip-address-no-zone
+      - ipv4-address-no-zone
+      - ipv6-address-no-zone";
+    reference
+     "RFC 6991: Common YANG Data Types";
+  }
+
+  revision 2010-09-24 {
+    description
+     "Initial revision.";
+    reference
+     "RFC 6021: Common YANG Data Types";
+  }
+
+  /*** collection of types related to protocol fields ***/
+
+  typedef ip-version {
+    type enumeration {
+      enum unknown {
+        value "0";
+        description
+         "An unknown or unspecified version of the Internet
+          protocol.";
+      }
+      enum ipv4 {
+        value "1";
+        description
+         "The IPv4 protocol as defined in RFC 791.";
+      }
+      enum ipv6 {
+        value "2";
+        description
+         "The IPv6 protocol as defined in RFC 2460.";
+      }
+    }
+    description
+     "This value represents the version of the IP protocol.
+
+      In the value set and its semantics, this type is equivalent
+      to the InetVersion textual convention of the SMIv2.";
+    reference
+     "RFC  791: Internet Protocol
+      RFC 2460: Internet Protocol, Version 6 (IPv6) Specification
+      RFC 4001: Textual Conventions for Internet Network Addresses";
+  }
+
+  typedef dscp {
+    type uint8 {
+      range "0..63";
+    }
+    description
+     "The dscp type represents a Differentiated Services Code Point
+      that may be used for marking packets in a traffic stream.
+      In the value set and its semantics, this type is equivalent
+      to the Dscp textual convention of the SMIv2.";
+    reference
+     "RFC 3289: Management Information Base for the Differentiated
+                Services Architecture
+      RFC 2474: Definition of the Differentiated Services Field
+                (DS Field) in the IPv4 and IPv6 Headers
+      RFC 2780: IANA Allocation Guidelines For Values In
+                the Internet Protocol and Related Headers";
+  }
+
+  typedef ipv6-flow-label {
+    type uint32 {
+      range "0..1048575";
+    }
+    description
+     "The ipv6-flow-label type represents the flow identifier or Flow
+      Label in an IPv6 packet header that may be used to
+      discriminate traffic flows.
+
+      In the value set and its semantics, this type is equivalent
+      to the IPv6FlowLabel textual convention of the SMIv2.";
+    reference
+     "RFC 3595: Textual Conventions for IPv6 Flow Label
+      RFC 2460: Internet Protocol, Version 6 (IPv6) Specification";
+  }
+
+  typedef port-number {
+    type uint16 {
+      range "0..65535";
+    }
+    description
+     "The port-number type represents a 16-bit port number of an
+      Internet transport-layer protocol such as UDP, TCP, DCCP, or
+      SCTP.  Port numbers are assigned by IANA.  A current list of
+      all assignments is available from <http://www.iana.org/>.
+
+      Note that the port number value zero is reserved by IANA.  In
+      situations where the value zero does not make sense, it can
+      be excluded by subtyping the port-number type.
+      In the value set and its semantics, this type is equivalent
+      to the InetPortNumber textual convention of the SMIv2.";
+    reference
+     "RFC  768: User Datagram Protocol
+      RFC  793: Transmission Control Protocol
+      RFC 4960: Stream Control Transmission Protocol
+      RFC 4340: Datagram Congestion Control Protocol (DCCP)
+      RFC 4001: Textual Conventions for Internet Network Addresses";
+  }
+
+  /*** collection of types related to autonomous systems ***/
+
+  typedef as-number {
+    type uint32;
+    description
+     "The as-number type represents autonomous system numbers
+      which identify an Autonomous System (AS).  An AS is a set
+      of routers under a single technical administration, using
+      an interior gateway protocol and common metrics to route
+      packets within the AS, and using an exterior gateway
+      protocol to route packets to other ASes.  IANA maintains
+      the AS number space and has delegated large parts to the
+      regional registries.
+
+      Autonomous system numbers were originally limited to 16
+      bits.  BGP extensions have enlarged the autonomous system
+      number space to 32 bits.  This type therefore uses an uint32
+      base type without a range restriction in order to support
+      a larger autonomous system number space.
+
+      In the value set and its semantics, this type is equivalent
+      to the InetAutonomousSystemNumber textual convention of
+      the SMIv2.";
+    reference
+     "RFC 1930: Guidelines for creation, selection, and registration
+                of an Autonomous System (AS)
+      RFC 4271: A Border Gateway Protocol 4 (BGP-4)
+      RFC 4001: Textual Conventions for Internet Network Addresses
+      RFC 6793: BGP Support for Four-Octet Autonomous System (AS)
+                Number Space";
+  }
+
+  /*** collection of types related to IP addresses and hostnames ***/
+
+  typedef ip-address {
+    type union {
+      type inet:ipv4-address;
+      type inet:ipv6-address;
+    }
+    description
+     "The ip-address type represents an IP address and is IP
+      version neutral.  The format of the textual representation
+      implies the IP version.  This type supports scoped addresses
+      by allowing zone identifiers in the address format.";
+    reference
+     "RFC 4007: IPv6 Scoped Address Architecture";
+  }
+
+  typedef ipv4-address {
+    type string {
+      pattern
+        '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
+      +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+      + '(%[\p{N}\p{L}]+)?';
+    }
+    description
+      "The ipv4-address type represents an IPv4 address in
+       dotted-quad notation.  The IPv4 address may include a zone
+       index, separated by a % sign.
+
+       The zone index is used to disambiguate identical address
+       values.  For link-local addresses, the zone index will
+       typically be the interface index number or the name of an
+       interface.  If the zone index is not present, the default
+       zone of the device will be used.
+
+       The canonical format for the zone index is the numerical
+       format";
+  }
+
+  typedef ipv6-address {
+    type string {
+      pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
+            + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
+            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}'
+            + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
+            + '(%[\p{N}\p{L}]+)?';
+      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|'
+            + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
+            + '(%.+)?';
+    }
+    description
+     "The ipv6-address type represents an IPv6 address in full,
+      mixed, shortened, and shortened-mixed notation.  The IPv6
+      address may include a zone index, separated by a % sign.
+
+      The zone index is used to disambiguate identical address
+      values.  For link-local addresses, the zone index will
+      typically be the interface index number or the name of an
+      interface.  If the zone index is not present, the default
+      zone of the device will be used.
+
+      The canonical format of IPv6 addresses uses the textual
+      representation defined in Section 4 of RFC 5952.  The
+      canonical format for the zone index is the numerical
+      format as described in Section 11.2 of RFC 4007.";
+    reference
+     "RFC 4291: IP Version 6 Addressing Architecture
+      RFC 4007: IPv6 Scoped Address Architecture
+      RFC 5952: A Recommendation for IPv6 Address Text
+                Representation";
+  }
+
+  typedef ip-address-no-zone {
+    type union {
+      type inet:ipv4-address-no-zone;
+      type inet:ipv6-address-no-zone;
+    }
+    description
+     "The ip-address-no-zone type represents an IP address and is
+      IP version neutral.  The format of the textual representation
+      implies the IP version.  This type does not support scoped
+      addresses since it does not allow zone identifiers in the
+      address format.";
+    reference
+     "RFC 4007: IPv6 Scoped Address Architecture";
+  }
+
+  typedef ipv4-address-no-zone {
+    type inet:ipv4-address {
+      pattern '[0-9\.]*';
+    }
+    description
+      "An IPv4 address without a zone index.  This type, derived from
+       ipv4-address, may be used in situations where the zone is
+       known from the context and hence no zone index is needed.";
+  }
+
+  typedef ipv6-address-no-zone {
+    type inet:ipv6-address {
+      pattern '[0-9a-fA-F:\.]*';
+    }
+    description
+      "An IPv6 address without a zone index.  This type, derived from
+       ipv6-address, may be used in situations where the zone is
+       known from the context and hence no zone index is needed.";
+    reference
+     "RFC 4291: IP Version 6 Addressing Architecture
+      RFC 4007: IPv6 Scoped Address Architecture
+      RFC 5952: A Recommendation for IPv6 Address Text
+                Representation";
+  }
+
+  typedef ip-prefix {
+    type union {
+      type inet:ipv4-prefix;
+      type inet:ipv6-prefix;
+    }
+    description
+     "The ip-prefix type represents an IP prefix and is IP
+      version neutral.  The format of the textual representations
+      implies the IP version.";
+  }
+
+  typedef ipv4-prefix {
+    type string {
+      pattern
+         '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
+       +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+       + '/(([0-9])|([1-2][0-9])|(3[0-2]))';
+    }
+    description
+     "The ipv4-prefix type represents an IPv4 address prefix.
+      The prefix length is given by the number following the
+      slash character and must be less than or equal to 32.
+
+      A prefix length value of n corresponds to an IP address
+      mask that has n contiguous 1-bits from the most
+      significant bit (MSB) and all other bits set to 0.
+
+      The canonical format of an IPv4 prefix has all bits of
+      the IPv4 address set to zero that are not part of the
+      IPv4 prefix.";
+  }
+
+  typedef ipv6-prefix {
+    type string {
+      pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
+            + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
+            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}'
+            + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
+            + '(/(([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))';
+      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|'
+            + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
+            + '(/.+)';
+    }
+
+    description
+     "The ipv6-prefix type represents an IPv6 address prefix.
+      The prefix length is given by the number following the
+      slash character and must be less than or equal to 128.
+
+      A prefix length value of n corresponds to an IP address
+      mask that has n contiguous 1-bits from the most
+      significant bit (MSB) and all other bits set to 0.
+
+      The IPv6 address should have all bits that do not belong
+      to the prefix set to zero.
+
+      The canonical format of an IPv6 prefix has all bits of
+      the IPv6 address set to zero that are not part of the
+      IPv6 prefix.  Furthermore, the IPv6 address is represented
+      as defined in Section 4 of RFC 5952.";
+    reference
+     "RFC 5952: A Recommendation for IPv6 Address Text
+                Representation";
+  }
+
+  /*** collection of domain name and URI types ***/
+
+  typedef domain-name {
+    type string {
+      pattern
+        '((([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.)*'
+      + '([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.?)'
+      + '|\.';
+      length "1..253";
+    }
+    description
+     "The domain-name type represents a DNS domain name.  The
+      name SHOULD be fully qualified whenever possible.
+
+      Internet domain names are only loosely specified.  Section
+      3.5 of RFC 1034 recommends a syntax (modified in Section
+      2.1 of RFC 1123).  The pattern above is intended to allow
+      for current practice in domain name use, and some possible
+      future expansion.  It is designed to hold various types of
+      domain names, including names used for A or AAAA records
+      (host names) and other records, such as SRV records.  Note
+      that Internet host names have a stricter syntax (described
+      in RFC 952) than the DNS recommendations in RFCs 1034 and
+      1123, and that systems that want to store host names in
+      schema nodes using the domain-name type are recommended to
+      adhere to this stricter standard to ensure interoperability.
+
+      The encoding of DNS names in the DNS protocol is limited
+      to 255 characters.  Since the encoding consists of labels
+      prefixed by a length bytes and there is a trailing NULL
+      byte, only 253 characters can appear in the textual dotted
+      notation.
+
+      The description clause of schema nodes using the domain-name
+      type MUST describe when and how these names are resolved to
+      IP addresses.  Note that the resolution of a domain-name value
+      may require to query multiple DNS records (e.g., A for IPv4
+      and AAAA for IPv6).  The order of the resolution process and
+      which DNS record takes precedence can either be defined
+      explicitly or may depend on the configuration of the
+      resolver.
+
+      Domain-name values use the US-ASCII encoding.  Their canonical
+      format uses lowercase US-ASCII characters.  Internationalized
+      domain names MUST be A-labels as per RFC 5890.";
+    reference
+     "RFC  952: DoD Internet Host Table Specification
+      RFC 1034: Domain Names - Concepts and Facilities
+      RFC 1123: Requirements for Internet Hosts -- Application
+                and Support
+      RFC 2782: A DNS RR for specifying the location of services
+                (DNS SRV)
+      RFC 5890: Internationalized Domain Names in Applications
+                (IDNA): Definitions and Document Framework";
+  }
+
+  typedef host {
+    type union {
+      type inet:ip-address;
+      type inet:domain-name;
+    }
+    description
+     "The host type represents either an IP address or a DNS
+      domain name.";
+  }
+
+  typedef uri {
+    type string;
+    description
+     "The uri type represents a Uniform Resource Identifier
+      (URI) as defined by STD 66.
+
+      Objects using the uri type MUST be in US-ASCII encoding,
+      and MUST be normalized as described by RFC 3986 Sections
+      6.2.1, 6.2.2.1, and 6.2.2.2.  All unnecessary
+      percent-encoding is removed, and all case-insensitive
+      characters are set to lowercase except for hexadecimal
+      digits, which are normalized to uppercase as described in
+      Section 6.2.2.1.
+
+      The purpose of this normalization is to help provide
+      unique URIs.  Note that this normalization is not
+      sufficient to provide uniqueness.  Two URIs that are
+      textually distinct after this normalization may still be
+      equivalent.
+
+      Objects using the uri type may restrict the schemes that
+      they permit.  For example, 'data:' and 'urn:' schemes
+      might not be appropriate.
+
+      A zero-length URI is not a valid URI.  This can be used to
+      express 'URI absent' where required.
+
+      In the value set and its semantics, this type is equivalent
+      to the Uri SMIv2 textual convention defined in RFC 5017.";
+    reference
+     "RFC 3986: Uniform Resource Identifier (URI): Generic Syntax
+      RFC 3305: Report from the Joint W3C/IETF URI Planning Interest
+                Group: Uniform Resource Identifiers (URIs), URLs,
+                and Uniform Resource Names (URNs): Clarifications
+                and Recommendations
+      RFC 5017: MIB Textual Conventions for Uniform Resource
+                Identifiers (URIs)";
+  }
+
+}
+""")
+    res.append(r"""module ietf-netconf-acm {
+
+  namespace "urn:ietf:params:xml:ns:yang:ietf-netconf-acm";
+
+  prefix nacm;
+
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  organization
+    "IETF NETCONF (Network Configuration) Working Group";
+
+  contact
+    "WG Web:   <https://datatracker.ietf.org/wg/netconf/>
+     WG List:  <mailto:netconf@ietf.org>
+
+     Author:   Andy Bierman
+               <mailto:andy@yumaworks.com>
+
+     Author:   Martin Bjorklund
+               <mailto:mbj@tail-f.com>";
+
+  description
+    "Network Configuration Access Control Model.
+
+     Copyright (c) 2012 - 2018 IETF Trust and the persons
+     identified as authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD
+     License set forth in Section 4.c of the IETF Trust's
+     Legal Provisions Relating to IETF Documents
+     (https://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC 8341; see
+     the RFC itself for full legal notices.";
+
+  revision "2018-02-14" {
+    description
+      "Added support for YANG 1.1 actions and notifications tied to
+       data nodes.  Clarified how NACM extensions can be used by
+       other data models.";
+    reference
+      "RFC 8341: Network Configuration Access Control Model";
+  }
+
+  revision "2012-02-22" {
+    description
+      "Initial version.";
+    reference
+      "RFC 6536: Network Configuration Protocol (NETCONF)
+                 Access Control Model";
+  }
+
+  /*
+   * Extension statements
+   */
+
+  extension default-deny-write {
+    description
+      "Used to indicate that the data model node
+       represents a sensitive security system parameter.
+
+       If present, the NETCONF server will only allow the designated
+       'recovery session' to have write access to the node.  An
+       explicit access control rule is required for all other users.
+
+       If the NACM module is used, then it must be enabled (i.e.,
+       /nacm/enable-nacm object equals 'true'), or this extension
+       is ignored.
+
+       The 'default-deny-write' extension MAY appear within a data
+       definition statement.  It is ignored otherwise.";
+  }
+
+  extension default-deny-all {
+    description
+      "Used to indicate that the data model node
+       controls a very sensitive security system parameter.
+
+       If present, the NETCONF server will only allow the designated
+       'recovery session' to have read, write, or execute access to
+       the node.  An explicit access control rule is required for all
+       other users.
+
+       If the NACM module is used, then it must be enabled (i.e.,
+       /nacm/enable-nacm object equals 'true'), or this extension
+       is ignored.
+
+       The 'default-deny-all' extension MAY appear within a data
+       definition statement, 'rpc' statement, or 'notification'
+       statement.  It is ignored otherwise.";
+  }
+
+  /*
+   * Derived types
+   */
+
+  typedef user-name-type {
+    type string {
+      length "1..max";
+    }
+    description
+      "General-purpose username string.";
+  }
+
+  typedef matchall-string-type {
+    type string {
+      pattern '\*';
+    }
+    description
+      "The string containing a single asterisk '*' is used
+       to conceptually represent all possible values
+       for the particular leaf using this data type.";
+  }
+
+  typedef access-operations-type {
+    type bits {
+      bit create {
+        description
+          "Any protocol operation that creates a
+           new data node.";
+      }
+      bit read {
+        description
+          "Any protocol operation or notification that
+           returns the value of a data node.";
+      }
+      bit update {
+        description
+          "Any protocol operation that alters an existing
+           data node.";
+      }
+      bit delete {
+        description
+          "Any protocol operation that removes a data node.";
+      }
+      bit exec {
+        description
+          "Execution access to the specified protocol operation.";
+      }
+    }
+    description
+      "Access operation.";
+  }
+
+  typedef group-name-type {
+    type string {
+      length "1..max";
+      pattern '[^\*].*';
+    }
+    description
+      "Name of administrative group to which
+       users can be assigned.";
+  }
+
+  typedef action-type {
+    type enumeration {
+      enum permit {
+        description
+          "Requested action is permitted.";
+      }
+      enum deny {
+        description
+          "Requested action is denied.";
+      }
+    }
+    description
+      "Action taken by the server when a particular
+       rule matches.";
+  }
+
+  typedef node-instance-identifier {
+    type yang:xpath1.0;
+    description
+      "Path expression used to represent a special
+       data node, action, or notification instance-identifier
+       string.
+
+       A node-instance-identifier value is an
+       unrestricted YANG instance-identifier expression.
+       All the same rules as an instance-identifier apply,
+       except that predicates for keys are optional.  If a key
+       predicate is missing, then the node-instance-identifier
+       represents all possible server instances for that key.
+
+       This XML Path Language (XPath) expression is evaluated in the
+       following context:
+
+          o  The set of namespace declarations are those in scope on
+             the leaf element where this type is used.
+
+          o  The set of variable bindings contains one variable,
+             'USER', which contains the name of the user of the
+             current session.
+
+          o  The function library is the core function library, but
+             note that due to the syntax restrictions of an
+             instance-identifier, no functions are allowed.
+
+          o  The context node is the root node in the data tree.
+
+       The accessible tree includes actions and notifications tied
+       to data nodes.";
+  }
+
+  /*
+   * Data definition statements
+   */
+
+  container nacm {
+    nacm:default-deny-all;
+
+    description
+      "Parameters for NETCONF access control model.";
+
+    leaf enable-nacm {
+      type boolean;
+      default "true";
+      description
+        "Enables or disables all NETCONF access control
+         enforcement.  If 'true', then enforcement
+         is enabled.  If 'false', then enforcement
+         is disabled.";
+    }
+
+    leaf read-default {
+      type action-type;
+      default "permit";
+      description
+        "Controls whether read access is granted if
+         no appropriate rule is found for a
+         particular read request.";
+    }
+
+    leaf write-default {
+      type action-type;
+      default "deny";
+      description
+        "Controls whether create, update, or delete access
+         is granted if no appropriate rule is found for a
+         particular write request.";
+    }
+
+    leaf exec-default {
+      type action-type;
+      default "permit";
+      description
+        "Controls whether exec access is granted if no appropriate
+         rule is found for a particular protocol operation request.";
+    }
+
+    leaf enable-external-groups {
+      type boolean;
+      default "true";
+      description
+        "Controls whether the server uses the groups reported by the
+         NETCONF transport layer when it assigns the user to a set of
+         NACM groups.  If this leaf has the value 'false', any group
+         names reported by the transport layer are ignored by the
+         server.";
+    }
+
+    leaf denied-operations {
+      type yang:zero-based-counter32;
+      config false;
+      mandatory true;
+      description
+        "Number of times since the server last restarted that a
+         protocol operation request was denied.";
+    }
+
+    leaf denied-data-writes {
+      type yang:zero-based-counter32;
+      config false;
+      mandatory true;
+      description
+        "Number of times since the server last restarted that a
+         protocol operation request to alter
+         a configuration datastore was denied.";
+    }
+
+    leaf denied-notifications {
+      type yang:zero-based-counter32;
+      config false;
+      mandatory true;
+      description
+        "Number of times since the server last restarted that
+         a notification was dropped for a subscription because
+         access to the event type was denied.";
+    }
+
+    container groups {
+      description
+        "NETCONF access control groups.";
+
+      list group {
+        key name;
+
+        description
+          "One NACM group entry.  This list will only contain
+           configured entries, not any entries learned from
+           any transport protocols.";
+
+        leaf name {
+          type group-name-type;
+          description
+            "Group name associated with this entry.";
+        }
+
+        leaf-list user-name {
+          type user-name-type;
+          description
+            "Each entry identifies the username of
+             a member of the group associated with
+             this entry.";
+        }
+      }
+    }
+
+    list rule-list {
+      key name;
+      ordered-by user;
+      description
+        "An ordered collection of access control rules.";
+
+      leaf name {
+        type string {
+          length "1..max";
+        }
+        description
+          "Arbitrary name assigned to the rule-list.";
+      }
+      leaf-list group {
+        type union {
+          type matchall-string-type;
+          type group-name-type;
+        }
+        description
+          "List of administrative groups that will be
+           assigned the associated access rights
+           defined by the 'rule' list.
+
+           The string '*' indicates that all groups apply to the
+           entry.";
+      }
+
+      list rule {
+        key name;
+        ordered-by user;
+        description
+          "One access control rule.
+
+           Rules are processed in user-defined order until a match is
+           found.  A rule matches if 'module-name', 'rule-type', and
+           'access-operations' match the request.  If a rule
+           matches, the 'action' leaf determines whether or not
+           access is granted.";
+
+        leaf name {
+          type string {
+            length "1..max";
+          }
+          description
+            "Arbitrary name assigned to the rule.";
+        }
+
+        leaf module-name {
+          type union {
+            type matchall-string-type;
+            type string;
+          }
+          default "*";
+          description
+            "Name of the module associated with this rule.
+
+             This leaf matches if it has the value '*' or if the
+             object being accessed is defined in the module with the
+             specified module name.";
+        }
+        choice rule-type {
+          description
+            "This choice matches if all leafs present in the rule
+             match the request.  If no leafs are present, the
+             choice matches all requests.";
+          case protocol-operation {
+            leaf rpc-name {
+              type union {
+                type matchall-string-type;
+                type string;
+              }
+              description
+                "This leaf matches if it has the value '*' or if
+                 its value equals the requested protocol operation
+                 name.";
+            }
+          }
+          case notification {
+            leaf notification-name {
+              type union {
+                type matchall-string-type;
+                type string;
+              }
+              description
+                "This leaf matches if it has the value '*' or if its
+                 value equals the requested notification name.";
+            }
+          }
+
+          case data-node {
+            leaf path {
+              type node-instance-identifier;
+              mandatory true;
+              description
+                "Data node instance-identifier associated with the
+                 data node, action, or notification controlled by
+                 this rule.
+
+                 Configuration data or state data
+                 instance-identifiers start with a top-level
+                 data node.  A complete instance-identifier is
+                 required for this type of path value.
+
+                 The special value '/' refers to all possible
+                 datastore contents.";
+            }
+          }
+        }
+
+        leaf access-operations {
+          type union {
+            type matchall-string-type;
+            type access-operations-type;
+          }
+          default "*";
+          description
+            "Access operations associated with this rule.
+
+             This leaf matches if it has the value '*' or if the
+             bit corresponding to the requested operation is set.";
+        }
+
+        leaf action {
+          type action-type;
+          mandatory true;
+          description
+            "The access control action associated with the
+             rule.  If a rule has been determined to match a
+             particular request, then this object is used
+             to determine whether to permit or deny the
+             request.";
+        }
+
+        leaf comment {
+          type string;
+          description
+            "A textual description of the access rule.";
+        }
+      }
+    }
+  }
+}
+""")
+    res.append(r"""module ietf-system {
+  namespace "urn:ietf:params:xml:ns:yang:ietf-system";
+  prefix "sys";
+
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  import ietf-netconf-acm {
+    prefix nacm;
+  }
+
+  import iana-crypt-hash {
+    prefix ianach;
+  }
+
+  organization
+    "IETF NETMOD (NETCONF Data Modeling Language) Working Group";
+
+  contact
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     WG Chair: Thomas Nadeau
+               <mailto:tnadeau@lucidvision.com>
+
+     WG Chair: Juergen Schoenwaelder
+               <mailto:j.schoenwaelder@jacobs-university.de>
+
+     Editor:   Andy Bierman
+               <mailto:andy@yumaworks.com>
+
+     Editor:   Martin Bjorklund
+               <mailto:mbj@tail-f.com>";
+
+  description
+    "This module contains a collection of YANG definitions for the
+     configuration and identification of some common system
+     properties within a device containing a NETCONF server.  This
+     includes data node definitions for system identification,
+     time-of-day management, user management, DNS resolver
+     configuration, and some protocol operations for system
+     management.
+
+     Copyright (c) 2014 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC 7317; see
+     the RFC itself for full legal notices.";
+
+  revision 2014-08-06 {
+    description
+      "Initial revision.";
+    reference
+      "RFC 7317: A YANG Data Model for System Management";
+  }
+
+ /*
+  * Typedefs
+  */
+
+  typedef timezone-name {
+    type string;
+    description
+      "A time zone name as used by the Time Zone Database,
+       sometimes referred to as the 'Olson Database'.
+
+       The exact set of valid values is an implementation-specific
+       matter.  Client discovery of the exact set of time zone names
+       for a particular server is out of scope.";
+    reference
+      "RFC 6557: Procedures for Maintaining the Time Zone Database";
+   }
+
+  /*
+   * Features
+   */
+
+  feature radius {
+    description
+      "Indicates that the device can be configured as a RADIUS
+       client.";
+    reference
+      "RFC 2865: Remote Authentication Dial In User Service (RADIUS)";
+  }
+
+  feature authentication {
+    description
+      "Indicates that the device supports configuration of
+       user authentication.";
+  }
+
+  feature local-users {
+    if-feature authentication;
+    description
+      "Indicates that the device supports configuration of
+       local user authentication.";
+  }
+
+  feature radius-authentication {
+    if-feature radius;
+    if-feature authentication;
+    description
+      "Indicates that the device supports configuration of user
+       authentication over RADIUS.";
+    reference
+      "RFC 2865: Remote Authentication Dial In User Service (RADIUS)
+       RFC 5607: Remote Authentication Dial-In User Service (RADIUS)
+                 Authorization for Network Access Server (NAS)
+                 Management";
+  }
+
+  feature ntp {
+    description
+      "Indicates that the device can be configured to use one or
+       more NTP servers to set the system date and time.";
+  }
+
+  feature ntp-udp-port {
+    if-feature ntp;
+    description
+      "Indicates that the device supports the configuration of
+       the UDP port for NTP servers.
+
+       This is a 'feature', since many implementations do not support
+       any port other than the default port.";
+  }
+
+  feature timezone-name {
+    description
+      "Indicates that the local time zone on the device
+       can be configured to use the TZ database
+       to set the time zone and manage daylight saving time.";
+    reference
+      "RFC 6557: Procedures for Maintaining the Time Zone Database";
+  }
+
+  feature dns-udp-tcp-port {
+    description
+      "Indicates that the device supports the configuration of
+       the UDP and TCP port for DNS servers.
+
+       This is a 'feature', since many implementations do not support
+       any port other than the default port.";
+  }
+
+  /*
+   * Identities
+   */
+
+  identity authentication-method {
+    description
+      "Base identity for user authentication methods.";
+  }
+
+  identity radius {
+    base authentication-method;
+    description
+      "Indicates user authentication using RADIUS.";
+    reference
+      "RFC 2865: Remote Authentication Dial In User Service (RADIUS)
+       RFC 5607: Remote Authentication Dial-In User Service (RADIUS)
+                 Authorization for Network Access Server (NAS)
+                 Management";
+  }
+
+  identity local-users {
+    base authentication-method;
+    description
+      "Indicates password-based authentication of locally
+       configured users.";
+  }
+
+  identity radius-authentication-type {
+    description
+      "Base identity for RADIUS authentication types.";
+  }
+
+  identity radius-pap {
+    base radius-authentication-type;
+    description
+      "The device requests Password Authentication Protocol (PAP)
+       authentication from the RADIUS server.";
+    reference
+      "RFC 2865: Remote Authentication Dial In User Service (RADIUS)";
+  }
+
+  identity radius-chap {
+    base radius-authentication-type;
+    description
+      "The device requests Challenge Handshake Authentication
+       Protocol (CHAP) authentication from the RADIUS server.";
+    reference
+      "RFC 2865: Remote Authentication Dial In User Service (RADIUS)";
+  }
+
+  /*
+   * Configuration data nodes
+   */
+
+  container system {
+    description
+      "System group configuration.";
+
+    leaf contact {
+      type string;
+      description
+        "The administrator contact information for the system.
+
+         A server implementation MAY map this leaf to the sysContact
+         MIB object.  Such an implementation needs to use some
+         mechanism to handle the differences in size and characters
+         allowed between this leaf and sysContact.  The definition of
+         such a mechanism is outside the scope of this document.";
+      reference
+        "RFC 3418: Management Information Base (MIB) for the
+                   Simple Network Management Protocol (SNMP)
+                   SNMPv2-MIB.sysContact";
+    }
+    leaf hostname {
+      type inet:domain-name;
+     description
+       "The name of the host.  This name can be a single domain
+        label or the fully qualified domain name of the host.";
+    }
+    leaf location {
+      type string;
+      description
+        "The system location.
+
+         A server implementation MAY map this leaf to the sysLocation
+         MIB object.  Such an implementation needs to use some
+         mechanism to handle the differences in size and characters
+         allowed between this leaf and sysLocation.  The definition
+         of such a mechanism is outside the scope of this document.";
+      reference
+        "RFC 3418: Management Information Base (MIB) for the
+                   Simple Network Management Protocol (SNMP)
+                   SNMPv2-MIB.sysLocation";
+    }
+
+    container clock {
+      description
+        "Configuration of the system date and time properties.";
+
+      choice timezone {
+        description
+          "The system time zone information.";
+
+        case timezone-name {
+          if-feature timezone-name;
+          leaf timezone-name {
+            type timezone-name;
+            description
+              "The TZ database name to use for the system, such
+               as 'Europe/Stockholm'.";
+          }
+        }
+        case timezone-utc-offset {
+          leaf timezone-utc-offset {
+            type int16 {
+              range "-1500 .. 1500";
+            }
+            units "minutes";
+            description
+              "The number of minutes to add to UTC time to
+               identify the time zone for this system.  For example,
+               'UTC - 8:00 hours' would be represented as '-480'.
+               Note that automatic daylight saving time adjustment
+               is not provided if this object is used.";
+          }
+        }
+      }
+    }
+
+    container ntp {
+      if-feature ntp;
+      presence
+        "Enables the NTP client unless the 'enabled' leaf
+         (which defaults to 'true') is set to 'false'";
+      description
+        "Configuration of the NTP client.";
+
+      leaf enabled {
+        type boolean;
+        default true;
+        description
+          "Indicates that the system should attempt to
+           synchronize the system clock with an NTP server
+           from the 'ntp/server' list.";
+      }
+      list server {
+        key name;
+        description
+          "List of NTP servers to use for system clock
+           synchronization.  If '/system/ntp/enabled'
+           is 'true', then the system will attempt to
+           contact and utilize the specified NTP servers.";
+
+        leaf name {
+          type string;
+          description
+            "An arbitrary name for the NTP server.";
+        }
+        choice transport {
+          mandatory true;
+          description
+            "The transport-protocol-specific parameters for this
+             server.";
+
+          case udp {
+            container udp {
+              description
+                "Contains UDP-specific configuration parameters
+                 for NTP.";
+              leaf address {
+                type inet:host;
+                mandatory true;
+                description
+                  "The address of the NTP server.";
+              }
+              leaf port {
+                if-feature ntp-udp-port;
+                type inet:port-number;
+                default 123;
+                description
+                  "The port number of the NTP server.";
+              }
+            }
+          }
+        }
+        leaf association-type {
+          type enumeration {
+            enum server {
+              description
+                "Use client association mode.  This device
+                 will not provide synchronization to the
+                 configured NTP server.";
+            }
+            enum peer {
+              description
+                "Use symmetric active association mode.
+                 This device may provide synchronization
+                 to the configured NTP server.";
+            }
+            enum pool {
+              description
+                "Use client association mode with one or
+                 more of the NTP servers found by DNS
+                 resolution of the domain name given by
+                 the 'address' leaf.  This device will not
+                 provide synchronization to the servers.";
+            }
+          }
+          default server;
+          description
+            "The desired association type for this NTP server.";
+        }
+        leaf iburst {
+          type boolean;
+          default false;
+          description
+            "Indicates whether this server should enable burst
+             synchronization or not.";
+        }
+        leaf prefer {
+          type boolean;
+          default false;
+          description
+            "Indicates whether this server should be preferred
+             or not.";
+        }
+      }
+    }
+
+    container dns-resolver {
+      description
+        "Configuration of the DNS resolver.";
+
+      leaf-list search {
+        type inet:domain-name;
+        ordered-by user;
+        description
+          "An ordered list of domains to search when resolving
+           a host name.";
+      }
+      list server {
+        key name;
+        ordered-by user;
+        description
+          "List of the DNS servers that the resolver should query.
+
+           When the resolver is invoked by a calling application, it
+           sends the query to the first name server in this list.  If
+           no response has been received within 'timeout' seconds,
+           the resolver continues with the next server in the list.
+           If no response is received from any server, the resolver
+           continues with the first server again.  When the resolver
+           has traversed the list 'attempts' times without receiving
+           any response, it gives up and returns an error to the
+           calling application.
+
+           Implementations MAY limit the number of entries in this
+           list.";
+
+        leaf name {
+          type string;
+          description
+            "An arbitrary name for the DNS server.";
+        }
+        choice transport {
+          mandatory true;
+          description
+            "The transport-protocol-specific parameters for this
+             server.";
+
+          case udp-and-tcp {
+            container udp-and-tcp {
+              description
+                "Contains UDP- and TCP-specific configuration
+                 parameters for DNS.";
+              reference
+                "RFC 1035: Domain Names - Implementation and
+                           Specification
+                 RFC 5966: DNS Transport over TCP - Implementation
+                           Requirements";
+
+              leaf address {
+                type inet:ip-address;
+                mandatory true;
+                description
+                  "The address of the DNS server.";
+              }
+              leaf port {
+                if-feature dns-udp-tcp-port;
+                type inet:port-number;
+                default 53;
+                description
+                  "The UDP and TCP port number of the DNS server.";
+              }
+            }
+          }
+        }
+      }
+      container options {
+        description
+          "Resolver options.  The set of available options has been
+           limited to those that are generally available across
+           different resolver implementations and generally useful.";
+        leaf timeout {
+          type uint8 {
+            range "1..max";
+          }
+          units "seconds";
+          default "5";
+          description
+            "The amount of time the resolver will wait for a
+             response from each remote name server before
+             retrying the query via a different name server.";
+        }
+        leaf attempts {
+          type uint8 {
+            range "1..max";
+          }
+          default "2";
+          description
+            "The number of times the resolver will send a query to
+             all of its name servers before giving up and returning
+             an error to the calling application.";
+        }
+      }
+    }
+
+    container radius {
+      if-feature radius;
+
+      description
+        "Configuration of the RADIUS client.";
+
+      list server {
+        key name;
+        ordered-by user;
+        description
+          "List of RADIUS servers used by the device.
+
+           When the RADIUS client is invoked by a calling
+           application, it sends the query to the first server in
+           this list.  If no response has been received within
+           'timeout' seconds, the client continues with the next
+           server in the list.  If no response is received from any
+           server, the client continues with the first server again.
+           When the client has traversed the list 'attempts' times
+           without receiving any response, it gives up and returns an
+           error to the calling application.";
+
+        leaf name {
+          type string;
+          description
+            "An arbitrary name for the RADIUS server.";
+        }
+        choice transport {
+          mandatory true;
+          description
+            "The transport-protocol-specific parameters for this
+             server.";
+
+          case udp {
+            container udp {
+              description
+                "Contains UDP-specific configuration parameters
+                 for RADIUS.";
+              leaf address {
+                type inet:host;
+                mandatory true;
+                description
+                  "The address of the RADIUS server.";
+              }
+
+              leaf authentication-port {
+                type inet:port-number;
+                default "1812";
+                description
+                  "The port number of the RADIUS server.";
+              }
+              leaf shared-secret {
+                type string;
+                mandatory true;
+                nacm:default-deny-all;
+                description
+                  "The shared secret, which is known to both the
+                   RADIUS client and server.";
+                reference
+                  "RFC 2865: Remote Authentication Dial In User
+                             Service (RADIUS)";
+              }
+            }
+          }
+        }
+        leaf authentication-type {
+          type identityref {
+            base radius-authentication-type;
+          }
+          default radius-pap;
+          description
+            "The authentication type requested from the RADIUS
+             server.";
+        }
+      }
+      container options {
+        description
+          "RADIUS client options.";
+
+        leaf timeout {
+          type uint8 {
+            range "1..max";
+          }
+          units "seconds";
+          default "5";
+          description
+            "The number of seconds the device will wait for a
+             response from each RADIUS server before trying with a
+             different server.";
+        }
+
+        leaf attempts {
+          type uint8 {
+            range "1..max";
+          }
+          default "2";
+          description
+            "The number of times the device will send a query to
+             all of its RADIUS servers before giving up.";
+        }
+      }
+    }
+
+    container authentication {
+      nacm:default-deny-write;
+      if-feature authentication;
+
+       description
+         "The authentication configuration subtree.";
+
+       leaf-list user-authentication-order {
+         type identityref {
+           base authentication-method;
+         }
+         must '(. != "sys:radius" or ../../radius/server)' {
+           error-message
+             "When 'radius' is used, a RADIUS server"
+           + " must be configured.";
+           description
+             "When 'radius' is used as an authentication method,
+              a RADIUS server must be configured.";
+         }
+         ordered-by user;
+
+         description
+           "When the device authenticates a user with a password,
+            it tries the authentication methods in this leaf-list in
+            order.  If authentication with one method fails, the next
+            method is used.  If no method succeeds, the user is
+            denied access.
+
+            An empty user-authentication-order leaf-list still allows
+            authentication of users using mechanisms that do not
+            involve a password.
+
+            If the 'radius-authentication' feature is advertised by
+            the NETCONF server, the 'radius' identity can be added to
+            this list.
+
+            If the 'local-users' feature is advertised by the
+            NETCONF server, the 'local-users' identity can be
+            added to this list.";
+       }
+
+       list user {
+         if-feature local-users;
+         key name;
+         description
+           "The list of local users configured on this device.";
+
+         leaf name {
+           type string;
+           description
+            "The user name string identifying this entry.";
+         }
+         leaf password {
+           type ianach:crypt-hash;
+           description
+             "The password for this entry.";
+         }
+         list authorized-key {
+           key name;
+           description
+             "A list of public SSH keys for this user.  These keys
+              are allowed for SSH authentication, as described in
+              RFC 4253.";
+           reference
+             "RFC 4253: The Secure Shell (SSH) Transport Layer
+                        Protocol";
+
+           leaf name {
+             type string;
+             description
+               "An arbitrary name for the SSH key.";
+           }
+
+           leaf algorithm {
+             type string;
+             mandatory true;
+             description
+               "The public key algorithm name for this SSH key.
+
+                Valid values are the values in the IANA 'Secure Shell
+                (SSH) Protocol Parameters' registry, Public Key
+                Algorithm Names.";
+             reference
+               "IANA 'Secure Shell (SSH) Protocol Parameters'
+                registry, Public Key Algorithm Names";
+           }
+           leaf key-data {
+             type binary;
+             mandatory true;
+             description
+               "The binary public key data for this SSH key, as
+                specified by RFC 4253, Section 6.6, i.e.:
+
+                  string    certificate or public key format
+                            identifier
+                  byte[n]   key/certificate data.";
+             reference
+               "RFC 4253: The Secure Shell (SSH) Transport Layer
+                          Protocol";
+           }
+         }
+       }
+     }
+  }
+
+  /*
+   * Operational state data nodes
+   */
+
+  container system-state {
+    config false;
+    description
+      "System group operational state.";
+
+    container platform {
+      description
+        "Contains vendor-specific information for
+         identifying the system platform and operating system.";
+      reference
+        "IEEE Std 1003.1-2008 - sys/utsname.h";
+
+      leaf os-name {
+        type string;
+        description
+          "The name of the operating system in use -
+           for example, 'Linux'.";
+        reference
+          "IEEE Std 1003.1-2008 - utsname.sysname";
+      }
+      leaf os-release {
+        type string;
+        description
+          "The current release level of the operating
+           system in use.  This string MAY indicate
+           the OS source code revision.";
+        reference
+          "IEEE Std 1003.1-2008 - utsname.release";
+      }
+      leaf os-version {
+        type string;
+        description
+          "The current version level of the operating
+           system in use.  This string MAY indicate
+           the specific OS build date and target variant
+           information.";
+        reference
+          "IEEE Std 1003.1-2008 - utsname.version";
+      }
+      leaf machine {
+        type string;
+        description
+          "A vendor-specific identifier string representing
+           the hardware in use.";
+        reference
+          "IEEE Std 1003.1-2008 - utsname.machine";
+      }
+    }
+
+    container clock {
+      description
+        "Monitoring of the system date and time properties.";
+
+      leaf current-datetime {
+        type yang:date-and-time;
+        description
+          "The current system date and time.";
+      }
+
+      leaf boot-datetime {
+        type yang:date-and-time;
+        description
+          "The system date and time when the system last restarted.";
+      }
+    }
+  }
+
+  rpc set-current-datetime {
+    nacm:default-deny-all;
+    description
+      "Set the /system-state/clock/current-datetime leaf
+       to the specified value.
+
+       If the system is using NTP (i.e., /system/ntp/enabled
+       is set to 'true'), then this operation will fail with
+       error-tag 'operation-failed' and error-app-tag value of
+       'ntp-active'.";
+    input {
+      leaf current-datetime {
+        type yang:date-and-time;
+        mandatory true;
+        description
+          "The current system date and time.";
+      }
+    }
+  }
+
+  rpc system-restart {
+    nacm:default-deny-all;
+    description
+      "Request that the entire system be restarted immediately.
+       A server SHOULD send an rpc reply to the client before
+       restarting the system.";
+  }
+
+  rpc system-shutdown {
+    nacm:default-deny-all;
+    description
+      "Request that the entire system be shut down immediately.
+       A server SHOULD send an rpc reply to the client before
+       shutting down the system.";
+  }
+
+}
+""")
+    res.append(r"""module ietf-yang-types {
+
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-types";
+  prefix "yang";
+
+  organization
+   "IETF NETMOD (NETCONF Data Modeling Language) Working Group";
+
+  contact
+   "WG Web:   <http://tools.ietf.org/wg/netmod/>
+    WG List:  <mailto:netmod@ietf.org>
+
+    WG Chair: David Kessens
+              <mailto:david.kessens@nsn.com>
+
+    WG Chair: Juergen Schoenwaelder
+              <mailto:j.schoenwaelder@jacobs-university.de>
+
+    Editor:   Juergen Schoenwaelder
+              <mailto:j.schoenwaelder@jacobs-university.de>";
+
+  description
+   "This module contains a collection of generally useful derived
+    YANG data types.
+
+    Copyright (c) 2013 IETF Trust and the persons identified as
+    authors of the code.  All rights reserved.
+
+    Redistribution and use in source and binary forms, with or
+    without modification, is permitted pursuant to, and subject
+    to the license terms contained in, the Simplified BSD License
+    set forth in Section 4.c of the IETF Trust's Legal Provisions
+    Relating to IETF Documents
+    (http://trustee.ietf.org/license-info).
+
+    This version of this YANG module is part of RFC 6991; see
+    the RFC itself for full legal notices.";
+
+  revision 2013-07-15 {
+    description
+     "This revision adds the following new data types:
+      - yang-identifier
+      - hex-string
+      - uuid
+      - dotted-quad";
+    reference
+     "RFC 6991: Common YANG Data Types";
+  }
+
+  revision 2010-09-24 {
+    description
+     "Initial revision.";
+    reference
+     "RFC 6021: Common YANG Data Types";
+  }
+
+  /*** collection of counter and gauge types ***/
+
+  typedef counter32 {
+    type uint32;
+    description
+     "The counter32 type represents a non-negative integer
+      that monotonically increases until it reaches a
+      maximum value of 2^32-1 (4294967295 decimal), when it
+      wraps around and starts increasing again from zero.
+
+      Counters have no defined 'initial' value, and thus, a
+      single value of a counter has (in general) no information
+      content.  Discontinuities in the monotonically increasing
+      value normally occur at re-initialization of the
+      management system, and at other times as specified in the
+      description of a schema node using this type.  If such
+      other times can occur, for example, the creation of
+      a schema node of type counter32 at times other than
+      re-initialization, then a corresponding schema node
+      should be defined, with an appropriate type, to indicate
+      the last discontinuity.
+
+      The counter32 type should not be used for configuration
+      schema nodes.  A default statement SHOULD NOT be used in
+      combination with the type counter32.
+
+      In the value set and its semantics, this type is equivalent
+      to the Counter32 type of the SMIv2.";
+    reference
+     "RFC 2578: Structure of Management Information Version 2
+                (SMIv2)";
+  }
+
+  typedef zero-based-counter32 {
+    type yang:counter32;
+    default "0";
+    description
+     "The zero-based-counter32 type represents a counter32
+      that has the defined 'initial' value zero.
+
+      A schema node of this type will be set to zero (0) on creation
+      and will thereafter increase monotonically until it reaches
+      a maximum value of 2^32-1 (4294967295 decimal), when it
+      wraps around and starts increasing again from zero.
+
+      Provided that an application discovers a new schema node
+      of this type within the minimum time to wrap, it can use the
+      'initial' value as a delta.  It is important for a management
+      station to be aware of this minimum time and the actual time
+      between polls, and to discard data if the actual time is too
+      long or there is no defined minimum time.
+
+      In the value set and its semantics, this type is equivalent
+      to the ZeroBasedCounter32 textual convention of the SMIv2.";
+    reference
+      "RFC 4502: Remote Network Monitoring Management Information
+                 Base Version 2";
+  }
+
+  typedef counter64 {
+    type uint64;
+    description
+     "The counter64 type represents a non-negative integer
+      that monotonically increases until it reaches a
+      maximum value of 2^64-1 (18446744073709551615 decimal),
+      when it wraps around and starts increasing again from zero.
+
+      Counters have no defined 'initial' value, and thus, a
+      single value of a counter has (in general) no information
+      content.  Discontinuities in the monotonically increasing
+      value normally occur at re-initialization of the
+      management system, and at other times as specified in the
+      description of a schema node using this type.  If such
+      other times can occur, for example, the creation of
+      a schema node of type counter64 at times other than
+      re-initialization, then a corresponding schema node
+      should be defined, with an appropriate type, to indicate
+      the last discontinuity.
+
+      The counter64 type should not be used for configuration
+      schema nodes.  A default statement SHOULD NOT be used in
+      combination with the type counter64.
+
+      In the value set and its semantics, this type is equivalent
+      to the Counter64 type of the SMIv2.";
+    reference
+     "RFC 2578: Structure of Management Information Version 2
+                (SMIv2)";
+  }
+
+  typedef zero-based-counter64 {
+    type yang:counter64;
+    default "0";
+    description
+     "The zero-based-counter64 type represents a counter64 that
+      has the defined 'initial' value zero.
+
+      A schema node of this type will be set to zero (0) on creation
+      and will thereafter increase monotonically until it reaches
+      a maximum value of 2^64-1 (18446744073709551615 decimal),
+      when it wraps around and starts increasing again from zero.
+
+      Provided that an application discovers a new schema node
+      of this type within the minimum time to wrap, it can use the
+      'initial' value as a delta.  It is important for a management
+      station to be aware of this minimum time and the actual time
+      between polls, and to discard data if the actual time is too
+      long or there is no defined minimum time.
+
+      In the value set and its semantics, this type is equivalent
+      to the ZeroBasedCounter64 textual convention of the SMIv2.";
+    reference
+     "RFC 2856: Textual Conventions for Additional High Capacity
+                Data Types";
+  }
+
+  typedef gauge32 {
+    type uint32;
+    description
+     "The gauge32 type represents a non-negative integer, which
+      may increase or decrease, but shall never exceed a maximum
+      value, nor fall below a minimum value.  The maximum value
+      cannot be greater than 2^32-1 (4294967295 decimal), and
+      the minimum value cannot be smaller than 0.  The value of
+      a gauge32 has its maximum value whenever the information
+      being modeled is greater than or equal to its maximum
+      value, and has its minimum value whenever the information
+      being modeled is smaller than or equal to its minimum value.
+      If the information being modeled subsequently decreases
+      below (increases above) the maximum (minimum) value, the
+      gauge32 also decreases (increases).
+
+      In the value set and its semantics, this type is equivalent
+      to the Gauge32 type of the SMIv2.";
+    reference
+     "RFC 2578: Structure of Management Information Version 2
+                (SMIv2)";
+  }
+
+  typedef gauge64 {
+    type uint64;
+    description
+     "The gauge64 type represents a non-negative integer, which
+      may increase or decrease, but shall never exceed a maximum
+      value, nor fall below a minimum value.  The maximum value
+      cannot be greater than 2^64-1 (18446744073709551615), and
+      the minimum value cannot be smaller than 0.  The value of
+      a gauge64 has its maximum value whenever the information
+      being modeled is greater than or equal to its maximum
+      value, and has its minimum value whenever the information
+      being modeled is smaller than or equal to its minimum value.
+      If the information being modeled subsequently decreases
+      below (increases above) the maximum (minimum) value, the
+      gauge64 also decreases (increases).
+
+      In the value set and its semantics, this type is equivalent
+      to the CounterBasedGauge64 SMIv2 textual convention defined
+      in RFC 2856";
+    reference
+     "RFC 2856: Textual Conventions for Additional High Capacity
+                Data Types";
+  }
+
+  /*** collection of identifier-related types ***/
+
+  typedef object-identifier {
+    type string {
+      pattern '(([0-1](\.[1-3]?[0-9]))|(2\.(0|([1-9]\d*))))'
+            + '(\.(0|([1-9]\d*)))*';
+    }
+    description
+     "The object-identifier type represents administratively
+      assigned names in a registration-hierarchical-name tree.
+
+      Values of this type are denoted as a sequence of numerical
+      non-negative sub-identifier values.  Each sub-identifier
+      value MUST NOT exceed 2^32-1 (4294967295).  Sub-identifiers
+      are separated by single dots and without any intermediate
+      whitespace.
+
+      The ASN.1 standard restricts the value space of the first
+      sub-identifier to 0, 1, or 2.  Furthermore, the value space
+      of the second sub-identifier is restricted to the range
+      0 to 39 if the first sub-identifier is 0 or 1.  Finally,
+      the ASN.1 standard requires that an object identifier
+      has always at least two sub-identifiers.  The pattern
+      captures these restrictions.
+
+      Although the number of sub-identifiers is not limited,
+      module designers should realize that there may be
+      implementations that stick with the SMIv2 limit of 128
+      sub-identifiers.
+
+      This type is a superset of the SMIv2 OBJECT IDENTIFIER type
+      since it is not restricted to 128 sub-identifiers.  Hence,
+      this type SHOULD NOT be used to represent the SMIv2 OBJECT
+      IDENTIFIER type; the object-identifier-128 type SHOULD be
+      used instead.";
+    reference
+     "ISO9834-1: Information technology -- Open Systems
+      Interconnection -- Procedures for the operation of OSI
+      Registration Authorities: General procedures and top
+      arcs of the ASN.1 Object Identifier tree";
+  }
+
+  typedef object-identifier-128 {
+    type object-identifier {
+      pattern '\d*(\.\d*){1,127}';
+    }
+    description
+     "This type represents object-identifiers restricted to 128
+      sub-identifiers.
+
+      In the value set and its semantics, this type is equivalent
+      to the OBJECT IDENTIFIER type of the SMIv2.";
+    reference
+     "RFC 2578: Structure of Management Information Version 2
+                (SMIv2)";
+  }
+
+  typedef yang-identifier {
+    type string {
+      length "1..max";
+      pattern '[a-zA-Z_][a-zA-Z0-9\-_.]*';
+      pattern '.|..|[^xX].*|.[^mM].*|..[^lL].*';
+    }
+    description
+      "A YANG identifier string as defined by the 'identifier'
+       rule in Section 12 of RFC 6020.  An identifier must
+       start with an alphabetic character or an underscore
+       followed by an arbitrary sequence of alphabetic or
+       numeric characters, underscores, hyphens, or dots.
+
+       A YANG identifier MUST NOT start with any possible
+       combination of the lowercase or uppercase character
+       sequence 'xml'.";
+    reference
+      "RFC 6020: YANG - A Data Modeling Language for the Network
+                 Configuration Protocol (NETCONF)";
+  }
+
+  /*** collection of types related to date and time***/
+
+  typedef date-and-time {
+    type string {
+      pattern '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?'
+            + '(Z|[\+\-]\d{2}:\d{2})';
+    }
+    description
+     "The date-and-time type is a profile of the ISO 8601
+      standard for representation of dates and times using the
+      Gregorian calendar.  The profile is defined by the
+      date-time production in Section 5.6 of RFC 3339.
+
+      The date-and-time type is compatible with the dateTime XML
+      schema type with the following notable exceptions:
+
+      (a) The date-and-time type does not allow negative years.
+
+      (b) The date-and-time time-offset -00:00 indicates an unknown
+          time zone (see RFC 3339) while -00:00 and +00:00 and Z
+          all represent the same time zone in dateTime.
+
+      (c) The canonical format (see below) of data-and-time values
+          differs from the canonical format used by the dateTime XML
+          schema type, which requires all times to be in UTC using
+          the time-offset 'Z'.
+
+      This type is not equivalent to the DateAndTime textual
+      convention of the SMIv2 since RFC 3339 uses a different
+      separator between full-date and full-time and provides
+      higher resolution of time-secfrac.
+
+      The canonical format for date-and-time values with a known time
+      zone uses a numeric time zone offset that is calculated using
+      the device's configured known offset to UTC time.  A change of
+      the device's offset to UTC time will cause date-and-time values
+      to change accordingly.  Such changes might happen periodically
+      in case a server follows automatically daylight saving time
+      (DST) time zone offset changes.  The canonical format for
+      date-and-time values with an unknown time zone (usually
+      referring to the notion of local time) uses the time-offset
+      -00:00.";
+    reference
+     "RFC 3339: Date and Time on the Internet: Timestamps
+      RFC 2579: Textual Conventions for SMIv2
+      XSD-TYPES: XML Schema Part 2: Datatypes Second Edition";
+  }
+
+  typedef timeticks {
+    type uint32;
+    description
+     "The timeticks type represents a non-negative integer that
+      represents the time, modulo 2^32 (4294967296 decimal), in
+      hundredths of a second between two epochs.  When a schema
+      node is defined that uses this type, the description of
+      the schema node identifies both of the reference epochs.
+
+      In the value set and its semantics, this type is equivalent
+      to the TimeTicks type of the SMIv2.";
+    reference
+     "RFC 2578: Structure of Management Information Version 2
+                (SMIv2)";
+  }
+
+  typedef timestamp {
+    type yang:timeticks;
+    description
+     "The timestamp type represents the value of an associated
+      timeticks schema node at which a specific occurrence
+      happened.  The specific occurrence must be defined in the
+      description of any schema node defined using this type.  When
+      the specific occurrence occurred prior to the last time the
+      associated timeticks attribute was zero, then the timestamp
+      value is zero.  Note that this requires all timestamp values
+      to be reset to zero when the value of the associated timeticks
+      attribute reaches 497+ days and wraps around to zero.
+
+      The associated timeticks schema node must be specified
+      in the description of any schema node using this type.
+
+      In the value set and its semantics, this type is equivalent
+      to the TimeStamp textual convention of the SMIv2.";
+    reference
+     "RFC 2579: Textual Conventions for SMIv2";
+  }
+
+  /*** collection of generic address types ***/
+
+  typedef phys-address {
+    type string {
+      pattern '([0-9a-fA-F]{2}(:[0-9a-fA-F]{2})*)?';
+    }
+
+    description
+     "Represents media- or physical-level addresses represented
+      as a sequence octets, each octet represented by two hexadecimal
+      numbers.  Octets are separated by colons.  The canonical
+      representation uses lowercase characters.
+
+      In the value set and its semantics, this type is equivalent
+      to the PhysAddress textual convention of the SMIv2.";
+    reference
+     "RFC 2579: Textual Conventions for SMIv2";
+  }
+
+  typedef mac-address {
+    type string {
+      pattern '[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}';
+    }
+    description
+     "The mac-address type represents an IEEE 802 MAC address.
+      The canonical representation uses lowercase characters.
+
+      In the value set and its semantics, this type is equivalent
+      to the MacAddress textual convention of the SMIv2.";
+    reference
+     "IEEE 802: IEEE Standard for Local and Metropolitan Area
+                Networks: Overview and Architecture
+      RFC 2579: Textual Conventions for SMIv2";
+  }
+
+  /*** collection of XML-specific types ***/
+
+  typedef xpath1.0 {
+    type string;
+    description
+     "This type represents an XPATH 1.0 expression.
+
+      When a schema node is defined that uses this type, the
+      description of the schema node MUST specify the XPath
+      context in which the XPath expression is evaluated.";
+    reference
+     "XPATH: XML Path Language (XPath) Version 1.0";
+  }
+
+  /*** collection of string types ***/
+
+  typedef hex-string {
+    type string {
+      pattern '([0-9a-fA-F]{2}(:[0-9a-fA-F]{2})*)?';
+    }
+    description
+     "A hexadecimal string with octets represented as hex digits
+      separated by colons.  The canonical representation uses
+      lowercase characters.";
+  }
+
+  typedef uuid {
+    type string {
+      pattern '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-'
+            + '[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+    }
+    description
+     "A Universally Unique IDentifier in the string representation
+      defined in RFC 4122.  The canonical representation uses
+      lowercase characters.
+
+      The following is an example of a UUID in string representation:
+      f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+      ";
+    reference
+     "RFC 4122: A Universally Unique IDentifier (UUID) URN
+                Namespace";
+  }
+
+  typedef dotted-quad {
+    type string {
+      pattern
+        '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
+      + '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])';
+    }
+    description
+      "An unsigned 32-bit number expressed in the dotted-quad
+       notation, i.e., four octets written as decimal numbers
+       and separated with the '.' (full stop) character.";
+  }
+}
+""")
+    return res
+
+
+mut def from_xml_ietf_netconf_acm__nacm__enable_nacm(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('boolean', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__read_default(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('enumeration', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__write_default(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('enumeration', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__exec_default(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('enumeration', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__enable_external_groups(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('boolean', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__groups__group__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__groups__group__user_name(val: list[value]) -> yang.gdata.LeafList:
+    return yang.gdata.LeafList('string', val)
+
+class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
+    name: str
+    user_name: list[str]
+
+    mut def __init__(self, name: str, user_name: ?list[str]=None):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
+        self.name = name
+        self.user_name = user_name if user_name is not None else []
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _user_name = self.user_name
+        if _user_name is not None:
+            children['user-name'] = yang.gdata.LeafList('string', _user_name)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> ietf_netconf_acm__nacm__groups__group_entry:
+        return ietf_netconf_acm__nacm__groups__group_entry(name=n.get_str('name'), user_name=n.get_opt_strs('user-name'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_netconf_acm__nacm__groups__group_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /nacm/groups/group')
+            res.append('{self_name} = ietf_netconf_acm__nacm__groups__group({repr(self.name)})')
+        leaves = []
+        _user_name = self.user_name
+        if len(_user_name) != 0:
+            leaves.append('{self_name}.user_name = {repr(_user_name)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /nacm/groups/group'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-netconf-acm:nacm', 'groups', 'group'])
+
+class ietf_netconf_acm__nacm__groups__group(yang.adata.MNode):
+    elements: list[ietf_netconf_acm__nacm__groups__group_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
+        self._name = 'group'
+        self.elements = elements
+
+    mut def create(self, name):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = ietf_netconf_acm__nacm__groups__group_entry(name)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[ietf_netconf_acm__nacm__groups__group_entry]:
+        if n is not None:
+            return [ietf_netconf_acm__nacm__groups__group_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return ietf_netconf_acm__nacm__groups__group(elements=copied_elements)
+
+extension ietf_netconf_acm__nacm__groups__group(Iterable[ietf_netconf_acm__nacm__groups__group_entry]):
+    def __iter__(self) -> Iterator[ietf_netconf_acm__nacm__groups__group_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_ietf_netconf_acm__nacm__groups__group_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_ietf_netconf_acm__nacm__groups__group__name, child_name)
+    child_user_name = yang.gdata.from_xml_opt_strs(node, 'user-name')
+    yang.gdata.maybe_add(children, 'user-name', from_xml_ietf_netconf_acm__nacm__groups__group__user_name, child_user_name)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_netconf_acm__nacm__groups__group(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_ietf_netconf_acm__nacm__groups__group_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements)
+
+class ietf_netconf_acm__nacm__groups(yang.adata.MNode):
+    group: ietf_netconf_acm__nacm__groups__group
+
+    mut def __init__(self, group: list[ietf_netconf_acm__nacm__groups__group_entry]=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
+        self.group = ietf_netconf_acm__nacm__groups__group(elements=group)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _group = self.group
+        if _group is not None:
+            children['group'] = _group.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_netconf_acm__nacm__groups:
+        if n is not None:
+            return ietf_netconf_acm__nacm__groups(group=ietf_netconf_acm__nacm__groups__group.from_gdata(n.get_opt_list('group')))
+        return ietf_netconf_acm__nacm__groups()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_netconf_acm__nacm__groups.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /nacm/groups')
+            res.append('{self_name} = ietf_netconf_acm__nacm__groups()')
+        leaves = []
+        _group = self.group
+        for _element in _group:
+            res.append('')
+            res.append("# List /nacm/groups/group element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'group_element = {self_name}.group.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('group_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /nacm/groups'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-netconf-acm:nacm', 'groups'])
+
+
+mut def from_xml_ietf_netconf_acm__nacm__groups(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_group = yang.gdata.from_xml_opt_list(node, 'group')
+    yang.gdata.maybe_add(children, 'group', from_xml_ietf_netconf_acm__nacm__groups__group, child_group)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__group(val: list[value]) -> yang.gdata.LeafList:
+    return yang.gdata.LeafList('union', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__module_name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('union', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__rpc_name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('union', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__notification_name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('union', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__path(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__access_operations(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('union', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__action(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('enumeration', val)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__comment(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+class ietf_netconf_acm__nacm__rule_list__rule_entry(yang.adata.MNode):
+    name: str
+    module_name: ?str
+    rpc_name: ?str
+    notification_name: ?str
+    path: ?str
+    access_operations: ?value
+    action_: ?str
+    comment: ?str
+
+    mut def __init__(self, name: str, module_name: ?str, rpc_name: ?str, notification_name: ?str, path: ?str, access_operations: ?value, action_: ?str, comment: ?str):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
+        self.name = name
+        self.module_name = module_name
+        self.rpc_name = rpc_name
+        self.notification_name = notification_name
+        self.path = path
+        self.access_operations = access_operations
+        self.action_ = action_
+        self.comment = comment
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _module_name = self.module_name
+        if _module_name is not None:
+            children['module-name'] = yang.gdata.Leaf('union', _module_name)
+        _rpc_name = self.rpc_name
+        if _rpc_name is not None:
+            children['rpc-name'] = yang.gdata.Leaf('union', _rpc_name)
+        _notification_name = self.notification_name
+        if _notification_name is not None:
+            children['notification-name'] = yang.gdata.Leaf('union', _notification_name)
+        _path = self.path
+        if _path is not None:
+            children['path'] = yang.gdata.Leaf('string', _path)
+        _access_operations = self.access_operations
+        if _access_operations is not None:
+            children['access-operations'] = yang.gdata.Leaf('union', _access_operations)
+        _action_ = self.action_
+        if _action_ is not None:
+            children['action'] = yang.gdata.Leaf('enumeration', _action_)
+        _comment = self.comment
+        if _comment is not None:
+            children['comment'] = yang.gdata.Leaf('string', _comment)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> ietf_netconf_acm__nacm__rule_list__rule_entry:
+        return ietf_netconf_acm__nacm__rule_list__rule_entry(name=n.get_str('name'), module_name=n.get_opt_str('module-name'), rpc_name=n.get_opt_str('rpc-name'), notification_name=n.get_opt_str('notification-name'), path=n.get_opt_str('path'), access_operations=n.get_opt_value('access-operations'), action_=n.get_opt_str('action'), comment=n.get_opt_str('comment'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_netconf_acm__nacm__rule_list__rule_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /nacm/rule-list/rule')
+            res.append('{self_name} = ietf_netconf_acm__nacm__rule_list__rule({repr(self.name)})')
+        leaves = []
+        _module_name = self.module_name
+        if _module_name is not None:
+            leaves.append('{self_name}.module_name = {repr(_module_name)}')
+        _rpc_name = self.rpc_name
+        if _rpc_name is not None:
+            leaves.append('{self_name}.rpc_name = {repr(_rpc_name)}')
+        _notification_name = self.notification_name
+        if _notification_name is not None:
+            leaves.append('{self_name}.notification_name = {repr(_notification_name)}')
+        _path = self.path
+        if _path is not None:
+            leaves.append('{self_name}.path = {repr(_path)}')
+        _access_operations = self.access_operations
+        if _access_operations is not None:
+            leaves.append('{self_name}.access_operations = {repr(_access_operations)}')
+        _action_ = self.action_
+        if _action_ is not None:
+            leaves.append('{self_name}.action_ = {repr(_action_)}')
+        _comment = self.comment
+        if _comment is not None:
+            leaves.append('{self_name}.comment = {repr(_comment)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /nacm/rule-list/rule'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-netconf-acm:nacm', 'rule-list', 'rule'])
+
+class ietf_netconf_acm__nacm__rule_list__rule(yang.adata.MNode):
+    elements: list[ietf_netconf_acm__nacm__rule_list__rule_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
+        self._name = 'rule'
+        self.elements = elements
+
+    mut def create(self, name, action_):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = ietf_netconf_acm__nacm__rule_list__rule_entry(name, action_)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements, user_order=True)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[ietf_netconf_acm__nacm__rule_list__rule_entry]:
+        if n is not None:
+            return [ietf_netconf_acm__nacm__rule_list__rule_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return ietf_netconf_acm__nacm__rule_list__rule(elements=copied_elements)
+
+extension ietf_netconf_acm__nacm__rule_list__rule(Iterable[ietf_netconf_acm__nacm__rule_list__rule_entry]):
+    def __iter__(self) -> Iterator[ietf_netconf_acm__nacm__rule_list__rule_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_ietf_netconf_acm__nacm__rule_list__rule__name, child_name)
+    child_module_name = yang.gdata.from_xml_opt_str(node, 'module-name')
+    yang.gdata.maybe_add(children, 'module-name', from_xml_ietf_netconf_acm__nacm__rule_list__rule__module_name, child_module_name)
+    child_rpc_name = yang.gdata.from_xml_opt_str(node, 'rpc-name')
+    yang.gdata.maybe_add(children, 'rpc-name', from_xml_ietf_netconf_acm__nacm__rule_list__rule__rpc_name, child_rpc_name)
+    child_notification_name = yang.gdata.from_xml_opt_str(node, 'notification-name')
+    yang.gdata.maybe_add(children, 'notification-name', from_xml_ietf_netconf_acm__nacm__rule_list__rule__notification_name, child_notification_name)
+    child_path = yang.gdata.from_xml_opt_str(node, 'path')
+    yang.gdata.maybe_add(children, 'path', from_xml_ietf_netconf_acm__nacm__rule_list__rule__path, child_path)
+    child_access_operations = yang.gdata.from_xml_opt_value(node, 'access-operations')
+    yang.gdata.maybe_add(children, 'access-operations', from_xml_ietf_netconf_acm__nacm__rule_list__rule__access_operations, child_access_operations)
+    child_action_ = yang.gdata.from_xml_opt_str(node, 'action')
+    yang.gdata.maybe_add(children, 'action', from_xml_ietf_netconf_acm__nacm__rule_list__rule__action, child_action_)
+    child_comment = yang.gdata.from_xml_opt_str(node, 'comment')
+    yang.gdata.maybe_add(children, 'comment', from_xml_ietf_netconf_acm__nacm__rule_list__rule__comment, child_comment)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_ietf_netconf_acm__nacm__rule_list__rule_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements, user_order=True)
+
+class ietf_netconf_acm__nacm__rule_list_entry(yang.adata.MNode):
+    name: str
+    group: list[str]
+    rule: ietf_netconf_acm__nacm__rule_list__rule
+
+    mut def __init__(self, name: str, group: ?list[str]=None, rule: list[ietf_netconf_acm__nacm__rule_list__rule_entry]=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
+        self.name = name
+        self.group = group if group is not None else []
+        self.rule = ietf_netconf_acm__nacm__rule_list__rule(elements=rule)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _group = self.group
+        if _group is not None:
+            children['group'] = yang.gdata.LeafList('union', _group)
+        _rule = self.rule
+        if _rule is not None:
+            children['rule'] = _rule.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> ietf_netconf_acm__nacm__rule_list_entry:
+        return ietf_netconf_acm__nacm__rule_list_entry(name=n.get_str('name'), group=n.get_opt_strs('group'), rule=ietf_netconf_acm__nacm__rule_list__rule.from_gdata(n.get_opt_list('rule')))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_netconf_acm__nacm__rule_list_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /nacm/rule-list')
+            res.append('{self_name} = ietf_netconf_acm__nacm__rule_list({repr(self.name)})')
+        leaves = []
+        _group = self.group
+        if len(_group) != 0:
+            leaves.append('{self_name}.group = {repr(_group)}')
+        _rule = self.rule
+        for _element in _rule:
+            res.append('')
+            res.append("# List /nacm/rule-list/rule element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'rule_element = {self_name}.rule.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('rule_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /nacm/rule-list'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-netconf-acm:nacm', 'rule-list'])
+
+class ietf_netconf_acm__nacm__rule_list(yang.adata.MNode):
+    elements: list[ietf_netconf_acm__nacm__rule_list_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
+        self._name = 'rule-list'
+        self.elements = elements
+
+    mut def create(self, name):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = ietf_netconf_acm__nacm__rule_list_entry(name)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements, user_order=True)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[ietf_netconf_acm__nacm__rule_list_entry]:
+        if n is not None:
+            return [ietf_netconf_acm__nacm__rule_list_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return ietf_netconf_acm__nacm__rule_list(elements=copied_elements)
+
+extension ietf_netconf_acm__nacm__rule_list(Iterable[ietf_netconf_acm__nacm__rule_list_entry]):
+    def __iter__(self) -> Iterator[ietf_netconf_acm__nacm__rule_list_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_ietf_netconf_acm__nacm__rule_list__name, child_name)
+    child_group = yang.gdata.from_xml_opt_strs(node, 'group')
+    yang.gdata.maybe_add(children, 'group', from_xml_ietf_netconf_acm__nacm__rule_list__group, child_group)
+    child_rule = yang.gdata.from_xml_opt_list(node, 'rule')
+    yang.gdata.maybe_add(children, 'rule', from_xml_ietf_netconf_acm__nacm__rule_list__rule, child_rule)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_netconf_acm__nacm__rule_list(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_ietf_netconf_acm__nacm__rule_list_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements, user_order=True)
+
+class ietf_netconf_acm__nacm(yang.adata.MNode):
+    enable_nacm: ?bool
+    read_default: ?str
+    write_default: ?str
+    exec_default: ?str
+    enable_external_groups: ?bool
+    groups: ietf_netconf_acm__nacm__groups
+    rule_list: ietf_netconf_acm__nacm__rule_list
+
+    mut def __init__(self, enable_nacm: ?bool, read_default: ?str, write_default: ?str, exec_default: ?str, enable_external_groups: ?bool, groups: ?ietf_netconf_acm__nacm__groups=None, rule_list: list[ietf_netconf_acm__nacm__rule_list_entry]=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
+        self.enable_nacm = enable_nacm
+        self.read_default = read_default
+        self.write_default = write_default
+        self.exec_default = exec_default
+        self.enable_external_groups = enable_external_groups
+        self.groups = groups if groups is not None else ietf_netconf_acm__nacm__groups()
+        self.rule_list = ietf_netconf_acm__nacm__rule_list(elements=rule_list)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _enable_nacm = self.enable_nacm
+        if _enable_nacm is not None:
+            children['enable-nacm'] = yang.gdata.Leaf('boolean', _enable_nacm)
+        _read_default = self.read_default
+        if _read_default is not None:
+            children['read-default'] = yang.gdata.Leaf('enumeration', _read_default)
+        _write_default = self.write_default
+        if _write_default is not None:
+            children['write-default'] = yang.gdata.Leaf('enumeration', _write_default)
+        _exec_default = self.exec_default
+        if _exec_default is not None:
+            children['exec-default'] = yang.gdata.Leaf('enumeration', _exec_default)
+        _enable_external_groups = self.enable_external_groups
+        if _enable_external_groups is not None:
+            children['enable-external-groups'] = yang.gdata.Leaf('boolean', _enable_external_groups)
+        _groups = self.groups
+        if _groups is not None:
+            children['groups'] = _groups.to_gdata()
+        _rule_list = self.rule_list
+        if _rule_list is not None:
+            children['rule-list'] = _rule_list.to_gdata()
+        return yang.gdata.Container(children, ns='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', module='ietf-netconf-acm')
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_netconf_acm__nacm:
+        if n is not None:
+            return ietf_netconf_acm__nacm(enable_nacm=n.get_opt_bool('enable-nacm'), read_default=n.get_opt_str('read-default'), write_default=n.get_opt_str('write-default'), exec_default=n.get_opt_str('exec-default'), enable_external_groups=n.get_opt_bool('enable-external-groups'), groups=ietf_netconf_acm__nacm__groups.from_gdata(n.get_opt_cnt('groups')), rule_list=ietf_netconf_acm__nacm__rule_list.from_gdata(n.get_opt_list('rule-list')))
+        return ietf_netconf_acm__nacm()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_netconf_acm__nacm.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /nacm')
+            res.append('{self_name} = ietf_netconf_acm__nacm()')
+        leaves = []
+        _enable_nacm = self.enable_nacm
+        if _enable_nacm is not None:
+            leaves.append('{self_name}.enable_nacm = {repr(_enable_nacm)}')
+        _read_default = self.read_default
+        if _read_default is not None:
+            leaves.append('{self_name}.read_default = {repr(_read_default)}')
+        _write_default = self.write_default
+        if _write_default is not None:
+            leaves.append('{self_name}.write_default = {repr(_write_default)}')
+        _exec_default = self.exec_default
+        if _exec_default is not None:
+            leaves.append('{self_name}.exec_default = {repr(_exec_default)}')
+        _enable_external_groups = self.enable_external_groups
+        if _enable_external_groups is not None:
+            leaves.append('{self_name}.enable_external_groups = {repr(_enable_external_groups)}')
+        _groups = self.groups
+        if _groups is not None:
+            res.extend(_groups.prsrc('{self_name}.groups', False).splitlines())
+        _rule_list = self.rule_list
+        for _element in _rule_list:
+            res.append('')
+            res.append("# List /nacm/rule-list element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'rule_list_element = {self_name}.rule_list.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('rule_list_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /nacm'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-netconf-acm:nacm'])
+
+
+mut def from_xml_ietf_netconf_acm__nacm(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_enable_nacm = yang.gdata.from_xml_opt_bool(node, 'enable-nacm')
+    yang.gdata.maybe_add(children, 'enable-nacm', from_xml_ietf_netconf_acm__nacm__enable_nacm, child_enable_nacm)
+    child_read_default = yang.gdata.from_xml_opt_str(node, 'read-default')
+    yang.gdata.maybe_add(children, 'read-default', from_xml_ietf_netconf_acm__nacm__read_default, child_read_default)
+    child_write_default = yang.gdata.from_xml_opt_str(node, 'write-default')
+    yang.gdata.maybe_add(children, 'write-default', from_xml_ietf_netconf_acm__nacm__write_default, child_write_default)
+    child_exec_default = yang.gdata.from_xml_opt_str(node, 'exec-default')
+    yang.gdata.maybe_add(children, 'exec-default', from_xml_ietf_netconf_acm__nacm__exec_default, child_exec_default)
+    child_enable_external_groups = yang.gdata.from_xml_opt_bool(node, 'enable-external-groups')
+    yang.gdata.maybe_add(children, 'enable-external-groups', from_xml_ietf_netconf_acm__nacm__enable_external_groups, child_enable_external_groups)
+    child_groups = yang.gdata.from_xml_opt_cnt(node, 'groups')
+    yang.gdata.maybe_add(children, 'groups', from_xml_ietf_netconf_acm__nacm__groups, child_groups)
+    child_rule_list = yang.gdata.from_xml_opt_list(node, 'rule-list')
+    yang.gdata.maybe_add(children, 'rule-list', from_xml_ietf_netconf_acm__nacm__rule_list, child_rule_list)
+    return yang.gdata.Container(children, ns='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', module='ietf-netconf-acm')
+
+mut def from_xml_ietf_system__system__contact(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__hostname(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__location(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__clock__timezone_name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__clock__timezone_utc_offset(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('int16', val)
+
+class ietf_system__system__clock(yang.adata.MNode):
+    timezone_name: ?str
+    timezone_utc_offset: ?int
+
+    mut def __init__(self, timezone_name: ?str, timezone_utc_offset: ?int):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.timezone_name = timezone_name
+        self.timezone_utc_offset = timezone_utc_offset
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _timezone_name = self.timezone_name
+        if _timezone_name is not None:
+            children['timezone-name'] = yang.gdata.Leaf('string', _timezone_name)
+        _timezone_utc_offset = self.timezone_utc_offset
+        if _timezone_utc_offset is not None:
+            children['timezone-utc-offset'] = yang.gdata.Leaf('int16', _timezone_utc_offset)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__clock:
+        if n is not None:
+            return ietf_system__system__clock(timezone_name=n.get_opt_str('timezone-name'), timezone_utc_offset=n.get_opt_int('timezone-utc-offset'))
+        return ietf_system__system__clock()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__clock.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/clock')
+            res.append('{self_name} = ietf_system__system__clock()')
+        leaves = []
+        _timezone_name = self.timezone_name
+        if _timezone_name is not None:
+            leaves.append('{self_name}.timezone_name = {repr(_timezone_name)}')
+        _timezone_utc_offset = self.timezone_utc_offset
+        if _timezone_utc_offset is not None:
+            leaves.append('{self_name}.timezone_utc_offset = {repr(_timezone_utc_offset)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/clock'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'clock'])
+
+
+mut def from_xml_ietf_system__system__clock(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_timezone_name = yang.gdata.from_xml_opt_str(node, 'timezone-name')
+    yang.gdata.maybe_add(children, 'timezone-name', from_xml_ietf_system__system__clock__timezone_name, child_timezone_name)
+    child_timezone_utc_offset = yang.gdata.from_xml_opt_int(node, 'timezone-utc-offset')
+    yang.gdata.maybe_add(children, 'timezone-utc-offset', from_xml_ietf_system__system__clock__timezone_utc_offset, child_timezone_utc_offset)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_system__system__ntp__enabled(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('boolean', val)
+
+mut def from_xml_ietf_system__system__ntp__server__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__ntp__server__udp__address(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('union', val)
+
+mut def from_xml_ietf_system__system__ntp__server__udp__port(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('uint16', val)
+
+class ietf_system__system__ntp__server__udp(yang.adata.MNode):
+    address: ?str
+    port: ?int
+
+    mut def __init__(self, address: ?str, port: ?int):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.address = address
+        self.port = port
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _address = self.address
+        if _address is not None:
+            children['address'] = yang.gdata.Leaf('union', _address)
+        _port = self.port
+        if _port is not None:
+            children['port'] = yang.gdata.Leaf('uint16', _port)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__ntp__server__udp:
+        if n is not None:
+            return ietf_system__system__ntp__server__udp(address=n.get_opt_str('address'), port=n.get_opt_int('port'))
+        raise ValueError('Missing required subtree ietf_system__system__ntp__server__udp')
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__ntp__server__udp.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/ntp/server/udp')
+            res.append('{self_name} = ietf_system__system__ntp__server__udp()')
+        leaves = []
+        _address = self.address
+        if _address is not None:
+            leaves.append('{self_name}.address = {repr(_address)}')
+        _port = self.port
+        if _port is not None:
+            leaves.append('{self_name}.port = {repr(_port)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/ntp/server/udp'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'ntp', 'server', 'udp'])
+
+
+mut def from_xml_ietf_system__system__ntp__server__udp(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_address = yang.gdata.from_xml_opt_str(node, 'address')
+    yang.gdata.maybe_add(children, 'address', from_xml_ietf_system__system__ntp__server__udp__address, child_address)
+    child_port = yang.gdata.from_xml_opt_int(node, 'port')
+    yang.gdata.maybe_add(children, 'port', from_xml_ietf_system__system__ntp__server__udp__port, child_port)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_system__system__ntp__server__association_type(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('enumeration', val)
+
+mut def from_xml_ietf_system__system__ntp__server__iburst(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('boolean', val)
+
+mut def from_xml_ietf_system__system__ntp__server__prefer(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('boolean', val)
+
+class ietf_system__system__ntp__server_entry(yang.adata.MNode):
+    name: str
+    udp: ietf_system__system__ntp__server__udp
+    association_type: ?str
+    iburst: ?bool
+    prefer: ?bool
+
+    mut def __init__(self, name: str, udp: ?ietf_system__system__ntp__server__udp=None, association_type: ?str, iburst: ?bool, prefer: ?bool):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.name = name
+        self.udp = udp if udp is not None else ietf_system__system__ntp__server__udp()
+        self.association_type = association_type
+        self.iburst = iburst
+        self.prefer = prefer
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _udp = self.udp
+        if _udp is not None:
+            children['udp'] = _udp.to_gdata()
+        _association_type = self.association_type
+        if _association_type is not None:
+            children['association-type'] = yang.gdata.Leaf('enumeration', _association_type)
+        _iburst = self.iburst
+        if _iburst is not None:
+            children['iburst'] = yang.gdata.Leaf('boolean', _iburst)
+        _prefer = self.prefer
+        if _prefer is not None:
+            children['prefer'] = yang.gdata.Leaf('boolean', _prefer)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__ntp__server_entry:
+        return ietf_system__system__ntp__server_entry(name=n.get_str('name'), udp=ietf_system__system__ntp__server__udp.from_gdata(n.get_opt_cnt('udp')), association_type=n.get_opt_str('association-type'), iburst=n.get_opt_bool('iburst'), prefer=n.get_opt_bool('prefer'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__ntp__server_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/ntp/server')
+            res.append('{self_name} = ietf_system__system__ntp__server({repr(self.name)})')
+        leaves = []
+        _udp = self.udp
+        if _udp is not None:
+            res.extend(_udp.prsrc('{self_name}.udp', False).splitlines())
+        _association_type = self.association_type
+        if _association_type is not None:
+            leaves.append('{self_name}.association_type = {repr(_association_type)}')
+        _iburst = self.iburst
+        if _iburst is not None:
+            leaves.append('{self_name}.iburst = {repr(_iburst)}')
+        _prefer = self.prefer
+        if _prefer is not None:
+            leaves.append('{self_name}.prefer = {repr(_prefer)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/ntp/server'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'ntp', 'server'])
+
+class ietf_system__system__ntp__server(yang.adata.MNode):
+    elements: list[ietf_system__system__ntp__server_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self._name = 'server'
+        self.elements = elements
+
+    mut def create(self, name):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = ietf_system__system__ntp__server_entry(name)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[ietf_system__system__ntp__server_entry]:
+        if n is not None:
+            return [ietf_system__system__ntp__server_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return ietf_system__system__ntp__server(elements=copied_elements)
+
+extension ietf_system__system__ntp__server(Iterable[ietf_system__system__ntp__server_entry]):
+    def __iter__(self) -> Iterator[ietf_system__system__ntp__server_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_ietf_system__system__ntp__server_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_ietf_system__system__ntp__server__name, child_name)
+    child_udp = yang.gdata.from_xml_opt_cnt(node, 'udp')
+    yang.gdata.maybe_add(children, 'udp', from_xml_ietf_system__system__ntp__server__udp, child_udp)
+    child_association_type = yang.gdata.from_xml_opt_str(node, 'association-type')
+    yang.gdata.maybe_add(children, 'association-type', from_xml_ietf_system__system__ntp__server__association_type, child_association_type)
+    child_iburst = yang.gdata.from_xml_opt_bool(node, 'iburst')
+    yang.gdata.maybe_add(children, 'iburst', from_xml_ietf_system__system__ntp__server__iburst, child_iburst)
+    child_prefer = yang.gdata.from_xml_opt_bool(node, 'prefer')
+    yang.gdata.maybe_add(children, 'prefer', from_xml_ietf_system__system__ntp__server__prefer, child_prefer)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_system__system__ntp__server(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_ietf_system__system__ntp__server_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements)
+
+class ietf_system__system__ntp(yang.adata.MNode):
+    enabled: ?bool
+    server: ietf_system__system__ntp__server
+
+    mut def __init__(self, enabled: ?bool, server: list[ietf_system__system__ntp__server_entry]=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.enabled = enabled
+        self.server = ietf_system__system__ntp__server(elements=server)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _enabled = self.enabled
+        if _enabled is not None:
+            children['enabled'] = yang.gdata.Leaf('boolean', _enabled)
+        _server = self.server
+        if _server is not None:
+            children['server'] = _server.to_gdata()
+        return yang.gdata.Container(children, presence=True)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ?ietf_system__system__ntp:
+        if n is not None:
+            return ietf_system__system__ntp(enabled=n.get_opt_bool('enabled'), server=ietf_system__system__ntp__server.from_gdata(n.get_opt_list('server')))
+        return None
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        ad = ietf_system__system__ntp.from_gdata(self.to_gdata())
+        if ad is not None:
+            return ad
+        raise Exception('Unreachable in ietf_system__system__ntp.copy()')
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/ntp')
+            res.append('{self_name} = ietf_system__system__ntp()')
+        leaves = []
+        _enabled = self.enabled
+        if _enabled is not None:
+            leaves.append('{self_name}.enabled = {repr(_enabled)}')
+        _server = self.server
+        for _element in _server:
+            res.append('')
+            res.append("# List /system/ntp/server element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'server_element = {self_name}.server.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('server_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/ntp'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'ntp'])
+
+
+mut def from_xml_ietf_system__system__ntp(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_enabled = yang.gdata.from_xml_opt_bool(node, 'enabled')
+    yang.gdata.maybe_add(children, 'enabled', from_xml_ietf_system__system__ntp__enabled, child_enabled)
+    child_server = yang.gdata.from_xml_opt_list(node, 'server')
+    yang.gdata.maybe_add(children, 'server', from_xml_ietf_system__system__ntp__server, child_server)
+    return yang.gdata.Container(children, presence=True)
+
+mut def from_xml_ietf_system__system__dns_resolver__search(val: list[value]) -> yang.gdata.LeafList:
+    return yang.gdata.LeafList('string', val, user_order=True)
+
+mut def from_xml_ietf_system__system__dns_resolver__server__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp__address(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('union', val)
+
+mut def from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp__port(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('uint16', val)
+
+class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
+    address: ?str
+    port: ?int
+
+    mut def __init__(self, address: ?str, port: ?int):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.address = address
+        self.port = port
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _address = self.address
+        if _address is not None:
+            children['address'] = yang.gdata.Leaf('union', _address)
+        _port = self.port
+        if _port is not None:
+            children['port'] = yang.gdata.Leaf('uint16', _port)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__server__udp_and_tcp:
+        if n is not None:
+            return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str('address'), port=n.get_opt_int('port'))
+        raise ValueError('Missing required subtree ietf_system__system__dns_resolver__server__udp_and_tcp')
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__dns_resolver__server__udp_and_tcp.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/dns-resolver/server/udp-and-tcp')
+            res.append('{self_name} = ietf_system__system__dns_resolver__server__udp_and_tcp()')
+        leaves = []
+        _address = self.address
+        if _address is not None:
+            leaves.append('{self_name}.address = {repr(_address)}')
+        _port = self.port
+        if _port is not None:
+            leaves.append('{self_name}.port = {repr(_port)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/dns-resolver/server/udp-and-tcp'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'server', 'udp-and-tcp'])
+
+
+mut def from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_address = yang.gdata.from_xml_opt_str(node, 'address')
+    yang.gdata.maybe_add(children, 'address', from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp__address, child_address)
+    child_port = yang.gdata.from_xml_opt_int(node, 'port')
+    yang.gdata.maybe_add(children, 'port', from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp__port, child_port)
+    return yang.gdata.Container(children)
+
+class ietf_system__system__dns_resolver__server_entry(yang.adata.MNode):
+    name: str
+    udp_and_tcp: ietf_system__system__dns_resolver__server__udp_and_tcp
+
+    mut def __init__(self, name: str, udp_and_tcp: ?ietf_system__system__dns_resolver__server__udp_and_tcp=None):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.name = name
+        self.udp_and_tcp = udp_and_tcp if udp_and_tcp is not None else ietf_system__system__dns_resolver__server__udp_and_tcp()
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _udp_and_tcp = self.udp_and_tcp
+        if _udp_and_tcp is not None:
+            children['udp-and-tcp'] = _udp_and_tcp.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__dns_resolver__server_entry:
+        return ietf_system__system__dns_resolver__server_entry(name=n.get_str('name'), udp_and_tcp=ietf_system__system__dns_resolver__server__udp_and_tcp.from_gdata(n.get_opt_cnt('udp-and-tcp')))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__dns_resolver__server_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/dns-resolver/server')
+            res.append('{self_name} = ietf_system__system__dns_resolver__server({repr(self.name)})')
+        leaves = []
+        _udp_and_tcp = self.udp_and_tcp
+        if _udp_and_tcp is not None:
+            res.extend(_udp_and_tcp.prsrc('{self_name}.udp_and_tcp', False).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/dns-resolver/server'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'server'])
+
+class ietf_system__system__dns_resolver__server(yang.adata.MNode):
+    elements: list[ietf_system__system__dns_resolver__server_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self._name = 'server'
+        self.elements = elements
+
+    mut def create(self, name):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = ietf_system__system__dns_resolver__server_entry(name)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements, user_order=True)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[ietf_system__system__dns_resolver__server_entry]:
+        if n is not None:
+            return [ietf_system__system__dns_resolver__server_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return ietf_system__system__dns_resolver__server(elements=copied_elements)
+
+extension ietf_system__system__dns_resolver__server(Iterable[ietf_system__system__dns_resolver__server_entry]):
+    def __iter__(self) -> Iterator[ietf_system__system__dns_resolver__server_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_ietf_system__system__dns_resolver__server_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_ietf_system__system__dns_resolver__server__name, child_name)
+    child_udp_and_tcp = yang.gdata.from_xml_opt_cnt(node, 'udp-and-tcp')
+    yang.gdata.maybe_add(children, 'udp-and-tcp', from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp, child_udp_and_tcp)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_system__system__dns_resolver__server(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_ietf_system__system__dns_resolver__server_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements, user_order=True)
+
+mut def from_xml_ietf_system__system__dns_resolver__options__timeout(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('uint8', val)
+
+mut def from_xml_ietf_system__system__dns_resolver__options__attempts(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('uint8', val)
+
+class ietf_system__system__dns_resolver__options(yang.adata.MNode):
+    timeout: ?int
+    attempts: ?int
+
+    mut def __init__(self, timeout: ?int, attempts: ?int):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.timeout = timeout
+        self.attempts = attempts
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _timeout = self.timeout
+        if _timeout is not None:
+            children['timeout'] = yang.gdata.Leaf('uint8', _timeout)
+        _attempts = self.attempts
+        if _attempts is not None:
+            children['attempts'] = yang.gdata.Leaf('uint8', _attempts)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__options:
+        if n is not None:
+            return ietf_system__system__dns_resolver__options(timeout=n.get_opt_int('timeout'), attempts=n.get_opt_int('attempts'))
+        return ietf_system__system__dns_resolver__options()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__dns_resolver__options.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/dns-resolver/options')
+            res.append('{self_name} = ietf_system__system__dns_resolver__options()')
+        leaves = []
+        _timeout = self.timeout
+        if _timeout is not None:
+            leaves.append('{self_name}.timeout = {repr(_timeout)}')
+        _attempts = self.attempts
+        if _attempts is not None:
+            leaves.append('{self_name}.attempts = {repr(_attempts)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/dns-resolver/options'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'options'])
+
+
+mut def from_xml_ietf_system__system__dns_resolver__options(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_timeout = yang.gdata.from_xml_opt_int(node, 'timeout')
+    yang.gdata.maybe_add(children, 'timeout', from_xml_ietf_system__system__dns_resolver__options__timeout, child_timeout)
+    child_attempts = yang.gdata.from_xml_opt_int(node, 'attempts')
+    yang.gdata.maybe_add(children, 'attempts', from_xml_ietf_system__system__dns_resolver__options__attempts, child_attempts)
+    return yang.gdata.Container(children)
+
+class ietf_system__system__dns_resolver(yang.adata.MNode):
+    search: list[str]
+    server: ietf_system__system__dns_resolver__server
+    options: ietf_system__system__dns_resolver__options
+
+    mut def __init__(self, search: ?list[str]=None, server: list[ietf_system__system__dns_resolver__server_entry]=[], options: ?ietf_system__system__dns_resolver__options=None):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.search = search if search is not None else []
+        self.server = ietf_system__system__dns_resolver__server(elements=server)
+        self.options = options if options is not None else ietf_system__system__dns_resolver__options()
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _search = self.search
+        if _search is not None:
+            children['search'] = yang.gdata.LeafList('string', _search, user_order=True)
+        _server = self.server
+        if _server is not None:
+            children['server'] = _server.to_gdata()
+        _options = self.options
+        if _options is not None:
+            children['options'] = _options.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver:
+        if n is not None:
+            return ietf_system__system__dns_resolver(search=n.get_opt_strs('search'), server=ietf_system__system__dns_resolver__server.from_gdata(n.get_opt_list('server')), options=ietf_system__system__dns_resolver__options.from_gdata(n.get_opt_cnt('options')))
+        return ietf_system__system__dns_resolver()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__dns_resolver.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/dns-resolver')
+            res.append('{self_name} = ietf_system__system__dns_resolver()')
+        leaves = []
+        _search = self.search
+        if len(_search) != 0:
+            leaves.append('{self_name}.search = {repr(_search)}')
+        _server = self.server
+        for _element in _server:
+            res.append('')
+            res.append("# List /system/dns-resolver/server element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'server_element = {self_name}.server.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('server_element', False, list_element=True).splitlines())
+        _options = self.options
+        if _options is not None:
+            res.extend(_options.prsrc('{self_name}.options', False).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/dns-resolver'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'dns-resolver'])
+
+
+mut def from_xml_ietf_system__system__dns_resolver(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_search = yang.gdata.from_xml_opt_strs(node, 'search')
+    yang.gdata.maybe_add(children, 'search', from_xml_ietf_system__system__dns_resolver__search, child_search)
+    child_server = yang.gdata.from_xml_opt_list(node, 'server')
+    yang.gdata.maybe_add(children, 'server', from_xml_ietf_system__system__dns_resolver__server, child_server)
+    child_options = yang.gdata.from_xml_opt_cnt(node, 'options')
+    yang.gdata.maybe_add(children, 'options', from_xml_ietf_system__system__dns_resolver__options, child_options)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_system__system__radius__server__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__radius__server__udp__address(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('union', val)
+
+mut def from_xml_ietf_system__system__radius__server__udp__authentication_port(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('uint16', val)
+
+mut def from_xml_ietf_system__system__radius__server__udp__shared_secret(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+class ietf_system__system__radius__server__udp(yang.adata.MNode):
+    address: ?str
+    authentication_port: ?int
+    shared_secret: ?str
+
+    mut def __init__(self, address: ?str, authentication_port: ?int, shared_secret: ?str):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.address = address
+        self.authentication_port = authentication_port
+        self.shared_secret = shared_secret
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _address = self.address
+        if _address is not None:
+            children['address'] = yang.gdata.Leaf('union', _address)
+        _authentication_port = self.authentication_port
+        if _authentication_port is not None:
+            children['authentication-port'] = yang.gdata.Leaf('uint16', _authentication_port)
+        _shared_secret = self.shared_secret
+        if _shared_secret is not None:
+            children['shared-secret'] = yang.gdata.Leaf('string', _shared_secret)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__server__udp:
+        if n is not None:
+            return ietf_system__system__radius__server__udp(address=n.get_opt_str('address'), authentication_port=n.get_opt_int('authentication-port'), shared_secret=n.get_opt_str('shared-secret'))
+        raise ValueError('Missing required subtree ietf_system__system__radius__server__udp')
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__radius__server__udp.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/radius/server/udp')
+            res.append('{self_name} = ietf_system__system__radius__server__udp()')
+        leaves = []
+        _address = self.address
+        if _address is not None:
+            leaves.append('{self_name}.address = {repr(_address)}')
+        _authentication_port = self.authentication_port
+        if _authentication_port is not None:
+            leaves.append('{self_name}.authentication_port = {repr(_authentication_port)}')
+        _shared_secret = self.shared_secret
+        if _shared_secret is not None:
+            leaves.append('{self_name}.shared_secret = {repr(_shared_secret)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/radius/server/udp'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'radius', 'server', 'udp'])
+
+
+mut def from_xml_ietf_system__system__radius__server__udp(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_address = yang.gdata.from_xml_opt_str(node, 'address')
+    yang.gdata.maybe_add(children, 'address', from_xml_ietf_system__system__radius__server__udp__address, child_address)
+    child_authentication_port = yang.gdata.from_xml_opt_int(node, 'authentication-port')
+    yang.gdata.maybe_add(children, 'authentication-port', from_xml_ietf_system__system__radius__server__udp__authentication_port, child_authentication_port)
+    child_shared_secret = yang.gdata.from_xml_opt_str(node, 'shared-secret')
+    yang.gdata.maybe_add(children, 'shared-secret', from_xml_ietf_system__system__radius__server__udp__shared_secret, child_shared_secret)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_system__system__radius__server__authentication_type(val: PartialIdentityref) -> yang.gdata.Leaf:
+    new_val, error = complete_and_validate_identityref(val, _identities, ['sys:radius-authentication-type'], 'ietf-system')
+    if new_val is not None:
+        return yang.gdata.Leaf('identityref', new_val)
+    else:
+        raise ValueError('Invalid value for identityref leaf authentication-type: {error}')
+
+class ietf_system__system__radius__server_entry(yang.adata.MNode):
+    name: str
+    udp: ietf_system__system__radius__server__udp
+    authentication_type: ?Identityref
+
+    mut def __init__(self, name: str, udp: ?ietf_system__system__radius__server__udp=None, authentication_type: ?Identityref):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.name = name
+        self.udp = udp if udp is not None else ietf_system__system__radius__server__udp()
+        self.authentication_type = authentication_type
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _udp = self.udp
+        if _udp is not None:
+            children['udp'] = _udp.to_gdata()
+        _authentication_type = self.authentication_type
+        if _authentication_type is not None:
+            _identityref_authentication_type, error = complete_and_validate_identityref(_authentication_type, _identities, ['sys:radius-authentication-type'], 'ietf-system')
+            if _identityref_authentication_type is not None:
+                _authentication_type = _identityref_authentication_type
+            else:
+                raise ValueError('Invalid value for identityref leaf authentication-type: {error}')
+            children['authentication-type'] = yang.gdata.Leaf('identityref', _authentication_type)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__radius__server_entry:
+        return ietf_system__system__radius__server_entry(name=n.get_str('name'), udp=ietf_system__system__radius__server__udp.from_gdata(n.get_opt_cnt('udp')), authentication_type=n.get_opt_Identityref('authentication-type'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__radius__server_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/radius/server')
+            res.append('{self_name} = ietf_system__system__radius__server({repr(self.name)})')
+        leaves = []
+        _udp = self.udp
+        if _udp is not None:
+            res.extend(_udp.prsrc('{self_name}.udp', False).splitlines())
+        _authentication_type = self.authentication_type
+        if _authentication_type is not None:
+            leaves.append('{self_name}.authentication_type = {repr(_authentication_type)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/radius/server'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'radius', 'server'])
+
+class ietf_system__system__radius__server(yang.adata.MNode):
+    elements: list[ietf_system__system__radius__server_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self._name = 'server'
+        self.elements = elements
+
+    mut def create(self, name):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = ietf_system__system__radius__server_entry(name)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements, user_order=True)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[ietf_system__system__radius__server_entry]:
+        if n is not None:
+            return [ietf_system__system__radius__server_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return ietf_system__system__radius__server(elements=copied_elements)
+
+extension ietf_system__system__radius__server(Iterable[ietf_system__system__radius__server_entry]):
+    def __iter__(self) -> Iterator[ietf_system__system__radius__server_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_ietf_system__system__radius__server_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_ietf_system__system__radius__server__name, child_name)
+    child_udp = yang.gdata.from_xml_opt_cnt(node, 'udp')
+    yang.gdata.maybe_add(children, 'udp', from_xml_ietf_system__system__radius__server__udp, child_udp)
+    child_authentication_type = yang.gdata.from_xml_opt_Identityref(node, 'authentication-type')
+    yang.gdata.maybe_add(children, 'authentication-type', from_xml_ietf_system__system__radius__server__authentication_type, child_authentication_type)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_system__system__radius__server(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_ietf_system__system__radius__server_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements, user_order=True)
+
+mut def from_xml_ietf_system__system__radius__options__timeout(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('uint8', val)
+
+mut def from_xml_ietf_system__system__radius__options__attempts(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('uint8', val)
+
+class ietf_system__system__radius__options(yang.adata.MNode):
+    timeout: ?int
+    attempts: ?int
+
+    mut def __init__(self, timeout: ?int, attempts: ?int):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.timeout = timeout
+        self.attempts = attempts
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _timeout = self.timeout
+        if _timeout is not None:
+            children['timeout'] = yang.gdata.Leaf('uint8', _timeout)
+        _attempts = self.attempts
+        if _attempts is not None:
+            children['attempts'] = yang.gdata.Leaf('uint8', _attempts)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__options:
+        if n is not None:
+            return ietf_system__system__radius__options(timeout=n.get_opt_int('timeout'), attempts=n.get_opt_int('attempts'))
+        return ietf_system__system__radius__options()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__radius__options.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/radius/options')
+            res.append('{self_name} = ietf_system__system__radius__options()')
+        leaves = []
+        _timeout = self.timeout
+        if _timeout is not None:
+            leaves.append('{self_name}.timeout = {repr(_timeout)}')
+        _attempts = self.attempts
+        if _attempts is not None:
+            leaves.append('{self_name}.attempts = {repr(_attempts)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/radius/options'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'radius', 'options'])
+
+
+mut def from_xml_ietf_system__system__radius__options(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_timeout = yang.gdata.from_xml_opt_int(node, 'timeout')
+    yang.gdata.maybe_add(children, 'timeout', from_xml_ietf_system__system__radius__options__timeout, child_timeout)
+    child_attempts = yang.gdata.from_xml_opt_int(node, 'attempts')
+    yang.gdata.maybe_add(children, 'attempts', from_xml_ietf_system__system__radius__options__attempts, child_attempts)
+    return yang.gdata.Container(children)
+
+class ietf_system__system__radius(yang.adata.MNode):
+    server: ietf_system__system__radius__server
+    options: ietf_system__system__radius__options
+
+    mut def __init__(self, server: list[ietf_system__system__radius__server_entry]=[], options: ?ietf_system__system__radius__options=None):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.server = ietf_system__system__radius__server(elements=server)
+        self.options = options if options is not None else ietf_system__system__radius__options()
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _server = self.server
+        if _server is not None:
+            children['server'] = _server.to_gdata()
+        _options = self.options
+        if _options is not None:
+            children['options'] = _options.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius:
+        if n is not None:
+            return ietf_system__system__radius(server=ietf_system__system__radius__server.from_gdata(n.get_opt_list('server')), options=ietf_system__system__radius__options.from_gdata(n.get_opt_cnt('options')))
+        return ietf_system__system__radius()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__radius.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/radius')
+            res.append('{self_name} = ietf_system__system__radius()')
+        leaves = []
+        _server = self.server
+        for _element in _server:
+            res.append('')
+            res.append("# List /system/radius/server element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'server_element = {self_name}.server.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('server_element', False, list_element=True).splitlines())
+        _options = self.options
+        if _options is not None:
+            res.extend(_options.prsrc('{self_name}.options', False).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/radius'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'radius'])
+
+
+mut def from_xml_ietf_system__system__radius(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_server = yang.gdata.from_xml_opt_list(node, 'server')
+    yang.gdata.maybe_add(children, 'server', from_xml_ietf_system__system__radius__server, child_server)
+    child_options = yang.gdata.from_xml_opt_cnt(node, 'options')
+    yang.gdata.maybe_add(children, 'options', from_xml_ietf_system__system__radius__options, child_options)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_system__system__authentication__user_authentication_order(val: list[PartialIdentityref]) -> yang.gdata.LeafList:
+    new_val = []
+    for v in val:
+        nv, error = complete_and_validate_identityref(v, _identities, ['sys:authentication-method'], 'ietf-system')
+        if nv is not None:
+            new_val.append(nv)
+        else:
+            raise ValueError('Invalid value for identityref leaf-list user-authentication-order: {error}')
+    return yang.gdata.LeafList('identityref', new_val, user_order=True)
+
+mut def from_xml_ietf_system__system__authentication__user__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__authentication__user__password(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__authentication__user__authorized_key__name(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__authentication__user__authorized_key__algorithm(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+mut def from_xml_ietf_system__system__authentication__user__authorized_key__key_data(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('binary', val)
+
+class ietf_system__system__authentication__user__authorized_key_entry(yang.adata.MNode):
+    name: str
+    algorithm: ?str
+    key_data: ?bytes
+
+    mut def __init__(self, name: str, algorithm: ?str, key_data: ?bytes):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.name = name
+        self.algorithm = algorithm
+        self.key_data = key_data
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _algorithm = self.algorithm
+        if _algorithm is not None:
+            children['algorithm'] = yang.gdata.Leaf('string', _algorithm)
+        _key_data = self.key_data
+        if _key_data is not None:
+            children['key-data'] = yang.gdata.Leaf('binary', _key_data)
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__authentication__user__authorized_key_entry:
+        return ietf_system__system__authentication__user__authorized_key_entry(name=n.get_str('name'), algorithm=n.get_opt_str('algorithm'), key_data=n.get_opt_bytes('key-data'))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__authentication__user__authorized_key_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/authentication/user/authorized-key')
+            res.append('{self_name} = ietf_system__system__authentication__user__authorized_key({repr(self.name)})')
+        leaves = []
+        _algorithm = self.algorithm
+        if _algorithm is not None:
+            leaves.append('{self_name}.algorithm = {repr(_algorithm)}')
+        _key_data = self.key_data
+        if _key_data is not None:
+            leaves.append('{self_name}.key_data = {repr(_key_data)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/authentication/user/authorized-key'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'authentication', 'user', 'authorized-key'])
+
+class ietf_system__system__authentication__user__authorized_key(yang.adata.MNode):
+    elements: list[ietf_system__system__authentication__user__authorized_key_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self._name = 'authorized-key'
+        self.elements = elements
+
+    mut def create(self, name, algorithm, key_data):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = ietf_system__system__authentication__user__authorized_key_entry(name, algorithm, key_data)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[ietf_system__system__authentication__user__authorized_key_entry]:
+        if n is not None:
+            return [ietf_system__system__authentication__user__authorized_key_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return ietf_system__system__authentication__user__authorized_key(elements=copied_elements)
+
+extension ietf_system__system__authentication__user__authorized_key(Iterable[ietf_system__system__authentication__user__authorized_key_entry]):
+    def __iter__(self) -> Iterator[ietf_system__system__authentication__user__authorized_key_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_ietf_system__system__authentication__user__authorized_key_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_ietf_system__system__authentication__user__authorized_key__name, child_name)
+    child_algorithm = yang.gdata.from_xml_opt_str(node, 'algorithm')
+    yang.gdata.maybe_add(children, 'algorithm', from_xml_ietf_system__system__authentication__user__authorized_key__algorithm, child_algorithm)
+    child_key_data = yang.gdata.from_xml_opt_bytes(node, 'key-data')
+    yang.gdata.maybe_add(children, 'key-data', from_xml_ietf_system__system__authentication__user__authorized_key__key_data, child_key_data)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_system__system__authentication__user__authorized_key(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_ietf_system__system__authentication__user__authorized_key_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements)
+
+class ietf_system__system__authentication__user_entry(yang.adata.MNode):
+    name: str
+    password: ?str
+    authorized_key: ietf_system__system__authentication__user__authorized_key
+
+    mut def __init__(self, name: str, password: ?str, authorized_key: list[ietf_system__system__authentication__user__authorized_key_entry]=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.name = name
+        self.password = password
+        self.authorized_key = ietf_system__system__authentication__user__authorized_key(elements=authorized_key)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _name = self.name
+        if _name is not None:
+            children['name'] = yang.gdata.Leaf('string', _name)
+        _password = self.password
+        if _password is not None:
+            children['password'] = yang.gdata.Leaf('string', _password)
+        _authorized_key = self.authorized_key
+        if _authorized_key is not None:
+            children['authorized-key'] = _authorized_key.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__authentication__user_entry:
+        return ietf_system__system__authentication__user_entry(name=n.get_str('name'), password=n.get_opt_str('password'), authorized_key=ietf_system__system__authentication__user__authorized_key.from_gdata(n.get_opt_list('authorized-key')))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__authentication__user_entry.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/authentication/user')
+            res.append('{self_name} = ietf_system__system__authentication__user({repr(self.name)})')
+        leaves = []
+        _password = self.password
+        if _password is not None:
+            leaves.append('{self_name}.password = {repr(_password)}')
+        _authorized_key = self.authorized_key
+        for _element in _authorized_key:
+            res.append('')
+            res.append("# List /system/authentication/user/authorized-key element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'authorized_key_element = {self_name}.authorized_key.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('authorized_key_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/authentication/user'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'authentication', 'user'])
+
+class ietf_system__system__authentication__user(yang.adata.MNode):
+    elements: list[ietf_system__system__authentication__user_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self._name = 'user'
+        self.elements = elements
+
+    mut def create(self, name):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                return e
+
+        res = ietf_system__system__authentication__user_entry(name)
+        self.elements.append(res)
+        return res
+
+    mut def to_gdata(self):
+        elements = []
+        for e in self:
+            e_gdata = e.to_gdata()
+            if isinstance(e_gdata, yang.gdata.Container):
+                elements.append(e_gdata)
+        return yang.gdata.List(['name'], elements)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[ietf_system__system__authentication__user_entry]:
+        if n is not None:
+            return [ietf_system__system__authentication__user_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return ietf_system__system__authentication__user(elements=copied_elements)
+
+extension ietf_system__system__authentication__user(Iterable[ietf_system__system__authentication__user_entry]):
+    def __iter__(self) -> Iterator[ietf_system__system__authentication__user_entry]:
+        return self.elements.__iter__()
+
+mut def from_xml_ietf_system__system__authentication__user_element(node: xml.Node) -> yang.gdata.Node:
+    children = {}
+    child_name = yang.gdata.from_xml_str(node, 'name')
+    yang.gdata.maybe_add(children, 'name', from_xml_ietf_system__system__authentication__user__name, child_name)
+    child_password = yang.gdata.from_xml_opt_str(node, 'password')
+    yang.gdata.maybe_add(children, 'password', from_xml_ietf_system__system__authentication__user__password, child_password)
+    child_authorized_key = yang.gdata.from_xml_opt_list(node, 'authorized-key')
+    yang.gdata.maybe_add(children, 'authorized-key', from_xml_ietf_system__system__authentication__user__authorized_key, child_authorized_key)
+    return yang.gdata.Container(children)
+
+mut def from_xml_ietf_system__system__authentication__user(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_ietf_system__system__authentication__user_element(e) for e in nodes]
+    return yang.gdata.List(keys=['name'], elements=elements)
+
+class ietf_system__system__authentication(yang.adata.MNode):
+    user_authentication_order: list[Identityref]
+    user: ietf_system__system__authentication__user
+
+    mut def __init__(self, user_authentication_order: ?list[Identityref]=None, user: list[ietf_system__system__authentication__user_entry]=[]):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.user_authentication_order = user_authentication_order if user_authentication_order is not None else []
+        self.user = ietf_system__system__authentication__user(elements=user)
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _user_authentication_order = self.user_authentication_order
+        if _user_authentication_order is not None:
+            _identityref_user_authentication_order = []
+            for v in _user_authentication_order:
+                nv, error = complete_and_validate_identityref(v, _identities, ['sys:authentication-method'], 'ietf-system')
+                if nv is not None:
+                    _identityref_user_authentication_order.append(nv)
+                else:
+                    raise ValueError('Invalid value for identityref leaf-list user-authentication-order: {error}')
+            _user_authentication_order = _identityref_user_authentication_order
+            children['user-authentication-order'] = yang.gdata.LeafList('identityref', _user_authentication_order, user_order=True)
+        _user = self.user
+        if _user is not None:
+            children['user'] = _user.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__authentication:
+        if n is not None:
+            return ietf_system__system__authentication(user_authentication_order=n.get_opt_Identityrefs('user-authentication-order'), user=ietf_system__system__authentication__user.from_gdata(n.get_opt_list('user')))
+        return ietf_system__system__authentication()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system__authentication.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system/authentication')
+            res.append('{self_name} = ietf_system__system__authentication()')
+        leaves = []
+        _user_authentication_order = self.user_authentication_order
+        if len(_user_authentication_order) != 0:
+            leaves.append('{self_name}.user_authentication_order = {repr(_user_authentication_order)}')
+        _user = self.user
+        for _element in _user:
+            res.append('')
+            res.append("# List /system/authentication/user element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'user_element = {self_name}.user.create({repr(_element.name)})'
+            res.append(list_elem)
+            res.extend(_element.prsrc('user_element', False, list_element=True).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system/authentication'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system', 'authentication'])
+
+
+mut def from_xml_ietf_system__system__authentication(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_user_authentication_order = yang.gdata.from_xml_opt_Identityrefs(node, 'user-authentication-order')
+    yang.gdata.maybe_add(children, 'user-authentication-order', from_xml_ietf_system__system__authentication__user_authentication_order, child_user_authentication_order)
+    child_user = yang.gdata.from_xml_opt_list(node, 'user')
+    yang.gdata.maybe_add(children, 'user', from_xml_ietf_system__system__authentication__user, child_user)
+    return yang.gdata.Container(children)
+
+class ietf_system__system(yang.adata.MNode):
+    contact: ?str
+    hostname: ?str
+    location: ?str
+    clock: ietf_system__system__clock
+    ntp: ?ietf_system__system__ntp
+    dns_resolver: ietf_system__system__dns_resolver
+    radius: ietf_system__system__radius
+    authentication: ietf_system__system__authentication
+
+    mut def __init__(self, contact: ?str, hostname: ?str, location: ?str, clock: ?ietf_system__system__clock=None, ntp: ?ietf_system__system__ntp=None, dns_resolver: ?ietf_system__system__dns_resolver=None, radius: ?ietf_system__system__radius=None, authentication: ?ietf_system__system__authentication=None):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.contact = contact
+        self.hostname = hostname
+        self.location = location
+        self.clock = clock if clock is not None else ietf_system__system__clock()
+        self.ntp = ntp
+        self.dns_resolver = dns_resolver if dns_resolver is not None else ietf_system__system__dns_resolver()
+        self.radius = radius if radius is not None else ietf_system__system__radius()
+        self.authentication = authentication if authentication is not None else ietf_system__system__authentication()
+
+    mut def create_ntp(self):
+        existing = self.ntp
+        if existing is not None:
+            return existing
+        res = ietf_system__system__ntp()
+        self.ntp = res
+        return res
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _contact = self.contact
+        if _contact is not None:
+            children['contact'] = yang.gdata.Leaf('string', _contact)
+        _hostname = self.hostname
+        if _hostname is not None:
+            children['hostname'] = yang.gdata.Leaf('string', _hostname)
+        _location = self.location
+        if _location is not None:
+            children['location'] = yang.gdata.Leaf('string', _location)
+        _clock = self.clock
+        if _clock is not None:
+            children['clock'] = _clock.to_gdata()
+        _ntp = self.ntp
+        if _ntp is not None:
+            children['ntp'] = _ntp.to_gdata()
+        _dns_resolver = self.dns_resolver
+        if _dns_resolver is not None:
+            children['dns-resolver'] = _dns_resolver.to_gdata()
+        _radius = self.radius
+        if _radius is not None:
+            children['radius'] = _radius.to_gdata()
+        _authentication = self.authentication
+        if _authentication is not None:
+            children['authentication'] = _authentication.to_gdata()
+        return yang.gdata.Container(children, ns='urn:ietf:params:xml:ns:yang:ietf-system', module='ietf-system')
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system:
+        if n is not None:
+            return ietf_system__system(contact=n.get_opt_str('contact'), hostname=n.get_opt_str('hostname'), location=n.get_opt_str('location'), clock=ietf_system__system__clock.from_gdata(n.get_opt_cnt('clock')), ntp=ietf_system__system__ntp.from_gdata(n.get_opt_cnt('ntp')), dns_resolver=ietf_system__system__dns_resolver.from_gdata(n.get_opt_cnt('dns-resolver')), radius=ietf_system__system__radius.from_gdata(n.get_opt_cnt('radius')), authentication=ietf_system__system__authentication.from_gdata(n.get_opt_cnt('authentication')))
+        return ietf_system__system()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /system')
+            res.append('{self_name} = ietf_system__system()')
+        leaves = []
+        _contact = self.contact
+        if _contact is not None:
+            leaves.append('{self_name}.contact = {repr(_contact)}')
+        _hostname = self.hostname
+        if _hostname is not None:
+            leaves.append('{self_name}.hostname = {repr(_hostname)}')
+        _location = self.location
+        if _location is not None:
+            leaves.append('{self_name}.location = {repr(_location)}')
+        _clock = self.clock
+        if _clock is not None:
+            res.extend(_clock.prsrc('{self_name}.clock', False).splitlines())
+        _ntp = self.ntp
+        if _ntp is not None:
+            res.append('')
+            res.append('# P-container: /system/ntp')
+            res.append('ntp = {self_name}.create_ntp()')
+            res.extend(_ntp.prsrc('ntp', False).splitlines())
+        _dns_resolver = self.dns_resolver
+        if _dns_resolver is not None:
+            res.extend(_dns_resolver.prsrc('{self_name}.dns_resolver', False).splitlines())
+        _radius = self.radius
+        if _radius is not None:
+            res.extend(_radius.prsrc('{self_name}.radius', False).splitlines())
+        _authentication = self.authentication
+        if _authentication is not None:
+            res.extend(_authentication.prsrc('{self_name}.authentication', False).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /system'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:system'])
+
+
+mut def from_xml_ietf_system__system(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_contact = yang.gdata.from_xml_opt_str(node, 'contact')
+    yang.gdata.maybe_add(children, 'contact', from_xml_ietf_system__system__contact, child_contact)
+    child_hostname = yang.gdata.from_xml_opt_str(node, 'hostname')
+    yang.gdata.maybe_add(children, 'hostname', from_xml_ietf_system__system__hostname, child_hostname)
+    child_location = yang.gdata.from_xml_opt_str(node, 'location')
+    yang.gdata.maybe_add(children, 'location', from_xml_ietf_system__system__location, child_location)
+    child_clock = yang.gdata.from_xml_opt_cnt(node, 'clock')
+    yang.gdata.maybe_add(children, 'clock', from_xml_ietf_system__system__clock, child_clock)
+    child_ntp = yang.gdata.from_xml_opt_cnt(node, 'ntp')
+    yang.gdata.maybe_add(children, 'ntp', from_xml_ietf_system__system__ntp, child_ntp)
+    child_dns_resolver = yang.gdata.from_xml_opt_cnt(node, 'dns-resolver')
+    yang.gdata.maybe_add(children, 'dns-resolver', from_xml_ietf_system__system__dns_resolver, child_dns_resolver)
+    child_radius = yang.gdata.from_xml_opt_cnt(node, 'radius')
+    yang.gdata.maybe_add(children, 'radius', from_xml_ietf_system__system__radius, child_radius)
+    child_authentication = yang.gdata.from_xml_opt_cnt(node, 'authentication')
+    yang.gdata.maybe_add(children, 'authentication', from_xml_ietf_system__system__authentication, child_authentication)
+    return yang.gdata.Container(children, ns='urn:ietf:params:xml:ns:yang:ietf-system', module='ietf-system')
+
+class root(yang.adata.MNode):
+    nacm: ietf_netconf_acm__nacm
+    system: ietf_system__system
+
+    mut def __init__(self, nacm: ?ietf_netconf_acm__nacm=None, system: ?ietf_system__system=None):
+        self._ns = ''
+        self.nacm = nacm if nacm is not None else ietf_netconf_acm__nacm()
+        self.system = system if system is not None else ietf_system__system()
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _nacm = self.nacm
+        if _nacm is not None:
+            children['nacm'] = _nacm.to_gdata()
+        _system = self.system
+        if _system is not None:
+            children['system'] = _system.to_gdata()
+        return yang.gdata.Container(children)
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> root:
+        if n is not None:
+            return root(nacm=ietf_netconf_acm__nacm.from_gdata(n.get_opt_cnt('nacm')), system=ietf_system__system.from_gdata(n.get_opt_cnt('system')))
+        return root()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return root.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /root')
+            res.append('{self_name} = root()')
+        leaves = []
+        _nacm = self.nacm
+        if _nacm is not None:
+            res.extend(_nacm.prsrc('{self_name}.nacm', False).splitlines())
+        _system = self.system
+        if _system is not None:
+            res.extend(_system.prsrc('{self_name}.system', False).splitlines())
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /root'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True)
+
+
+mut def from_xml(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_nacm = yang.gdata.from_xml_opt_cnt(node, 'nacm', 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm')
+    yang.gdata.maybe_add(children, 'nacm', from_xml_ietf_netconf_acm__nacm, child_nacm)
+    child_system = yang.gdata.from_xml_opt_cnt(node, 'system', 'urn:ietf:params:xml:ns:yang:ietf-system')
+    yang.gdata.maybe_add(children, 'system', from_xml_ietf_system__system, child_system)
+    return yang.gdata.Container(children)
+
+def from_xml_gen3(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
+    # WARNING: this wrapper for the gen3.from_xml schema-driven parser compiles the schema on every call!
+    s = yang.compile(src_yang())
+    return yang.gen3.from_xml(s, node, loose=True, root_path=root_path)
+
+mut def from_xml_ietf_system__set_current_datetime__input__current_datetime(val: value) -> yang.gdata.Leaf:
+    return yang.gdata.Leaf('string', val)
+
+class ietf_system__set_current_datetime__input(yang.adata.MNode):
+    current_datetime: ?str
+
+    mut def __init__(self, current_datetime: ?str):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.current_datetime = current_datetime
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        children = {}
+        _current_datetime = self.current_datetime
+        if _current_datetime is not None:
+            children['current-datetime'] = yang.gdata.Leaf('string', _current_datetime)
+        return yang.gdata.Container(children, ns='urn:ietf:params:xml:ns:yang:ietf-system', module='ietf-system')
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__set_current_datetime__input:
+        if n is not None:
+            return ietf_system__set_current_datetime__input(current_datetime=n.get_opt_str('current-datetime'))
+        raise ValueError('Missing required subtree ietf_system__set_current_datetime__input')
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__set_current_datetime__input.from_gdata(self.to_gdata())
+
+    def prsrc(self, self_name='ad', top=True, list_element=False):
+        res = []
+        if top:
+            res.append('# Top node: /set-current-datetime/input')
+            res.append('{self_name} = ietf_system__set_current_datetime__input()')
+        leaves = []
+        _current_datetime = self.current_datetime
+        if _current_datetime is not None:
+            leaves.append('{self_name}.current_datetime = {repr(_current_datetime)}')
+        if leaves:
+            if not list_element:
+               res = ['', '# Container: /set-current-datetime/input'] + leaves + res
+            else:
+                res = leaves + res
+        return '\n'.join(res)
+
+    def prsrc_gen3(self, self_name='ad'):
+        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
+        s = yang.compile(src_yang())
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['ietf-system:set-current-datetime', 'input'])
+
+
+mut def from_xml_ietf_system__set_current_datetime__input(node: xml.Node) -> yang.gdata.Container:
+    children = {}
+    child_current_datetime = yang.gdata.from_xml_opt_str(node, 'current-datetime')
+    yang.gdata.maybe_add(children, 'current-datetime', from_xml_ietf_system__set_current_datetime__input__current_datetime, child_current_datetime)
+    return yang.gdata.Container(children, ns='urn:ietf:params:xml:ns:yang:ietf-system', module='ietf-system')
+
+actor rpc_root(tp: yang.gdata.TreeProvider):
+    def set_current_datetime(cb: action(?Exception) -> None, inp: ietf_system__set_current_datetime__input, gen3: bool=False):
+        if inp is not None:
+            xmlstr = '<set-current-datetime xmlns="urn:ietf:params:xml:ns:yang:ietf-system">{inp.to_gdata().to_xmlstr()}</set-current-datetime>'
+        else:
+            xmlstr = '<set-current-datetime xmlns="urn:ietf:params:xml:ns:yang:ietf-system" />'
+        tp.rpc_xml(lambda _, err: cb(err), xml.decode(xmlstr))
+
+    def system_restart(cb: action(?Exception) -> None, gen3: bool=False):
+        xmlstr = '<system-restart xmlns="urn:ietf:params:xml:ns:yang:ietf-system" />'
+        tp.rpc_xml(lambda _, err: cb(err), xml.decode(xmlstr))
+
+    def system_shutdown(cb: action(?Exception) -> None, gen3: bool=False):
+        xmlstr = '<system-shutdown xmlns="urn:ietf:params:xml:ns:yang:ietf-system" />'
+        tp.rpc_xml(lambda _, err: cb(err), xml.decode(xmlstr))
+
+
+
+schema_namespaces: set[str] = {
+    'urn:ietf:params:xml:ns:yang:ietf-netconf-acm',
+    'urn:ietf:params:xml:ns:yang:ietf-system',
+}
+
+def prsrc_gen3(data, self_name='ad'):
+    # WARNING: this wrapper for the gen3.prsrc schema-driven parser compiles the schema on every call!
+    s = yang.compile(src_yang())
+    return yang.gen3.pradata(s, data, self_name, loose=True)

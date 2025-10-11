@@ -1,0 +1,34 @@
+import yang.adata
+import orchestron.device as odev
+import orchestron.ttt
+from orchestron import UnsupportedDevice
+
+import mini.layers.base_1 as base
+
+import mini.devices.ietf as ietf_dev
+
+class BaseConfig(base.BaseConfig):
+    def transform(self, i, di):
+        print("RFS /rfs{{{di.name}}}/base-config transform running", err=True)
+
+        if "ietf-system" in di.modules:
+            dev = ietf_dev.root()
+            dev.system.hostname = i.name
+
+            return dev
+
+        raise UnsupportedDevice()
+
+
+class NtpServer(base.NtpServer):
+    def transform(self, i, di):
+        print("RFS /rfs{{{di.name}}}/ntp-server transform running", err=True)
+
+        if "ietf-system" in di.modules:
+            dev = ietf_dev.root()
+            ntp = dev.system.create_ntp()
+            ntp.server.create(i.name)
+
+            return dev
+
+        raise UnsupportedDevice()

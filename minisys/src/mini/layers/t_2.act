@@ -1,0 +1,17 @@
+# WARNING WARNING WARNING WARNING WARNING
+# DO NOT MODIFY THIS FILE!! This file is generated!
+# WARNING WARNING WARNING WARNING WARNING
+
+import logging
+
+import orchestron.device as odev
+import orchestron.ttt as ttt
+import yang.adata
+import yang.gdata
+
+
+
+
+def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str],?ttt.Layer)->ttt.Node:
+    r = ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_registry, log_handler), ['name'], ['string'])}, ns='http://orchestron.org/yang/orchestron-device.yang', module='orchestron-device')})
+    return r

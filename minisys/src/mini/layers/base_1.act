@@ -1,0 +1,69 @@
+# WARNING WARNING WARNING WARNING WARNING
+# DO NOT MODIFY THIS FILE!! This file is generated!
+# WARNING WARNING WARNING WARNING WARNING
+
+import logging
+import xml
+import orchestron.ttt as ttt
+import yang.adata
+import yang.gdata
+
+from mini.layers.y_1 import orchestron_rfs__rfs__base_config_entry
+from mini.layers.y_1 import orchestron_rfs__rfs__ntp_server_entry
+from mini.layers.y_1 import from_xml_orchestron_rfs__rfs__base_config_element
+from mini.layers.y_1 import from_xml_orchestron_rfs__rfs__ntp_server_element
+from mini.layers.y_2_loose import root as output_root
+
+def o_root():
+    return output_root()
+
+
+class BaseConfig(ttt.RFSFunction):
+    transform: mut(orchestron_rfs__rfs__base_config_entry, ttt.DeviceInfo) -> yang.adata.MNode
+
+    @staticmethod
+    def input_type():
+        """Return the modeled input type for this transform"""
+        return orchestron_rfs__rfs__base_config_entry
+
+    mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttt.DeviceInfo, memory: ?yang.gdata.Node, dynstate: ?yang.gdata.Node) -> (yang.gdata.Node, ?yang.gdata.Node):
+        """Wrap the user provided transform method to convert from gdata to
+        modeled input and back to gdata
+        """
+        modeled_input = orchestron_rfs__rfs__base_config_entry.from_gdata(i)
+
+        return self.transform(modeled_input, device_info).to_gdata(), None
+
+    mut def transform_xml(self, i: xml.Node, device_info: ttt.DeviceInfo, memory: ?yang.gdata.Node, dynstate: ?yang.gdata.Node) -> (yang.gdata.Node, ?yang.gdata.Node):
+        """Wrap the user provided transform method to convert from XML to
+        modeled input and return gdata
+        """
+        gdata_input = from_xml_orchestron_rfs__rfs__base_config_element(i)
+        modeled_input = orchestron_rfs__rfs__base_config_entry.from_gdata(gdata_input)
+
+        return self.transform(modeled_input, device_info).to_gdata(), None
+
+class NtpServer(ttt.RFSFunction):
+    transform: mut(orchestron_rfs__rfs__ntp_server_entry, ttt.DeviceInfo) -> yang.adata.MNode
+
+    @staticmethod
+    def input_type():
+        """Return the modeled input type for this transform"""
+        return orchestron_rfs__rfs__ntp_server_entry
+
+    mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttt.DeviceInfo, memory: ?yang.gdata.Node, dynstate: ?yang.gdata.Node) -> (yang.gdata.Node, ?yang.gdata.Node):
+        """Wrap the user provided transform method to convert from gdata to
+        modeled input and back to gdata
+        """
+        modeled_input = orchestron_rfs__rfs__ntp_server_entry.from_gdata(i)
+
+        return self.transform(modeled_input, device_info).to_gdata(), None
+
+    mut def transform_xml(self, i: xml.Node, device_info: ttt.DeviceInfo, memory: ?yang.gdata.Node, dynstate: ?yang.gdata.Node) -> (yang.gdata.Node, ?yang.gdata.Node):
+        """Wrap the user provided transform method to convert from XML to
+        modeled input and return gdata
+        """
+        gdata_input = from_xml_orchestron_rfs__rfs__ntp_server_element(i)
+        modeled_input = orchestron_rfs__rfs__ntp_server_entry.from_gdata(gdata_input)
+
+        return self.transform(modeled_input, device_info).to_gdata(), None

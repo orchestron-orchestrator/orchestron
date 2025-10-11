@@ -1,0 +1,24 @@
+name: mini-quicklab-notconf
+# The prefix is prepended to container node names. We override the default
+# "clab-<lab-name>-" prefix here by using the "__lab-name" magic value.
+# Containerlab replaces it with the lab name defined above. This ensures we're
+# creating unique containers for each instance of the lab based on the same
+# topology (=testenv).
+prefix: __lab-name
+
+mgmt:
+  network: mini-quicklab-notconf
+  ipv4-subnet: auto
+  ipv6-subnet: auto
+
+topology:
+  nodes:
+    ams-core-1:
+      kind: linux
+      image: ghcr.io/notconf/notconf-ietf:latest
+    otron:
+      kind: linux
+      image: mini-otron-base
+      ports:
+        - "80/tcp"
+        - "830/tcp"

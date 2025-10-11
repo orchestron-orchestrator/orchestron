@@ -1,0 +1,41 @@
+module mini-rfs {
+    yang-version "1.1";
+    namespace "http://example.com/mini-rfs";
+    prefix "mini-rfs";
+
+    import orchestron-rfs {
+        prefix orfs;
+    }
+    import ietf-inet-types {
+      prefix inet;
+    }
+
+    augment "/orfs:rfs" {
+        // TODO: should really be a P-container
+        list base-config {
+            key name;
+
+            orchestron:rfs-transform mini.rfs.BaseConfig;
+
+            leaf name {
+                type string;
+            }
+
+            leaf ipv4-address {
+                type string;
+                mandatory true;
+            }
+        }
+
+        list ntp-server {
+            key name;
+
+            orchestron:rfs-transform mini.rfs.NtpServer;
+
+            leaf name {
+                type string;
+            }
+
+        }
+  }
+}

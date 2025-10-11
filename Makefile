@@ -32,3 +32,17 @@ test-ldep:
 pkg-upgrade:
 	acton pkg upgrade
 	cd gen_dmc && acton pkg upgrade
+
+
+.PHONY: test-mini
+test-mini: check-mini-is-up-to-date
+	$(MAKE) build-mini
+
+.PHONY: check-mini-is-up-to-date
+check-mini-is-up-to-date:
+	cd minisys/gen && acton build && out/bin/gen
+	git diff --exit-code
+
+.PHONY: build-mini
+build-mini:
+	cd minisys && acton build

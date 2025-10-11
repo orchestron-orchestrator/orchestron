@@ -1,0 +1,32 @@
+import yang.adata
+import orchestron.ttt
+
+import mini.layers.base_0 as base
+# TODO: this import is required by the compiler, maybe related to
+# https://github.com/actonlang/acton/issues/2390
+import yang.identityref
+
+class Router(base.Router):
+    def transform(self, i):
+        o = base.o_root()
+        print("CFS router transform running", i.name)
+        dev = o.device.create(i.name)
+        dev.type = i.type
+        dev.approval_required = False
+        oob_addr = dev.address.create("oob")
+        oob_addr.address = i.name
+        dev.credentials.username = "clab"
+        dev.credentials.password = "clab@123"
+
+        rfs = o.rfs.create(i.name)
+        bc = rfs.base_config.create(i.name) # TODO: should be P-container
+        bc.ipv4_address = "10.0.0.%d" % i.id
+
+        return o
+
+class NtpFoo(base.NtpFoo):
+    def transform(self, i):
+        o = base.o_root()
+        rfs = o.rfs.create(i.name)
+        ns = rfs.ntp_server.create(i.name)
+        return o

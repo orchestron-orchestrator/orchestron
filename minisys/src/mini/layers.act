@@ -1,0 +1,19 @@
+# WARNING WARNING WARNING WARNING WARNING
+# DO NOT MODIFY THIS FILE!! This file is generated!
+# WARNING WARNING WARNING WARNING WARNING
+
+import logging
+
+import orchestron.device as odev
+import orchestron.ttt as ttt
+import yang.adata
+import yang.gdata
+
+import mini.layers.t_2
+import mini.layers.t_1
+import mini.layers.t_0
+def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None):
+    layer2 = ttt.Layer('2', mini.layers.t_2.get_ttt(None, dev_registry, log_handler), None)
+    layer1 = ttt.Layer('1', mini.layers.t_1.get_ttt(layer2, dev_registry, log_handler), layer2)
+    layer0 = ttt.Layer('0', mini.layers.t_0.get_ttt(layer1, dev_registry, log_handler), layer1)
+    return layer0
