@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data>
+    <netinfra xmlns="http://example.com/netinfra">
+        <foo>
+            <router>rtr1</router>
+            <name>1.2.3.4</name>
+        </foo>
+    </netinfra>
+</data>
