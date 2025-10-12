@@ -1052,7 +1052,7 @@ class _RFSTransaction(_TransformTransactionBase):
             diff = difference(output, gdata.Container())
             if isinstance(diff, gdata.Container):
                 dev_content = {
-                    "name": gdata.Leaf("str", self.devname),
+                    "name": gdata.Leaf("string", self.devname),
                     "config": diff
                 }
                 embedded_diff: gdata.Node = self.embed(dev_content)
