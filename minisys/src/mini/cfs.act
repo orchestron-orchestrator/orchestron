@@ -15,8 +15,8 @@ class Router(base.Router):
         dev.approval_required = False
         oob_addr = dev.address.create("oob")
         oob_addr.address = i.name
-        dev.credentials.username = "clab"
-        dev.credentials.password = "clab@123"
+        dev.credentials.username = "admin"
+        dev.credentials.password = "admin"
 
         rfs = o.rfs.create(i.name)
         bc = rfs.base_config.create(i.name) # TODO: should be P-container
@@ -24,9 +24,9 @@ class Router(base.Router):
 
         return o
 
-class NtpFoo(base.NtpFoo):
+class Foo(base.Foo):
     def transform(self, i):
         o = base.o_root()
-        rfs = o.rfs.create(i.name)
-        ns = rfs.ntp_server.create(i.name)
+        rfs = o.rfs.create(i.router)
+        b = rfs.bar.create(i.name)
         return o

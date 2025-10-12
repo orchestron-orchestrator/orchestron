@@ -9,9 +9,9 @@ import yang.adata
 import yang.gdata
 
 from mini.layers.y_0 import netinfra__netinfra__router_entry
-from mini.layers.y_0 import netinfra__netinfra__ntp_foo_entry
+from mini.layers.y_0 import netinfra__netinfra__foo_entry
 from mini.layers.y_0 import from_xml_netinfra__netinfra__router_element
-from mini.layers.y_0 import from_xml_netinfra__netinfra__ntp_foo_element
+from mini.layers.y_0 import from_xml_netinfra__netinfra__foo_element
 from mini.layers.y_1_loose import root as output_root
 
 def o_root():
@@ -43,19 +43,19 @@ class Router(ttt.TransformFunction):
 
         return self.transform(modeled_input).to_gdata(), None
 
-class NtpFoo(ttt.TransformFunction):
-    transform: mut(netinfra__netinfra__ntp_foo_entry) -> yang.adata.MNode
+class Foo(ttt.TransformFunction):
+    transform: mut(netinfra__netinfra__foo_entry) -> yang.adata.MNode
 
     @staticmethod
     def input_type():
         """Return the modeled input type for this transform"""
-        return netinfra__netinfra__ntp_foo_entry
+        return netinfra__netinfra__foo_entry
 
     mut def transform_wrapper(self, i: yang.gdata.Node, memory: ?yang.gdata.Node, dynstate: ?yang.gdata.Node) -> (yang.gdata.Node, ?yang.gdata.Node):
         """Wrap the user provided transform method to convert from gdata to
         modeled input and back to gdata
         """
-        modeled_input = netinfra__netinfra__ntp_foo_entry.from_gdata(i)
+        modeled_input = netinfra__netinfra__foo_entry.from_gdata(i)
 
         return self.transform(modeled_input).to_gdata(), None
 
@@ -63,7 +63,7 @@ class NtpFoo(ttt.TransformFunction):
         """Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         """
-        gdata_input = from_xml_netinfra__netinfra__ntp_foo_element(i)
-        modeled_input = netinfra__netinfra__ntp_foo_entry.from_gdata(gdata_input)
+        gdata_input = from_xml_netinfra__netinfra__foo_element(i)
+        modeled_input = netinfra__netinfra__foo_entry.from_gdata(gdata_input)
 
         return self.transform(modeled_input).to_gdata(), None

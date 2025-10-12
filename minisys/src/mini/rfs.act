@@ -20,14 +20,14 @@ class BaseConfig(base.BaseConfig):
         raise UnsupportedDevice()
 
 
-class NtpServer(base.NtpServer):
+class Bar(base.Bar):
     def transform(self, i, di):
-        print("RFS /rfs{{{di.name}}}/ntp-server transform running", err=True)
+        print("RFS /rfs{{{di.name}}}/bar transform running", err=True)
 
         if "ietf-system" in di.modules:
             dev = ietf_dev.root()
-            ntp = dev.system.create_ntp()
-            ntp.server.create(i.name)
+            d = dev.system.dns_resolver.server.create(i.name)
+            #ntp.server.create(i.name)
 
             return dev
 

@@ -27,10 +27,10 @@ module mini-rfs {
             }
         }
 
-        list ntp-server {
+        list bar {
             key name;
 
-            orchestron:rfs-transform mini.rfs.NtpServer;
+            orchestron:rfs-transform mini.rfs.Bar;
 
             leaf name {
                 type string;

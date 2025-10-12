@@ -43,10 +43,10 @@ def src_yang():
             }
         }
 
-        list ntp-server {
+        list bar {
             key name;
 
-            orchestron:rfs-transform mini.rfs.NtpServer;
+            orchestron:rfs-transform mini.rfs.Bar;
 
             leaf name {
                 type string;
@@ -2438,13 +2438,13 @@ mut def from_json_orchestron_rfs__rfs__base_config(jd: list[dict[str, ?value]]) 
     elements = [from_json_orchestron_rfs__rfs__base_config_element(e) for e in jd if isinstance(e, dict)]
     return yang.gdata.List(keys=['name'], elements=elements, ns='http://example.com/mini-rfs', module='mini-rfs')
 
-mut def from_json_orchestron_rfs__rfs__ntp_server__name(val: value) -> yang.gdata.Leaf:
+mut def from_json_orchestron_rfs__rfs__bar__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_orchestron_rfs__rfs__ntp_server__name(val: value) -> yang.gdata.Leaf:
+mut def from_xml_orchestron_rfs__rfs__bar__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-class orchestron_rfs__rfs__ntp_server_entry(yang.adata.MNode):
+class orchestron_rfs__rfs__bar_entry(yang.adata.MNode):
     name: str
 
     mut def __init__(self, name: str):
@@ -2459,22 +2459,22 @@ class orchestron_rfs__rfs__ntp_server_entry(yang.adata.MNode):
         return yang.gdata.Container(children)
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs__ntp_server_entry:
-        return orchestron_rfs__rfs__ntp_server_entry(name=n.get_str('name'))
+    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs__bar_entry:
+        return orchestron_rfs__rfs__bar_entry(name=n.get_str('name'))
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__rfs__ntp_server_entry.from_gdata(self.to_gdata())
+        return orchestron_rfs__rfs__bar_entry.from_gdata(self.to_gdata())
 
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
         if top:
-            res.append('# Top node: /rfs/ntp-server')
-            res.append('{self_name} = orchestron_rfs__rfs__ntp_server({repr(self.name)})')
+            res.append('# Top node: /rfs/bar')
+            res.append('{self_name} = orchestron_rfs__rfs__bar({repr(self.name)})')
         leaves = []
         if leaves:
             if not list_element:
-               res = ['', '# Container: /rfs/ntp-server'] + leaves + res
+               res = ['', '# Container: /rfs/bar'] + leaves + res
             else:
                 res = leaves + res
         return '\n'.join(res)
@@ -2482,13 +2482,13 @@ class orchestron_rfs__rfs__ntp_server_entry(yang.adata.MNode):
     def prsrc_gen3(self, self_name='ad'):
         # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
         s = yang.compile(src_yang())
-        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['mini-rfs:rfs', 'ntp-server'])
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['mini-rfs:rfs', 'bar'])
 
-class orchestron_rfs__rfs__ntp_server(yang.adata.MNode):
-    elements: list[orchestron_rfs__rfs__ntp_server_entry]
+class orchestron_rfs__rfs__bar(yang.adata.MNode):
+    elements: list[orchestron_rfs__rfs__bar_entry]
     mut def __init__(self, elements=[]):
         self._ns = 'http://example.com/mini-rfs'
-        self._name = 'ntp-server'
+        self._name = 'bar'
         self.elements = elements
 
     mut def create(self, name):
@@ -2500,7 +2500,7 @@ class orchestron_rfs__rfs__ntp_server(yang.adata.MNode):
             if match:
                 return e
 
-        res = orchestron_rfs__rfs__ntp_server_entry(name)
+        res = orchestron_rfs__rfs__bar_entry(name)
         self.elements.append(res)
         return res
 
@@ -2513,9 +2513,9 @@ class orchestron_rfs__rfs__ntp_server(yang.adata.MNode):
         return yang.gdata.List(['name'], elements, ns='http://example.com/mini-rfs', module='mini-rfs')
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__rfs__ntp_server_entry]:
+    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__rfs__bar_entry]:
         if n is not None:
-            return [orchestron_rfs__rfs__ntp_server_entry.from_gdata(e) for e in n.elements]
+            return [orchestron_rfs__rfs__bar_entry.from_gdata(e) for e in n.elements]
         return []
 
     def copy(self):
@@ -2526,28 +2526,28 @@ class orchestron_rfs__rfs__ntp_server(yang.adata.MNode):
             ce = e.copy()
             if ce is not None:
                 copied_elements.append(ce)
-        return orchestron_rfs__rfs__ntp_server(elements=copied_elements)
+        return orchestron_rfs__rfs__bar(elements=copied_elements)
 
-extension orchestron_rfs__rfs__ntp_server(Iterable[orchestron_rfs__rfs__ntp_server_entry]):
-    def __iter__(self) -> Iterator[orchestron_rfs__rfs__ntp_server_entry]:
+extension orchestron_rfs__rfs__bar(Iterable[orchestron_rfs__rfs__bar_entry]):
+    def __iter__(self) -> Iterator[orchestron_rfs__rfs__bar_entry]:
         return self.elements.__iter__()
 
-mut def from_xml_orchestron_rfs__rfs__ntp_server_element(node: xml.Node) -> yang.gdata.Node:
+mut def from_xml_orchestron_rfs__rfs__bar_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_orchestron_rfs__rfs__ntp_server__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_xml_orchestron_rfs__rfs__bar__name, child_name)
     return yang.gdata.Container(children)
 
-mut def from_xml_orchestron_rfs__rfs__ntp_server(nodes: list[xml.Node]) -> yang.gdata.List:
-    elements = [from_xml_orchestron_rfs__rfs__ntp_server_element(e) for e in nodes]
+mut def from_xml_orchestron_rfs__rfs__bar(nodes: list[xml.Node]) -> yang.gdata.List:
+    elements = [from_xml_orchestron_rfs__rfs__bar_element(e) for e in nodes]
     return yang.gdata.List(keys=['name'], elements=elements, ns='http://example.com/mini-rfs', module='mini-rfs')
 
-mut def from_json_path_orchestron_rfs__rfs__ntp_server_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+mut def from_json_path_orchestron_rfs__rfs__bar_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
     if len(path) == 1:
         point = path[0]
         keys = point.split(",")
         jd_dict = yang.gdata.unwrap_dict(jd)
-        val = from_json_orchestron_rfs__rfs__ntp_server_element(jd_dict)
+        val = from_json_orchestron_rfs__rfs__bar_element(jd_dict)
         if op == "merge":
             return val
         elif op == "remove":
@@ -2558,11 +2558,11 @@ mut def from_json_path_orchestron_rfs__rfs__ntp_server_element(jd: value, path: 
         point = path[1]
         rest_path = path[2:]
         children: dict[str, yang.gdata.Node] = {}
-        children['name'] = from_json_orchestron_rfs__rfs__ntp_server__name(keys[0])
+        children['name'] = from_json_orchestron_rfs__rfs__bar__name(keys[0])
         return yang.gdata.Container(children)
     raise ValueError("unreachable - no keys to list element")
 
-mut def from_json_path_orchestron_rfs__rfs__ntp_server(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
+mut def from_json_path_orchestron_rfs__rfs__bar(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
     if len(path) == 1:
         point = path[0]
         keys = point.split(",")
@@ -2576,7 +2576,7 @@ mut def from_json_path_orchestron_rfs__rfs__ntp_server(jd: value, path: list[str
             else:
                 if str(jd_dict[key]) != keys.pop(0):
                     raise ValueError("Key value mismatch between path and payload")
-        element = from_json_orchestron_rfs__rfs__ntp_server_element(jd_dict)
+        element = from_json_orchestron_rfs__rfs__bar_element(jd_dict)
         elements = []
         if op == "merge":
             elements.append(element)
@@ -2584,29 +2584,29 @@ mut def from_json_path_orchestron_rfs__rfs__ntp_server(jd: value, path: list[str
             elements.append(yang.gdata.Absent(element.key_children(['name'])))
         return yang.gdata.List(['name'], elements, ns='http://example.com/mini-rfs', module='mini-rfs')
     elif len(path) > 1:
-        return yang.gdata.List(['name'], [from_json_path_orchestron_rfs__rfs__ntp_server_element(jd, path, op)], ns='http://example.com/mini-rfs', module='mini-rfs')
+        return yang.gdata.List(['name'], [from_json_path_orchestron_rfs__rfs__bar_element(jd, path, op)], ns='http://example.com/mini-rfs', module='mini-rfs')
     raise ValueError("Unable to resolve path, no keys provided")
 
-mut def from_json_orchestron_rfs__rfs__ntp_server_element(jd: dict[str, ?value]) -> yang.gdata.Node:
+mut def from_json_orchestron_rfs__rfs__bar_element(jd: dict[str, ?value]) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.take_json_str(jd, 'name')
-    yang.gdata.maybe_add(children, 'name', from_json_orchestron_rfs__rfs__ntp_server__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_json_orchestron_rfs__rfs__bar__name, child_name)
     return yang.gdata.Container(children)
 
-mut def from_json_orchestron_rfs__rfs__ntp_server(jd: list[dict[str, ?value]]) -> yang.gdata.List:
-    elements = [from_json_orchestron_rfs__rfs__ntp_server_element(e) for e in jd if isinstance(e, dict)]
+mut def from_json_orchestron_rfs__rfs__bar(jd: list[dict[str, ?value]]) -> yang.gdata.List:
+    elements = [from_json_orchestron_rfs__rfs__bar_element(e) for e in jd if isinstance(e, dict)]
     return yang.gdata.List(keys=['name'], elements=elements, ns='http://example.com/mini-rfs', module='mini-rfs')
 
 class orchestron_rfs__rfs_entry(yang.adata.MNode):
     name: str
     base_config: orchestron_rfs__rfs__base_config
-    ntp_server: orchestron_rfs__rfs__ntp_server
+    bar: orchestron_rfs__rfs__bar
 
-    mut def __init__(self, name: str, base_config: list[orchestron_rfs__rfs__base_config_entry]=[], ntp_server: list[orchestron_rfs__rfs__ntp_server_entry]=[]):
+    mut def __init__(self, name: str, base_config: list[orchestron_rfs__rfs__base_config_entry]=[], bar: list[orchestron_rfs__rfs__bar_entry]=[]):
         self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
         self.name = name
         self.base_config = orchestron_rfs__rfs__base_config(elements=base_config)
-        self.ntp_server = orchestron_rfs__rfs__ntp_server(elements=ntp_server)
+        self.bar = orchestron_rfs__rfs__bar(elements=bar)
 
     mut def to_gdata(self) -> yang.gdata.Node:
         children = {}
@@ -2616,14 +2616,14 @@ class orchestron_rfs__rfs_entry(yang.adata.MNode):
         _base_config = self.base_config
         if _base_config is not None:
             children['base-config'] = _base_config.to_gdata()
-        _ntp_server = self.ntp_server
-        if _ntp_server is not None:
-            children['ntp-server'] = _ntp_server.to_gdata()
+        _bar = self.bar
+        if _bar is not None:
+            children['bar'] = _bar.to_gdata()
         return yang.gdata.Container(children)
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs_entry:
-        return orchestron_rfs__rfs_entry(name=n.get_str('name'), base_config=orchestron_rfs__rfs__base_config.from_gdata(n.get_opt_list('base-config')), ntp_server=orchestron_rfs__rfs__ntp_server.from_gdata(n.get_opt_list('ntp-server')))
+        return orchestron_rfs__rfs_entry(name=n.get_str('name'), base_config=orchestron_rfs__rfs__base_config.from_gdata(n.get_opt_list('base-config')), bar=orchestron_rfs__rfs__bar.from_gdata(n.get_opt_list('bar')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -2642,13 +2642,13 @@ class orchestron_rfs__rfs_entry(yang.adata.MNode):
             list_elem = 'base_config_element = {self_name}.base_config.create({repr(_element.name)}, {repr(_element.ipv4_address)})'
             res.append(list_elem)
             res.extend(_element.prsrc('base_config_element', False, list_element=True).splitlines())
-        _ntp_server = self.ntp_server
-        for _element in _ntp_server:
+        _bar = self.bar
+        for _element in _bar:
             res.append('')
-            res.append("# List /rfs/ntp-server element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'ntp_server_element = {self_name}.ntp_server.create({repr(_element.name)})'
+            res.append("# List /rfs/bar element: {_element.to_gdata().key_str(['name'])}")
+            list_elem = 'bar_element = {self_name}.bar.create({repr(_element.name)})'
             res.append(list_elem)
-            res.extend(_element.prsrc('ntp_server_element', False, list_element=True).splitlines())
+            res.extend(_element.prsrc('bar_element', False, list_element=True).splitlines())
         if leaves:
             if not list_element:
                res = ['', '# Container: /rfs'] + leaves + res
@@ -2715,8 +2715,8 @@ mut def from_xml_orchestron_rfs__rfs_element(node: xml.Node) -> yang.gdata.Node:
     yang.gdata.maybe_add(children, 'name', from_xml_orchestron_rfs__rfs__name, child_name)
     child_base_config = yang.gdata.from_xml_opt_list(node, 'base-config', 'http://example.com/mini-rfs')
     yang.gdata.maybe_add(children, 'base-config', from_xml_orchestron_rfs__rfs__base_config, child_base_config)
-    child_ntp_server = yang.gdata.from_xml_opt_list(node, 'ntp-server', 'http://example.com/mini-rfs')
-    yang.gdata.maybe_add(children, 'ntp-server', from_xml_orchestron_rfs__rfs__ntp_server, child_ntp_server)
+    child_bar = yang.gdata.from_xml_opt_list(node, 'bar', 'http://example.com/mini-rfs')
+    yang.gdata.maybe_add(children, 'bar', from_xml_orchestron_rfs__rfs__bar, child_bar)
     return yang.gdata.Container(children)
 
 mut def from_xml_orchestron_rfs__rfs(nodes: list[xml.Node]) -> yang.gdata.List:
@@ -2742,8 +2742,8 @@ mut def from_json_path_orchestron_rfs__rfs_element(jd: value, path: list[str]=[]
         children['name'] = from_json_orchestron_rfs__rfs__name(keys[0])
         if point == 'mini-rfs:base-config':
             children['base-config'] = from_json_path_orchestron_rfs__rfs__base_config(jd, rest_path, op)
-        if point == 'mini-rfs:ntp-server':
-            children['ntp-server'] = from_json_path_orchestron_rfs__rfs__ntp_server(jd, rest_path, op)
+        if point == 'mini-rfs:bar':
+            children['bar'] = from_json_path_orchestron_rfs__rfs__bar(jd, rest_path, op)
         return yang.gdata.Container(children)
     raise ValueError("unreachable - no keys to list element")
 
@@ -2778,8 +2778,8 @@ mut def from_json_orchestron_rfs__rfs_element(jd: dict[str, ?value]) -> yang.gda
     yang.gdata.maybe_add(children, 'name', from_json_orchestron_rfs__rfs__name, child_name)
     child_base_config = yang.gdata.take_json_opt_list(jd, 'base-config', 'mini-rfs')
     yang.gdata.maybe_add(children, 'base-config', from_json_orchestron_rfs__rfs__base_config, child_base_config)
-    child_ntp_server = yang.gdata.take_json_opt_list(jd, 'ntp-server', 'mini-rfs')
-    yang.gdata.maybe_add(children, 'ntp-server', from_json_orchestron_rfs__rfs__ntp_server, child_ntp_server)
+    child_bar = yang.gdata.take_json_opt_list(jd, 'bar', 'mini-rfs')
+    yang.gdata.maybe_add(children, 'bar', from_json_orchestron_rfs__rfs__bar, child_bar)
     return yang.gdata.Container(children)
 
 mut def from_json_orchestron_rfs__rfs(jd: list[dict[str, ?value]]) -> yang.gdata.List:

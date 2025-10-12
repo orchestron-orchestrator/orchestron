@@ -13,5 +13,5 @@ import mini.cfs
 
 
 def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str],?ttt.Layer)->ttt.Node:
-    r = ttt.Container({"netinfra": ttt.Container({"router": ttt.List(ttt.Transform(mini.cfs.Router, None, lower, log_handler), ['name'], ['string']), "ntp-foo": ttt.List(ttt.Transform(mini.cfs.NtpFoo, None, lower, log_handler), ['router', 'name'], ['string', 'string'])}, ns='http://example.com/netinfra', module='netinfra')})
+    r = ttt.Container({"netinfra": ttt.Container({"router": ttt.List(ttt.Transform(mini.cfs.Router, None, lower, log_handler), ['name'], ['string']), "foo": ttt.List(ttt.Transform(mini.cfs.Foo, None, lower, log_handler), ['router', 'name'], ['string', 'string'])}, ns='http://example.com/netinfra', module='netinfra')})
     return r
