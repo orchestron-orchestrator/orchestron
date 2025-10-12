@@ -13,7 +13,7 @@ mgmt:
 
 topology:
   nodes:
-    ams-core-1:
+    rtr1:
       kind: linux
       image: ghcr.io/notconf/notconf-ietf:latest
     otron:

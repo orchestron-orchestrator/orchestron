@@ -32,7 +32,7 @@ module netinfra {
       }
     }
 
-    list ntp-foo {
+    list foo {
       // This is silly nonsense transform. It makes no sense to have a separate
       // transform for configuring individual NTP servers on a router, it would
       // be more natural to model as part of the base-config that comes from the
@@ -43,7 +43,7 @@ module netinfra {
       // same device config.
       key "router name";
 
-      orchestron:transform mini.cfs.NtpFoo;
+      orchestron:transform mini.cfs.Foo;
 
       leaf router {
         type string;
