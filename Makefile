@@ -32,7 +32,12 @@ test-ldep:
 pkg-upgrade:
 	acton pkg upgrade
 	cd gen_dmc && acton pkg upgrade
+	cd minisys && acton pkg upgrade
+	cd minisys/gen && acton pkg upgrade
 
+.PHONY: check-dep-consistency
+check-dep-consistency:
+	@python3 scripts/check_dep_consistency.py
 
 .PHONY: test-mini
 test-mini: check-mini-is-up-to-date
