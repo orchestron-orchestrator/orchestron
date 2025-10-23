@@ -32,7 +32,8 @@ test-ldep:
 pkg-upgrade:
 	acton pkg upgrade
 	cd gen_dmc && acton pkg upgrade
-
+	cd minisys && acton pkg upgrade
+	cd minisys/gen && acton pkg upgrade
 
 .PHONY: test-mini
 test-mini: check-mini-is-up-to-date
