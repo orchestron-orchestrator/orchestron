@@ -10,7 +10,8 @@ path = [
     "src/**",
     "gen_dmc/**",
     "test/**",
-    "minisys/**"
+    "minisys/**",
+    "scripts/**"
 ]
 SPDX-FileCopyrightText = "Deutsche Telekom AG"
 SPDX-License-Identifier = "BSD-3-Clause"
