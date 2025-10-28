@@ -51,3 +51,7 @@ check-mini-is-up-to-date:
 .PHONY: build-mini
 build-mini:
 	cd minisys && acton build
+
+.PHONY: build-mini-ldep
+build-mini-ldep:
+	cd minisys && acton build --dep yang=../../acton-yang --dep netconf=../../netconf --dep actmf=../../actmf
