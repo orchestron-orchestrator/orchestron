@@ -358,7 +358,7 @@ mut def from_xml(node: xml.Node) -> yang.gdata.Container:
 def from_xml_gen3(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
     # WARNING: this wrapper for the gen3.from_xml schema-driven parser compiles the schema on every call!
     s = yang.compile(src_yang())
-    return yang.gen3.from_xml(s, node, loose=True, root_path=root_path)
+    return yang.gen3.from_data(s, node, loose=True, root_path=root_path)
 
 mut def from_json_path(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
     # path handling
@@ -386,7 +386,7 @@ mut def from_json(jd: dict[str, ?value]) -> yang.gdata.Container:
 def from_json_gen3(jd: dict[str, ?value], root_path: list[str]=[]) -> yang.gdata.Container:
     # WARNING: this wrapper for the gen3.from_json schema-driven parser compiles the schema on every call!
     s = yang.compile(src_yang())
-    return yang.gen3.from_json(s, jd, loose=True, root_path=root_path)
+    return yang.gen3.from_data(s, jd, loose=True, root_path=root_path)
 
 def from_json_path_gen3(jd: dict[str, ?value], path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
     s = yang.compile(src_yang())
