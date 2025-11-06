@@ -45,7 +45,7 @@ test-mini: check-mini-is-up-to-date
 
 .PHONY: check-mini-is-up-to-date
 check-mini-is-up-to-date:
-	cd minisys/gen && acton build && out/bin/gen
+	$(MAKE) gen-mini
 	git diff --exit-code
 
 .PHONY: build-mini
@@ -55,3 +55,11 @@ build-mini:
 .PHONY: build-mini-ldep
 build-mini-ldep:
 	cd minisys && acton build --dep yang=../../acton-yang --dep netconf=../../netconf --dep actmf=../../actmf
+
+.PHONY: gen-mini
+gen-mini:
+	cd minisys/gen && acton build && out/bin/gen
+
+.PHONY: gen-mini-ldep
+gen-mini-ldep:
+	cd minisys/gen && acton build --dep yang=../../../acton-yang && out/bin/gen
