@@ -460,7 +460,7 @@ actor main(env):
                 elif request.headers.get("content-type") == "application/yang-data+xml":
                     try:
                         xml_in = xml.decode(request.body.decode())
-                        input_config = yang.gen3.from_xml(top_schema, xml_in, loose=True)
+                        input_config = yang.gen3.from_data(top_schema, xml_in, loose=True)
                     except Exception as e:
                         respond(400, {}, "Error parsing XML: {e}")
                         return
@@ -541,7 +541,7 @@ actor main(env):
             config = configs.pop(0)
             # Grab the first config
             log.info("Applying config file...", {"config_file": config.filename})
-            input_config = yang.gen3.from_xml(top_schema, config.config, loose=True)
+            input_config = yang.gen3.from_data(top_schema, config.config, loose=True)
             session.edit_config(input_config, None, lambda result: _conf_file_done(config, result))
         except IndexError:
             log.info("All config files applied")
