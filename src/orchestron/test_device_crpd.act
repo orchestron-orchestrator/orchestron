@@ -140,7 +140,7 @@ actor _test_txid(t: testing.EnvT):
                         print("Current config:", r.encode())
 
                 log.info("Resetting device configuration to known state")
-                c.edit_config(reset_config, on_setup_edit_config, datastore="candidate")
+                c.edit_config([xml.decode(reset_config)], on_setup_edit_config, datastore="candidate")
                 #c.get_config(on_get_config, datastore="running")
             else:
                 log.error("Failed to get initial config")

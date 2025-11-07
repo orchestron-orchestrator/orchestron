@@ -1381,9 +1381,9 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                     running_conf = current_conf
 
                 # Use the diff provided by DeviceMgr
-                xml_diff = new_diff.to_xmlstr(pretty=False)
-                if xml_diff != "":
-                    _log.debug("Device.configure: sending diff", {"diff": xml_diff})
+                xml_diff = new_diff.to_xml()
+                if len(xml_diff) > 0:
+                    _log.debug("Device.configure: sending diff", {"diff": xml.encode_nodes(xml_diff)})
                     if client is not None:
                         client.edit_config(xml_diff, on_edited, target_datastore())
                 else:
