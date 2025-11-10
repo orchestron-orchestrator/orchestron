@@ -26,7 +26,7 @@ test:
 
 .PHONY: test-ldep
 test-ldep:
-	$(MAKE) test DEP_OVERRIDES="--dep yang=../acton-yang"
+	$(MAKE) test DEP_OVERRIDES="--dep yang=../acton-yang --dep netconf=../netconf"
 
 .PHONY: pkg-upgrade
 pkg-upgrade:
