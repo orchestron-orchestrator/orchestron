@@ -4617,19 +4617,18 @@ mut def from_xml_ietf_system__set_current_datetime__input(node: xml.Node) -> yan
 
 actor rpc_root(tp: yang.gdata.TreeProvider):
     def set_current_datetime(cb: action(?Exception) -> None, inp: ietf_system__set_current_datetime__input, gen3: bool=False):
+        rpc_xml = xml.Node('set-current-datetime', nsdefs=[(None, 'urn:ietf:params:xml:ns:yang:ietf-system')])
         if inp is not None:
-            xmlstr = '<set-current-datetime xmlns="urn:ietf:params:xml:ns:yang:ietf-system">{inp.to_gdata().to_xmlstr()}</set-current-datetime>'
-        else:
-            xmlstr = '<set-current-datetime xmlns="urn:ietf:params:xml:ns:yang:ietf-system" />'
-        tp.rpc_xml(lambda _, err: cb(err), xml.decode(xmlstr))
+            rpc_xml.children.extend(inp.to_gdata().to_xml())
+        tp.rpc_xml(lambda _, err: cb(err), rpc_xml)
 
     def system_restart(cb: action(?Exception) -> None, gen3: bool=False):
-        xmlstr = '<system-restart xmlns="urn:ietf:params:xml:ns:yang:ietf-system" />'
-        tp.rpc_xml(lambda _, err: cb(err), xml.decode(xmlstr))
+        rpc_xml = xml.Node('system-restart', nsdefs=[(None, 'urn:ietf:params:xml:ns:yang:ietf-system')])
+        tp.rpc_xml(lambda _, err: cb(err), rpc_xml)
 
     def system_shutdown(cb: action(?Exception) -> None, gen3: bool=False):
-        xmlstr = '<system-shutdown xmlns="urn:ietf:params:xml:ns:yang:ietf-system" />'
-        tp.rpc_xml(lambda _, err: cb(err), xml.decode(xmlstr))
+        rpc_xml = xml.Node('system-shutdown', nsdefs=[(None, 'urn:ietf:params:xml:ns:yang:ietf-system')])
+        tp.rpc_xml(lambda _, err: cb(err), rpc_xml)
 
 
 

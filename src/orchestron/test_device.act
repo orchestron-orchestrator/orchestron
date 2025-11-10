@@ -373,7 +373,7 @@ actor _test_netconf_adapter(t: testing.EnvT):
 </netconf-server>"""
 
                 log.info("Resetting device configuration to known state")
-                c.edit_config(reset_config, on_setup_edit_config, datastore="running")
+                c.edit_config([xml.decode(reset_config)], on_setup_edit_config, datastore="running")
             else:
                 log.error("Failed to get initial config")
                 t.failure(ValueError("Failed to get initial config"))
