@@ -8,8 +8,7 @@ actor main(env):
 
     schema_yang = [oyang.rfs, oyang.ietf_inet_types]
     y = yang.compile(schema_yang)
-    ydev = y.get("device")
-    src = ydev.prdaclass(schema_yang=schema_yang, gen_json=False, gen_xml=False).encode()
+    src = y.prdaclass(schema_yang=schema_yang, gen_json=False, gen_xml=False, root_path=["orchestron-rfs:device"]).encode()
 
     wf = file.WriteFile(wfc, "src/orchestron/device_meta_config.act")
     await async wf.write(src)
