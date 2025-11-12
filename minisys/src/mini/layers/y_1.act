@@ -2317,7 +2317,7 @@ class orchestron_rfs__rfs__base_config_entry(yang.adata.MNode):
     def prsrc_gen3(self, self_name='ad'):
         # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
         s = yang.compile(src_yang())
-        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['mini-rfs:rfs', 'base-config'])
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:rfs', 'mini-rfs:base-config'])
 
 class orchestron_rfs__rfs__base_config(yang.adata.MNode):
     elements: list[orchestron_rfs__rfs__base_config_entry]
@@ -2482,7 +2482,7 @@ class orchestron_rfs__rfs__bar_entry(yang.adata.MNode):
     def prsrc_gen3(self, self_name='ad'):
         # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
         s = yang.compile(src_yang())
-        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['mini-rfs:rfs', 'bar'])
+        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:rfs', 'mini-rfs:bar'])
 
 class orchestron_rfs__rfs__bar(yang.adata.MNode):
     elements: list[orchestron_rfs__rfs__bar_entry]
@@ -2818,7 +2818,7 @@ class root(yang.adata.MNode):
     def prsrc(self, self_name='ad', top=True, list_element=False):
         res = []
         if top:
-            res.append('# Top node: /root')
+            res.append('# Top node: /')
             res.append('{self_name} = root()')
         leaves = []
         _device = self.device
@@ -2838,7 +2838,7 @@ class root(yang.adata.MNode):
             res.extend(_element.prsrc('rfs_element', False, list_element=True).splitlines())
         if leaves:
             if not list_element:
-               res = ['', '# Container: /root'] + leaves + res
+               res = ['', '# Container: /'] + leaves + res
             else:
                 res = leaves + res
         return '\n'.join(res)
