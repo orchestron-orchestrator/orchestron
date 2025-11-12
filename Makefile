@@ -10,6 +10,7 @@ build-ldep: src/orchestron/device_meta_config.act
 gen: src/orchestron/device_meta_config.act
 
 .PHONY: gen-ldep
+gen-ldep: DEP_OVERRIDES=--dep yang=../acton-yang
 gen-ldep: src/orchestron/device_meta_config.act
 	$(MAKE) --always-make gen DEP_OVERRIDES="--dep yang=../acton-yang"
 
