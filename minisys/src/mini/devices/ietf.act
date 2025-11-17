@@ -2359,25 +2359,25 @@ def src_yang():
     return res
 
 
-mut def from_xml_ietf_netconf_acm__nacm__enable_nacm(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__enable_nacm(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('boolean', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__read_default(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__read_default(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('enumeration', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__write_default(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__write_default(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('enumeration', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__exec_default(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__exec_default(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('enumeration', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__enable_external_groups(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__enable_external_groups(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('boolean', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__groups__group__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__groups__group__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__groups__group__user_name(val: list[value]) -> yang.gdata.LeafList:
+mut def from_data_ietf_netconf_acm__nacm__groups__group__user_name(val: list[value]) -> yang.gdata.LeafList:
     return yang.gdata.LeafList('string', val)
 
 class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
@@ -2479,9 +2479,9 @@ extension ietf_netconf_acm__nacm__groups__group(Iterable[ietf_netconf_acm__nacm_
 mut def from_xml_ietf_netconf_acm__nacm__groups__group_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_ietf_netconf_acm__nacm__groups__group__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_ietf_netconf_acm__nacm__groups__group__name, child_name)
     child_user_name = yang.gdata.from_xml_opt_strs(node, 'user-name')
-    yang.gdata.maybe_add(children, 'user-name', from_xml_ietf_netconf_acm__nacm__groups__group__user_name, child_user_name)
+    yang.gdata.maybe_add(children, 'user-name', from_data_ietf_netconf_acm__nacm__groups__group__user_name, child_user_name)
     return yang.gdata.Container(children)
 
 mut def from_xml_ietf_netconf_acm__nacm__groups__group(nodes: list[xml.Node]) -> yang.gdata.List:
@@ -2544,34 +2544,34 @@ mut def from_xml_ietf_netconf_acm__nacm__groups(node: xml.Node) -> yang.gdata.Co
     yang.gdata.maybe_add(children, 'group', from_xml_ietf_netconf_acm__nacm__groups__group, child_group)
     return yang.gdata.Container(children)
 
-mut def from_xml_ietf_netconf_acm__nacm__rule_list__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__rule_list__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__rule_list__group(val: list[value]) -> yang.gdata.LeafList:
+mut def from_data_ietf_netconf_acm__nacm__rule_list__group(val: list[value]) -> yang.gdata.LeafList:
     return yang.gdata.LeafList('union', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__rule_list__rule__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__module_name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__rule_list__rule__module_name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('union', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__rpc_name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__rule_list__rule__rpc_name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('union', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__notification_name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__rule_list__rule__notification_name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('union', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__path(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__rule_list__rule__path(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__access_operations(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__rule_list__rule__access_operations(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('union', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__action(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__rule_list__rule__action(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('enumeration', val)
 
-mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule__comment(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_netconf_acm__nacm__rule_list__rule__comment(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
 class ietf_netconf_acm__nacm__rule_list__rule_entry(yang.adata.MNode):
@@ -2721,21 +2721,21 @@ extension ietf_netconf_acm__nacm__rule_list__rule(Iterable[ietf_netconf_acm__nac
 mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_ietf_netconf_acm__nacm__rule_list__rule__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_ietf_netconf_acm__nacm__rule_list__rule__name, child_name)
     child_module_name = yang.gdata.from_xml_opt_str(node, 'module-name')
-    yang.gdata.maybe_add(children, 'module-name', from_xml_ietf_netconf_acm__nacm__rule_list__rule__module_name, child_module_name)
+    yang.gdata.maybe_add(children, 'module-name', from_data_ietf_netconf_acm__nacm__rule_list__rule__module_name, child_module_name)
     child_rpc_name = yang.gdata.from_xml_opt_str(node, 'rpc-name')
-    yang.gdata.maybe_add(children, 'rpc-name', from_xml_ietf_netconf_acm__nacm__rule_list__rule__rpc_name, child_rpc_name)
+    yang.gdata.maybe_add(children, 'rpc-name', from_data_ietf_netconf_acm__nacm__rule_list__rule__rpc_name, child_rpc_name)
     child_notification_name = yang.gdata.from_xml_opt_str(node, 'notification-name')
-    yang.gdata.maybe_add(children, 'notification-name', from_xml_ietf_netconf_acm__nacm__rule_list__rule__notification_name, child_notification_name)
+    yang.gdata.maybe_add(children, 'notification-name', from_data_ietf_netconf_acm__nacm__rule_list__rule__notification_name, child_notification_name)
     child_path = yang.gdata.from_xml_opt_str(node, 'path')
-    yang.gdata.maybe_add(children, 'path', from_xml_ietf_netconf_acm__nacm__rule_list__rule__path, child_path)
+    yang.gdata.maybe_add(children, 'path', from_data_ietf_netconf_acm__nacm__rule_list__rule__path, child_path)
     child_access_operations = yang.gdata.from_xml_opt_value(node, 'access-operations')
-    yang.gdata.maybe_add(children, 'access-operations', from_xml_ietf_netconf_acm__nacm__rule_list__rule__access_operations, child_access_operations)
+    yang.gdata.maybe_add(children, 'access-operations', from_data_ietf_netconf_acm__nacm__rule_list__rule__access_operations, child_access_operations)
     child_action_ = yang.gdata.from_xml_opt_str(node, 'action')
-    yang.gdata.maybe_add(children, 'action', from_xml_ietf_netconf_acm__nacm__rule_list__rule__action, child_action_)
+    yang.gdata.maybe_add(children, 'action', from_data_ietf_netconf_acm__nacm__rule_list__rule__action, child_action_)
     child_comment = yang.gdata.from_xml_opt_str(node, 'comment')
-    yang.gdata.maybe_add(children, 'comment', from_xml_ietf_netconf_acm__nacm__rule_list__rule__comment, child_comment)
+    yang.gdata.maybe_add(children, 'comment', from_data_ietf_netconf_acm__nacm__rule_list__rule__comment, child_comment)
     return yang.gdata.Container(children)
 
 mut def from_xml_ietf_netconf_acm__nacm__rule_list__rule(nodes: list[xml.Node]) -> yang.gdata.List:
@@ -2853,9 +2853,9 @@ extension ietf_netconf_acm__nacm__rule_list(Iterable[ietf_netconf_acm__nacm__rul
 mut def from_xml_ietf_netconf_acm__nacm__rule_list_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_ietf_netconf_acm__nacm__rule_list__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_ietf_netconf_acm__nacm__rule_list__name, child_name)
     child_group = yang.gdata.from_xml_opt_strs(node, 'group')
-    yang.gdata.maybe_add(children, 'group', from_xml_ietf_netconf_acm__nacm__rule_list__group, child_group)
+    yang.gdata.maybe_add(children, 'group', from_data_ietf_netconf_acm__nacm__rule_list__group, child_group)
     child_rule = yang.gdata.from_xml_opt_list(node, 'rule')
     yang.gdata.maybe_add(children, 'rule', from_xml_ietf_netconf_acm__nacm__rule_list__rule, child_rule)
     return yang.gdata.Container(children)
@@ -2965,34 +2965,34 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
 mut def from_xml_ietf_netconf_acm__nacm(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_enable_nacm = yang.gdata.from_xml_opt_bool(node, 'enable-nacm')
-    yang.gdata.maybe_add(children, 'enable-nacm', from_xml_ietf_netconf_acm__nacm__enable_nacm, child_enable_nacm)
+    yang.gdata.maybe_add(children, 'enable-nacm', from_data_ietf_netconf_acm__nacm__enable_nacm, child_enable_nacm)
     child_read_default = yang.gdata.from_xml_opt_str(node, 'read-default')
-    yang.gdata.maybe_add(children, 'read-default', from_xml_ietf_netconf_acm__nacm__read_default, child_read_default)
+    yang.gdata.maybe_add(children, 'read-default', from_data_ietf_netconf_acm__nacm__read_default, child_read_default)
     child_write_default = yang.gdata.from_xml_opt_str(node, 'write-default')
-    yang.gdata.maybe_add(children, 'write-default', from_xml_ietf_netconf_acm__nacm__write_default, child_write_default)
+    yang.gdata.maybe_add(children, 'write-default', from_data_ietf_netconf_acm__nacm__write_default, child_write_default)
     child_exec_default = yang.gdata.from_xml_opt_str(node, 'exec-default')
-    yang.gdata.maybe_add(children, 'exec-default', from_xml_ietf_netconf_acm__nacm__exec_default, child_exec_default)
+    yang.gdata.maybe_add(children, 'exec-default', from_data_ietf_netconf_acm__nacm__exec_default, child_exec_default)
     child_enable_external_groups = yang.gdata.from_xml_opt_bool(node, 'enable-external-groups')
-    yang.gdata.maybe_add(children, 'enable-external-groups', from_xml_ietf_netconf_acm__nacm__enable_external_groups, child_enable_external_groups)
+    yang.gdata.maybe_add(children, 'enable-external-groups', from_data_ietf_netconf_acm__nacm__enable_external_groups, child_enable_external_groups)
     child_groups = yang.gdata.from_xml_opt_cnt(node, 'groups')
     yang.gdata.maybe_add(children, 'groups', from_xml_ietf_netconf_acm__nacm__groups, child_groups)
     child_rule_list = yang.gdata.from_xml_opt_list(node, 'rule-list')
     yang.gdata.maybe_add(children, 'rule-list', from_xml_ietf_netconf_acm__nacm__rule_list, child_rule_list)
     return yang.gdata.Container(children, ns='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', module='ietf-netconf-acm')
 
-mut def from_xml_ietf_system__system__contact(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__contact(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__hostname(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__hostname(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__location(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__location(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__clock__timezone_name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__clock__timezone_name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__clock__timezone_utc_offset(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__clock__timezone_utc_offset(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('int16', val)
 
 class ietf_system__system__clock(yang.adata.MNode):
@@ -3052,21 +3052,21 @@ class ietf_system__system__clock(yang.adata.MNode):
 mut def from_xml_ietf_system__system__clock(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_timezone_name = yang.gdata.from_xml_opt_str(node, 'timezone-name')
-    yang.gdata.maybe_add(children, 'timezone-name', from_xml_ietf_system__system__clock__timezone_name, child_timezone_name)
+    yang.gdata.maybe_add(children, 'timezone-name', from_data_ietf_system__system__clock__timezone_name, child_timezone_name)
     child_timezone_utc_offset = yang.gdata.from_xml_opt_int(node, 'timezone-utc-offset')
-    yang.gdata.maybe_add(children, 'timezone-utc-offset', from_xml_ietf_system__system__clock__timezone_utc_offset, child_timezone_utc_offset)
+    yang.gdata.maybe_add(children, 'timezone-utc-offset', from_data_ietf_system__system__clock__timezone_utc_offset, child_timezone_utc_offset)
     return yang.gdata.Container(children)
 
-mut def from_xml_ietf_system__system__ntp__enabled(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__ntp__enabled(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('boolean', val)
 
-mut def from_xml_ietf_system__system__ntp__server__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__ntp__server__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__ntp__server__udp__address(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__ntp__server__udp__address(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('union', val)
 
-mut def from_xml_ietf_system__system__ntp__server__udp__port(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__ntp__server__udp__port(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('uint16', val)
 
 class ietf_system__system__ntp__server__udp(yang.adata.MNode):
@@ -3126,18 +3126,18 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
 mut def from_xml_ietf_system__system__ntp__server__udp(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_address = yang.gdata.from_xml_opt_str(node, 'address')
-    yang.gdata.maybe_add(children, 'address', from_xml_ietf_system__system__ntp__server__udp__address, child_address)
+    yang.gdata.maybe_add(children, 'address', from_data_ietf_system__system__ntp__server__udp__address, child_address)
     child_port = yang.gdata.from_xml_opt_int(node, 'port')
-    yang.gdata.maybe_add(children, 'port', from_xml_ietf_system__system__ntp__server__udp__port, child_port)
+    yang.gdata.maybe_add(children, 'port', from_data_ietf_system__system__ntp__server__udp__port, child_port)
     return yang.gdata.Container(children)
 
-mut def from_xml_ietf_system__system__ntp__server__association_type(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__ntp__server__association_type(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('enumeration', val)
 
-mut def from_xml_ietf_system__system__ntp__server__iburst(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__ntp__server__iburst(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('boolean', val)
 
-mut def from_xml_ietf_system__system__ntp__server__prefer(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__ntp__server__prefer(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('boolean', val)
 
 class ietf_system__system__ntp__server_entry(yang.adata.MNode):
@@ -3263,15 +3263,15 @@ extension ietf_system__system__ntp__server(Iterable[ietf_system__system__ntp__se
 mut def from_xml_ietf_system__system__ntp__server_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_ietf_system__system__ntp__server__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_ietf_system__system__ntp__server__name, child_name)
     child_udp = yang.gdata.from_xml_opt_cnt(node, 'udp')
     yang.gdata.maybe_add(children, 'udp', from_xml_ietf_system__system__ntp__server__udp, child_udp)
     child_association_type = yang.gdata.from_xml_opt_str(node, 'association-type')
-    yang.gdata.maybe_add(children, 'association-type', from_xml_ietf_system__system__ntp__server__association_type, child_association_type)
+    yang.gdata.maybe_add(children, 'association-type', from_data_ietf_system__system__ntp__server__association_type, child_association_type)
     child_iburst = yang.gdata.from_xml_opt_bool(node, 'iburst')
-    yang.gdata.maybe_add(children, 'iburst', from_xml_ietf_system__system__ntp__server__iburst, child_iburst)
+    yang.gdata.maybe_add(children, 'iburst', from_data_ietf_system__system__ntp__server__iburst, child_iburst)
     child_prefer = yang.gdata.from_xml_opt_bool(node, 'prefer')
-    yang.gdata.maybe_add(children, 'prefer', from_xml_ietf_system__system__ntp__server__prefer, child_prefer)
+    yang.gdata.maybe_add(children, 'prefer', from_data_ietf_system__system__ntp__server__prefer, child_prefer)
     return yang.gdata.Container(children)
 
 mut def from_xml_ietf_system__system__ntp__server(nodes: list[xml.Node]) -> yang.gdata.List:
@@ -3342,21 +3342,21 @@ class ietf_system__system__ntp(yang.adata.MNode):
 mut def from_xml_ietf_system__system__ntp(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_enabled = yang.gdata.from_xml_opt_bool(node, 'enabled')
-    yang.gdata.maybe_add(children, 'enabled', from_xml_ietf_system__system__ntp__enabled, child_enabled)
+    yang.gdata.maybe_add(children, 'enabled', from_data_ietf_system__system__ntp__enabled, child_enabled)
     child_server = yang.gdata.from_xml_opt_list(node, 'server')
     yang.gdata.maybe_add(children, 'server', from_xml_ietf_system__system__ntp__server, child_server)
     return yang.gdata.Container(children, presence=True)
 
-mut def from_xml_ietf_system__system__dns_resolver__search(val: list[value]) -> yang.gdata.LeafList:
+mut def from_data_ietf_system__system__dns_resolver__search(val: list[value]) -> yang.gdata.LeafList:
     return yang.gdata.LeafList('string', val, user_order=True)
 
-mut def from_xml_ietf_system__system__dns_resolver__server__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__dns_resolver__server__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp__address(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__dns_resolver__server__udp_and_tcp__address(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('union', val)
 
-mut def from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp__port(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__dns_resolver__server__udp_and_tcp__port(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('uint16', val)
 
 class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
@@ -3416,9 +3416,9 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
 mut def from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_address = yang.gdata.from_xml_opt_str(node, 'address')
-    yang.gdata.maybe_add(children, 'address', from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp__address, child_address)
+    yang.gdata.maybe_add(children, 'address', from_data_ietf_system__system__dns_resolver__server__udp_and_tcp__address, child_address)
     child_port = yang.gdata.from_xml_opt_int(node, 'port')
-    yang.gdata.maybe_add(children, 'port', from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp__port, child_port)
+    yang.gdata.maybe_add(children, 'port', from_data_ietf_system__system__dns_resolver__server__udp_and_tcp__port, child_port)
     return yang.gdata.Container(children)
 
 class ietf_system__system__dns_resolver__server_entry(yang.adata.MNode):
@@ -3520,7 +3520,7 @@ extension ietf_system__system__dns_resolver__server(Iterable[ietf_system__system
 mut def from_xml_ietf_system__system__dns_resolver__server_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_ietf_system__system__dns_resolver__server__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_ietf_system__system__dns_resolver__server__name, child_name)
     child_udp_and_tcp = yang.gdata.from_xml_opt_cnt(node, 'udp-and-tcp')
     yang.gdata.maybe_add(children, 'udp-and-tcp', from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp, child_udp_and_tcp)
     return yang.gdata.Container(children)
@@ -3529,10 +3529,10 @@ mut def from_xml_ietf_system__system__dns_resolver__server(nodes: list[xml.Node]
     elements = [from_xml_ietf_system__system__dns_resolver__server_element(e) for e in nodes]
     return yang.gdata.List(keys=['name'], elements=elements, user_order=True)
 
-mut def from_xml_ietf_system__system__dns_resolver__options__timeout(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__dns_resolver__options__timeout(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('uint8', val)
 
-mut def from_xml_ietf_system__system__dns_resolver__options__attempts(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__dns_resolver__options__attempts(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('uint8', val)
 
 class ietf_system__system__dns_resolver__options(yang.adata.MNode):
@@ -3592,9 +3592,9 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
 mut def from_xml_ietf_system__system__dns_resolver__options(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_timeout = yang.gdata.from_xml_opt_int(node, 'timeout')
-    yang.gdata.maybe_add(children, 'timeout', from_xml_ietf_system__system__dns_resolver__options__timeout, child_timeout)
+    yang.gdata.maybe_add(children, 'timeout', from_data_ietf_system__system__dns_resolver__options__timeout, child_timeout)
     child_attempts = yang.gdata.from_xml_opt_int(node, 'attempts')
-    yang.gdata.maybe_add(children, 'attempts', from_xml_ietf_system__system__dns_resolver__options__attempts, child_attempts)
+    yang.gdata.maybe_add(children, 'attempts', from_data_ietf_system__system__dns_resolver__options__attempts, child_attempts)
     return yang.gdata.Container(children)
 
 class ietf_system__system__dns_resolver(yang.adata.MNode):
@@ -3666,23 +3666,23 @@ class ietf_system__system__dns_resolver(yang.adata.MNode):
 mut def from_xml_ietf_system__system__dns_resolver(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_search = yang.gdata.from_xml_opt_strs(node, 'search')
-    yang.gdata.maybe_add(children, 'search', from_xml_ietf_system__system__dns_resolver__search, child_search)
+    yang.gdata.maybe_add(children, 'search', from_data_ietf_system__system__dns_resolver__search, child_search)
     child_server = yang.gdata.from_xml_opt_list(node, 'server')
     yang.gdata.maybe_add(children, 'server', from_xml_ietf_system__system__dns_resolver__server, child_server)
     child_options = yang.gdata.from_xml_opt_cnt(node, 'options')
     yang.gdata.maybe_add(children, 'options', from_xml_ietf_system__system__dns_resolver__options, child_options)
     return yang.gdata.Container(children)
 
-mut def from_xml_ietf_system__system__radius__server__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__radius__server__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__radius__server__udp__address(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__radius__server__udp__address(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('union', val)
 
-mut def from_xml_ietf_system__system__radius__server__udp__authentication_port(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__radius__server__udp__authentication_port(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('uint16', val)
 
-mut def from_xml_ietf_system__system__radius__server__udp__shared_secret(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__radius__server__udp__shared_secret(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
 class ietf_system__system__radius__server__udp(yang.adata.MNode):
@@ -3750,14 +3750,14 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
 mut def from_xml_ietf_system__system__radius__server__udp(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_address = yang.gdata.from_xml_opt_str(node, 'address')
-    yang.gdata.maybe_add(children, 'address', from_xml_ietf_system__system__radius__server__udp__address, child_address)
+    yang.gdata.maybe_add(children, 'address', from_data_ietf_system__system__radius__server__udp__address, child_address)
     child_authentication_port = yang.gdata.from_xml_opt_int(node, 'authentication-port')
-    yang.gdata.maybe_add(children, 'authentication-port', from_xml_ietf_system__system__radius__server__udp__authentication_port, child_authentication_port)
+    yang.gdata.maybe_add(children, 'authentication-port', from_data_ietf_system__system__radius__server__udp__authentication_port, child_authentication_port)
     child_shared_secret = yang.gdata.from_xml_opt_str(node, 'shared-secret')
-    yang.gdata.maybe_add(children, 'shared-secret', from_xml_ietf_system__system__radius__server__udp__shared_secret, child_shared_secret)
+    yang.gdata.maybe_add(children, 'shared-secret', from_data_ietf_system__system__radius__server__udp__shared_secret, child_shared_secret)
     return yang.gdata.Container(children)
 
-mut def from_xml_ietf_system__system__radius__server__authentication_type(val: PartialIdentityref) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__radius__server__authentication_type(val: value) -> yang.gdata.Leaf:
     new_val, error = complete_and_validate_identityref(val, _identities, ['sys:radius-authentication-type'], 'ietf-system')
     if new_val is not None:
         return yang.gdata.Leaf('identityref', new_val)
@@ -3876,21 +3876,21 @@ extension ietf_system__system__radius__server(Iterable[ietf_system__system__radi
 mut def from_xml_ietf_system__system__radius__server_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_ietf_system__system__radius__server__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_ietf_system__system__radius__server__name, child_name)
     child_udp = yang.gdata.from_xml_opt_cnt(node, 'udp')
     yang.gdata.maybe_add(children, 'udp', from_xml_ietf_system__system__radius__server__udp, child_udp)
     child_authentication_type = yang.gdata.from_xml_opt_Identityref(node, 'authentication-type')
-    yang.gdata.maybe_add(children, 'authentication-type', from_xml_ietf_system__system__radius__server__authentication_type, child_authentication_type)
+    yang.gdata.maybe_add(children, 'authentication-type', from_data_ietf_system__system__radius__server__authentication_type, child_authentication_type)
     return yang.gdata.Container(children)
 
 mut def from_xml_ietf_system__system__radius__server(nodes: list[xml.Node]) -> yang.gdata.List:
     elements = [from_xml_ietf_system__system__radius__server_element(e) for e in nodes]
     return yang.gdata.List(keys=['name'], elements=elements, user_order=True)
 
-mut def from_xml_ietf_system__system__radius__options__timeout(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__radius__options__timeout(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('uint8', val)
 
-mut def from_xml_ietf_system__system__radius__options__attempts(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__radius__options__attempts(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('uint8', val)
 
 class ietf_system__system__radius__options(yang.adata.MNode):
@@ -3950,9 +3950,9 @@ class ietf_system__system__radius__options(yang.adata.MNode):
 mut def from_xml_ietf_system__system__radius__options(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_timeout = yang.gdata.from_xml_opt_int(node, 'timeout')
-    yang.gdata.maybe_add(children, 'timeout', from_xml_ietf_system__system__radius__options__timeout, child_timeout)
+    yang.gdata.maybe_add(children, 'timeout', from_data_ietf_system__system__radius__options__timeout, child_timeout)
     child_attempts = yang.gdata.from_xml_opt_int(node, 'attempts')
-    yang.gdata.maybe_add(children, 'attempts', from_xml_ietf_system__system__radius__options__attempts, child_attempts)
+    yang.gdata.maybe_add(children, 'attempts', from_data_ietf_system__system__radius__options__attempts, child_attempts)
     return yang.gdata.Container(children)
 
 class ietf_system__system__radius(yang.adata.MNode):
@@ -4021,7 +4021,7 @@ mut def from_xml_ietf_system__system__radius(node: xml.Node) -> yang.gdata.Conta
     yang.gdata.maybe_add(children, 'options', from_xml_ietf_system__system__radius__options, child_options)
     return yang.gdata.Container(children)
 
-mut def from_xml_ietf_system__system__authentication__user_authentication_order(val: list[PartialIdentityref]) -> yang.gdata.LeafList:
+mut def from_data_ietf_system__system__authentication__user_authentication_order(val: list[value]) -> yang.gdata.LeafList:
     new_val = []
     for v in val:
         nv, error = complete_and_validate_identityref(v, _identities, ['sys:authentication-method'], 'ietf-system')
@@ -4031,19 +4031,19 @@ mut def from_xml_ietf_system__system__authentication__user_authentication_order(
             raise ValueError('Invalid value for identityref leaf-list user-authentication-order: {error}')
     return yang.gdata.LeafList('identityref', new_val, user_order=True)
 
-mut def from_xml_ietf_system__system__authentication__user__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__authentication__user__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__authentication__user__password(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__authentication__user__password(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__authentication__user__authorized_key__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__authentication__user__authorized_key__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__authentication__user__authorized_key__algorithm(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__authentication__user__authorized_key__algorithm(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_ietf_system__system__authentication__user__authorized_key__key_data(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__system__authentication__user__authorized_key__key_data(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('binary', val)
 
 class ietf_system__system__authentication__user__authorized_key_entry(yang.adata.MNode):
@@ -4153,11 +4153,11 @@ extension ietf_system__system__authentication__user__authorized_key(Iterable[iet
 mut def from_xml_ietf_system__system__authentication__user__authorized_key_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_ietf_system__system__authentication__user__authorized_key__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_ietf_system__system__authentication__user__authorized_key__name, child_name)
     child_algorithm = yang.gdata.from_xml_opt_str(node, 'algorithm')
-    yang.gdata.maybe_add(children, 'algorithm', from_xml_ietf_system__system__authentication__user__authorized_key__algorithm, child_algorithm)
+    yang.gdata.maybe_add(children, 'algorithm', from_data_ietf_system__system__authentication__user__authorized_key__algorithm, child_algorithm)
     child_key_data = yang.gdata.from_xml_opt_bytes(node, 'key-data')
-    yang.gdata.maybe_add(children, 'key-data', from_xml_ietf_system__system__authentication__user__authorized_key__key_data, child_key_data)
+    yang.gdata.maybe_add(children, 'key-data', from_data_ietf_system__system__authentication__user__authorized_key__key_data, child_key_data)
     return yang.gdata.Container(children)
 
 mut def from_xml_ietf_system__system__authentication__user__authorized_key(nodes: list[xml.Node]) -> yang.gdata.List:
@@ -4275,9 +4275,9 @@ extension ietf_system__system__authentication__user(Iterable[ietf_system__system
 mut def from_xml_ietf_system__system__authentication__user_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_ietf_system__system__authentication__user__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_ietf_system__system__authentication__user__name, child_name)
     child_password = yang.gdata.from_xml_opt_str(node, 'password')
-    yang.gdata.maybe_add(children, 'password', from_xml_ietf_system__system__authentication__user__password, child_password)
+    yang.gdata.maybe_add(children, 'password', from_data_ietf_system__system__authentication__user__password, child_password)
     child_authorized_key = yang.gdata.from_xml_opt_list(node, 'authorized-key')
     yang.gdata.maybe_add(children, 'authorized-key', from_xml_ietf_system__system__authentication__user__authorized_key, child_authorized_key)
     return yang.gdata.Container(children)
@@ -4355,7 +4355,7 @@ class ietf_system__system__authentication(yang.adata.MNode):
 mut def from_xml_ietf_system__system__authentication(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_user_authentication_order = yang.gdata.from_xml_opt_Identityrefs(node, 'user-authentication-order')
-    yang.gdata.maybe_add(children, 'user-authentication-order', from_xml_ietf_system__system__authentication__user_authentication_order, child_user_authentication_order)
+    yang.gdata.maybe_add(children, 'user-authentication-order', from_data_ietf_system__system__authentication__user_authentication_order, child_user_authentication_order)
     child_user = yang.gdata.from_xml_opt_list(node, 'user')
     yang.gdata.maybe_add(children, 'user', from_xml_ietf_system__system__authentication__user, child_user)
     return yang.gdata.Container(children)
@@ -4476,11 +4476,11 @@ class ietf_system__system(yang.adata.MNode):
 mut def from_xml_ietf_system__system(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_contact = yang.gdata.from_xml_opt_str(node, 'contact')
-    yang.gdata.maybe_add(children, 'contact', from_xml_ietf_system__system__contact, child_contact)
+    yang.gdata.maybe_add(children, 'contact', from_data_ietf_system__system__contact, child_contact)
     child_hostname = yang.gdata.from_xml_opt_str(node, 'hostname')
-    yang.gdata.maybe_add(children, 'hostname', from_xml_ietf_system__system__hostname, child_hostname)
+    yang.gdata.maybe_add(children, 'hostname', from_data_ietf_system__system__hostname, child_hostname)
     child_location = yang.gdata.from_xml_opt_str(node, 'location')
-    yang.gdata.maybe_add(children, 'location', from_xml_ietf_system__system__location, child_location)
+    yang.gdata.maybe_add(children, 'location', from_data_ietf_system__system__location, child_location)
     child_clock = yang.gdata.from_xml_opt_cnt(node, 'clock')
     yang.gdata.maybe_add(children, 'clock', from_xml_ietf_system__system__clock, child_clock)
     child_ntp = yang.gdata.from_xml_opt_cnt(node, 'ntp')
@@ -4560,7 +4560,7 @@ def from_xml_gen3(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Contain
     s = yang.compile(src_yang())
     return yang.gen3.from_data(s, node, loose=True, root_path=root_path)
 
-mut def from_xml_ietf_system__set_current_datetime__input__current_datetime(val: value) -> yang.gdata.Leaf:
+mut def from_data_ietf_system__set_current_datetime__input__current_datetime(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
 class ietf_system__set_current_datetime__input(yang.adata.MNode):
@@ -4612,7 +4612,7 @@ class ietf_system__set_current_datetime__input(yang.adata.MNode):
 mut def from_xml_ietf_system__set_current_datetime__input(node: xml.Node) -> yang.gdata.Container:
     children = {}
     child_current_datetime = yang.gdata.from_xml_opt_str(node, 'current-datetime')
-    yang.gdata.maybe_add(children, 'current-datetime', from_xml_ietf_system__set_current_datetime__input__current_datetime, child_current_datetime)
+    yang.gdata.maybe_add(children, 'current-datetime', from_data_ietf_system__set_current_datetime__input__current_datetime, child_current_datetime)
     return yang.gdata.Container(children, ns='urn:ietf:params:xml:ns:yang:ietf-system', module='ietf-system')
 
 actor rpc_root(tp: yang.gdata.TreeProvider):
