@@ -534,22 +534,13 @@ def src_yang():
     return res
 
 
-mut def from_json_netinfra__netinfra__router__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_netinfra__netinfra__router__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_netinfra__netinfra__router__name(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
-mut def from_json_netinfra__netinfra__router__id(val: value) -> yang.gdata.Leaf:
+mut def from_data_netinfra__netinfra__router__id(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('uint32', val)
 
-mut def from_xml_netinfra__netinfra__router__id(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('uint32', val)
-
-mut def from_json_netinfra__netinfra__router__type(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
-mut def from_xml_netinfra__netinfra__router__type(val: value) -> yang.gdata.Leaf:
+mut def from_data_netinfra__netinfra__router__type(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
 class netinfra__netinfra__router_entry(yang.adata.MNode):
@@ -659,11 +650,11 @@ extension netinfra__netinfra__router(Iterable[netinfra__netinfra__router_entry])
 mut def from_xml_netinfra__netinfra__router_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_netinfra__netinfra__router__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_netinfra__netinfra__router__name, child_name)
     child_id = yang.gdata.from_xml_opt_int(node, 'id')
-    yang.gdata.maybe_add(children, 'id', from_xml_netinfra__netinfra__router__id, child_id)
+    yang.gdata.maybe_add(children, 'id', from_data_netinfra__netinfra__router__id, child_id)
     child_type = yang.gdata.from_xml_opt_str(node, 'type')
-    yang.gdata.maybe_add(children, 'type', from_xml_netinfra__netinfra__router__type, child_type)
+    yang.gdata.maybe_add(children, 'type', from_data_netinfra__netinfra__router__type, child_type)
     return yang.gdata.Container(children)
 
 mut def from_xml_netinfra__netinfra__router(nodes: list[xml.Node]) -> yang.gdata.List:
@@ -686,7 +677,7 @@ mut def from_json_path_netinfra__netinfra__router_element(jd: value, path: list[
         point = path[1]
         rest_path = path[2:]
         children: dict[str, yang.gdata.Node] = {}
-        children['name'] = from_json_netinfra__netinfra__router__name(keys[0])
+        children['name'] = from_data_netinfra__netinfra__router__name(keys[0])
         if point == 'id':
             raise ValueError("Invalid json path to non-inner node")
         if point == 'type':
@@ -722,27 +713,21 @@ mut def from_json_path_netinfra__netinfra__router(jd: value, path: list[str]=[],
 mut def from_json_netinfra__netinfra__router_element(jd: dict[str, ?value]) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.take_json_str(jd, 'name')
-    yang.gdata.maybe_add(children, 'name', from_json_netinfra__netinfra__router__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_netinfra__netinfra__router__name, child_name)
     child_id = yang.gdata.take_json_opt_int(jd, 'id')
-    yang.gdata.maybe_add(children, 'id', from_json_netinfra__netinfra__router__id, child_id)
+    yang.gdata.maybe_add(children, 'id', from_data_netinfra__netinfra__router__id, child_id)
     child_type = yang.gdata.take_json_opt_str(jd, 'type')
-    yang.gdata.maybe_add(children, 'type', from_json_netinfra__netinfra__router__type, child_type)
+    yang.gdata.maybe_add(children, 'type', from_data_netinfra__netinfra__router__type, child_type)
     return yang.gdata.Container(children)
 
 mut def from_json_netinfra__netinfra__router(jd: list[dict[str, ?value]]) -> yang.gdata.List:
     elements = [from_json_netinfra__netinfra__router_element(e) for e in jd if isinstance(e, dict)]
     return yang.gdata.List(keys=['name'], elements=elements)
 
-mut def from_json_netinfra__netinfra__foo__router(val: value) -> yang.gdata.Leaf:
+mut def from_data_netinfra__netinfra__foo__router(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_netinfra__netinfra__foo__router(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
-mut def from_json_netinfra__netinfra__foo__name(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
-mut def from_xml_netinfra__netinfra__foo__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_netinfra__netinfra__foo__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
 class netinfra__netinfra__foo_entry(yang.adata.MNode):
@@ -844,9 +829,9 @@ extension netinfra__netinfra__foo(Iterable[netinfra__netinfra__foo_entry]):
 mut def from_xml_netinfra__netinfra__foo_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_router = yang.gdata.from_xml_str(node, 'router')
-    yang.gdata.maybe_add(children, 'router', from_xml_netinfra__netinfra__foo__router, child_router)
+    yang.gdata.maybe_add(children, 'router', from_data_netinfra__netinfra__foo__router, child_router)
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_netinfra__netinfra__foo__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_netinfra__netinfra__foo__name, child_name)
     return yang.gdata.Container(children)
 
 mut def from_xml_netinfra__netinfra__foo(nodes: list[xml.Node]) -> yang.gdata.List:
@@ -869,8 +854,8 @@ mut def from_json_path_netinfra__netinfra__foo_element(jd: value, path: list[str
         point = path[1]
         rest_path = path[2:]
         children: dict[str, yang.gdata.Node] = {}
-        children['router'] = from_json_netinfra__netinfra__foo__router(keys[0])
-        children['name'] = from_json_netinfra__netinfra__foo__name(keys[1])
+        children['router'] = from_data_netinfra__netinfra__foo__router(keys[0])
+        children['name'] = from_data_netinfra__netinfra__foo__name(keys[1])
         return yang.gdata.Container(children)
     raise ValueError("unreachable - no keys to list element")
 
@@ -902,9 +887,9 @@ mut def from_json_path_netinfra__netinfra__foo(jd: value, path: list[str]=[], op
 mut def from_json_netinfra__netinfra__foo_element(jd: dict[str, ?value]) -> yang.gdata.Node:
     children = {}
     child_router = yang.gdata.take_json_str(jd, 'router')
-    yang.gdata.maybe_add(children, 'router', from_json_netinfra__netinfra__foo__router, child_router)
+    yang.gdata.maybe_add(children, 'router', from_data_netinfra__netinfra__foo__router, child_router)
     child_name = yang.gdata.take_json_str(jd, 'name')
-    yang.gdata.maybe_add(children, 'name', from_json_netinfra__netinfra__foo__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_netinfra__netinfra__foo__name, child_name)
     return yang.gdata.Container(children)
 
 mut def from_json_netinfra__netinfra__foo(jd: list[dict[str, ?value]]) -> yang.gdata.List:

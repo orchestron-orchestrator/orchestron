@@ -45,16 +45,10 @@ def src_yang():
     return res
 
 
-mut def from_json_orchestron_device__devices__device__name(val: value) -> yang.gdata.Leaf:
+mut def from_data_orchestron_device__devices__device__name(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
-mut def from_xml_orchestron_device__devices__device__name(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
-mut def from_json_orchestron_device__devices__device__modset_id(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
-mut def from_xml_orchestron_device__devices__device__modset_id(val: value) -> yang.gdata.Leaf:
+mut def from_data_orchestron_device__devices__device__modset_id(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
 class orchestron_device__devices__device_entry(yang.adata.MNode):
@@ -156,9 +150,9 @@ extension orchestron_device__devices__device(Iterable[orchestron_device__devices
 mut def from_xml_orchestron_device__devices__device_element(node: xml.Node) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_xml_orchestron_device__devices__device__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_orchestron_device__devices__device__name, child_name)
     child_modset_id = yang.gdata.from_xml_opt_str(node, 'modset_id')
-    yang.gdata.maybe_add(children, 'modset_id', from_xml_orchestron_device__devices__device__modset_id, child_modset_id)
+    yang.gdata.maybe_add(children, 'modset_id', from_data_orchestron_device__devices__device__modset_id, child_modset_id)
     return yang.gdata.Container(children)
 
 mut def from_xml_orchestron_device__devices__device(nodes: list[xml.Node]) -> yang.gdata.List:
@@ -181,7 +175,7 @@ mut def from_json_path_orchestron_device__devices__device_element(jd: value, pat
         point = path[1]
         rest_path = path[2:]
         children: dict[str, yang.gdata.Node] = {}
-        children['name'] = from_json_orchestron_device__devices__device__name(keys[0])
+        children['name'] = from_data_orchestron_device__devices__device__name(keys[0])
         if point == 'modset_id':
             raise ValueError("Invalid json path to non-inner node")
         return yang.gdata.Container(children)
@@ -215,9 +209,9 @@ mut def from_json_path_orchestron_device__devices__device(jd: value, path: list[
 mut def from_json_orchestron_device__devices__device_element(jd: dict[str, ?value]) -> yang.gdata.Node:
     children = {}
     child_name = yang.gdata.take_json_str(jd, 'name')
-    yang.gdata.maybe_add(children, 'name', from_json_orchestron_device__devices__device__name, child_name)
+    yang.gdata.maybe_add(children, 'name', from_data_orchestron_device__devices__device__name, child_name)
     child_modset_id = yang.gdata.take_json_opt_str(jd, 'modset_id')
-    yang.gdata.maybe_add(children, 'modset_id', from_json_orchestron_device__devices__device__modset_id, child_modset_id)
+    yang.gdata.maybe_add(children, 'modset_id', from_data_orchestron_device__devices__device__modset_id, child_modset_id)
     return yang.gdata.Container(children)
 
 mut def from_json_orchestron_device__devices__device(jd: list[dict[str, ?value]]) -> yang.gdata.List:
