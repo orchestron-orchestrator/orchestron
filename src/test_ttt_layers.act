@@ -8,39 +8,39 @@ import yang.gdata as gdata
 
 cfg1 = gdata.List(["name"], [
     gdata.Container({
-        "name": gdata.Leaf("string", "k1"),
-        "n1": gdata.Leaf("int", bigint(1)),
-        "n2": gdata.Leaf("int", bigint(2))
+        "name": gdata.Leaf("k1"),
+        "n1": gdata.Leaf(bigint(1)),
+        "n2": gdata.Leaf(bigint(2))
     }),
     gdata.Container({
-        "name": gdata.Leaf("string", "k2"),
-        "n1": gdata.Leaf("int", bigint(4))
+        "name": gdata.Leaf("k2"),
+        "n1": gdata.Leaf(bigint(4))
     })
 ])
 
 cfg2 = gdata.List(["name"], [
     gdata.Container({
-        "name": gdata.Leaf("string", "k1"),
-        "n2": gdata.Leaf("int", bigint(2)),
-        "n3": gdata.Leaf("int", bigint(3))
+        "name": gdata.Leaf("k1"),
+        "n2": gdata.Leaf(bigint(2)),
+        "n3": gdata.Leaf(bigint(3))
     }),
     gdata.Container({
-        "name": gdata.Leaf("string", "k3"),
-        "n1": gdata.Leaf("int", bigint(1)),
-        "n3": gdata.Leaf("int", bigint(3))
+        "name": gdata.Leaf("k3"),
+        "n1": gdata.Leaf(bigint(1)),
+        "n3": gdata.Leaf(bigint(3))
     })
 ])
 
 out1 = gdata.Container({
     'devices': gdata.List(["id"], [
         gdata.Container({
-            "id": gdata.Leaf("string", "k1"),
-            "n1": gdata.Leaf("int", bigint(1)),
-            "n2": gdata.Leaf("int", bigint(2))
+            "id": gdata.Leaf("k1"),
+            "n1": gdata.Leaf(bigint(1)),
+            "n2": gdata.Leaf(bigint(2))
         }),
         gdata.Container({
-            "id": gdata.Leaf("string", "k2"),
-            "n1": gdata.Leaf("int", bigint(4))
+            "id": gdata.Leaf("k2"),
+            "n1": gdata.Leaf(bigint(4))
         })
     ])
 })
@@ -48,19 +48,19 @@ out1 = gdata.Container({
 out1_2 = gdata.Container({
     'devices': gdata.List(["id"], [
         gdata.Container({
-            "id": gdata.Leaf("string", "k1"),
-            "n1": gdata.Leaf("int", bigint(1)),
-            "n2": gdata.Leaf("int", bigint(2)),
-            "n3": gdata.Leaf("int", bigint(3))
+            "id": gdata.Leaf("k1"),
+            "n1": gdata.Leaf(bigint(1)),
+            "n2": gdata.Leaf(bigint(2)),
+            "n3": gdata.Leaf(bigint(3))
         }),
         gdata.Container({
-            "id": gdata.Leaf("string", "k3"),
-            "n1": gdata.Leaf("int", bigint(1)),
-            "n3": gdata.Leaf("int", bigint(3))
+            "id": gdata.Leaf("k3"),
+            "n1": gdata.Leaf(bigint(1)),
+            "n3": gdata.Leaf(bigint(3))
         }),
         gdata.Container({
-            "id": gdata.Leaf("string", "k2"),
-            "n1": gdata.Leaf("int", bigint(4))
+            "id": gdata.Leaf("k2"),
+            "n1": gdata.Leaf(bigint(4))
         })
     ])
 })
@@ -77,7 +77,7 @@ class TransF(ttt.TransformFunction):
             # Copy all child nodes
             out = gdata.Container(dict(cfg.children.items()))
             # "Rename" the key leaf
-            out.children["id"] = gdata.Leaf("string", cfg.get_leaf("name").val)
+            out.children["id"] = gdata.Leaf(cfg.get_leaf("name").val)
             del out.children["name"]
             return gdata.Container({
                 'devices': gdata.List(["id"], [
@@ -148,22 +148,22 @@ actor simultaneous_commit(t: testing.AsyncT):
 
 cfg3 = gdata.Container({
     "left": gdata.Container({
-        "a": gdata.Leaf("int", bigint(1))
+        "a": gdata.Leaf(bigint(1))
     }),
     "right": gdata.Container({
-        "a": gdata.Leaf("int", bigint(2))
+        "a": gdata.Leaf(bigint(2))
     })
 })
 
 out3 = gdata.Container({
     'devices': gdata.List(["id"], [
         gdata.Container({
-            "id": gdata.Leaf("int", bigint(1)),
-            "val": gdata.Leaf("int", bigint(1))
+            "id": gdata.Leaf(bigint(1)),
+            "val": gdata.Leaf(bigint(1))
         }),
         gdata.Container({
-            "id": gdata.Leaf("int", bigint(2)),
-            "val": gdata.Leaf("int", bigint(2))
+            "id": gdata.Leaf(bigint(2)),
+            "val": gdata.Leaf(bigint(2))
         })
     ])
 })
@@ -174,8 +174,8 @@ class WriteDev(ttt.TransformFunction):
         return gdata.Container({
             'devices': gdata.List(["id"], [
                 gdata.Container({
-                    "id": gdata.Leaf("int", bigint(i)),
-                    "val": gdata.Leaf("int", bigint(i))
+                    "id": gdata.Leaf(i),
+                    "val": gdata.Leaf(i)
                 })
             ])
         }), None
@@ -200,8 +200,8 @@ actor diamond_commit(t: testing.AsyncT):
 ########################
 
 cfg4 = gdata.Container({
-    "ll": gdata.Leaf("int", bigint(1)),
-    "rr": gdata.Leaf("int", bigint(2))
+    "ll": gdata.Leaf(bigint(1)),
+    "rr": gdata.Leaf(bigint(2))
 })
 
 class ServiceMap(ttt.TransformFunction):
@@ -210,10 +210,10 @@ class ServiceMap(ttt.TransformFunction):
         rr = cfg.get_bigint("rr")
         return gdata.Container({
             "left": gdata.Container({
-                "a": gdata.Leaf("int", bigint(ll))
+                "a": gdata.Leaf(ll)
             }),
             "right": gdata.Container({
-                "a": gdata.Leaf("int", bigint(rr))
+                "a": gdata.Leaf(rr)
             })
         }), None
 
@@ -241,15 +241,15 @@ actor multi_layer(t: testing.AsyncT):
 ########################
 
 cfg5 = gdata.Container({
-    "a": gdata.Leaf("int", bigint(1)),
+    "a": gdata.Leaf(bigint(1)),
 })
 
 cfg6 = gdata.Container({
-    "a": gdata.Leaf("int", bigint(2)),
+    "a": gdata.Leaf(bigint(2)),
 })
 
 out5 = gdata.Container({
-    "b": gdata.Leaf("int", bigint(3)),
+    "b": gdata.Leaf(bigint(3)),
 })
 
 

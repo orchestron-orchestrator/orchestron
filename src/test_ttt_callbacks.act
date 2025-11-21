@@ -28,15 +28,15 @@ actor reconf(t: testing.AsyncT):
 
 cfg2 = gdata.List(["name"], [
     gdata.Container({
-        "name": gdata.Leaf("string", "k1"),
+        "name": gdata.Leaf("k1"),
         "config": gdata.Container({
-            "val": gdata.Leaf("string", "one")
+            "val": gdata.Leaf("one")
         })
     }),
     gdata.Container({
-        "name": gdata.Leaf("string", "k2"),
+        "name": gdata.Leaf("k2"),
         "config": gdata.Container({
-            "val": gdata.Leaf("string", "two")
+            "val": gdata.Leaf("two")
         })
     })
 ])
@@ -73,20 +73,20 @@ class Fun(ttt.RFSFunction):
 cfg3 = gdata.Container({
     "rfs": gdata.List(["name"], [
         gdata.Container({
-            "name": gdata.Leaf("string", "k1"),
+            "name": gdata.Leaf("k1"),
             "base": gdata.List(["id"], [
                 gdata.Container({
-                    "id": gdata.Leaf("string", "A"),
-                    "val": gdata.Leaf("string", "one")
+                    "id": gdata.Leaf("A"),
+                    "val": gdata.Leaf("one")
                 })
             ])
         }),
         gdata.Container({
-            "name": gdata.Leaf("string", "k2"),
+            "name": gdata.Leaf("k2"),
             "base": gdata.List(["id"], [
                 gdata.Container({
-                    "id": gdata.Leaf("string", "A"),
-                    "val": gdata.Leaf("string", "two")
+                    "id": gdata.Leaf("A"),
+                    "val": gdata.Leaf("two")
                 })
             ])
         })
@@ -97,7 +97,7 @@ def rfs_for_device(dev):
     return gdata.Container({
         'rfs': gdata.List(["name"], [
             gdata.Container({
-                "name": gdata.Leaf("string", dev)
+                "name": gdata.Leaf(dev)
             })
         ])
     })
