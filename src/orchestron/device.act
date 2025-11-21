@@ -75,7 +75,7 @@ class MockRoot(yang.adata.MNode):
         self._parent = None
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.gdata.Leaf("string", self._name)
+        return yang.gdata.Leaf(self._name)
 
     @staticmethod
     mut def from_gdata(self, gdata: ?yang.gdata.Node=None) -> yang.adata.MNode:
