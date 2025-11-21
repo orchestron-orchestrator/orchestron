@@ -2997,9 +2997,9 @@ mut def from_data_ietf_system__system__clock__timezone_utc_offset(val: value) ->
 
 class ietf_system__system__clock(yang.adata.MNode):
     timezone_name: ?str
-    timezone_utc_offset: ?int
+    timezone_utc_offset: ?bigint
 
-    mut def __init__(self, timezone_name: ?str, timezone_utc_offset: ?int):
+    mut def __init__(self, timezone_name: ?str, timezone_utc_offset: ?bigint):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.timezone_name = timezone_name
         self.timezone_utc_offset = timezone_utc_offset
@@ -3017,7 +3017,7 @@ class ietf_system__system__clock(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__clock:
         if n is not None:
-            return ietf_system__system__clock(timezone_name=n.get_opt_str('timezone-name'), timezone_utc_offset=n.get_opt_int('timezone-utc-offset'))
+            return ietf_system__system__clock(timezone_name=n.get_opt_str('timezone-name'), timezone_utc_offset=n.get_opt_bigint('timezone-utc-offset'))
         return ietf_system__system__clock()
 
     def copy(self):
@@ -3053,7 +3053,7 @@ mut def from_xml_ietf_system__system__clock(node: xml.Node) -> yang.gdata.Contai
     children = {}
     child_timezone_name = yang.gdata.from_xml_opt_str(node, 'timezone-name')
     yang.gdata.maybe_add(children, 'timezone-name', from_data_ietf_system__system__clock__timezone_name, child_timezone_name)
-    child_timezone_utc_offset = yang.gdata.from_xml_opt_int(node, 'timezone-utc-offset')
+    child_timezone_utc_offset = yang.gdata.from_xml_opt_bigint(node, 'timezone-utc-offset')
     yang.gdata.maybe_add(children, 'timezone-utc-offset', from_data_ietf_system__system__clock__timezone_utc_offset, child_timezone_utc_offset)
     return yang.gdata.Container(children)
 
@@ -3071,9 +3071,9 @@ mut def from_data_ietf_system__system__ntp__server__udp__port(val: value) -> yan
 
 class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     address: ?str
-    port: ?int
+    port: ?bigint
 
-    mut def __init__(self, address: ?str, port: ?int):
+    mut def __init__(self, address: ?str, port: ?bigint):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.address = address
         self.port = port
@@ -3091,7 +3091,7 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__ntp__server__udp:
         if n is not None:
-            return ietf_system__system__ntp__server__udp(address=n.get_opt_str('address'), port=n.get_opt_int('port'))
+            return ietf_system__system__ntp__server__udp(address=n.get_opt_str('address'), port=n.get_opt_bigint('port'))
         raise ValueError('Missing required subtree ietf_system__system__ntp__server__udp')
 
     def copy(self):
@@ -3127,7 +3127,7 @@ mut def from_xml_ietf_system__system__ntp__server__udp(node: xml.Node) -> yang.g
     children = {}
     child_address = yang.gdata.from_xml_opt_str(node, 'address')
     yang.gdata.maybe_add(children, 'address', from_data_ietf_system__system__ntp__server__udp__address, child_address)
-    child_port = yang.gdata.from_xml_opt_int(node, 'port')
+    child_port = yang.gdata.from_xml_opt_bigint(node, 'port')
     yang.gdata.maybe_add(children, 'port', from_data_ietf_system__system__ntp__server__udp__port, child_port)
     return yang.gdata.Container(children)
 
@@ -3361,9 +3361,9 @@ mut def from_data_ietf_system__system__dns_resolver__server__udp_and_tcp__port(v
 
 class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     address: ?str
-    port: ?int
+    port: ?bigint
 
-    mut def __init__(self, address: ?str, port: ?int):
+    mut def __init__(self, address: ?str, port: ?bigint):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.address = address
         self.port = port
@@ -3381,7 +3381,7 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__server__udp_and_tcp:
         if n is not None:
-            return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str('address'), port=n.get_opt_int('port'))
+            return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str('address'), port=n.get_opt_bigint('port'))
         raise ValueError('Missing required subtree ietf_system__system__dns_resolver__server__udp_and_tcp')
 
     def copy(self):
@@ -3417,7 +3417,7 @@ mut def from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp(node: xm
     children = {}
     child_address = yang.gdata.from_xml_opt_str(node, 'address')
     yang.gdata.maybe_add(children, 'address', from_data_ietf_system__system__dns_resolver__server__udp_and_tcp__address, child_address)
-    child_port = yang.gdata.from_xml_opt_int(node, 'port')
+    child_port = yang.gdata.from_xml_opt_bigint(node, 'port')
     yang.gdata.maybe_add(children, 'port', from_data_ietf_system__system__dns_resolver__server__udp_and_tcp__port, child_port)
     return yang.gdata.Container(children)
 
@@ -3536,10 +3536,10 @@ mut def from_data_ietf_system__system__dns_resolver__options__attempts(val: valu
     return yang.gdata.Leaf('uint8', val)
 
 class ietf_system__system__dns_resolver__options(yang.adata.MNode):
-    timeout: ?int
-    attempts: ?int
+    timeout: ?bigint
+    attempts: ?bigint
 
-    mut def __init__(self, timeout: ?int, attempts: ?int):
+    mut def __init__(self, timeout: ?bigint, attempts: ?bigint):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.timeout = timeout
         self.attempts = attempts
@@ -3557,7 +3557,7 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__options:
         if n is not None:
-            return ietf_system__system__dns_resolver__options(timeout=n.get_opt_int('timeout'), attempts=n.get_opt_int('attempts'))
+            return ietf_system__system__dns_resolver__options(timeout=n.get_opt_bigint('timeout'), attempts=n.get_opt_bigint('attempts'))
         return ietf_system__system__dns_resolver__options()
 
     def copy(self):
@@ -3591,9 +3591,9 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
 
 mut def from_xml_ietf_system__system__dns_resolver__options(node: xml.Node) -> yang.gdata.Container:
     children = {}
-    child_timeout = yang.gdata.from_xml_opt_int(node, 'timeout')
+    child_timeout = yang.gdata.from_xml_opt_bigint(node, 'timeout')
     yang.gdata.maybe_add(children, 'timeout', from_data_ietf_system__system__dns_resolver__options__timeout, child_timeout)
-    child_attempts = yang.gdata.from_xml_opt_int(node, 'attempts')
+    child_attempts = yang.gdata.from_xml_opt_bigint(node, 'attempts')
     yang.gdata.maybe_add(children, 'attempts', from_data_ietf_system__system__dns_resolver__options__attempts, child_attempts)
     return yang.gdata.Container(children)
 
@@ -3687,10 +3687,10 @@ mut def from_data_ietf_system__system__radius__server__udp__shared_secret(val: v
 
 class ietf_system__system__radius__server__udp(yang.adata.MNode):
     address: ?str
-    authentication_port: ?int
+    authentication_port: ?bigint
     shared_secret: ?str
 
-    mut def __init__(self, address: ?str, authentication_port: ?int, shared_secret: ?str):
+    mut def __init__(self, address: ?str, authentication_port: ?bigint, shared_secret: ?str):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.address = address
         self.authentication_port = authentication_port
@@ -3712,7 +3712,7 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__server__udp:
         if n is not None:
-            return ietf_system__system__radius__server__udp(address=n.get_opt_str('address'), authentication_port=n.get_opt_int('authentication-port'), shared_secret=n.get_opt_str('shared-secret'))
+            return ietf_system__system__radius__server__udp(address=n.get_opt_str('address'), authentication_port=n.get_opt_bigint('authentication-port'), shared_secret=n.get_opt_str('shared-secret'))
         raise ValueError('Missing required subtree ietf_system__system__radius__server__udp')
 
     def copy(self):
@@ -3751,7 +3751,7 @@ mut def from_xml_ietf_system__system__radius__server__udp(node: xml.Node) -> yan
     children = {}
     child_address = yang.gdata.from_xml_opt_str(node, 'address')
     yang.gdata.maybe_add(children, 'address', from_data_ietf_system__system__radius__server__udp__address, child_address)
-    child_authentication_port = yang.gdata.from_xml_opt_int(node, 'authentication-port')
+    child_authentication_port = yang.gdata.from_xml_opt_bigint(node, 'authentication-port')
     yang.gdata.maybe_add(children, 'authentication-port', from_data_ietf_system__system__radius__server__udp__authentication_port, child_authentication_port)
     child_shared_secret = yang.gdata.from_xml_opt_str(node, 'shared-secret')
     yang.gdata.maybe_add(children, 'shared-secret', from_data_ietf_system__system__radius__server__udp__shared_secret, child_shared_secret)
@@ -3894,10 +3894,10 @@ mut def from_data_ietf_system__system__radius__options__attempts(val: value) -> 
     return yang.gdata.Leaf('uint8', val)
 
 class ietf_system__system__radius__options(yang.adata.MNode):
-    timeout: ?int
-    attempts: ?int
+    timeout: ?bigint
+    attempts: ?bigint
 
-    mut def __init__(self, timeout: ?int, attempts: ?int):
+    mut def __init__(self, timeout: ?bigint, attempts: ?bigint):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.timeout = timeout
         self.attempts = attempts
@@ -3915,7 +3915,7 @@ class ietf_system__system__radius__options(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__options:
         if n is not None:
-            return ietf_system__system__radius__options(timeout=n.get_opt_int('timeout'), attempts=n.get_opt_int('attempts'))
+            return ietf_system__system__radius__options(timeout=n.get_opt_bigint('timeout'), attempts=n.get_opt_bigint('attempts'))
         return ietf_system__system__radius__options()
 
     def copy(self):
@@ -3949,9 +3949,9 @@ class ietf_system__system__radius__options(yang.adata.MNode):
 
 mut def from_xml_ietf_system__system__radius__options(node: xml.Node) -> yang.gdata.Container:
     children = {}
-    child_timeout = yang.gdata.from_xml_opt_int(node, 'timeout')
+    child_timeout = yang.gdata.from_xml_opt_bigint(node, 'timeout')
     yang.gdata.maybe_add(children, 'timeout', from_data_ietf_system__system__radius__options__timeout, child_timeout)
-    child_attempts = yang.gdata.from_xml_opt_int(node, 'attempts')
+    child_attempts = yang.gdata.from_xml_opt_bigint(node, 'attempts')
     yang.gdata.maybe_add(children, 'attempts', from_data_ietf_system__system__radius__options__attempts, child_attempts)
     return yang.gdata.Container(children)
 
