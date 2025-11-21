@@ -12,6 +12,9 @@ from yang.schema import DIdentity
 # == This file is generated ==
 
 
+_identities: list[DIdentity] = []
+
+
 def src_yang():
     res = []
     res.append(r"""module orchestron-rfs {
@@ -618,15 +621,6 @@ def src_yang():
     return res
 
 
-
-
-
-
-
-
-
-
-
 class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNode):
     username: str
     password: str
@@ -844,10 +838,6 @@ extension orchestron_rfs__device__address(Iterable[orchestron_rfs__device__addre
     def __iter__(self) -> Iterator[orchestron_rfs__device__address_entry]:
         return self.elements.__iter__()
 
-
-
-
-
 class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
     key: str
     private_key: ?str
@@ -1007,9 +997,6 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
         return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'credentials'])
 
 
-
-
-
 class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
     username: str
     password: str
@@ -1113,12 +1100,6 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
 extension orchestron_rfs__device__initial_credentials(Iterable[orchestron_rfs__device__initial_credentials_entry]):
     def __iter__(self) -> Iterator[orchestron_rfs__device__initial_credentials_entry]:
         return self.elements.__iter__()
-
-
-
-
-
-
 
 class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
     name: str
@@ -1285,7 +1266,6 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
         # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
         s = yang.compile(src_yang())
         return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'mock'])
-
 
 
 class orchestron_rfs__device__debug(yang.adata.MNode):
@@ -1498,11 +1478,11 @@ extension orchestron_rfs__device(Iterable[orchestron_rfs__device_entry]):
     def __iter__(self) -> Iterator[orchestron_rfs__device_entry]:
         return self.elements.__iter__()
 
-schema_namespaces: set[str] = {
-    'http://orchestron.org/yang/orchestron-rfs.yang',
-}
-
 def prsrc_gen3(data, self_name='ad'):
     # WARNING: this wrapper for the gen3.prsrc schema-driven parser compiles the schema on every call!
     s = yang.compile(src_yang())
     return yang.gen3.pradata(s, data, self_name, loose=False)
+
+schema_namespaces: set[str] = {
+    'http://orchestron.org/yang/orchestron-rfs.yang',
+}
