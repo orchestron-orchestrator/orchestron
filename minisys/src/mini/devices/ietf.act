@@ -4555,11 +4555,6 @@ mut def from_xml(node: xml.Node) -> yang.gdata.Container:
     yang.gdata.maybe_add(children, 'system', from_xml_ietf_system__system, child_system)
     return yang.gdata.Container(children)
 
-def from_xml_gen3(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
-    # WARNING: this wrapper for the gen3.from_xml schema-driven parser compiles the schema on every call!
-    s = yang.compile(src_yang())
-    return yang.gen3.from_data(s, node, loose=True, root_path=root_path)
-
 mut def from_data_ietf_system__set_current_datetime__input__current_datetime(val: value) -> yang.gdata.Leaf:
     return yang.gdata.Leaf('string', val)
 
@@ -4632,12 +4627,17 @@ actor rpc_root(tp: yang.gdata.TreeProvider):
 
 
 
-schema_namespaces: set[str] = {
-    'urn:ietf:params:xml:ns:yang:ietf-netconf-acm',
-    'urn:ietf:params:xml:ns:yang:ietf-system',
-}
+def from_xml_gen3(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
+    # WARNING: this wrapper for the gen3.from_xml schema-driven parser compiles the schema on every call!
+    s = yang.compile(src_yang())
+    return yang.gen3.from_data(s, node, loose=True, root_path=root_path)
 
 def prsrc_gen3(data, self_name='ad'):
     # WARNING: this wrapper for the gen3.prsrc schema-driven parser compiles the schema on every call!
     s = yang.compile(src_yang())
     return yang.gen3.pradata(s, data, self_name, loose=True)
+
+schema_namespaces: set[str] = {
+    'urn:ietf:params:xml:ns:yang:ietf-netconf-acm',
+    'urn:ietf:params:xml:ns:yang:ietf-system',
+}

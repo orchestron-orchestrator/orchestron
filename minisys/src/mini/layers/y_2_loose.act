@@ -12,6 +12,9 @@ from yang.schema import DIdentity
 # == This file is generated ==
 
 
+_identities: list[DIdentity] = []
+
+
 def src_yang():
     res = []
     res.append(r"""module orchestron-device {
@@ -349,11 +352,6 @@ mut def from_xml(node: xml.Node) -> yang.gdata.Container:
     yang.gdata.maybe_add(children, 'devices', from_xml_orchestron_device__devices, child_devices)
     return yang.gdata.Container(children)
 
-def from_xml_gen3(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
-    # WARNING: this wrapper for the gen3.from_xml schema-driven parser compiles the schema on every call!
-    s = yang.compile(src_yang())
-    return yang.gen3.from_data(s, node, loose=True, root_path=root_path)
-
 mut def from_json_path(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
     # path handling
     if len(path) > 0:
@@ -377,6 +375,11 @@ mut def from_json(jd: dict[str, ?value]) -> yang.gdata.Container:
     yang.gdata.maybe_add(children, 'devices', from_json_orchestron_device__devices, child_devices)
     return yang.gdata.Container(children)
 
+def from_xml_gen3(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
+    # WARNING: this wrapper for the gen3.from_xml schema-driven parser compiles the schema on every call!
+    s = yang.compile(src_yang())
+    return yang.gen3.from_data(s, node, loose=True, root_path=root_path)
+
 def from_json_gen3(jd: dict[str, ?value], root_path: list[str]=[]) -> yang.gdata.Container:
     # WARNING: this wrapper for the gen3.from_json schema-driven parser compiles the schema on every call!
     s = yang.compile(src_yang())
@@ -386,11 +389,11 @@ def from_json_path_gen3(jd: dict[str, ?value], path: list[str]=[], op: ?str='mer
     s = yang.compile(src_yang())
     return yang.gen3.from_json_path(s, jd, path, op, loose=True)
 
-schema_namespaces: set[str] = {
-    'http://orchestron.org/yang/orchestron-device.yang',
-}
-
 def prsrc_gen3(data, self_name='ad'):
     # WARNING: this wrapper for the gen3.prsrc schema-driven parser compiles the schema on every call!
     s = yang.compile(src_yang())
     return yang.gen3.pradata(s, data, self_name, loose=True)
+
+schema_namespaces: set[str] = {
+    'http://orchestron.org/yang/orchestron-device.yang',
+}

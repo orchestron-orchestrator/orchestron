@@ -63,4 +63,4 @@ gen-mini:
 
 .PHONY: gen-mini-ldep
 gen-mini-ldep:
-	cd minisys/gen && acton build --dep yang=../../../acton-yang && out/bin/gen
+	cd minisys/gen && acton build --dep yang=../../../acton-yang --dep netconf=../../../netconf && out/bin/gen
