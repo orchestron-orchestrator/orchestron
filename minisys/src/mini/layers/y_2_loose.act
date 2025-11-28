@@ -8,7 +8,7 @@ import yang.gen3
 from yang.gdata import repr_yang
 from yang.identity import complete_and_validate_identityref
 from yang.identityref import Identityref, PartialIdentityref
-from yang.schema import DIdentity
+from yang.schema import *
 
 # == This file is generated ==
 
@@ -51,12 +51,6 @@ def src_yang():
     return res
 
 
-mut def from_data_orchestron_device__devices__device__name(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
-mut def from_data_orchestron_device__devices__device__modset_id(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
 class orchestron_device__devices__device_entry(yang.adata.MNode):
     name: str
     modset_id: ?str
@@ -66,15 +60,17 @@ class orchestron_device__devices__device_entry(yang.adata.MNode):
         self.name = name
         self.modset_id = modset_id
 
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'name':
+            return self.name
+        if name == 'modset_id':
+            return self.modset_id
+        raise ValueError('Attribute {name} not found in orchestron_device__devices__device')
+
     mut def to_gdata(self) -> yang.gdata.Node:
-        children = {}
-        _name = self.name
-        if _name is not None:
-            children['name'] = yang.gdata.Leaf('string', _name)
-        _modset_id = self.modset_id
-        if _modset_id is not None:
-            children['modset_id'] = yang.gdata.Leaf('string', _modset_id)
-        return yang.gdata.Container(children)
+        if isinstance(self, yang.adata.MNode):
+            return yang.gen3.from_data(src_dnode(), self, loose=True, root_path=['orchestron-device:devices', 'device'])
+        raise ValueError('unreachable')
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_device__devices__device_entry:
@@ -84,26 +80,8 @@ class orchestron_device__devices__device_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return orchestron_device__devices__device_entry.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad', top=True, list_element=False):
-        res = []
-        if top:
-            res.append('# Top node: /devices/device')
-            res.append('{self_name} = orchestron_device__devices__device({repr_yang(self.name)})')
-        leaves = []
-        _modset_id = self.modset_id
-        if _modset_id is not None:
-            leaves.append('{self_name}.modset_id = {repr_yang(_modset_id)}')
-        if leaves:
-            if not list_element:
-               res = ['', '# Container: /devices/device'] + leaves + res
-            else:
-                res = leaves + res
-        return '\n'.join(res)
-
-    def prsrc_gen3(self, self_name='ad'):
-        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
-        s = yang.compile(src_yang())
-        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-device:devices', 'device'])
+    def prsrc(self, self_name='ad'):
+        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=True, root_path=['orchestron-device:devices', 'device'])
 
 class orchestron_device__devices__device(yang.adata.MNode):
     elements: list[orchestron_device__devices__device_entry]
@@ -125,14 +103,6 @@ class orchestron_device__devices__device(yang.adata.MNode):
         self.elements.append(res)
         return res
 
-    mut def to_gdata(self):
-        elements = []
-        for e in self:
-            e_gdata = e.to_gdata()
-            if isinstance(e_gdata, yang.gdata.Container):
-                elements.append(e_gdata)
-        return yang.gdata.List(['name'], elements)
-
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_device__devices__device_entry]:
         if n is not None:
@@ -153,77 +123,6 @@ extension orchestron_device__devices__device(Iterable[orchestron_device__devices
     def __iter__(self) -> Iterator[orchestron_device__devices__device_entry]:
         return self.elements.__iter__()
 
-mut def from_xml_orchestron_device__devices__device_element(node: xml.Node) -> yang.gdata.Node:
-    children = {}
-    child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_data_orchestron_device__devices__device__name, child_name)
-    child_modset_id = yang.gdata.from_xml_opt_str(node, 'modset_id')
-    yang.gdata.maybe_add(children, 'modset_id', from_data_orchestron_device__devices__device__modset_id, child_modset_id)
-    return yang.gdata.Container(children)
-
-mut def from_xml_orchestron_device__devices__device(nodes: list[xml.Node]) -> yang.gdata.List:
-    elements = [from_xml_orchestron_device__devices__device_element(e) for e in nodes]
-    return yang.gdata.List(keys=['name'], elements=elements)
-
-mut def from_json_path_orchestron_device__devices__device_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
-    if len(path) == 1:
-        point = path[0]
-        keys = point.split(",")
-        jd_dict = yang.gdata.unwrap_dict(jd)
-        val = from_json_orchestron_device__devices__device_element(jd_dict)
-        if op == "merge":
-            return val
-        elif op == "remove":
-            return yang.gdata.Absent(val.key_children(['name']))
-        raise ValueError("Invalid operation")
-    elif len(path) > 1:
-        keys = path[0].split(",")
-        point = path[1]
-        rest_path = path[2:]
-        children: dict[str, yang.gdata.Node] = {}
-        children['name'] = from_data_orchestron_device__devices__device__name(keys[0])
-        if point == 'modset_id':
-            raise ValueError("Invalid json path to non-inner node")
-        return yang.gdata.Container(children)
-    raise ValueError("unreachable - no keys to list element")
-
-mut def from_json_path_orchestron_device__devices__device(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
-    if len(path) == 1:
-        point = path[0]
-        keys = point.split(",")
-        jd_dict = yang.gdata.unwrap_dict(jd)
-        # Check that all keys are present in payload.
-        # If present, they must equal the keys in the path
-        # If not present, fill in from path
-        for key in ['name']:
-            if key not in jd_dict:
-                jd_dict[key] = keys.pop(0)
-            else:
-                if str(jd_dict[key]) != keys.pop(0):
-                    raise ValueError("Key value mismatch between path and payload")
-        element = from_json_orchestron_device__devices__device_element(jd_dict)
-        elements = []
-        if op == "merge":
-            elements.append(element)
-        elif op == "remove":
-            elements.append(yang.gdata.Absent(element.key_children(['name'])))
-        return yang.gdata.List(['name'], elements)
-    elif len(path) > 1:
-        return yang.gdata.List(['name'], [from_json_path_orchestron_device__devices__device_element(jd, path, op)])
-    raise ValueError("Unable to resolve path, no keys provided")
-
-mut def from_json_orchestron_device__devices__device_element(jd: dict[str, ?value]) -> yang.gdata.Node:
-    children = {}
-    child_name = yang.gdata.take_json_str(jd, 'name')
-    yang.gdata.maybe_add(children, 'name', from_data_orchestron_device__devices__device__name, child_name)
-    child_modset_id = yang.gdata.take_json_opt_str(jd, 'modset_id')
-    yang.gdata.maybe_add(children, 'modset_id', from_data_orchestron_device__devices__device__modset_id, child_modset_id)
-    return yang.gdata.Container(children)
-
-mut def from_json_orchestron_device__devices__device(jd: list[dict[str, ?value]]) -> yang.gdata.List:
-    elements = [from_json_orchestron_device__devices__device_element(e) for e in jd if isinstance(e, dict)]
-    return yang.gdata.List(keys=['name'], elements=elements)
-
 class orchestron_device__devices(yang.adata.MNode):
     device: orchestron_device__devices__device
 
@@ -231,12 +130,15 @@ class orchestron_device__devices(yang.adata.MNode):
         self._ns = 'http://orchestron.org/yang/orchestron-device.yang'
         self.device = orchestron_device__devices__device(elements=device)
 
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'device':
+            return iter(self.device)
+        raise ValueError('Attribute {name} not found in orchestron_device__devices')
+
     mut def to_gdata(self) -> yang.gdata.Node:
-        children = {}
-        _device = self.device
-        if _device is not None:
-            children['device'] = _device.to_gdata()
-        return yang.gdata.Container(children, ns='http://orchestron.org/yang/orchestron-device.yang', module='orchestron-device')
+        if isinstance(self, yang.adata.MNode):
+            return yang.gen3.from_data(src_dnode(), self, loose=True, root_path=['orchestron-device:devices'])
+        raise ValueError('unreachable')
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_device__devices:
@@ -248,60 +150,9 @@ class orchestron_device__devices(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return orchestron_device__devices.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad', top=True, list_element=False):
-        res = []
-        if top:
-            res.append('# Top node: /devices')
-            res.append('{self_name} = orchestron_device__devices()')
-        leaves = []
-        _device = self.device
-        for _element in _device:
-            res.append('')
-            res.append("# List /devices/device element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'device_element = {self_name}.device.create({repr_yang(_element.name)})'
-            res.append(list_elem)
-            res.extend(_element.prsrc('device_element', False, list_element=True).splitlines())
-        if leaves:
-            if not list_element:
-               res = ['', '# Container: /devices'] + leaves + res
-            else:
-                res = leaves + res
-        return '\n'.join(res)
+    def prsrc(self, self_name='ad'):
+        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=True, root_path=['orchestron-device:devices'])
 
-    def prsrc_gen3(self, self_name='ad'):
-        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
-        s = yang.compile(src_yang())
-        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True, root_path=['orchestron-device:devices'])
-
-
-mut def from_xml_orchestron_device__devices(node: xml.Node) -> yang.gdata.Container:
-    children = {}
-    child_device = yang.gdata.from_xml_opt_list(node, 'device')
-    yang.gdata.maybe_add(children, 'device', from_xml_orchestron_device__devices__device, child_device)
-    return yang.gdata.Container(children, ns='http://orchestron.org/yang/orchestron-device.yang', module='orchestron-device')
-
-mut def from_json_path_orchestron_device__devices(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
-    # path handling
-    if len(path) > 0:
-        point = path[0]
-        rest_path = path[1:]
-        if point == 'device':
-            child = {'device': from_json_path_orchestron_device__devices__device(jd, rest_path, op) }
-            return yang.gdata.Container(child, ns='http://orchestron.org/yang/orchestron-device.yang', module='orchestron-device')
-        raise ValueError("Invalid path")
-    elif len(path) == 0:
-        if op == "merge":
-            return from_json_orchestron_device__devices(yang.gdata.unwrap_dict(jd))
-        elif op == "remove":
-            return yang.gdata.Absent()
-        raise ValueError("Invalid operation")
-    raise ValueError("Unable to resolve path")
-
-mut def from_json_orchestron_device__devices(jd: dict[str, ?value]) -> yang.gdata.Container:
-    children = {}
-    child_device = yang.gdata.take_json_opt_list(jd, 'device')
-    yang.gdata.maybe_add(children, 'device', from_json_orchestron_device__devices__device, child_device)
-    return yang.gdata.Container(children, ns='http://orchestron.org/yang/orchestron-device.yang', module='orchestron-device')
 
 class root(yang.adata.MNode):
     devices: orchestron_device__devices
@@ -310,12 +161,15 @@ class root(yang.adata.MNode):
         self._ns = ''
         self.devices = devices if devices is not None else orchestron_device__devices()
 
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'devices':
+            return self.devices
+        raise ValueError('Attribute {name} not found in root')
+
     mut def to_gdata(self) -> yang.gdata.Node:
-        children = {}
-        _devices = self.devices
-        if _devices is not None:
-            children['devices'] = _devices.to_gdata()
-        return yang.gdata.Container(children)
+        if isinstance(self, yang.adata.MNode):
+            return yang.gen3.from_data(src_dnode(), self, loose=True)
+        raise ValueError('unreachable')
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
@@ -327,75 +181,33 @@ class root(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return root.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad', top=True, list_element=False):
-        res = []
-        if top:
-            res.append('# Top node: /')
-            res.append('{self_name} = root()')
-        leaves = []
-        _devices = self.devices
-        if _devices is not None:
-            res.extend(_devices.prsrc('{self_name}.devices', False).splitlines())
-        if leaves:
-            if not list_element:
-               res = ['', '# Container: /'] + leaves + res
-            else:
-                res = leaves + res
-        return '\n'.join(res)
-
-    def prsrc_gen3(self, self_name='ad'):
-        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
-        s = yang.compile(src_yang())
-        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=True)
+    def prsrc(self, self_name='ad'):
+        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=True)
 
 
-mut def from_xml(node: xml.Node) -> yang.gdata.Container:
-    children = {}
-    child_devices = yang.gdata.from_xml_opt_cnt(node, 'devices', 'http://orchestron.org/yang/orchestron-device.yang')
-    yang.gdata.maybe_add(children, 'devices', from_xml_orchestron_device__devices, child_devices)
-    return yang.gdata.Container(children)
+def src_dnode():
+    return DRoot(children=[
+    DContainer(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='devices', config=True, presence=False, children=[
+        DList(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='device', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
+                Ext('orchestron', 'device-config')
+            ], children=[
+            DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='name', config=True, mandatory=False, type_=Type('string')),
+            DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='modset_id', config=True, mandatory=False, type_=Type('string'))
+        ])
+    ])
+])
 
-mut def from_json_path(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
-    # path handling
-    if len(path) > 0:
-        point = path[0]
-        rest_path = path[1:]
-        if point == 'orchestron-device:devices':
-            child = {'devices': from_json_path_orchestron_device__devices(jd, rest_path, op) }
-            return yang.gdata.Container(child)
-        raise ValueError("Invalid path")
-    elif len(path) == 0:
-        if op == "merge":
-            return from_json(yang.gdata.unwrap_dict(jd))
-        elif op == "remove":
-            return yang.gdata.Absent()
-        raise ValueError("Invalid operation")
-    raise ValueError("Unable to resolve path")
+def from_xml(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
+    return yang.gen3.from_data(src_dnode(), node, loose=True, root_path=root_path)
 
-mut def from_json(jd: dict[str, ?value]) -> yang.gdata.Container:
-    children = {}
-    child_devices = yang.gdata.take_json_opt_cnt(jd, 'devices', 'orchestron-device')
-    yang.gdata.maybe_add(children, 'devices', from_json_orchestron_device__devices, child_devices)
-    return yang.gdata.Container(children)
+def from_json(jd: dict[str, ?value], root_path: list[str]=[]) -> yang.gdata.Container:
+    return yang.gen3.from_data(src_dnode(), jd, loose=True, root_path=root_path)
 
-def from_xml_gen3(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
-    # WARNING: this wrapper for the gen3.from_xml schema-driven parser compiles the schema on every call!
-    s = yang.compile(src_yang())
-    return yang.gen3.from_data(s, node, loose=True, root_path=root_path)
+def from_json_path(jd: dict[str, ?value], path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    return yang.gen3.from_json_path(src_dnode(), jd, path, op, loose=True)
 
-def from_json_gen3(jd: dict[str, ?value], root_path: list[str]=[]) -> yang.gdata.Container:
-    # WARNING: this wrapper for the gen3.from_json schema-driven parser compiles the schema on every call!
-    s = yang.compile(src_yang())
-    return yang.gen3.from_data(s, jd, loose=True, root_path=root_path)
-
-def from_json_path_gen3(jd: dict[str, ?value], path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
-    s = yang.compile(src_yang())
-    return yang.gen3.from_json_path(s, jd, path, op, loose=True)
-
-def prsrc_gen3(data, self_name='ad'):
-    # WARNING: this wrapper for the gen3.prsrc schema-driven parser compiles the schema on every call!
-    s = yang.compile(src_yang())
-    return yang.gen3.pradata(s, data, self_name, loose=True)
+def prsrc(data, self_name='ad'):
+    return yang.gen3.pradata(src_dnode(), data, self_name, loose=True)
 
 schema_namespaces: set[str] = {
     'http://orchestron.org/yang/orchestron-device.yang',

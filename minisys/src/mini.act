@@ -70,9 +70,7 @@ actor main(env):
 
     log = logging.Logger(logh)
 
-    print("Compiling schema...")
-    top_schema = yang.compile(mini.layers.y_0.src_yang())
-    print("Schema compile done")
+    top_schema = mini.layers.y_0.src_dnode()
 
     dev_registry = odev.DeviceRegistry(mini.sysspec.device_types, env.cap, logh_dev)
     cfs = mini.layers.get_layers(dev_registry, logh_ttt)

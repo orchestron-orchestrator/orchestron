@@ -97,7 +97,7 @@ class MockRoot(yang.adata.MNode):
     mut def from_gdata(self, gdata: ?yang.gdata.Node=None) -> yang.adata.MNode:
         return MockRoot()
 
-    mut def prsrc(self, self_name='ad', top=False, list_element=False) -> str:
+    mut def prsrc(self, self_name='ad') -> str:
         return f"{self_name}.{self._name}"
 
 class DeviceError(Exception):
