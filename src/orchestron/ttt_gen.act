@@ -2,12 +2,6 @@
 import yang
 import yang.schema as schema
 
-def get_list_name(sn: schema.DList) -> str:
-    sn_parent = sn.parent
-    if sn_parent is not None:
-        return sn.name
-    raise NotImplementedError("List without parent")
-
 def get_key_types(sn: schema.DList) -> list[str]:
     key_types = []
     for kn in sn.key:
@@ -29,7 +23,7 @@ class TTTSrc(object):
         self.base_defs = base_defs
         self.act_defs = act_defs
 
-def children_to_tttsrc(sn: schema.DNodeInner) -> TTTSrc:
+def children_to_tttsrc(sn: schema.DNodeInner, spath: list[schema.DNode]) -> TTTSrc:
     input_classes = []
     state_classes = []
     deserializers = []
@@ -41,7 +35,7 @@ def children_to_tttsrc(sn: schema.DNodeInner) -> TTTSrc:
     for child in sn.children:
         if isinstance(child, schema.DLeaf):
             continue
-        res = dschema_to_tttsrc(child, set_ns=child.namespace!=sn.namespace)
+        res = dschema_to_tttsrc(child, spath + [child], set_ns=child.namespace!=sn.namespace)
         input_classes.extend(res.input_classes)
         state_classes.extend(res.state_classes)
         deserializers.extend(res.deserializers)
@@ -53,7 +47,7 @@ def children_to_tttsrc(sn: schema.DNodeInner) -> TTTSrc:
     children_src = ", ".join(elems)
     return TTTSrc(src=children_src, input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
-def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
+def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set_ns=True) -> TTTSrc:
     input_classes = []
     state_classes = []
     deserializers = []
@@ -80,7 +74,7 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
                         transform_module = ".".join(transform.split(".")[:-1])
                         transform_name = transform.split(".")[-1]
                         imports.append("import %s" % transform_module)
-                        input_class = schema.get_path_name(sn)
+                        input_class = schema.get_path_name(spath)
                         if isinstance(sn, schema.DList):
                             input_class += "_entry"
                         input_classes.append(input_class)
@@ -93,12 +87,12 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
                                     if subextprefix is not None and subextprefix == "orchestron":
                                         subextname = subext.name
                                         if subextname == "memory":
-                                            _memory_class: str = schema.get_path_name(child)
+                                            _memory_class: str = schema.get_path_name(spath + [child])
                                             state_classes.append(_memory_class)
                                             input_classes.append(_memory_class)
                                             memory_class = _memory_class
                                         elif subextname == "dynstate":
-                                            _dynstate_class: str = schema.get_path_name(child)
+                                            _dynstate_class: str = schema.get_path_name(spath + [child])
                                             state_classes.append(input_class)
                                             state_classes.append(_dynstate_class)
                                             input_classes.append(_dynstate_class)
@@ -136,7 +130,7 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
                         else:
                             wrapper_return = "return self.transform(modeled_input%s).to_gdata(), None" % wrapper_extra_params
 
-                        deserializer = f"from_xml_{schema.get_path_name(sn)}"
+                        deserializer = f"from_xml_{schema.get_path_name(spath)}"
                         # TODO: align with adata names, like _entry above?
                         if isinstance(sn, schema.DList):
                             deserializer += "_element"
@@ -205,7 +199,7 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
                     return TTTSrc(src="ttt.List(ttt.DeviceConfig(dev_registry, log_handler), {repr(sn.key)}, {repr(get_key_types(sn))}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, deserializers=deserializers, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
         # List without an extension
-        children_res = children_to_tttsrc(sn)
+        children_res = children_to_tttsrc(sn, spath)
         input_classes.extend(children_res.input_classes)
         state_classes.extend(children_res.state_classes)
         deserializers.extend(children_res.deserializers)
@@ -217,7 +211,7 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
 
     elif isinstance(sn, schema.DNodeInner):
         sn_children = sn.children
-        children_res = children_to_tttsrc(sn)
+        children_res = children_to_tttsrc(sn, spath)
         input_classes.extend(children_res.input_classes)
         state_classes.extend(children_res.state_classes)
         deserializers.extend(children_res.deserializers)
@@ -230,7 +224,7 @@ def dschema_to_tttsrc(sn: schema.DNode, indent=0, set_ns=True) -> TTTSrc:
     raise NotImplementedError(f"Unhandled schema type: {type(sn)}")
 
 def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str) -> (base: str, ttt: str):
-    ts = dschema_to_tttsrc(sn)
+    ts = dschema_to_tttsrc(sn, [sn])
 
     base_src = "# WARNING WARNING WARNING WARNING WARNING\n"
     base_src += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
