@@ -9,25 +9,25 @@ import yang.gdata as gdata
 cfg1 = gdata.List(["name"], [
     gdata.Container({
         "name": gdata.Leaf("string", "k1"),
-        "n1": gdata.Leaf("int", 1),
-        "n2": gdata.Leaf("int", 2)
+        "n1": gdata.Leaf("int", bigint(1)),
+        "n2": gdata.Leaf("int", bigint(2))
     }),
     gdata.Container({
         "name": gdata.Leaf("string", "k2"),
-        "n1": gdata.Leaf("int", 4)
+        "n1": gdata.Leaf("int", bigint(4))
     })
 ])
 
 cfg2 = gdata.List(["name"], [
     gdata.Container({
         "name": gdata.Leaf("string", "k1"),
-        "n2": gdata.Leaf("int", 2),
-        "n3": gdata.Leaf("int", 3)
+        "n2": gdata.Leaf("int", bigint(2)),
+        "n3": gdata.Leaf("int", bigint(3))
     }),
     gdata.Container({
         "name": gdata.Leaf("string", "k3"),
-        "n1": gdata.Leaf("int", 1),
-        "n3": gdata.Leaf("int", 3)
+        "n1": gdata.Leaf("int", bigint(1)),
+        "n3": gdata.Leaf("int", bigint(3))
     })
 ])
 
@@ -35,12 +35,12 @@ out1 = gdata.Container({
     'devices': gdata.List(["id"], [
         gdata.Container({
             "id": gdata.Leaf("string", "k1"),
-            "n1": gdata.Leaf("int", 1),
-            "n2": gdata.Leaf("int", 2)
+            "n1": gdata.Leaf("int", bigint(1)),
+            "n2": gdata.Leaf("int", bigint(2))
         }),
         gdata.Container({
             "id": gdata.Leaf("string", "k2"),
-            "n1": gdata.Leaf("int", 4)
+            "n1": gdata.Leaf("int", bigint(4))
         })
     ])
 })
@@ -49,18 +49,18 @@ out1_2 = gdata.Container({
     'devices': gdata.List(["id"], [
         gdata.Container({
             "id": gdata.Leaf("string", "k1"),
-            "n1": gdata.Leaf("int", 1),
-            "n2": gdata.Leaf("int", 2),
-            "n3": gdata.Leaf("int", 3)
+            "n1": gdata.Leaf("int", bigint(1)),
+            "n2": gdata.Leaf("int", bigint(2)),
+            "n3": gdata.Leaf("int", bigint(3))
         }),
         gdata.Container({
             "id": gdata.Leaf("string", "k3"),
-            "n1": gdata.Leaf("int", 1),
-            "n3": gdata.Leaf("int", 3)
+            "n1": gdata.Leaf("int", bigint(1)),
+            "n3": gdata.Leaf("int", bigint(3))
         }),
         gdata.Container({
             "id": gdata.Leaf("string", "k2"),
-            "n1": gdata.Leaf("int", 4)
+            "n1": gdata.Leaf("int", bigint(4))
         })
     ])
 })
@@ -148,34 +148,34 @@ actor simultaneous_commit(t: testing.AsyncT):
 
 cfg3 = gdata.Container({
     "left": gdata.Container({
-        "a": gdata.Leaf("int", 1)
+        "a": gdata.Leaf("int", bigint(1))
     }),
     "right": gdata.Container({
-        "a": gdata.Leaf("int", 2)
+        "a": gdata.Leaf("int", bigint(2))
     })
 })
 
 out3 = gdata.Container({
     'devices': gdata.List(["id"], [
         gdata.Container({
-            "id": gdata.Leaf("int", 1),
-            "val": gdata.Leaf("int", 1)
+            "id": gdata.Leaf("int", bigint(1)),
+            "val": gdata.Leaf("int", bigint(1))
         }),
         gdata.Container({
-            "id": gdata.Leaf("int", 2),
-            "val": gdata.Leaf("int", 2)
+            "id": gdata.Leaf("int", bigint(2)),
+            "val": gdata.Leaf("int", bigint(2))
         })
     ])
 })
 
 class WriteDev(ttt.TransformFunction):
     def transform_wrapper(self, cfg: gdata.Node, memory, dynstate):
-        i = cfg.get_int("a")
+        i = cfg.get_bigint("a")
         return gdata.Container({
             'devices': gdata.List(["id"], [
                 gdata.Container({
-                    "id": gdata.Leaf("int", i),
-                    "val": gdata.Leaf("int", i)
+                    "id": gdata.Leaf("int", bigint(i)),
+                    "val": gdata.Leaf("int", bigint(i))
                 })
             ])
         }), None
@@ -200,20 +200,20 @@ actor diamond_commit(t: testing.AsyncT):
 ########################
 
 cfg4 = gdata.Container({
-    "ll": gdata.Leaf("int", 1),
-    "rr": gdata.Leaf("int", 2)
+    "ll": gdata.Leaf("int", bigint(1)),
+    "rr": gdata.Leaf("int", bigint(2))
 })
 
 class ServiceMap(ttt.TransformFunction):
     def transform_wrapper(self, cfg, memory, dynstate):
-        ll = cfg.get_int("ll")
-        rr = cfg.get_int("rr")
+        ll = cfg.get_bigint("ll")
+        rr = cfg.get_bigint("rr")
         return gdata.Container({
             "left": gdata.Container({
-                "a": gdata.Leaf("int", ll)
+                "a": gdata.Leaf("int", bigint(ll))
             }),
             "right": gdata.Container({
-                "a": gdata.Leaf("int", rr)
+                "a": gdata.Leaf("int", bigint(rr))
             })
         }), None
 
@@ -241,15 +241,15 @@ actor multi_layer(t: testing.AsyncT):
 ########################
 
 cfg5 = gdata.Container({
-    "a": gdata.Leaf("int", 1),
+    "a": gdata.Leaf("int", bigint(1)),
 })
 
 cfg6 = gdata.Container({
-    "a": gdata.Leaf("int", 2),
+    "a": gdata.Leaf("int", bigint(2)),
 })
 
 out5 = gdata.Container({
-    "b": gdata.Leaf("int", 3),
+    "b": gdata.Leaf("int", bigint(3)),
 })
 
 

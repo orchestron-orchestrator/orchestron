@@ -5,11 +5,14 @@ import yang
 import yang.adata
 import yang.gdata
 import yang.gen3
+from yang.gdata import repr_yang
 from yang.identity import complete_and_validate_identityref
 from yang.identityref import Identityref, PartialIdentityref
 from yang.schema import DIdentity
 
 # == This file is generated ==
+
+
 
 
 _identities: list[DIdentity] = []
@@ -548,10 +551,10 @@ mut def from_data_netinfra__netinfra__router__type(val: value) -> yang.gdata.Lea
 
 class netinfra__netinfra__router_entry(yang.adata.MNode):
     name: str
-    id: int
+    id: bigint
     type: str
 
-    mut def __init__(self, name: str, id: int, type: str):
+    mut def __init__(self, name: str, id: bigint, type: str):
         self._ns = 'http://example.com/netinfra'
         self.name = name
         self.id = id
@@ -572,7 +575,7 @@ class netinfra__netinfra__router_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> netinfra__netinfra__router_entry:
-        return netinfra__netinfra__router_entry(name=n.get_str('name'), id=n.get_int('id'), type=n.get_str('type'))
+        return netinfra__netinfra__router_entry(name=n.get_str('name'), id=n.get_bigint('id'), type=n.get_str('type'))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -582,7 +585,7 @@ class netinfra__netinfra__router_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /netinfra/router')
-            res.append('{self_name} = netinfra__netinfra__router({repr(self.name)}, {repr(self.id)}, {repr(self.type)})')
+            res.append('{self_name} = netinfra__netinfra__router({repr_yang(self.name)}, {repr_yang(self.id)}, {repr_yang(self.type)})')
         leaves = []
         if leaves:
             if not list_element:
@@ -648,7 +651,7 @@ mut def from_xml_netinfra__netinfra__router_element(node: xml.Node) -> yang.gdat
     children = {}
     child_name = yang.gdata.from_xml_str(node, 'name')
     yang.gdata.maybe_add(children, 'name', from_data_netinfra__netinfra__router__name, child_name)
-    child_id = yang.gdata.from_xml_int(node, 'id')
+    child_id = yang.gdata.from_xml_bigint(node, 'id')
     yang.gdata.maybe_add(children, 'id', from_data_netinfra__netinfra__router__id, child_id)
     child_type = yang.gdata.from_xml_str(node, 'type')
     yang.gdata.maybe_add(children, 'type', from_data_netinfra__netinfra__router__type, child_type)
@@ -711,7 +714,7 @@ mut def from_json_netinfra__netinfra__router_element(jd: dict[str, ?value]) -> y
     children = {}
     child_name = yang.gdata.take_json_str(jd, 'name')
     yang.gdata.maybe_add(children, 'name', from_data_netinfra__netinfra__router__name, child_name)
-    child_id = yang.gdata.take_json_int(jd, 'id')
+    child_id = yang.gdata.take_json_bigint(jd, 'id')
     yang.gdata.maybe_add(children, 'id', from_data_netinfra__netinfra__router__id, child_id)
     child_type = yang.gdata.take_json_str(jd, 'type')
     yang.gdata.maybe_add(children, 'type', from_data_netinfra__netinfra__router__type, child_type)
@@ -758,7 +761,7 @@ class netinfra__netinfra__foo_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /netinfra/foo')
-            res.append('{self_name} = netinfra__netinfra__foo({repr(self.router)}, {repr(self.name)})')
+            res.append('{self_name} = netinfra__netinfra__foo({repr_yang(self.router)}, {repr_yang(self.name)})')
         leaves = []
         if leaves:
             if not list_element:
@@ -932,14 +935,14 @@ class netinfra__netinfra(yang.adata.MNode):
         for _element in _router:
             res.append('')
             res.append("# List /netinfra/router element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'router_element = {self_name}.router.create({repr(_element.name)}, {repr(_element.id)}, {repr(_element.type)})'
+            list_elem = 'router_element = {self_name}.router.create({repr_yang(_element.name)}, {repr_yang(_element.id)}, {repr_yang(_element.type)})'
             res.append(list_elem)
             res.extend(_element.prsrc('router_element', False, list_element=True).splitlines())
         _foo = self.foo
         for _element in _foo:
             res.append('')
             res.append("# List /netinfra/foo element: {_element.to_gdata().key_str(['router', 'name'])}")
-            list_elem = 'foo_element = {self_name}.foo.create({repr(_element.router)}, {repr(_element.name)})'
+            list_elem = 'foo_element = {self_name}.foo.create({repr_yang(_element.router)}, {repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('foo_element', False, list_element=True).splitlines())
         if leaves:

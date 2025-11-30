@@ -5,11 +5,14 @@ import yang
 import yang.adata
 import yang.gdata
 import yang.gen3
+from yang.gdata import repr_yang
 from yang.identity import complete_and_validate_identityref
 from yang.identityref import Identityref, PartialIdentityref
 from yang.schema import DIdentity
 
 # == This file is generated ==
+
+
 
 
 _base_ietf_system_authentication_method = DIdentity(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='authentication-method', base=[])
@@ -2411,11 +2414,11 @@ class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /nacm/groups/group')
-            res.append('{self_name} = ietf_netconf_acm__nacm__groups__group({repr(self.name)})')
+            res.append('{self_name} = ietf_netconf_acm__nacm__groups__group({repr_yang(self.name)})')
         leaves = []
         _user_name = self.user_name
         if len(_user_name) != 0:
-            leaves.append('{self_name}.user_name = {repr(_user_name)}')
+            leaves.append('{self_name}.user_name = {repr_yang(_user_name)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /nacm/groups/group'] + leaves + res
@@ -2522,7 +2525,7 @@ class ietf_netconf_acm__nacm__groups(yang.adata.MNode):
         for _element in _group:
             res.append('')
             res.append("# List /nacm/groups/group element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'group_element = {self_name}.group.create({repr(_element.name)})'
+            list_elem = 'group_element = {self_name}.group.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('group_element', False, list_element=True).splitlines())
         if leaves:
@@ -2635,29 +2638,29 @@ class ietf_netconf_acm__nacm__rule_list__rule_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /nacm/rule-list/rule')
-            res.append('{self_name} = ietf_netconf_acm__nacm__rule_list__rule({repr(self.name)})')
+            res.append('{self_name} = ietf_netconf_acm__nacm__rule_list__rule({repr_yang(self.name)})')
         leaves = []
         _module_name = self.module_name
         if _module_name is not None:
-            leaves.append('{self_name}.module_name = {repr(_module_name)}')
+            leaves.append('{self_name}.module_name = {repr_yang(_module_name)}')
         _rpc_name = self.rpc_name
         if _rpc_name is not None:
-            leaves.append('{self_name}.rpc_name = {repr(_rpc_name)}')
+            leaves.append('{self_name}.rpc_name = {repr_yang(_rpc_name)}')
         _notification_name = self.notification_name
         if _notification_name is not None:
-            leaves.append('{self_name}.notification_name = {repr(_notification_name)}')
+            leaves.append('{self_name}.notification_name = {repr_yang(_notification_name)}')
         _path = self.path
         if _path is not None:
-            leaves.append('{self_name}.path = {repr(_path)}')
+            leaves.append('{self_name}.path = {repr_yang(_path)}')
         _access_operations = self.access_operations
         if _access_operations is not None:
-            leaves.append('{self_name}.access_operations = {repr(_access_operations)}')
+            leaves.append('{self_name}.access_operations = {repr_yang(_access_operations)}')
         _action_ = self.action_
         if _action_ is not None:
-            leaves.append('{self_name}.action_ = {repr(_action_)}')
+            leaves.append('{self_name}.action_ = {repr_yang(_action_)}')
         _comment = self.comment
         if _comment is not None:
-            leaves.append('{self_name}.comment = {repr(_comment)}')
+            leaves.append('{self_name}.comment = {repr_yang(_comment)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /nacm/rule-list/rule'] + leaves + res
@@ -2778,16 +2781,16 @@ class ietf_netconf_acm__nacm__rule_list_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /nacm/rule-list')
-            res.append('{self_name} = ietf_netconf_acm__nacm__rule_list({repr(self.name)})')
+            res.append('{self_name} = ietf_netconf_acm__nacm__rule_list({repr_yang(self.name)})')
         leaves = []
         _group = self.group
         if len(_group) != 0:
-            leaves.append('{self_name}.group = {repr(_group)}')
+            leaves.append('{self_name}.group = {repr_yang(_group)}')
         _rule = self.rule
         for _element in _rule:
             res.append('')
             res.append("# List /nacm/rule-list/rule element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'rule_element = {self_name}.rule.create({repr(_element.name)})'
+            list_elem = 'rule_element = {self_name}.rule.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('rule_element', False, list_element=True).splitlines())
         if leaves:
@@ -2926,19 +2929,19 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
         leaves = []
         _enable_nacm = self.enable_nacm
         if _enable_nacm is not None:
-            leaves.append('{self_name}.enable_nacm = {repr(_enable_nacm)}')
+            leaves.append('{self_name}.enable_nacm = {repr_yang(_enable_nacm)}')
         _read_default = self.read_default
         if _read_default is not None:
-            leaves.append('{self_name}.read_default = {repr(_read_default)}')
+            leaves.append('{self_name}.read_default = {repr_yang(_read_default)}')
         _write_default = self.write_default
         if _write_default is not None:
-            leaves.append('{self_name}.write_default = {repr(_write_default)}')
+            leaves.append('{self_name}.write_default = {repr_yang(_write_default)}')
         _exec_default = self.exec_default
         if _exec_default is not None:
-            leaves.append('{self_name}.exec_default = {repr(_exec_default)}')
+            leaves.append('{self_name}.exec_default = {repr_yang(_exec_default)}')
         _enable_external_groups = self.enable_external_groups
         if _enable_external_groups is not None:
-            leaves.append('{self_name}.enable_external_groups = {repr(_enable_external_groups)}')
+            leaves.append('{self_name}.enable_external_groups = {repr_yang(_enable_external_groups)}')
         _groups = self.groups
         if _groups is not None:
             res.extend(_groups.prsrc('{self_name}.groups', False).splitlines())
@@ -2946,7 +2949,7 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
         for _element in _rule_list:
             res.append('')
             res.append("# List /nacm/rule-list element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'rule_list_element = {self_name}.rule_list.create({repr(_element.name)})'
+            list_elem = 'rule_list_element = {self_name}.rule_list.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('rule_list_element', False, list_element=True).splitlines())
         if leaves:
@@ -2997,9 +3000,9 @@ mut def from_data_ietf_system__system__clock__timezone_utc_offset(val: value) ->
 
 class ietf_system__system__clock(yang.adata.MNode):
     timezone_name: ?str
-    timezone_utc_offset: ?int
+    timezone_utc_offset: ?bigint
 
-    mut def __init__(self, timezone_name: ?str, timezone_utc_offset: ?int):
+    mut def __init__(self, timezone_name: ?str, timezone_utc_offset: ?bigint):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.timezone_name = timezone_name
         self.timezone_utc_offset = timezone_utc_offset
@@ -3017,7 +3020,7 @@ class ietf_system__system__clock(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__clock:
         if n is not None:
-            return ietf_system__system__clock(timezone_name=n.get_opt_str('timezone-name'), timezone_utc_offset=n.get_opt_int('timezone-utc-offset'))
+            return ietf_system__system__clock(timezone_name=n.get_opt_str('timezone-name'), timezone_utc_offset=n.get_opt_bigint('timezone-utc-offset'))
         return ietf_system__system__clock()
 
     def copy(self):
@@ -3032,10 +3035,10 @@ class ietf_system__system__clock(yang.adata.MNode):
         leaves = []
         _timezone_name = self.timezone_name
         if _timezone_name is not None:
-            leaves.append('{self_name}.timezone_name = {repr(_timezone_name)}')
+            leaves.append('{self_name}.timezone_name = {repr_yang(_timezone_name)}')
         _timezone_utc_offset = self.timezone_utc_offset
         if _timezone_utc_offset is not None:
-            leaves.append('{self_name}.timezone_utc_offset = {repr(_timezone_utc_offset)}')
+            leaves.append('{self_name}.timezone_utc_offset = {repr_yang(_timezone_utc_offset)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /system/clock'] + leaves + res
@@ -3053,7 +3056,7 @@ mut def from_xml_ietf_system__system__clock(node: xml.Node) -> yang.gdata.Contai
     children = {}
     child_timezone_name = yang.gdata.from_xml_opt_str(node, 'timezone-name')
     yang.gdata.maybe_add(children, 'timezone-name', from_data_ietf_system__system__clock__timezone_name, child_timezone_name)
-    child_timezone_utc_offset = yang.gdata.from_xml_opt_int(node, 'timezone-utc-offset')
+    child_timezone_utc_offset = yang.gdata.from_xml_opt_bigint(node, 'timezone-utc-offset')
     yang.gdata.maybe_add(children, 'timezone-utc-offset', from_data_ietf_system__system__clock__timezone_utc_offset, child_timezone_utc_offset)
     return yang.gdata.Container(children)
 
@@ -3071,9 +3074,9 @@ mut def from_data_ietf_system__system__ntp__server__udp__port(val: value) -> yan
 
 class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     address: ?str
-    port: ?int
+    port: ?bigint
 
-    mut def __init__(self, address: ?str, port: ?int):
+    mut def __init__(self, address: ?str, port: ?bigint):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.address = address
         self.port = port
@@ -3091,7 +3094,7 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__ntp__server__udp:
         if n is not None:
-            return ietf_system__system__ntp__server__udp(address=n.get_opt_str('address'), port=n.get_opt_int('port'))
+            return ietf_system__system__ntp__server__udp(address=n.get_opt_str('address'), port=n.get_opt_bigint('port'))
         raise ValueError('Missing required subtree ietf_system__system__ntp__server__udp')
 
     def copy(self):
@@ -3106,10 +3109,10 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
         leaves = []
         _address = self.address
         if _address is not None:
-            leaves.append('{self_name}.address = {repr(_address)}')
+            leaves.append('{self_name}.address = {repr_yang(_address)}')
         _port = self.port
         if _port is not None:
-            leaves.append('{self_name}.port = {repr(_port)}')
+            leaves.append('{self_name}.port = {repr_yang(_port)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /system/ntp/server/udp'] + leaves + res
@@ -3127,7 +3130,7 @@ mut def from_xml_ietf_system__system__ntp__server__udp(node: xml.Node) -> yang.g
     children = {}
     child_address = yang.gdata.from_xml_opt_str(node, 'address')
     yang.gdata.maybe_add(children, 'address', from_data_ietf_system__system__ntp__server__udp__address, child_address)
-    child_port = yang.gdata.from_xml_opt_int(node, 'port')
+    child_port = yang.gdata.from_xml_opt_bigint(node, 'port')
     yang.gdata.maybe_add(children, 'port', from_data_ietf_system__system__ntp__server__udp__port, child_port)
     return yang.gdata.Container(children)
 
@@ -3186,20 +3189,20 @@ class ietf_system__system__ntp__server_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /system/ntp/server')
-            res.append('{self_name} = ietf_system__system__ntp__server({repr(self.name)})')
+            res.append('{self_name} = ietf_system__system__ntp__server({repr_yang(self.name)})')
         leaves = []
         _udp = self.udp
         if _udp is not None:
             res.extend(_udp.prsrc('{self_name}.udp', False).splitlines())
         _association_type = self.association_type
         if _association_type is not None:
-            leaves.append('{self_name}.association_type = {repr(_association_type)}')
+            leaves.append('{self_name}.association_type = {repr_yang(_association_type)}')
         _iburst = self.iburst
         if _iburst is not None:
-            leaves.append('{self_name}.iburst = {repr(_iburst)}')
+            leaves.append('{self_name}.iburst = {repr_yang(_iburst)}')
         _prefer = self.prefer
         if _prefer is not None:
-            leaves.append('{self_name}.prefer = {repr(_prefer)}')
+            leaves.append('{self_name}.prefer = {repr_yang(_prefer)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /system/ntp/server'] + leaves + res
@@ -3318,12 +3321,12 @@ class ietf_system__system__ntp(yang.adata.MNode):
         leaves = []
         _enabled = self.enabled
         if _enabled is not None:
-            leaves.append('{self_name}.enabled = {repr(_enabled)}')
+            leaves.append('{self_name}.enabled = {repr_yang(_enabled)}')
         _server = self.server
         for _element in _server:
             res.append('')
             res.append("# List /system/ntp/server element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'server_element = {self_name}.server.create({repr(_element.name)})'
+            list_elem = 'server_element = {self_name}.server.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('server_element', False, list_element=True).splitlines())
         if leaves:
@@ -3361,9 +3364,9 @@ mut def from_data_ietf_system__system__dns_resolver__server__udp_and_tcp__port(v
 
 class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     address: ?str
-    port: ?int
+    port: ?bigint
 
-    mut def __init__(self, address: ?str, port: ?int):
+    mut def __init__(self, address: ?str, port: ?bigint):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.address = address
         self.port = port
@@ -3381,7 +3384,7 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__server__udp_and_tcp:
         if n is not None:
-            return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str('address'), port=n.get_opt_int('port'))
+            return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str('address'), port=n.get_opt_bigint('port'))
         raise ValueError('Missing required subtree ietf_system__system__dns_resolver__server__udp_and_tcp')
 
     def copy(self):
@@ -3396,10 +3399,10 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
         leaves = []
         _address = self.address
         if _address is not None:
-            leaves.append('{self_name}.address = {repr(_address)}')
+            leaves.append('{self_name}.address = {repr_yang(_address)}')
         _port = self.port
         if _port is not None:
-            leaves.append('{self_name}.port = {repr(_port)}')
+            leaves.append('{self_name}.port = {repr_yang(_port)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /system/dns-resolver/server/udp-and-tcp'] + leaves + res
@@ -3417,7 +3420,7 @@ mut def from_xml_ietf_system__system__dns_resolver__server__udp_and_tcp(node: xm
     children = {}
     child_address = yang.gdata.from_xml_opt_str(node, 'address')
     yang.gdata.maybe_add(children, 'address', from_data_ietf_system__system__dns_resolver__server__udp_and_tcp__address, child_address)
-    child_port = yang.gdata.from_xml_opt_int(node, 'port')
+    child_port = yang.gdata.from_xml_opt_bigint(node, 'port')
     yang.gdata.maybe_add(children, 'port', from_data_ietf_system__system__dns_resolver__server__udp_and_tcp__port, child_port)
     return yang.gdata.Container(children)
 
@@ -3452,7 +3455,7 @@ class ietf_system__system__dns_resolver__server_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /system/dns-resolver/server')
-            res.append('{self_name} = ietf_system__system__dns_resolver__server({repr(self.name)})')
+            res.append('{self_name} = ietf_system__system__dns_resolver__server({repr_yang(self.name)})')
         leaves = []
         _udp_and_tcp = self.udp_and_tcp
         if _udp_and_tcp is not None:
@@ -3536,10 +3539,10 @@ mut def from_data_ietf_system__system__dns_resolver__options__attempts(val: valu
     return yang.gdata.Leaf('uint8', val)
 
 class ietf_system__system__dns_resolver__options(yang.adata.MNode):
-    timeout: ?int
-    attempts: ?int
+    timeout: ?bigint
+    attempts: ?bigint
 
-    mut def __init__(self, timeout: ?int, attempts: ?int):
+    mut def __init__(self, timeout: ?bigint, attempts: ?bigint):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.timeout = timeout
         self.attempts = attempts
@@ -3557,7 +3560,7 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__options:
         if n is not None:
-            return ietf_system__system__dns_resolver__options(timeout=n.get_opt_int('timeout'), attempts=n.get_opt_int('attempts'))
+            return ietf_system__system__dns_resolver__options(timeout=n.get_opt_bigint('timeout'), attempts=n.get_opt_bigint('attempts'))
         return ietf_system__system__dns_resolver__options()
 
     def copy(self):
@@ -3572,10 +3575,10 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
         leaves = []
         _timeout = self.timeout
         if _timeout is not None:
-            leaves.append('{self_name}.timeout = {repr(_timeout)}')
+            leaves.append('{self_name}.timeout = {repr_yang(_timeout)}')
         _attempts = self.attempts
         if _attempts is not None:
-            leaves.append('{self_name}.attempts = {repr(_attempts)}')
+            leaves.append('{self_name}.attempts = {repr_yang(_attempts)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /system/dns-resolver/options'] + leaves + res
@@ -3591,9 +3594,9 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
 
 mut def from_xml_ietf_system__system__dns_resolver__options(node: xml.Node) -> yang.gdata.Container:
     children = {}
-    child_timeout = yang.gdata.from_xml_opt_int(node, 'timeout')
+    child_timeout = yang.gdata.from_xml_opt_bigint(node, 'timeout')
     yang.gdata.maybe_add(children, 'timeout', from_data_ietf_system__system__dns_resolver__options__timeout, child_timeout)
-    child_attempts = yang.gdata.from_xml_opt_int(node, 'attempts')
+    child_attempts = yang.gdata.from_xml_opt_bigint(node, 'attempts')
     yang.gdata.maybe_add(children, 'attempts', from_data_ietf_system__system__dns_resolver__options__attempts, child_attempts)
     return yang.gdata.Container(children)
 
@@ -3639,12 +3642,12 @@ class ietf_system__system__dns_resolver(yang.adata.MNode):
         leaves = []
         _search = self.search
         if len(_search) != 0:
-            leaves.append('{self_name}.search = {repr(_search)}')
+            leaves.append('{self_name}.search = {repr_yang(_search)}')
         _server = self.server
         for _element in _server:
             res.append('')
             res.append("# List /system/dns-resolver/server element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'server_element = {self_name}.server.create({repr(_element.name)})'
+            list_elem = 'server_element = {self_name}.server.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('server_element', False, list_element=True).splitlines())
         _options = self.options
@@ -3687,10 +3690,10 @@ mut def from_data_ietf_system__system__radius__server__udp__shared_secret(val: v
 
 class ietf_system__system__radius__server__udp(yang.adata.MNode):
     address: ?str
-    authentication_port: ?int
+    authentication_port: ?bigint
     shared_secret: ?str
 
-    mut def __init__(self, address: ?str, authentication_port: ?int, shared_secret: ?str):
+    mut def __init__(self, address: ?str, authentication_port: ?bigint, shared_secret: ?str):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.address = address
         self.authentication_port = authentication_port
@@ -3712,7 +3715,7 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__server__udp:
         if n is not None:
-            return ietf_system__system__radius__server__udp(address=n.get_opt_str('address'), authentication_port=n.get_opt_int('authentication-port'), shared_secret=n.get_opt_str('shared-secret'))
+            return ietf_system__system__radius__server__udp(address=n.get_opt_str('address'), authentication_port=n.get_opt_bigint('authentication-port'), shared_secret=n.get_opt_str('shared-secret'))
         raise ValueError('Missing required subtree ietf_system__system__radius__server__udp')
 
     def copy(self):
@@ -3727,13 +3730,13 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
         leaves = []
         _address = self.address
         if _address is not None:
-            leaves.append('{self_name}.address = {repr(_address)}')
+            leaves.append('{self_name}.address = {repr_yang(_address)}')
         _authentication_port = self.authentication_port
         if _authentication_port is not None:
-            leaves.append('{self_name}.authentication_port = {repr(_authentication_port)}')
+            leaves.append('{self_name}.authentication_port = {repr_yang(_authentication_port)}')
         _shared_secret = self.shared_secret
         if _shared_secret is not None:
-            leaves.append('{self_name}.shared_secret = {repr(_shared_secret)}')
+            leaves.append('{self_name}.shared_secret = {repr_yang(_shared_secret)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /system/radius/server/udp'] + leaves + res
@@ -3751,7 +3754,7 @@ mut def from_xml_ietf_system__system__radius__server__udp(node: xml.Node) -> yan
     children = {}
     child_address = yang.gdata.from_xml_opt_str(node, 'address')
     yang.gdata.maybe_add(children, 'address', from_data_ietf_system__system__radius__server__udp__address, child_address)
-    child_authentication_port = yang.gdata.from_xml_opt_int(node, 'authentication-port')
+    child_authentication_port = yang.gdata.from_xml_opt_bigint(node, 'authentication-port')
     yang.gdata.maybe_add(children, 'authentication-port', from_data_ietf_system__system__radius__server__udp__authentication_port, child_authentication_port)
     child_shared_secret = yang.gdata.from_xml_opt_str(node, 'shared-secret')
     yang.gdata.maybe_add(children, 'shared-secret', from_data_ietf_system__system__radius__server__udp__shared_secret, child_shared_secret)
@@ -3805,14 +3808,14 @@ class ietf_system__system__radius__server_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /system/radius/server')
-            res.append('{self_name} = ietf_system__system__radius__server({repr(self.name)})')
+            res.append('{self_name} = ietf_system__system__radius__server({repr_yang(self.name)})')
         leaves = []
         _udp = self.udp
         if _udp is not None:
             res.extend(_udp.prsrc('{self_name}.udp', False).splitlines())
         _authentication_type = self.authentication_type
         if _authentication_type is not None:
-            leaves.append('{self_name}.authentication_type = {repr(_authentication_type)}')
+            leaves.append('{self_name}.authentication_type = {repr_yang(_authentication_type)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /system/radius/server'] + leaves + res
@@ -3894,10 +3897,10 @@ mut def from_data_ietf_system__system__radius__options__attempts(val: value) -> 
     return yang.gdata.Leaf('uint8', val)
 
 class ietf_system__system__radius__options(yang.adata.MNode):
-    timeout: ?int
-    attempts: ?int
+    timeout: ?bigint
+    attempts: ?bigint
 
-    mut def __init__(self, timeout: ?int, attempts: ?int):
+    mut def __init__(self, timeout: ?bigint, attempts: ?bigint):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.timeout = timeout
         self.attempts = attempts
@@ -3915,7 +3918,7 @@ class ietf_system__system__radius__options(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__options:
         if n is not None:
-            return ietf_system__system__radius__options(timeout=n.get_opt_int('timeout'), attempts=n.get_opt_int('attempts'))
+            return ietf_system__system__radius__options(timeout=n.get_opt_bigint('timeout'), attempts=n.get_opt_bigint('attempts'))
         return ietf_system__system__radius__options()
 
     def copy(self):
@@ -3930,10 +3933,10 @@ class ietf_system__system__radius__options(yang.adata.MNode):
         leaves = []
         _timeout = self.timeout
         if _timeout is not None:
-            leaves.append('{self_name}.timeout = {repr(_timeout)}')
+            leaves.append('{self_name}.timeout = {repr_yang(_timeout)}')
         _attempts = self.attempts
         if _attempts is not None:
-            leaves.append('{self_name}.attempts = {repr(_attempts)}')
+            leaves.append('{self_name}.attempts = {repr_yang(_attempts)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /system/radius/options'] + leaves + res
@@ -3949,9 +3952,9 @@ class ietf_system__system__radius__options(yang.adata.MNode):
 
 mut def from_xml_ietf_system__system__radius__options(node: xml.Node) -> yang.gdata.Container:
     children = {}
-    child_timeout = yang.gdata.from_xml_opt_int(node, 'timeout')
+    child_timeout = yang.gdata.from_xml_opt_bigint(node, 'timeout')
     yang.gdata.maybe_add(children, 'timeout', from_data_ietf_system__system__radius__options__timeout, child_timeout)
-    child_attempts = yang.gdata.from_xml_opt_int(node, 'attempts')
+    child_attempts = yang.gdata.from_xml_opt_bigint(node, 'attempts')
     yang.gdata.maybe_add(children, 'attempts', from_data_ietf_system__system__radius__options__attempts, child_attempts)
     return yang.gdata.Container(children)
 
@@ -3994,7 +3997,7 @@ class ietf_system__system__radius(yang.adata.MNode):
         for _element in _server:
             res.append('')
             res.append("# List /system/radius/server element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'server_element = {self_name}.server.create({repr(_element.name)})'
+            list_elem = 'server_element = {self_name}.server.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('server_element', False, list_element=True).splitlines())
         _options = self.options
@@ -4082,14 +4085,14 @@ class ietf_system__system__authentication__user__authorized_key_entry(yang.adata
         res = []
         if top:
             res.append('# Top node: /system/authentication/user/authorized-key')
-            res.append('{self_name} = ietf_system__system__authentication__user__authorized_key({repr(self.name)})')
+            res.append('{self_name} = ietf_system__system__authentication__user__authorized_key({repr_yang(self.name)})')
         leaves = []
         _algorithm = self.algorithm
         if _algorithm is not None:
-            leaves.append('{self_name}.algorithm = {repr(_algorithm)}')
+            leaves.append('{self_name}.algorithm = {repr_yang(_algorithm)}')
         _key_data = self.key_data
         if _key_data is not None:
-            leaves.append('{self_name}.key_data = {repr(_key_data)}')
+            leaves.append('{self_name}.key_data = {repr_yang(_key_data)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /system/authentication/user/authorized-key'] + leaves + res
@@ -4200,16 +4203,16 @@ class ietf_system__system__authentication__user_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /system/authentication/user')
-            res.append('{self_name} = ietf_system__system__authentication__user({repr(self.name)})')
+            res.append('{self_name} = ietf_system__system__authentication__user({repr_yang(self.name)})')
         leaves = []
         _password = self.password
         if _password is not None:
-            leaves.append('{self_name}.password = {repr(_password)}')
+            leaves.append('{self_name}.password = {repr_yang(_password)}')
         _authorized_key = self.authorized_key
         for _element in _authorized_key:
             res.append('')
             res.append("# List /system/authentication/user/authorized-key element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'authorized_key_element = {self_name}.authorized_key.create({repr(_element.name)})'
+            list_elem = 'authorized_key_element = {self_name}.authorized_key.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('authorized_key_element', False, list_element=True).splitlines())
         if leaves:
@@ -4331,12 +4334,12 @@ class ietf_system__system__authentication(yang.adata.MNode):
         leaves = []
         _user_authentication_order = self.user_authentication_order
         if len(_user_authentication_order) != 0:
-            leaves.append('{self_name}.user_authentication_order = {repr(_user_authentication_order)}')
+            leaves.append('{self_name}.user_authentication_order = {repr_yang(_user_authentication_order)}')
         _user = self.user
         for _element in _user:
             res.append('')
             res.append("# List /system/authentication/user element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'user_element = {self_name}.user.create({repr(_element.name)})'
+            list_elem = 'user_element = {self_name}.user.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('user_element', False, list_element=True).splitlines())
         if leaves:
@@ -4435,13 +4438,13 @@ class ietf_system__system(yang.adata.MNode):
         leaves = []
         _contact = self.contact
         if _contact is not None:
-            leaves.append('{self_name}.contact = {repr(_contact)}')
+            leaves.append('{self_name}.contact = {repr_yang(_contact)}')
         _hostname = self.hostname
         if _hostname is not None:
-            leaves.append('{self_name}.hostname = {repr(_hostname)}')
+            leaves.append('{self_name}.hostname = {repr_yang(_hostname)}')
         _location = self.location
         if _location is not None:
-            leaves.append('{self_name}.location = {repr(_location)}')
+            leaves.append('{self_name}.location = {repr_yang(_location)}')
         _clock = self.clock
         if _clock is not None:
             res.extend(_clock.prsrc('{self_name}.clock', False).splitlines())
@@ -4590,7 +4593,7 @@ class ietf_system__set_current_datetime__input(yang.adata.MNode):
         leaves = []
         _current_datetime = self.current_datetime
         if _current_datetime is not None:
-            leaves.append('{self_name}.current_datetime = {repr(_current_datetime)}')
+            leaves.append('{self_name}.current_datetime = {repr_yang(_current_datetime)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /set-current-datetime/input'] + leaves + res

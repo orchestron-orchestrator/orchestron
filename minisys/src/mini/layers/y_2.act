@@ -5,11 +5,14 @@ import yang
 import yang.adata
 import yang.gdata
 import yang.gen3
+from yang.gdata import repr_yang
 from yang.identity import complete_and_validate_identityref
 from yang.identityref import Identityref, PartialIdentityref
 from yang.schema import DIdentity
 
 # == This file is generated ==
+
+
 
 
 _identities: list[DIdentity] = []
@@ -85,11 +88,11 @@ class orchestron_device__devices__device_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /devices/device')
-            res.append('{self_name} = orchestron_device__devices__device({repr(self.name)})')
+            res.append('{self_name} = orchestron_device__devices__device({repr_yang(self.name)})')
         leaves = []
         _modset_id = self.modset_id
         if _modset_id is not None:
-            leaves.append('{self_name}.modset_id = {repr(_modset_id)}')
+            leaves.append('{self_name}.modset_id = {repr_yang(_modset_id)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /devices/device'] + leaves + res
@@ -255,7 +258,7 @@ class orchestron_device__devices(yang.adata.MNode):
         for _element in _device:
             res.append('')
             res.append("# List /devices/device element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'device_element = {self_name}.device.create({repr(_element.name)})'
+            list_elem = 'device_element = {self_name}.device.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('device_element', False, list_element=True).splitlines())
         if leaves:

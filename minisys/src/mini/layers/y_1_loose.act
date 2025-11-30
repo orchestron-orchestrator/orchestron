@@ -5,11 +5,14 @@ import yang
 import yang.adata
 import yang.gdata
 import yang.gen3
+from yang.gdata import repr_yang
 from yang.identity import complete_and_validate_identityref
 from yang.identityref import Identityref, PartialIdentityref
 from yang.schema import DIdentity
 
 # == This file is generated ==
+
+
 
 
 _identities: list[DIdentity] = []
@@ -726,7 +729,7 @@ class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNod
         res = []
         if top:
             res.append('# Top node: /device/address/initial-credentials')
-            res.append('{self_name} = orchestron_rfs__device__address__initial_credentials({repr(self.username)}, {repr(self.password)}, {repr(self.key)})')
+            res.append('{self_name} = orchestron_rfs__device__address__initial_credentials({repr_yang(self.username)}, {repr_yang(self.password)}, {repr_yang(self.key)})')
         leaves = []
         if leaves:
             if not list_element:
@@ -872,10 +875,10 @@ mut def from_json_orchestron_rfs__device__address__initial_credentials(jd: list[
 class orchestron_rfs__device__address_entry(yang.adata.MNode):
     name: str
     address: ?str
-    port: ?int
+    port: ?bigint
     initial_credentials: orchestron_rfs__device__address__initial_credentials
 
-    mut def __init__(self, name: str, address: ?str, port: ?int, initial_credentials: list[orchestron_rfs__device__address__initial_credentials_entry]=[]):
+    mut def __init__(self, name: str, address: ?str, port: ?bigint, initial_credentials: list[orchestron_rfs__device__address__initial_credentials_entry]=[]):
         self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
         self.name = name
         self.address = address
@@ -900,7 +903,7 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
-        return orchestron_rfs__device__address_entry(name=n.get_str('name'), address=n.get_opt_str('address'), port=n.get_opt_int('port'), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')))
+        return orchestron_rfs__device__address_entry(name=n.get_str('name'), address=n.get_opt_str('address'), port=n.get_opt_bigint('port'), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list('initial-credentials')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -910,19 +913,19 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /device/address')
-            res.append('{self_name} = orchestron_rfs__device__address({repr(self.name)})')
+            res.append('{self_name} = orchestron_rfs__device__address({repr_yang(self.name)})')
         leaves = []
         _address = self.address
         if _address is not None:
-            leaves.append('{self_name}.address = {repr(_address)}')
+            leaves.append('{self_name}.address = {repr_yang(_address)}')
         _port = self.port
         if _port is not None:
-            leaves.append('{self_name}.port = {repr(_port)}')
+            leaves.append('{self_name}.port = {repr_yang(_port)}')
         _initial_credentials = self.initial_credentials
         for _element in _initial_credentials:
             res.append('')
             res.append("# List /device/address/initial-credentials element: {_element.to_gdata().key_str(['username', 'password', 'key'])}")
-            list_elem = 'initial_credentials_element = {self_name}.initial_credentials.create({repr(_element.username)}, {repr(_element.password)}, {repr(_element.key)})'
+            list_elem = 'initial_credentials_element = {self_name}.initial_credentials.create({repr_yang(_element.username)}, {repr_yang(_element.password)}, {repr_yang(_element.key)})'
             res.append(list_elem)
             res.extend(_element.prsrc('initial_credentials_element', False, list_element=True).splitlines())
         if leaves:
@@ -991,7 +994,7 @@ mut def from_xml_orchestron_rfs__device__address_element(node: xml.Node) -> yang
     yang.gdata.maybe_add(children, 'name', from_data_orchestron_rfs__device__address__name, child_name)
     child_address = yang.gdata.from_xml_opt_str(node, 'address')
     yang.gdata.maybe_add(children, 'address', from_data_orchestron_rfs__device__address__address, child_address)
-    child_port = yang.gdata.from_xml_opt_int(node, 'port')
+    child_port = yang.gdata.from_xml_opt_bigint(node, 'port')
     yang.gdata.maybe_add(children, 'port', from_data_orchestron_rfs__device__address__port, child_port)
     child_initial_credentials = yang.gdata.from_xml_opt_list(node, 'initial-credentials')
     yang.gdata.maybe_add(children, 'initial-credentials', from_xml_orchestron_rfs__device__address__initial_credentials, child_initial_credentials)
@@ -1058,7 +1061,7 @@ mut def from_json_orchestron_rfs__device__address_element(jd: dict[str, ?value])
     yang.gdata.maybe_add(children, 'name', from_data_orchestron_rfs__device__address__name, child_name)
     child_address = yang.gdata.take_json_opt_str(jd, 'address')
     yang.gdata.maybe_add(children, 'address', from_data_orchestron_rfs__device__address__address, child_address)
-    child_port = yang.gdata.take_json_opt_int(jd, 'port')
+    child_port = yang.gdata.take_json_opt_bigint(jd, 'port')
     yang.gdata.maybe_add(children, 'port', from_data_orchestron_rfs__device__address__port, child_port)
     child_initial_credentials = yang.gdata.take_json_opt_list(jd, 'initial-credentials')
     yang.gdata.maybe_add(children, 'initial-credentials', from_json_orchestron_rfs__device__address__initial_credentials, child_initial_credentials)
@@ -1111,11 +1114,11 @@ class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /device/credentials/key')
-            res.append('{self_name} = orchestron_rfs__device__credentials__key({repr(self.key)})')
+            res.append('{self_name} = orchestron_rfs__device__credentials__key({repr_yang(self.key)})')
         leaves = []
         _private_key = self.private_key
         if _private_key is not None:
-            leaves.append('{self_name}.private_key = {repr(_private_key)}')
+            leaves.append('{self_name}.private_key = {repr_yang(_private_key)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /device/credentials/key'] + leaves + res
@@ -1289,15 +1292,15 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
         leaves = []
         _username = self.username
         if _username is not None:
-            leaves.append('{self_name}.username = {repr(_username)}')
+            leaves.append('{self_name}.username = {repr_yang(_username)}')
         _password = self.password
         if _password is not None:
-            leaves.append('{self_name}.password = {repr(_password)}')
+            leaves.append('{self_name}.password = {repr_yang(_password)}')
         _key = self.key
         for _element in _key:
             res.append('')
             res.append("# List /device/credentials/key element: {_element.to_gdata().key_str(['key'])}")
-            list_elem = 'key_element = {self_name}.key.create({repr(_element.key)})'
+            list_elem = 'key_element = {self_name}.key.create({repr_yang(_element.key)})'
             res.append(list_elem)
             res.extend(_element.prsrc('key_element', False, list_element=True).splitlines())
         if leaves:
@@ -1399,7 +1402,7 @@ class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /device/initial-credentials')
-            res.append('{self_name} = orchestron_rfs__device__initial_credentials({repr(self.username)}, {repr(self.password)}, {repr(self.key)})')
+            res.append('{self_name} = orchestron_rfs__device__initial_credentials({repr_yang(self.username)}, {repr_yang(self.password)}, {repr_yang(self.key)})')
         leaves = []
         if leaves:
             if not list_element:
@@ -1601,17 +1604,17 @@ class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /device/mock/module')
-            res.append('{self_name} = orchestron_rfs__device__mock__module({repr(self.name)})')
+            res.append('{self_name} = orchestron_rfs__device__mock__module({repr_yang(self.name)})')
         leaves = []
         _namespace = self.namespace
         if _namespace is not None:
-            leaves.append('{self_name}.namespace = {repr(_namespace)}')
+            leaves.append('{self_name}.namespace = {repr_yang(_namespace)}')
         _revision = self.revision
         if _revision is not None:
-            leaves.append('{self_name}.revision = {repr(_revision)}')
+            leaves.append('{self_name}.revision = {repr_yang(_revision)}')
         _feature = self.feature
         if len(_feature) != 0:
-            leaves.append('{self_name}.feature = {repr(_feature)}')
+            leaves.append('{self_name}.feature = {repr_yang(_feature)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /device/mock/module'] + leaves + res
@@ -1792,12 +1795,12 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
         leaves = []
         _preset = self.preset
         if len(_preset) != 0:
-            leaves.append('{self_name}.preset = {repr(_preset)}')
+            leaves.append('{self_name}.preset = {repr_yang(_preset)}')
         _module = self.module
         for _element in _module:
             res.append('')
             res.append("# List /device/mock/module element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'module_element = {self_name}.module.create({repr(_element.name)})'
+            list_elem = 'module_element = {self_name}.module.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('module_element', False, list_element=True).splitlines())
         if leaves:
@@ -1883,7 +1886,7 @@ class orchestron_rfs__device__debug(yang.adata.MNode):
         leaves = []
         _connection = self.connection
         if _connection is not None:
-            leaves.append('{self_name}.connection = {repr(_connection)}')
+            leaves.append('{self_name}.connection = {repr_yang(_connection)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /device/debug'] + leaves + res
@@ -1991,19 +1994,19 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /device')
-            res.append('{self_name} = orchestron_rfs__device({repr(self.name)})')
+            res.append('{self_name} = orchestron_rfs__device({repr_yang(self.name)})')
         leaves = []
         _description = self.description
         if _description is not None:
-            leaves.append('{self_name}.description = {repr(_description)}')
+            leaves.append('{self_name}.description = {repr_yang(_description)}')
         _type = self.type
         if _type is not None:
-            leaves.append('{self_name}.type = {repr(_type)}')
+            leaves.append('{self_name}.type = {repr_yang(_type)}')
         _address = self.address
         for _element in _address:
             res.append('')
             res.append("# List /device/address element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'address_element = {self_name}.address.create({repr(_element.name)})'
+            list_elem = 'address_element = {self_name}.address.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('address_element', False, list_element=True).splitlines())
         _credentials = self.credentials
@@ -2013,12 +2016,12 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         for _element in _initial_credentials:
             res.append('')
             res.append("# List /device/initial-credentials element: {_element.to_gdata().key_str(['username', 'password', 'key'])}")
-            list_elem = 'initial_credentials_element = {self_name}.initial_credentials.create({repr(_element.username)}, {repr(_element.password)}, {repr(_element.key)})'
+            list_elem = 'initial_credentials_element = {self_name}.initial_credentials.create({repr_yang(_element.username)}, {repr_yang(_element.password)}, {repr_yang(_element.key)})'
             res.append(list_elem)
             res.extend(_element.prsrc('initial_credentials_element', False, list_element=True).splitlines())
         _approval_required = self.approval_required
         if _approval_required is not None:
-            leaves.append('{self_name}.approval_required = {repr(_approval_required)}')
+            leaves.append('{self_name}.approval_required = {repr_yang(_approval_required)}')
         _mock = self.mock
         if _mock is not None:
             res.extend(_mock.prsrc('{self_name}.mock', False).splitlines())
@@ -2238,11 +2241,11 @@ class orchestron_rfs__rfs__base_config_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /rfs/base-config')
-            res.append('{self_name} = orchestron_rfs__rfs__base_config({repr(self.name)})')
+            res.append('{self_name} = orchestron_rfs__rfs__base_config({repr_yang(self.name)})')
         leaves = []
         _ipv4_address = self.ipv4_address
         if _ipv4_address is not None:
-            leaves.append('{self_name}.ipv4_address = {repr(_ipv4_address)}')
+            leaves.append('{self_name}.ipv4_address = {repr_yang(_ipv4_address)}')
         if leaves:
             if not list_element:
                res = ['', '# Container: /rfs/base-config'] + leaves + res
@@ -2403,7 +2406,7 @@ class orchestron_rfs__rfs__bar_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /rfs/bar')
-            res.append('{self_name} = orchestron_rfs__rfs__bar({repr(self.name)})')
+            res.append('{self_name} = orchestron_rfs__rfs__bar({repr_yang(self.name)})')
         leaves = []
         if leaves:
             if not list_element:
@@ -2566,20 +2569,20 @@ class orchestron_rfs__rfs_entry(yang.adata.MNode):
         res = []
         if top:
             res.append('# Top node: /rfs')
-            res.append('{self_name} = orchestron_rfs__rfs({repr(self.name)})')
+            res.append('{self_name} = orchestron_rfs__rfs({repr_yang(self.name)})')
         leaves = []
         _base_config = self.base_config
         for _element in _base_config:
             res.append('')
             res.append("# List /rfs/base-config element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'base_config_element = {self_name}.base_config.create({repr(_element.name)})'
+            list_elem = 'base_config_element = {self_name}.base_config.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('base_config_element', False, list_element=True).splitlines())
         _bar = self.bar
         for _element in _bar:
             res.append('')
             res.append("# List /rfs/bar element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'bar_element = {self_name}.bar.create({repr(_element.name)})'
+            list_elem = 'bar_element = {self_name}.bar.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('bar_element', False, list_element=True).splitlines())
         if leaves:
@@ -2758,14 +2761,14 @@ class root(yang.adata.MNode):
         for _element in _device:
             res.append('')
             res.append("# List /device element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'device_element = {self_name}.device.create({repr(_element.name)})'
+            list_elem = 'device_element = {self_name}.device.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('device_element', False, list_element=True).splitlines())
         _rfs = self.rfs
         for _element in _rfs:
             res.append('')
             res.append("# List /rfs element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'rfs_element = {self_name}.rfs.create({repr(_element.name)})'
+            list_elem = 'rfs_element = {self_name}.rfs.create({repr_yang(_element.name)})'
             res.append(list_elem)
             res.extend(_element.prsrc('rfs_element', False, list_element=True).splitlines())
         if leaves:
