@@ -7,9 +7,10 @@ import xml
 import orchestron.ttt as ttt
 import yang.adata
 import yang.gdata
+import yang.gen3
 
 from respnet.layers.y_1 import orchestron_rfs__rfs__backbone_interface_entry
-from respnet.layers.y_1 import from_xml
+from respnet.layers.y_1 import src_dnode
 from  import root as output_root
 
 def o_root():
@@ -36,7 +37,7 @@ class BBInterface(ttt.RFSFunction):
         """Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         """
-        gdata_input = from_xml(i, ['orchestron-rfs:rfs', 'foo:backbone-interface'])
+        gdata_input = yang.gen3.from_data(src_dnode(), i, loose=True, root_path=['orchestron-rfs:rfs', 'foo:backbone-interface'])
         modeled_input = orchestron_rfs__rfs__backbone_interface_entry.from_gdata(gdata_input)
 
         return self.transform(modeled_input, device_info).to_gdata(), None

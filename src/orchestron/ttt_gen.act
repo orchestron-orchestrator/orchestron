@@ -149,7 +149,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         \"\"\"Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         \"\"\"
-        gdata_input = from_xml(i, {deserializer})
+        gdata_input = yang.gen3.from_data(src_dnode(), i, loose=False, root_path={deserializer})
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
@@ -175,7 +175,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         \"\"\"Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         \"\"\"
-        gdata_input = from_xml(i, {deserializer})
+        gdata_input = yang.gen3.from_data(src_dnode(), i, loose=True, root_path={deserializer})
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
@@ -221,10 +221,10 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     base_src = "# WARNING WARNING WARNING WARNING WARNING\n"
     base_src += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
     base_src += "# WARNING WARNING WARNING WARNING WARNING\n\n"
-    base_src += "import logging\nimport xml\nimport orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
+    base_src += "import logging\nimport xml\nimport orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\nimport yang.gen3\n\n"
     for ic in ts.input_classes:
         base_src += f"from {input_yang_module} import {ic}\n"
-    base_src += f"from {input_yang_module} import from_xml\n"
+    base_src += "from {input_yang_module} import src_dnode\n"
 
     if output_yang_module is not None:
         base_src += f"from {output_yang_module} import root as output_root\n\n"

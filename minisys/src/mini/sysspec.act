@@ -5,8 +5,6 @@ device_types: dict[str, odev.DeviceType] = {
     "ietf": odev.DeviceType(name="ietf",
             adapter_type=odev.NetconfAdapter,
             schema_namespaces=mini.devices.ietf.schema_namespaces,
-            root=mini.devices.ietf.root,
-            from_gdata=mini.devices.ietf.root.from_gdata,
-            from_xml=mini.devices.ietf.from_xml
+            src_dnode=mini.devices.ietf.src_dnode,
         ),
 }
