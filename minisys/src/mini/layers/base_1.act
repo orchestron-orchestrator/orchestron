@@ -10,8 +10,7 @@ import yang.gdata
 
 from mini.layers.y_1 import orchestron_rfs__rfs__base_config_entry
 from mini.layers.y_1 import orchestron_rfs__rfs__bar_entry
-from mini.layers.y_1 import from_xml_orchestron_rfs__rfs__base_config_element
-from mini.layers.y_1 import from_xml_orchestron_rfs__rfs__bar_element
+from mini.layers.y_1 import from_xml
 from mini.layers.y_2_loose import root as output_root
 
 def o_root():
@@ -38,7 +37,7 @@ class BaseConfig(ttt.RFSFunction):
         """Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         """
-        gdata_input = from_xml_orchestron_rfs__rfs__base_config_element(i)
+        gdata_input = from_xml(i, ['orchestron-rfs:rfs', 'mini-rfs:base-config'])
         modeled_input = orchestron_rfs__rfs__base_config_entry.from_gdata(gdata_input)
 
         return self.transform(modeled_input, device_info).to_gdata(), None
@@ -63,7 +62,7 @@ class Bar(ttt.RFSFunction):
         """Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         """
-        gdata_input = from_xml_orchestron_rfs__rfs__bar_element(i)
+        gdata_input = from_xml(i, ['orchestron-rfs:rfs', 'mini-rfs:bar'])
         modeled_input = orchestron_rfs__rfs__bar_entry.from_gdata(gdata_input)
 
         return self.transform(modeled_input, device_info).to_gdata(), None

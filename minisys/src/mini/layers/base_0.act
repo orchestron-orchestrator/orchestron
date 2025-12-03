@@ -10,8 +10,7 @@ import yang.gdata
 
 from mini.layers.y_0 import netinfra__netinfra__router_entry
 from mini.layers.y_0 import netinfra__netinfra__foo_entry
-from mini.layers.y_0 import from_xml_netinfra__netinfra__router_element
-from mini.layers.y_0 import from_xml_netinfra__netinfra__foo_element
+from mini.layers.y_0 import from_xml
 from mini.layers.y_1_loose import root as output_root
 
 def o_root():
@@ -38,7 +37,7 @@ class Router(ttt.TransformFunction):
         """Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         """
-        gdata_input = from_xml_netinfra__netinfra__router_element(i)
+        gdata_input = from_xml(i, ['netinfra:netinfra', 'router'])
         modeled_input = netinfra__netinfra__router_entry.from_gdata(gdata_input)
 
         return self.transform(modeled_input).to_gdata(), None
@@ -63,7 +62,7 @@ class Foo(ttt.TransformFunction):
         """Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         """
-        gdata_input = from_xml_netinfra__netinfra__foo_element(i)
+        gdata_input = from_xml(i, ['netinfra:netinfra', 'foo'])
         modeled_input = netinfra__netinfra__foo_entry.from_gdata(gdata_input)
 
         return self.transform(modeled_input).to_gdata(), None

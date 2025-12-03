@@ -8,7 +8,7 @@ import yang.gen3
 from yang.gdata import repr_yang
 from yang.identity import complete_and_validate_identityref
 from yang.identityref import Identityref, PartialIdentityref
-from yang.schema import DIdentity
+from yang.schema import *
 
 # == This file is generated ==
 
@@ -540,15 +540,6 @@ def src_yang():
     return res
 
 
-mut def from_data_netinfra__netinfra__router__name(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
-mut def from_data_netinfra__netinfra__router__id(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('uint32', val)
-
-mut def from_data_netinfra__netinfra__router__type(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
 class netinfra__netinfra__router_entry(yang.adata.MNode):
     name: str
     id: bigint
@@ -560,18 +551,19 @@ class netinfra__netinfra__router_entry(yang.adata.MNode):
         self.id = id
         self.type = type
 
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'name':
+            return self.name
+        if name == 'id':
+            return self.id
+        if name == 'type':
+            return self.type
+        raise ValueError('Attribute {name} not found in netinfra__netinfra__router')
+
     mut def to_gdata(self) -> yang.gdata.Node:
-        children = {}
-        _name = self.name
-        if _name is not None:
-            children['name'] = yang.gdata.Leaf('string', _name)
-        _id = self.id
-        if _id is not None:
-            children['id'] = yang.gdata.Leaf('uint32', _id)
-        _type = self.type
-        if _type is not None:
-            children['type'] = yang.gdata.Leaf('string', _type)
-        return yang.gdata.Container(children)
+        if isinstance(self, yang.adata.MNode):
+            return yang.gen3.from_data(src_dnode(), self, loose=False, root_path=['netinfra:netinfra', 'router'])
+        raise ValueError('unreachable')
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> netinfra__netinfra__router_entry:
@@ -581,23 +573,8 @@ class netinfra__netinfra__router_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return netinfra__netinfra__router_entry.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad', top=True, list_element=False):
-        res = []
-        if top:
-            res.append('# Top node: /netinfra/router')
-            res.append('{self_name} = netinfra__netinfra__router({repr_yang(self.name)}, {repr_yang(self.id)}, {repr_yang(self.type)})')
-        leaves = []
-        if leaves:
-            if not list_element:
-               res = ['', '# Container: /netinfra/router'] + leaves + res
-            else:
-                res = leaves + res
-        return '\n'.join(res)
-
-    def prsrc_gen3(self, self_name='ad'):
-        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
-        s = yang.compile(src_yang())
-        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['netinfra:netinfra', 'router'])
+    def prsrc(self, self_name='ad'):
+        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['netinfra:netinfra', 'router'])
 
 class netinfra__netinfra__router(yang.adata.MNode):
     elements: list[netinfra__netinfra__router_entry]
@@ -619,14 +596,6 @@ class netinfra__netinfra__router(yang.adata.MNode):
         self.elements.append(res)
         return res
 
-    mut def to_gdata(self):
-        elements = []
-        for e in self:
-            e_gdata = e.to_gdata()
-            if isinstance(e_gdata, yang.gdata.Container):
-                elements.append(e_gdata)
-        return yang.gdata.List(['name'], elements)
-
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.List) -> list[netinfra__netinfra__router_entry]:
         if n is not None:
@@ -647,89 +616,6 @@ extension netinfra__netinfra__router(Iterable[netinfra__netinfra__router_entry])
     def __iter__(self) -> Iterator[netinfra__netinfra__router_entry]:
         return self.elements.__iter__()
 
-mut def from_xml_netinfra__netinfra__router_element(node: xml.Node) -> yang.gdata.Node:
-    children = {}
-    child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_data_netinfra__netinfra__router__name, child_name)
-    child_id = yang.gdata.from_xml_bigint(node, 'id')
-    yang.gdata.maybe_add(children, 'id', from_data_netinfra__netinfra__router__id, child_id)
-    child_type = yang.gdata.from_xml_str(node, 'type')
-    yang.gdata.maybe_add(children, 'type', from_data_netinfra__netinfra__router__type, child_type)
-    return yang.gdata.Container(children)
-
-mut def from_xml_netinfra__netinfra__router(nodes: list[xml.Node]) -> yang.gdata.List:
-    elements = [from_xml_netinfra__netinfra__router_element(e) for e in nodes]
-    return yang.gdata.List(keys=['name'], elements=elements)
-
-mut def from_json_path_netinfra__netinfra__router_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
-    if len(path) == 1:
-        point = path[0]
-        keys = point.split(",")
-        jd_dict = yang.gdata.unwrap_dict(jd)
-        val = from_json_netinfra__netinfra__router_element(jd_dict)
-        if op == "merge":
-            return val
-        elif op == "remove":
-            return yang.gdata.Absent(val.key_children(['name']))
-        raise ValueError("Invalid operation")
-    elif len(path) > 1:
-        keys = path[0].split(",")
-        point = path[1]
-        rest_path = path[2:]
-        children: dict[str, yang.gdata.Node] = {}
-        children['name'] = from_data_netinfra__netinfra__router__name(keys[0])
-        if point == 'id':
-            raise ValueError("Invalid json path to non-inner node")
-        if point == 'type':
-            raise ValueError("Invalid json path to non-inner node")
-        return yang.gdata.Container(children)
-    raise ValueError("unreachable - no keys to list element")
-
-mut def from_json_path_netinfra__netinfra__router(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
-    if len(path) == 1:
-        point = path[0]
-        keys = point.split(",")
-        jd_dict = yang.gdata.unwrap_dict(jd)
-        # Check that all keys are present in payload.
-        # If present, they must equal the keys in the path
-        # If not present, fill in from path
-        for key in ['name']:
-            if key not in jd_dict:
-                jd_dict[key] = keys.pop(0)
-            else:
-                if str(jd_dict[key]) != keys.pop(0):
-                    raise ValueError("Key value mismatch between path and payload")
-        element = from_json_netinfra__netinfra__router_element(jd_dict)
-        elements = []
-        if op == "merge":
-            elements.append(element)
-        elif op == "remove":
-            elements.append(yang.gdata.Absent(element.key_children(['name'])))
-        return yang.gdata.List(['name'], elements)
-    elif len(path) > 1:
-        return yang.gdata.List(['name'], [from_json_path_netinfra__netinfra__router_element(jd, path, op)])
-    raise ValueError("Unable to resolve path, no keys provided")
-
-mut def from_json_netinfra__netinfra__router_element(jd: dict[str, ?value]) -> yang.gdata.Node:
-    children = {}
-    child_name = yang.gdata.take_json_str(jd, 'name')
-    yang.gdata.maybe_add(children, 'name', from_data_netinfra__netinfra__router__name, child_name)
-    child_id = yang.gdata.take_json_bigint(jd, 'id')
-    yang.gdata.maybe_add(children, 'id', from_data_netinfra__netinfra__router__id, child_id)
-    child_type = yang.gdata.take_json_str(jd, 'type')
-    yang.gdata.maybe_add(children, 'type', from_data_netinfra__netinfra__router__type, child_type)
-    return yang.gdata.Container(children)
-
-mut def from_json_netinfra__netinfra__router(jd: list[dict[str, ?value]]) -> yang.gdata.List:
-    elements = [from_json_netinfra__netinfra__router_element(e) for e in jd if isinstance(e, dict)]
-    return yang.gdata.List(keys=['name'], elements=elements)
-
-mut def from_data_netinfra__netinfra__foo__router(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
-mut def from_data_netinfra__netinfra__foo__name(val: value) -> yang.gdata.Leaf:
-    return yang.gdata.Leaf('string', val)
-
 class netinfra__netinfra__foo_entry(yang.adata.MNode):
     router: str
     name: str
@@ -739,15 +625,17 @@ class netinfra__netinfra__foo_entry(yang.adata.MNode):
         self.router = router
         self.name = name
 
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'router':
+            return self.router
+        if name == 'name':
+            return self.name
+        raise ValueError('Attribute {name} not found in netinfra__netinfra__foo')
+
     mut def to_gdata(self) -> yang.gdata.Node:
-        children = {}
-        _router = self.router
-        if _router is not None:
-            children['router'] = yang.gdata.Leaf('string', _router)
-        _name = self.name
-        if _name is not None:
-            children['name'] = yang.gdata.Leaf('string', _name)
-        return yang.gdata.Container(children)
+        if isinstance(self, yang.adata.MNode):
+            return yang.gen3.from_data(src_dnode(), self, loose=False, root_path=['netinfra:netinfra', 'foo'])
+        raise ValueError('unreachable')
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> netinfra__netinfra__foo_entry:
@@ -757,23 +645,8 @@ class netinfra__netinfra__foo_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return netinfra__netinfra__foo_entry.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad', top=True, list_element=False):
-        res = []
-        if top:
-            res.append('# Top node: /netinfra/foo')
-            res.append('{self_name} = netinfra__netinfra__foo({repr_yang(self.router)}, {repr_yang(self.name)})')
-        leaves = []
-        if leaves:
-            if not list_element:
-               res = ['', '# Container: /netinfra/foo'] + leaves + res
-            else:
-                res = leaves + res
-        return '\n'.join(res)
-
-    def prsrc_gen3(self, self_name='ad'):
-        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
-        s = yang.compile(src_yang())
-        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['netinfra:netinfra', 'foo'])
+    def prsrc(self, self_name='ad'):
+        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['netinfra:netinfra', 'foo'])
 
 class netinfra__netinfra__foo(yang.adata.MNode):
     elements: list[netinfra__netinfra__foo_entry]
@@ -798,14 +671,6 @@ class netinfra__netinfra__foo(yang.adata.MNode):
         self.elements.append(res)
         return res
 
-    mut def to_gdata(self):
-        elements = []
-        for e in self:
-            e_gdata = e.to_gdata()
-            if isinstance(e_gdata, yang.gdata.Container):
-                elements.append(e_gdata)
-        return yang.gdata.List(['router', 'name'], elements)
-
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.List) -> list[netinfra__netinfra__foo_entry]:
         if n is not None:
@@ -826,76 +691,6 @@ extension netinfra__netinfra__foo(Iterable[netinfra__netinfra__foo_entry]):
     def __iter__(self) -> Iterator[netinfra__netinfra__foo_entry]:
         return self.elements.__iter__()
 
-mut def from_xml_netinfra__netinfra__foo_element(node: xml.Node) -> yang.gdata.Node:
-    children = {}
-    child_router = yang.gdata.from_xml_str(node, 'router')
-    yang.gdata.maybe_add(children, 'router', from_data_netinfra__netinfra__foo__router, child_router)
-    child_name = yang.gdata.from_xml_str(node, 'name')
-    yang.gdata.maybe_add(children, 'name', from_data_netinfra__netinfra__foo__name, child_name)
-    return yang.gdata.Container(children)
-
-mut def from_xml_netinfra__netinfra__foo(nodes: list[xml.Node]) -> yang.gdata.List:
-    elements = [from_xml_netinfra__netinfra__foo_element(e) for e in nodes]
-    return yang.gdata.List(keys=['router', 'name'], elements=elements)
-
-mut def from_json_path_netinfra__netinfra__foo_element(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
-    if len(path) == 1:
-        point = path[0]
-        keys = point.split(",")
-        jd_dict = yang.gdata.unwrap_dict(jd)
-        val = from_json_netinfra__netinfra__foo_element(jd_dict)
-        if op == "merge":
-            return val
-        elif op == "remove":
-            return yang.gdata.Absent(val.key_children(['router', 'name']))
-        raise ValueError("Invalid operation")
-    elif len(path) > 1:
-        keys = path[0].split(",")
-        point = path[1]
-        rest_path = path[2:]
-        children: dict[str, yang.gdata.Node] = {}
-        children['router'] = from_data_netinfra__netinfra__foo__router(keys[0])
-        children['name'] = from_data_netinfra__netinfra__foo__name(keys[1])
-        return yang.gdata.Container(children)
-    raise ValueError("unreachable - no keys to list element")
-
-mut def from_json_path_netinfra__netinfra__foo(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.List:
-    if len(path) == 1:
-        point = path[0]
-        keys = point.split(",")
-        jd_dict = yang.gdata.unwrap_dict(jd)
-        # Check that all keys are present in payload.
-        # If present, they must equal the keys in the path
-        # If not present, fill in from path
-        for key in ['router', 'name']:
-            if key not in jd_dict:
-                jd_dict[key] = keys.pop(0)
-            else:
-                if str(jd_dict[key]) != keys.pop(0):
-                    raise ValueError("Key value mismatch between path and payload")
-        element = from_json_netinfra__netinfra__foo_element(jd_dict)
-        elements = []
-        if op == "merge":
-            elements.append(element)
-        elif op == "remove":
-            elements.append(yang.gdata.Absent(element.key_children(['router', 'name'])))
-        return yang.gdata.List(['router', 'name'], elements)
-    elif len(path) > 1:
-        return yang.gdata.List(['router', 'name'], [from_json_path_netinfra__netinfra__foo_element(jd, path, op)])
-    raise ValueError("Unable to resolve path, no keys provided")
-
-mut def from_json_netinfra__netinfra__foo_element(jd: dict[str, ?value]) -> yang.gdata.Node:
-    children = {}
-    child_router = yang.gdata.take_json_str(jd, 'router')
-    yang.gdata.maybe_add(children, 'router', from_data_netinfra__netinfra__foo__router, child_router)
-    child_name = yang.gdata.take_json_str(jd, 'name')
-    yang.gdata.maybe_add(children, 'name', from_data_netinfra__netinfra__foo__name, child_name)
-    return yang.gdata.Container(children)
-
-mut def from_json_netinfra__netinfra__foo(jd: list[dict[str, ?value]]) -> yang.gdata.List:
-    elements = [from_json_netinfra__netinfra__foo_element(e) for e in jd if isinstance(e, dict)]
-    return yang.gdata.List(keys=['router', 'name'], elements=elements)
-
 class netinfra__netinfra(yang.adata.MNode):
     router: netinfra__netinfra__router
     foo: netinfra__netinfra__foo
@@ -905,15 +700,17 @@ class netinfra__netinfra(yang.adata.MNode):
         self.router = netinfra__netinfra__router(elements=router)
         self.foo = netinfra__netinfra__foo(elements=foo)
 
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'router':
+            return iter(self.router)
+        if name == 'foo':
+            return iter(self.foo)
+        raise ValueError('Attribute {name} not found in netinfra__netinfra')
+
     mut def to_gdata(self) -> yang.gdata.Node:
-        children = {}
-        _router = self.router
-        if _router is not None:
-            children['router'] = _router.to_gdata()
-        _foo = self.foo
-        if _foo is not None:
-            children['foo'] = _foo.to_gdata()
-        return yang.gdata.Container(children, ns='http://example.com/netinfra', module='netinfra')
+        if isinstance(self, yang.adata.MNode):
+            return yang.gen3.from_data(src_dnode(), self, loose=False, root_path=['netinfra:netinfra'])
+        raise ValueError('unreachable')
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> netinfra__netinfra:
@@ -925,74 +722,9 @@ class netinfra__netinfra(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return netinfra__netinfra.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad', top=True, list_element=False):
-        res = []
-        if top:
-            res.append('# Top node: /netinfra')
-            res.append('{self_name} = netinfra__netinfra()')
-        leaves = []
-        _router = self.router
-        for _element in _router:
-            res.append('')
-            res.append("# List /netinfra/router element: {_element.to_gdata().key_str(['name'])}")
-            list_elem = 'router_element = {self_name}.router.create({repr_yang(_element.name)}, {repr_yang(_element.id)}, {repr_yang(_element.type)})'
-            res.append(list_elem)
-            res.extend(_element.prsrc('router_element', False, list_element=True).splitlines())
-        _foo = self.foo
-        for _element in _foo:
-            res.append('')
-            res.append("# List /netinfra/foo element: {_element.to_gdata().key_str(['router', 'name'])}")
-            list_elem = 'foo_element = {self_name}.foo.create({repr_yang(_element.router)}, {repr_yang(_element.name)})'
-            res.append(list_elem)
-            res.extend(_element.prsrc('foo_element', False, list_element=True).splitlines())
-        if leaves:
-            if not list_element:
-               res = ['', '# Container: /netinfra'] + leaves + res
-            else:
-                res = leaves + res
-        return '\n'.join(res)
+    def prsrc(self, self_name='ad'):
+        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['netinfra:netinfra'])
 
-    def prsrc_gen3(self, self_name='ad'):
-        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
-        s = yang.compile(src_yang())
-        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False, root_path=['netinfra:netinfra'])
-
-
-mut def from_xml_netinfra__netinfra(node: xml.Node) -> yang.gdata.Container:
-    children = {}
-    child_router = yang.gdata.from_xml_opt_list(node, 'router')
-    yang.gdata.maybe_add(children, 'router', from_xml_netinfra__netinfra__router, child_router)
-    child_foo = yang.gdata.from_xml_opt_list(node, 'foo')
-    yang.gdata.maybe_add(children, 'foo', from_xml_netinfra__netinfra__foo, child_foo)
-    return yang.gdata.Container(children, ns='http://example.com/netinfra', module='netinfra')
-
-mut def from_json_path_netinfra__netinfra(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
-    # path handling
-    if len(path) > 0:
-        point = path[0]
-        rest_path = path[1:]
-        if point == 'router':
-            child = {'router': from_json_path_netinfra__netinfra__router(jd, rest_path, op) }
-            return yang.gdata.Container(child, ns='http://example.com/netinfra', module='netinfra')
-        if point == 'foo':
-            child = {'foo': from_json_path_netinfra__netinfra__foo(jd, rest_path, op) }
-            return yang.gdata.Container(child, ns='http://example.com/netinfra', module='netinfra')
-        raise ValueError("Invalid path")
-    elif len(path) == 0:
-        if op == "merge":
-            return from_json_netinfra__netinfra(yang.gdata.unwrap_dict(jd))
-        elif op == "remove":
-            return yang.gdata.Absent()
-        raise ValueError("Invalid operation")
-    raise ValueError("Unable to resolve path")
-
-mut def from_json_netinfra__netinfra(jd: dict[str, ?value]) -> yang.gdata.Container:
-    children = {}
-    child_router = yang.gdata.take_json_opt_list(jd, 'router')
-    yang.gdata.maybe_add(children, 'router', from_json_netinfra__netinfra__router, child_router)
-    child_foo = yang.gdata.take_json_opt_list(jd, 'foo')
-    yang.gdata.maybe_add(children, 'foo', from_json_netinfra__netinfra__foo, child_foo)
-    return yang.gdata.Container(children, ns='http://example.com/netinfra', module='netinfra')
 
 class root(yang.adata.MNode):
     netinfra: netinfra__netinfra
@@ -1001,12 +733,15 @@ class root(yang.adata.MNode):
         self._ns = ''
         self.netinfra = netinfra if netinfra is not None else netinfra__netinfra()
 
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'netinfra':
+            return self.netinfra
+        raise ValueError('Attribute {name} not found in root')
+
     mut def to_gdata(self) -> yang.gdata.Node:
-        children = {}
-        _netinfra = self.netinfra
-        if _netinfra is not None:
-            children['netinfra'] = _netinfra.to_gdata()
-        return yang.gdata.Container(children)
+        if isinstance(self, yang.adata.MNode):
+            return yang.gen3.from_data(src_dnode(), self, loose=False)
+        raise ValueError('unreachable')
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
@@ -1018,75 +753,43 @@ class root(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return root.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad', top=True, list_element=False):
-        res = []
-        if top:
-            res.append('# Top node: /')
-            res.append('{self_name} = root()')
-        leaves = []
-        _netinfra = self.netinfra
-        if _netinfra is not None:
-            res.extend(_netinfra.prsrc('{self_name}.netinfra', False).splitlines())
-        if leaves:
-            if not list_element:
-               res = ['', '# Container: /'] + leaves + res
-            else:
-                res = leaves + res
-        return '\n'.join(res)
-
-    def prsrc_gen3(self, self_name='ad'):
-        # WARNING: this wrapper for the gen3.pradata schema-driven parser compiles the schema on every call!
-        s = yang.compile(src_yang())
-        return yang.gen3.pradata(s, self.to_gdata(), self_name, loose=False)
+    def prsrc(self, self_name='ad'):
+        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False)
 
 
-mut def from_xml(node: xml.Node) -> yang.gdata.Container:
-    children = {}
-    child_netinfra = yang.gdata.from_xml_opt_cnt(node, 'netinfra', 'http://example.com/netinfra')
-    yang.gdata.maybe_add(children, 'netinfra', from_xml_netinfra__netinfra, child_netinfra)
-    return yang.gdata.Container(children)
+def src_dnode():
+    return DRoot(children=[
+    DContainer(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='netinfra', config=True, description='Network infrastructure', presence=False, children=[
+        DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
+                Ext('orchestron', 'transform', arg='mini.cfs.Router')
+            ], children=[
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=Type('string')),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='id', config=True, description='router id', mandatory=True, type_=Type('uint32')),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='type', config=True, mandatory=True, type_=Type('string'))
+        ]),
+        DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='foo', key=[
+'router',
+'name'
+            ], config=True, min_elements=0, ordered_by='system', exts=[
+                Ext('orchestron', 'transform', arg='mini.cfs.Foo')
+            ], children=[
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', config=True, mandatory=False, type_=Type('string')),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=Type('string'))
+        ])
+    ])
+])
 
-mut def from_json_path(jd: value, path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
-    # path handling
-    if len(path) > 0:
-        point = path[0]
-        rest_path = path[1:]
-        if point == 'netinfra:netinfra':
-            child = {'netinfra': from_json_path_netinfra__netinfra(jd, rest_path, op) }
-            return yang.gdata.Container(child)
-        raise ValueError("Invalid path")
-    elif len(path) == 0:
-        if op == "merge":
-            return from_json(yang.gdata.unwrap_dict(jd))
-        elif op == "remove":
-            return yang.gdata.Absent()
-        raise ValueError("Invalid operation")
-    raise ValueError("Unable to resolve path")
+def from_xml(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
+    return yang.gen3.from_data(src_dnode(), node, loose=False, root_path=root_path)
 
-mut def from_json(jd: dict[str, ?value]) -> yang.gdata.Container:
-    children = {}
-    child_netinfra = yang.gdata.take_json_opt_cnt(jd, 'netinfra', 'netinfra')
-    yang.gdata.maybe_add(children, 'netinfra', from_json_netinfra__netinfra, child_netinfra)
-    return yang.gdata.Container(children)
+def from_json(jd: dict[str, ?value], root_path: list[str]=[]) -> yang.gdata.Container:
+    return yang.gen3.from_data(src_dnode(), jd, loose=False, root_path=root_path)
 
-def from_xml_gen3(node: xml.Node, root_path: list[str]=[]) -> yang.gdata.Container:
-    # WARNING: this wrapper for the gen3.from_xml schema-driven parser compiles the schema on every call!
-    s = yang.compile(src_yang())
-    return yang.gen3.from_data(s, node, loose=False, root_path=root_path)
+def from_json_path(jd: dict[str, ?value], path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
+    return yang.gen3.from_json_path(src_dnode(), jd, path, op, loose=False)
 
-def from_json_gen3(jd: dict[str, ?value], root_path: list[str]=[]) -> yang.gdata.Container:
-    # WARNING: this wrapper for the gen3.from_json schema-driven parser compiles the schema on every call!
-    s = yang.compile(src_yang())
-    return yang.gen3.from_data(s, jd, loose=False, root_path=root_path)
-
-def from_json_path_gen3(jd: dict[str, ?value], path: list[str]=[], op: ?str='merge') -> yang.gdata.Node:
-    s = yang.compile(src_yang())
-    return yang.gen3.from_json_path(s, jd, path, op, loose=False)
-
-def prsrc_gen3(data, self_name='ad'):
-    # WARNING: this wrapper for the gen3.prsrc schema-driven parser compiles the schema on every call!
-    s = yang.compile(src_yang())
-    return yang.gen3.pradata(s, data, self_name, loose=False)
+def prsrc(data, self_name='ad'):
+    return yang.gen3.pradata(src_dnode(), data, self_name, loose=False)
 
 schema_namespaces: set[str] = {
     'http://example.com/netinfra',
