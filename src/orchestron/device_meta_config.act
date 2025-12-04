@@ -657,9 +657,6 @@ class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNod
         """Create a deep copy of this adata object"""
         return orchestron_rfs__device__address__initial_credentials_entry.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad'):
-        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'address', 'initial-credentials'])
-
 class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
     elements: list[orchestron_rfs__device__address__initial_credentials_entry]
     mut def __init__(self, elements=[]):
@@ -743,9 +740,6 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return orchestron_rfs__device__address_entry.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad'):
-        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'address'])
-
 class orchestron_rfs__device__address(yang.adata.MNode):
     elements: list[orchestron_rfs__device__address_entry]
     mut def __init__(self, elements=[]):
@@ -814,9 +808,6 @@ class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
     def copy(self):
         """Create a deep copy of this adata object"""
         return orchestron_rfs__device__credentials__key_entry.from_gdata(self.to_gdata())
-
-    def prsrc(self, self_name='ad'):
-        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'credentials', 'key'])
 
 class orchestron_rfs__device__credentials__key(yang.adata.MNode):
     elements: list[orchestron_rfs__device__credentials__key_entry]
@@ -893,9 +884,6 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return orchestron_rfs__device__credentials.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad'):
-        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'credentials'])
-
 
 class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
     username: str
@@ -929,9 +917,6 @@ class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
     def copy(self):
         """Create a deep copy of this adata object"""
         return orchestron_rfs__device__initial_credentials_entry.from_gdata(self.to_gdata())
-
-    def prsrc(self, self_name='ad'):
-        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'initial-credentials'])
 
 class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
     elements: list[orchestron_rfs__device__initial_credentials_entry]
@@ -1016,9 +1001,6 @@ class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return orchestron_rfs__device__mock__module_entry.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad'):
-        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'mock', 'module'])
-
 class orchestron_rfs__device__mock__module(yang.adata.MNode):
     elements: list[orchestron_rfs__device__mock__module_entry]
     mut def __init__(self, elements=[]):
@@ -1090,9 +1072,6 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return orchestron_rfs__device__mock.from_gdata(self.to_gdata())
 
-    def prsrc(self, self_name='ad'):
-        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'mock'])
-
 
 class orchestron_rfs__device__debug(yang.adata.MNode):
     connection: bool
@@ -1120,9 +1099,6 @@ class orchestron_rfs__device__debug(yang.adata.MNode):
     def copy(self):
         """Create a deep copy of this adata object"""
         return orchestron_rfs__device__debug.from_gdata(self.to_gdata())
-
-    def prsrc(self, self_name='ad'):
-        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device', 'debug'])
 
 
 class orchestron_rfs__device_entry(yang.adata.MNode):
@@ -1181,9 +1157,6 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
     def copy(self):
         """Create a deep copy of this adata object"""
         return orchestron_rfs__device_entry.from_gdata(self.to_gdata())
-
-    def prsrc(self, self_name='ad'):
-        return yang.gen3.pradata(src_dnode(), self.to_gdata(), self_name, loose=False, root_path=['orchestron-rfs:device'])
 
 class orchestron_rfs__device(yang.adata.MNode):
     elements: list[orchestron_rfs__device_entry]
@@ -1298,9 +1271,6 @@ def src_dnode():
         DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='name', config=True, description='Device name', mandatory=False, type_=Type('string'))
     ])
 ])
-
-def prsrc(data, self_name='ad'):
-    return yang.gen3.pradata(src_dnode(), data, self_name, loose=False)
 
 schema_namespaces: set[str] = {
     'http://orchestron.org/yang/orchestron-rfs.yang',

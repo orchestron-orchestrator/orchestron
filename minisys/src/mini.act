@@ -40,13 +40,13 @@ def rfs_for_device(dev):
         ])
     })
 
-def adata_for_layer(layer, gdata):
+def schema_for_layer(layer):
     if layer == 0:
-        return mini.layers.y_0_loose.root.from_gdata(gdata)
+        return mini.layers.y_0_loose.src_dnode()
     elif layer == 1:
-        return mini.layers.y_1_loose.root.from_gdata(gdata)
+        return mini.layers.y_1_loose.src_dnode()
     elif layer == 2:
-        return mini.layers.y_2_loose.root.from_gdata(gdata)
+        return mini.layers.y_2_loose.src_dnode()
     else:
         raise ValueError("Invalid layer: {layer}")
 
@@ -159,8 +159,7 @@ actor main(env):
                         elif aheader == "application/yang-data+xml":
                             out_data = data.to_xmlstr()
                         elif aheader == "application/yang-data+acton-adata":
-                            adata = schema.from_gdata(data)
-                            out_data = adata.prsrc()
+                            out_data = yang.gen3.pradata(schema.src_dnode(), data, loose=True)
                         else:
                             respond(404, {}, "Unsupported media type")
                             return
@@ -171,6 +170,7 @@ actor main(env):
                 try:
                     dev_name = path_elements[2]
                     dev = dev_registry.get(dev_name)
+                    schema = dev.get_schema()
                     if path_elements[3] == "capabilities":
                         respond(200, {}, str(dev.get_capabilities()))
                         return
@@ -206,8 +206,7 @@ actor main(env):
                                 elif format_type == "gdata":
                                     diff_str = config_diff.prsrc()
                                 elif format_type == "adata":
-                                    # adata conversion would need schema
-                                    diff_str = "# Adata format not available for diff"
+                                    diff_str = yang.gen3.pradata(schema.src_dnode(), config_diff, loose=True)
                                 else:
                                     diff_str = config_diff.to_json()  # default to json
                                 respond(200, {"Content-Type": "text/plain"}, diff_str)
@@ -236,8 +235,7 @@ actor main(env):
                             elif format_type == "gdata":
                                 conf_str = target_conf.prsrc()
                             elif format_type == "adata":
-                                # adata conversion would need schema
-                                conf_str = "# Adata format not available"
+                                conf_str = yang.gen3.pradata(schema.src_dnode(), target_conf, loose=True)
                             else:
                                 conf_str = target_conf.to_json()  # default to json
                             respond(200, {"Content-Type": "text/plain"}, conf_str)
@@ -264,8 +262,7 @@ actor main(env):
                             elif format_type == "gdata":
                                 conf_str = running_conf.prsrc()
                             elif format_type == "adata":
-                                # adata conversion would need schema
-                                conf_str = "# Adata format not available"
+                                conf_str = yang.gen3.pradata(schema.src_dnode(), running_conf, loose=True)
                             else:
                                 conf_str = running_conf.to_json()  # default to json
                             respond(200, {"Content-Type": "text/plain"}, conf_str)
@@ -429,8 +426,8 @@ actor main(env):
                     if request.headers.get("accept") == "application/yang-data+xml":
                         content = layer_config.to_xmlstr()
                     if request.headers.get("accept") == "application/yang-data+acton-adata":
-                        adata = adata_for_layer(layer_idx, layer_config)
-                        content = adata.prsrc()
+                        src_dnode = schema_for_layer(layer_idx)
+                        content = yang.gen3.pradata(src_dnode, layer_config, loose=True)
                     respond(200, {}, content)
                     return
             else:

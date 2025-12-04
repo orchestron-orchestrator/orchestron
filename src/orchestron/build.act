@@ -133,9 +133,7 @@ class CompiledSysSpec(object):
             syssrc_devtypes += """    "{dev_type.name}": odev.DeviceType(name="{dev_type.name}",
             adapter_type=odev.NetconfAdapter,
             schema_namespaces={modname}.schema_namespaces,
-            root={modname}.root,
-            from_gdata={modname}.root.from_gdata,
-            from_xml={modname}.from_xml
+            src_dnode={modname}.src_dnode,
         ),
 """
         syssrc += "device_types: dict[str, odev.DeviceType] = {{\n"
@@ -240,7 +238,7 @@ class _CompiledLayerBase(object):
         classes, XML and JSON deserializers and the schema info. The schema is
         used by the XML and JSON schema-driven deserializers.
         """
-        return self.root.prdaclass(schema_yang=self.src, loose=loose, gen_json=gen_json)
+        return self.root.prdaclass(schema_yang=self.src, loose=loose)
 
 class CompiledLayer(_CompiledLayerBase):
     def __init__(self, root: yang.schema.DRoot, src: list[str], name: ?str=None):

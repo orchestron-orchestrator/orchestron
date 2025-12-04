@@ -210,12 +210,7 @@ actor _test_netconf_double_commit(t: testing.EnvT):
         dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf)
 
         # Create a simple device schema
-        schema = orchestron.device.DeviceSchema(
-            "test",
-            set(),
-            orchestron.device.MockRoot,
-            from_gdata=orchestron.device.MockRoot.from_gdata
-        )
+        schema = orchestron.device.DeviceSchema.mock()
 
         # Create test DeviceMetaConfig
         test_dmc = create_test_dmc()
@@ -430,12 +425,7 @@ actor _test_netconf_adapter(t: testing.EnvT):
         dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf)
 
         # Create a simple device schema
-        schema = orchestron.device.DeviceSchema(
-            "test",
-            set(),
-            orchestron.device.MockRoot,
-            from_gdata=orchestron.device.MockRoot.from_gdata
-        )
+        schema = orchestron.device.DeviceSchema.mock()
 
         # Create test DeviceMetaConfig
         test_dmc = create_test_dmc()
@@ -569,12 +559,7 @@ actor _test_netconf_adapter_resync(t: testing.EnvT):
         dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf)
 
         # Create a simple device schema
-        schema = orchestron.device.DeviceSchema(
-            "test",
-            set(),
-            orchestron.device.MockRoot,
-            from_gdata=orchestron.device.MockRoot.from_gdata
-        )
+        schema = orchestron.device.DeviceSchema.mock()
 
         # Create test DeviceMetaConfig
         test_dmc = create_test_dmc()
