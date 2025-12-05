@@ -6,9 +6,10 @@ import yang.adata
 import yang.gdata
 import yang.gen3
 from yang.gdata import repr_yang
-from yang.identity import complete_and_validate_identityref
 from yang.identityref import Identityref, PartialIdentityref
+from yang.pattern import YangPattern
 from yang.schema import *
+from yang.type import Decimal, Ranges
 
 # == This file is generated ==
 
@@ -182,8 +183,8 @@ def src_dnode():
         DList(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='device', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
                 Ext('orchestron', 'device-config')
             ], children=[
-            DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='name', config=True, mandatory=False, type_=Type('string')),
-            DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='modset_id', config=True, mandatory=False, type_=Type('string'))
+            DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='name', config=True, mandatory=False, type_=DTypeString(module='orchestron-device', namespace='orchestron-device', prefix='odev', name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='modset_id', config=True, mandatory=False, type_=DTypeString(module='orchestron-device', namespace='orchestron-device', prefix='odev', name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
         ])
     ])
 ])

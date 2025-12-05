@@ -6,9 +6,10 @@ import yang.adata
 import yang.gdata
 import yang.gen3
 from yang.gdata import repr_yang
-from yang.identity import complete_and_validate_identityref
 from yang.identityref import Identityref, PartialIdentityref
+from yang.pattern import YangPattern
 from yang.schema import *
+from yang.type import Decimal, Ranges
 
 # == This file is generated ==
 
@@ -273,9 +274,9 @@ def src_yang():
   typedef ipv4-address {
     type string {
       pattern
-        '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}'
+        '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
       +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
-      + '(%[\\p{N}\\p{L}]+)?';
+      + '(%[\p{N}\p{L}]+)?';
     }
     description
       "The ipv4-address type represents an IPv4 address in
@@ -296,10 +297,10 @@ def src_yang():
     type string {
       pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
             + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
-            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}'
+            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}'
             + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
-            + '(%[\\p{N}\\p{L}]+)?';
-      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|'
+            + '(%[\p{N}\p{L}]+)?';
+      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|'
             + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
             + '(%.+)?';
     }
@@ -342,7 +343,7 @@ def src_yang():
 
   typedef ipv4-address-no-zone {
     type inet:ipv4-address {
-      pattern '[0-9\\.]*';
+      pattern '[0-9\.]*';
     }
     description
       "An IPv4 address without a zone index.  This type, derived from
@@ -352,7 +353,7 @@ def src_yang():
 
   typedef ipv6-address-no-zone {
     type inet:ipv6-address {
-      pattern '[0-9a-fA-F:\\.]*';
+      pattern '[0-9a-fA-F:\.]*';
     }
     description
       "An IPv6 address without a zone index.  This type, derived from
@@ -379,7 +380,7 @@ def src_yang():
   typedef ipv4-prefix {
     type string {
       pattern
-         '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}'
+         '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
        +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
        + '/(([0-9])|([1-2][0-9])|(3[0-2]))';
     }
@@ -401,10 +402,10 @@ def src_yang():
     type string {
       pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
             + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
-            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}'
+            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}'
             + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
             + '(/(([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))';
-      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|'
+      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|'
             + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
             + '(/.+)';
     }
@@ -435,9 +436,9 @@ def src_yang():
   typedef domain-name {
     type string {
       pattern
-        '((([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){0,61})?[a-zA-Z0-9]\\.)*'
-      + '([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){0,61})?[a-zA-Z0-9]\\.?)'
-      + '|\\.';
+        '((([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.)*'
+      + '([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.?)'
+      + '|\.';
       length "1..253";
     }
     description
@@ -751,9 +752,9 @@ def src_dnode():
         DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
                 Ext('orchestron', 'transform', arg='mini.cfs.Router')
             ], children=[
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=Type('string')),
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='id', config=True, description='router id', mandatory=True, type_=Type('uint32')),
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='type', config=True, mandatory=True, type_=Type('string'))
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(module='netinfra', namespace='netinfra', prefix='netinfra', name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='id', config=True, description='router id', mandatory=True, type_=DTypeInteger(module='netinfra', namespace='netinfra', prefix='netinfra', name='uint32', description=None, reference=None, exts=[], builtin_type='uint32', default=None, ranges=Ranges([(bigint("0"), bigint("4294967295"))]))),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='type', config=True, mandatory=True, type_=DTypeString(module='netinfra', namespace='netinfra', prefix='netinfra', name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
         ]),
         DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='foo', key=[
 'router',
@@ -761,8 +762,8 @@ def src_dnode():
             ], config=True, min_elements=0, ordered_by='system', exts=[
                 Ext('orchestron', 'transform', arg='mini.cfs.Foo')
             ], children=[
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', config=True, mandatory=False, type_=Type('string')),
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=Type('string'))
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', config=True, mandatory=False, type_=DTypeString(module='netinfra', namespace='netinfra', prefix='netinfra', name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(module='netinfra', namespace='netinfra', prefix='netinfra', name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
         ])
     ])
 ])
