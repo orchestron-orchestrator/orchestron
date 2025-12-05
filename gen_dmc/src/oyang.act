@@ -366,9 +366,9 @@ ietf_inet_types = r"""module ietf-inet-types {
   typedef ipv4-address {
     type string {
       pattern
-        '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}'
+        '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
       +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
-      + '(%[\\p{N}\\p{L}]+)?';
+      + '(%[\p{N}\p{L}]+)?';
     }
     description
       "The ipv4-address type represents an IPv4 address in
@@ -389,10 +389,10 @@ ietf_inet_types = r"""module ietf-inet-types {
     type string {
       pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
             + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
-            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}'
+            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}'
             + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
-            + '(%[\\p{N}\\p{L}]+)?';
-      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|'
+            + '(%[\p{N}\p{L}]+)?';
+      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|'
             + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
             + '(%.+)?';
     }
@@ -435,7 +435,7 @@ ietf_inet_types = r"""module ietf-inet-types {
 
   typedef ipv4-address-no-zone {
     type inet:ipv4-address {
-      pattern '[0-9\\.]*';
+      pattern '[0-9\.]*';
     }
     description
       "An IPv4 address without a zone index.  This type, derived from
@@ -445,7 +445,7 @@ ietf_inet_types = r"""module ietf-inet-types {
 
   typedef ipv6-address-no-zone {
     type inet:ipv6-address {
-      pattern '[0-9a-fA-F:\\.]*';
+      pattern '[0-9a-fA-F:\.]*';
     }
     description
       "An IPv6 address without a zone index.  This type, derived from
@@ -472,7 +472,7 @@ ietf_inet_types = r"""module ietf-inet-types {
   typedef ipv4-prefix {
     type string {
       pattern
-         '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}'
+         '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
        +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
        + '/(([0-9])|([1-2][0-9])|(3[0-2]))';
     }
@@ -494,10 +494,10 @@ ietf_inet_types = r"""module ietf-inet-types {
     type string {
       pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
             + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
-            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}'
+            + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}'
             + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
             + '(/(([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))';
-      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\\..*)))|'
+      pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|'
             + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
             + '(/.+)';
     }
@@ -528,9 +528,9 @@ ietf_inet_types = r"""module ietf-inet-types {
   typedef domain-name {
     type string {
       pattern
-        '((([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){0,61})?[a-zA-Z0-9]\\.)*'
-      + '([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){0,61})?[a-zA-Z0-9]\\.?)'
-      + '|\\.';
+        '((([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.)*'
+      + '([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.?)'
+      + '|\.';
       length "1..253";
     }
     description
