@@ -6,7 +6,6 @@ import logging
 
 import orchestron.device as odev
 import orchestron.ttt as ttt
-import yang.adata
 import yang.gdata
 
 

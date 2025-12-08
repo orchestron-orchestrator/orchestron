@@ -56,6 +56,18 @@ ys_rfs = r"""module foo {
       leaf name {
         type string;
       }
+      container dynstate {
+        orchestron:dynstate;
+        leaf enable-polling {
+          type boolean;
+        }
+      }
+      container memory {
+        orchestron:memory;
+        leaf allocated-id {
+          type uint64;
+        }
+      }
     }
   }
 }

@@ -651,7 +651,9 @@ class DynstateTransform(ttt.TransformFunction):
 
 actor transform_dynstate(t: testing.AsyncT):
     def DynstateActorCtor(params: ttt.TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None:
-        act = DynstateActor(params.update_dynstate, t)
+        def update_dynstate_wrapper(dynstate: ?adata.MNode):
+            params.update_dynstate(dynstate.to_gdata() if dynstate is not None else None)
+        act = DynstateActor(update_dynstate_wrapper, t)
         return act.on_conf
 
     router = ttt.Transform(DynstateTransform, DynstateActorCtor) ([], None)
