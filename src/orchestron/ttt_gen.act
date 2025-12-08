@@ -112,9 +112,8 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
                             transform_actor_extra_params = ", ttt.expect(params.dev, \"Missing expected DeviceMgr param to {transform_actor_fq}.\")" if ext.name == "rfs-transform" else ""
                             memory_conv = ", %s.from_gdata(m) if m is not None else None" % memory_class if memory_class is not None else ""
                             act_defs.append("""def %s(params: ttt.TransformActorParams) -> ?proc(yang.gdata.Node, ?yang.gdata.Node) -> None:
-    _update_dynstate = params.update_dynstate
     def update_dynstate_type_wrapper(dynstate: ?%s):
-        _update_dynstate(dynstate)
+        params.update_dynstate(dynstate.to_gdata() if dynstate is not None else None)
     act = %s(update_dynstate_type_wrapper%s)
     return proc lambda c, m: act.on_conf(%s.from_gdata(c)%s)
 """ % (transform_actor_ctor, dynstate_class, transform_actor_fq, transform_actor_extra_params, input_class, memory_conv))
@@ -239,7 +238,7 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     ttt_src += "# WARNING WARNING WARNING WARNING WARNING\n\n"
     ttt_src += "import logging\n\n"
     ttt_src += "import orchestron.device as odev\n"
-    ttt_src += "import orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\n\n"
+    ttt_src += "import orchestron.ttt as ttt\nimport yang.gdata\n\n"
     ttt_src += "\n".join(list(set(ts.imports))) + "\n\n"
     for sc in ts.state_classes:
         ttt_src += "from %s import %s\n" % (input_yang_module, sc)
