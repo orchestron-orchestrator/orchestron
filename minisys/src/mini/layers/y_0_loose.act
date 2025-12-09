@@ -752,9 +752,9 @@ def src_dnode():
         DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
                 Ext('orchestron', 'transform', arg='mini.cfs.Router')
             ], children=[
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(module='netinfra', namespace='netinfra', prefix='netinfra', name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='id', config=True, description='router id', mandatory=True, type_=DTypeInteger(module='netinfra', namespace='netinfra', prefix='netinfra', name='uint32', description=None, reference=None, exts=[], builtin_type='uint32', default=None, ranges=Ranges([(bigint("0"), bigint("4294967295"))]))),
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='type', config=True, mandatory=True, type_=DTypeString(module='netinfra', namespace='netinfra', prefix='netinfra', name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='id', config=True, description='router id', mandatory=True, type_=DTypeInteger(name='uint32', description=None, reference=None, exts=[], builtin_type='uint32', default=None, ranges=Ranges([(bigint("0"), bigint("4294967295"))]))),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='type', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
         ]),
         DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='foo', key=[
 'router',
@@ -762,8 +762,8 @@ def src_dnode():
             ], config=True, min_elements=0, ordered_by='system', exts=[
                 Ext('orchestron', 'transform', arg='mini.cfs.Foo')
             ], children=[
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', config=True, mandatory=False, type_=DTypeString(module='netinfra', namespace='netinfra', prefix='netinfra', name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(module='netinfra', namespace='netinfra', prefix='netinfra', name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
         ])
     ])
 ])
