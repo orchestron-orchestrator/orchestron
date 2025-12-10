@@ -133,7 +133,7 @@ class CompiledSysSpec(object):
             syssrc_devtypes += """    "{dev_type.name}": odev.DeviceType(name="{dev_type.name}",
             adapter_type=odev.NetconfAdapter,
             schema_namespaces={modname}.schema_namespaces,
-            src_dnode={modname}.src_dnode,
+            src_dnode={modname}.SRC_DNODE,
         ),
 """
         syssrc += "device_types: dict[str, odev.DeviceType] = {{\n"
