@@ -490,6 +490,7 @@ class _ContainerTransaction(_Transaction):
 
 ################# Lists ####################
 
+# TODO: remove key_types, now that gdata.Leaf.type attribute is gone?!
 def List(template, key_names: list[str], key_types: list[str], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
     return lambda path, lower: Node(_List(path, template, key_names, key_types, ns, module, lower))
 
@@ -725,7 +726,7 @@ class _ListTransaction(_Transaction):
                 #print('####', '(List)', self.path, 'RESTORING KEY', key, err=True)
                 split_key = split_key_str(key)
                 for i, kn in enumerate(self.key_names):
-                    r.children.setdefault(kn, gdata.Leaf(self.key_types[i], split_key[i]))
+                    r.children.setdefault(kn, gdata.Leaf(split_key[i]))
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
@@ -1025,11 +1026,11 @@ class _RFSTransaction(_TransformTransactionBase):
     def compute(self, tid, merged, out):
         #print('####', tid, '(RFSTransform)', self.path, 'compute', actorid(), err=True)
         dev_content = {
-            "name": gdata.Leaf("string", self.devname),
+            "name": gdata.Leaf(self.devname),
         }
         modset, modset_id = self.dev.get_modules()
         if modset_id is not None:
-            dev_content["modset_id"] = gdata.Leaf("string", modset_id)
+            dev_content["modset_id"] = gdata.Leaf(modset_id)
         if len(modset) > 0:
             #print('####', tid, '(RFSTransform)', self.path, 'compute', self.devname, err=True)
             newoutmem = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset), self.memory, self.dynstate)
@@ -1052,7 +1053,7 @@ class _RFSTransaction(_TransformTransactionBase):
             diff = difference(output, gdata.Container())
             if isinstance(diff, gdata.Container):
                 dev_content = {
-                    "name": gdata.Leaf("string", self.devname),
+                    "name": gdata.Leaf(self.devname),
                     "config": diff
                 }
                 embedded_diff: gdata.Node = self.embed(dev_content)

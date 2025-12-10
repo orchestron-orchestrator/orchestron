@@ -5,7 +5,6 @@ import yang
 import yang.adata
 import yang.gdata
 import yang.gen3
-from yang.gdata import repr_yang
 from yang.identityref import Identityref, PartialIdentityref
 from yang.pattern import YangPattern
 from yang.schema import *

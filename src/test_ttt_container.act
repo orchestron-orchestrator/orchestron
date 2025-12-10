@@ -10,18 +10,18 @@ tree1 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
             gdata.Container({
-                "name": gdata.Leaf("string", "k1"),
-                "n1": gdata.Leaf("int", bigint(1)),
-                "n2": gdata.Leaf("int", bigint(2))
+                "name": gdata.Leaf("k1"),
+                "n1": gdata.Leaf(bigint(1)),
+                "n2": gdata.Leaf(bigint(2))
             }),
             gdata.Container({
-                "name": gdata.Leaf("string", "k4"),
-                "n4": gdata.Leaf("int", bigint(4))
+                "name": gdata.Leaf("k4"),
+                "n4": gdata.Leaf(bigint(4))
             })
         ])
     }),
     'right': gdata.Container({
-        "a": gdata.LeafList("int", [bigint(1), bigint(2), bigint(3)])
+        "a": gdata.LeafList([bigint(1),bigint(2),bigint(3)])
     })
 })
 
@@ -29,18 +29,18 @@ tree2 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
             gdata.Container({
-                "name": gdata.Leaf("string", "k1"),
-                "n2": gdata.Leaf("int", bigint(2))
+                "name": gdata.Leaf("k1"),
+                "n2": gdata.Leaf(bigint(2))
             }),
             gdata.Container({
-                "name": gdata.Leaf("string", "k2"),
-                "n1": gdata.Leaf("int", bigint(1)),
-                "n3": gdata.Leaf("int", bigint(3))
+                "name": gdata.Leaf("k2"),
+                "n1": gdata.Leaf(bigint(1)),
+                "n3": gdata.Leaf(bigint(3))
             })
         ]),
     }),
     'right': gdata.Container({
-        "b": gdata.Leaf("int", bigint(1))
+        "b": gdata.Leaf(bigint(1))
     })
 })
 
@@ -48,24 +48,24 @@ merge_1_2 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
             gdata.Container({
-                "name": gdata.Leaf("string", "k1"),
-                "n1": gdata.Leaf("int", bigint(1)),
-                "n2": gdata.Leaf("int", bigint(2))
+                "name": gdata.Leaf("k1"),
+                "n1": gdata.Leaf(bigint(1)),
+                "n2": gdata.Leaf(bigint(2))
             }),
             gdata.Container({
-                "name": gdata.Leaf("string", "k2"),
-                "n1": gdata.Leaf("int", bigint(1)),
-                "n3": gdata.Leaf("int", bigint(3))
+                "name": gdata.Leaf("k2"),
+                "n1": gdata.Leaf(bigint(1)),
+                "n3": gdata.Leaf(bigint(3))
             }),
             gdata.Container({
-                "name": gdata.Leaf("string", "k4"),
-                "n4": gdata.Leaf("int", bigint(4))
+                "name": gdata.Leaf("k4"),
+                "n4": gdata.Leaf(bigint(4))
             })
         ]),
     }),
     'right': gdata.Container({
-        "a": gdata.LeafList("int", [bigint(1), bigint(2), bigint(3)]),
-        "b": gdata.Leaf("int", bigint(1))
+        "a": gdata.LeafList([bigint(1),bigint(2),bigint(3)]),
+        "b": gdata.Leaf(bigint(1))
     })
 })
 
@@ -95,10 +95,10 @@ actor basic_commit(t: testing.AsyncT):
 actor all_delete(t: testing.AsyncT):
     in1 = gdata.Container({
             "left" : gdata.Container({
-                "x": gdata.Leaf("int", bigint(1))
+                "x": gdata.Leaf(bigint(1))
             }),
             "right": gdata.Container({
-                "x": gdata.Leaf("int", bigint(2))
+                "x": gdata.Leaf(bigint(2))
             })
         })
 
@@ -138,18 +138,18 @@ actor nested_delete(t: testing.AsyncT):
     in1 = gdata.Container({
         "left": gdata.List(["name"], [
             gdata.Container({
-                "name": gdata.Leaf("string", "k1"),
-                "x": gdata.Leaf("int", bigint(1))
+                "name": gdata.Leaf("k1"),
+                "x": gdata.Leaf(bigint(1))
             }),
             gdata.Container({
-                "name": gdata.Leaf("string", "k2"),
-                "x": gdata.Leaf("int", bigint(2))
+                "name": gdata.Leaf("k2"),
+                "x": gdata.Leaf(bigint(2))
             })
         ]),
         "right": gdata.List(["name"], [
             gdata.Container({
-                "name": gdata.Leaf("string", "v1"),
-                "y": gdata.Leaf("int", bigint(1))
+                "name": gdata.Leaf("v1"),
+                "y": gdata.Leaf(bigint(1))
             }),
         ])
     })
@@ -292,13 +292,13 @@ tree0 = gdata.Container({
     'left': gdata.Container({
         "l1": gdata.List(["name"], [
             gdata.Container({
-                "name": gdata.Leaf("string", "k4"),
-                "n4": gdata.Leaf("int", bigint(0))
+                "name": gdata.Leaf("k4"),
+                "n4": gdata.Leaf(bigint(0))
             })
         ]),
     }),
     'right': gdata.Container({
-        "a": gdata.LeafList("int", [bigint(1), bigint(2), bigint(3)])
+        "a": gdata.LeafList([bigint(1),bigint(2),bigint(3)])
     })
 })
 
@@ -331,32 +331,32 @@ actor modified_overlapping_commit(t: testing.AsyncT):
 
 a0 = gdata.Container({
     'left': gdata.Container({
-        'a': gdata.Leaf("int", bigint(0))
+        'a': gdata.Leaf(bigint(0))
     }),
     'right': gdata.Container({
-        'x': gdata.Leaf("int", bigint(0))
+        'x': gdata.Leaf(bigint(0))
     })
 })
 
 a1 = gdata.Container({
     'left': gdata.Container({
-        'a': gdata.Leaf("int", bigint(1))
+        'a': gdata.Leaf(bigint(1))
     })
 })
 
 b1 = gdata.Container({
     'left': gdata.Container({
-        'b': gdata.Leaf("int", bigint(1))
+        'b': gdata.Leaf(bigint(1))
     })
 })
 
 a0b1 = gdata.Container({
     'left': gdata.Container({
-        'a': gdata.Leaf("int", bigint(0)),
-        'b': gdata.Leaf("int", bigint(1))
+        'a': gdata.Leaf(bigint(0)),
+        'b': gdata.Leaf(bigint(1))
     }),
     'right': gdata.Container({
-        'x': gdata.Leaf("int", bigint(0))
+        'x': gdata.Leaf(bigint(0))
     })
 })
 
@@ -446,7 +446,7 @@ tree3 = gdata.Container({
         "l1": gdata.List(["name"], []),
     }),
     'right': gdata.Container({
-        "b": gdata.Leaf("int", bigint(0))
+        "b": gdata.Leaf(bigint(0))
     })
 })
 

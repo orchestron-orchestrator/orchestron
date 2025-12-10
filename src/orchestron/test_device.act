@@ -53,7 +53,7 @@ def create_simple_gdata_config() -> yang.gdata.Node:
     netconf-server -> listen -> endpoints -> endpoint -> ssh -> ssh-server-parameters -> server-identity -> banner
     """
     # Build the configuration tree from bottom up
-    banner_leaf = yang.gdata.Leaf("string", "Test banner from Orchestron", ns="urn:cesnet:libnetconf2-netconf-server")
+    banner_leaf = yang.gdata.Leaf("Test banner from Orchestron", ns="urn:cesnet:libnetconf2-netconf-server")
 
     # server-identity container with banner
     server_identity_children = {
@@ -75,7 +75,7 @@ def create_simple_gdata_config() -> yang.gdata.Node:
 
     # endpoint list entry with key "default-ssh"
     endpoint_children = {
-        "name": yang.gdata.Leaf("string", "default-ssh"),
+        "name": yang.gdata.Leaf("default-ssh"),
         "ssh": ssh_container
     }
     endpoint_entry = yang.gdata.Container(endpoint_children)
@@ -111,7 +111,7 @@ def create_simple_gdata_config() -> yang.gdata.Node:
 def create_crpd_gdata_config(seq) -> yang.gdata.Node:
     system = yang.gdata.Container({
         "login": yang.gdata.Container({
-            "announcement": yang.gdata.Leaf("string", "Test banner from Orchestron, seq: {seq}")
+            "announcement": yang.gdata.Leaf("Test banner from Orchestron, seq: {seq}")
         })
     })
     config_children = {
@@ -230,7 +230,7 @@ def create_second_gdata_config() -> yang.gdata.Node:
     we're actually sending different configurations.
     """
     # Build the configuration tree from bottom up
-    banner_leaf = yang.gdata.Leaf("string", "Second banner from Orchestron double commit test", ns="urn:cesnet:libnetconf2-netconf-server")
+    banner_leaf = yang.gdata.Leaf("Second banner from Orchestron double commit test", ns="urn:cesnet:libnetconf2-netconf-server")
 
     # server-identity container with banner
     server_identity_children = {
@@ -252,7 +252,7 @@ def create_second_gdata_config() -> yang.gdata.Node:
 
     # endpoint list entry with key "default-ssh"
     endpoint_children = {
-        "name": yang.gdata.Leaf("string", "default-ssh"),
+        "name": yang.gdata.Leaf("default-ssh"),
         "ssh": ssh_container
     }
     endpoint_entry = yang.gdata.Container(endpoint_children)
