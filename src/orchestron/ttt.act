@@ -311,6 +311,7 @@ class _Container(_Node):
     ns: ?str
     module: ?str
     key_names: list[str]
+    key_leaves: dict[str, gdata.Node]
 
     def __init__(self, path, template: dict[str, proc(list[str], ?Layer)->Node], ns, module, lower: ?Layer, key_names: list[str]):
         self.path = path
@@ -318,18 +319,22 @@ class _Container(_Node):
         self.ns = ns
         self.module = module
         self.key_names = key_names
+        # One shared dict per list element node to persist immutable key leaves
+        # across transactions; safe because key values never change.
+        self.key_leaves = {}
 
     def newtrans(self):
-        return ContainerTransaction(self.path, self.elems, self.key_names, self.ns, self.module)
+        return ContainerTransaction(self.path, self.elems, self.key_names, self.ns, self.module, self.key_leaves)
 
     def get(self):
         #print('####', '(Container)', self.path, actorid(),'NODE GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
+        res.update(self.key_leaves.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
 
-def ContainerTransaction(path, contents, key_names, ns:?str=None, module:?str=None):
-    return Transaction(_ContainerTransaction(path, contents, ns, module, key_names))
+def ContainerTransaction(path, contents, key_names, ns:?str=None, module:?str=None, key_leaves: ?dict[str, gdata.Node]=None):
+    return Transaction(_ContainerTransaction(path, contents, ns, module, key_names, key_leaves if key_leaves is not None else {}))
 
 class _ContainerTransaction(_Transaction):
     elems : dict[str, Transaction]
@@ -340,7 +345,7 @@ class _ContainerTransaction(_Transaction):
     key_names: list[str]
     key_leaves: dict[str, gdata.Node]
 
-    def __init__(self, path, contents, ns, module, key_names):
+    def __init__(self, path, contents, ns, module, key_names, key_leaves):
         self.path = path
         self.elems = {}
         self.accum = {}
@@ -349,8 +354,8 @@ class _ContainerTransaction(_Transaction):
         self.elems = {key: node.newtrans() for key, node in contents.items()}
         self.module = module
         self.key_names = key_names
-        self.key_leaves = {}
-        print('####', '(Container)', self.path, 'NEWTRANS', actorid(), key_names, err=True)
+        #print('####', '(Container)', self.path, 'NEWTRANS', actorid(), key_names, err=True)
+        self.key_leaves = key_leaves
 
     def configure(self, tid, diff, out, force=False):
         #print('####', tid, '(Container)', self.path, 'configure force:', force, actorid(), err=True)
@@ -362,10 +367,16 @@ class _ContainerTransaction(_Transaction):
         # subtree is being deleted, denoted by the presence of WILDKEY
         if WILDKEY not in diff_by_child:
             for kn in self.key_names:
-                if kn not in self.key_leaves:
-                    kv = next(iter(diff_by_child[kn].values()))
-                    self.key_leaves[kn] = kv
+                # Multiple transactions can converge here, but they all must
+                # present the same immutable set of keys for the list entry.
+                # Keep the first, verify later matches, and never overwrite.
                 # If key leaf is not present, input gdata is not valid!
+                ksrc = expect(diff_by_child.get(kn), "Missing key leaf on {self.path}: {kn}")
+                kv = next(diff_by_child[kn].values())
+                if kn not in self.key_leaves:
+                    self.key_leaves[kn] = kv
+                elif kv != self.key_leaves[kn]:
+                    raise ValueError(f"Conflicting key leaf {kn} on {self.path}: {kv} != {self.key_leaves[kn]}")
                 del diff_by_child[kn]
 
         # Extra nodes present in diff_by_child represent configuration that is
