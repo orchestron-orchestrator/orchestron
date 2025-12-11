@@ -9,5 +9,5 @@ import yang.adata
 import yang.gdata
 import yang.gen3
 
-from mini.layers.y_2 import src_dnode
+from mini.layers.y_2 import SRC_DNODE
 

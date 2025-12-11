@@ -30,13 +30,7 @@ class DeviceSchema(object):
     ## Schema namespaces
     schema_namespaces: set[str]
 
-    ## Function to get the compiled device schema
-    # TODO: this can be moved to an attribute once we can initialize the entire
-    # DNode tree without leaking the mut effect. And we can't have the
-    # DeviceSchema initializer leak the mut effect because it is instantiated as
-    # a module constant ...
-    @property
-    src_dnode: mut() -> yang.schema.DRoot
+    src_dnode: yang.schema.DRoot
 
     def __init__(self, name, schema_namespaces, src_dnode):
         self.name = name
@@ -45,7 +39,7 @@ class DeviceSchema(object):
 
     @staticmethod
     def mock():
-        return DeviceSchema("mock", set(), lambda: yang.schema.DRoot())
+        return DeviceSchema("mock", set(), yang.schema.DRoot())
 
 ## DeviceType represents a type of device, i.e. a specific platform or
 ## implementation of a device. It is used to define the schema and
@@ -1261,7 +1255,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                 # Extract current config and compute hash
                 data_tag = r.children[0] if len(r.children) > 0 else None
                 if data_tag is not None:
-                    current = yang.gen3.from_data(schema.src_dnode(), data_tag, loose=True)
+                    current = yang.gen3.from_data(schema.src_dnode, data_tag, loose=True)
                     if current is not None:
                         # Compute hash of the entire config as txid
                         current_xml_bytes = current.to_xmlstr().encode()
@@ -1591,7 +1585,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
                     # JUNOS response looks like this
                     # <data>\n<configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm" junos:commit-seconds="1756279893" junos:commit-localtime="2025-08-27 07:31:33 UTC" junos:commit-user="root">
                     # We want to extract the junos:commit-seconds and attach as txid on the root node in running_conf
-                    new_conf = yang.gen3.from_data(schema.src_dnode(), r.children[0], loose=True)
+                    new_conf = yang.gen3.from_data(schema.src_dnode, r.children[0], loose=True)
                     if new_conf is not None:
                         if new_conf.txid is None:
                             txid = extract_txid(data_tag)

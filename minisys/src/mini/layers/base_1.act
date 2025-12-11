@@ -11,7 +11,7 @@ import yang.gen3
 
 from mini.layers.y_1 import orchestron_rfs__rfs__base_config_entry
 from mini.layers.y_1 import orchestron_rfs__rfs__bar_entry
-from mini.layers.y_1 import src_dnode
+from mini.layers.y_1 import SRC_DNODE
 from mini.layers.y_2_loose import root as output_root
 
 def o_root():
@@ -38,7 +38,7 @@ class BaseConfig(ttt.RFSFunction):
         """Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         """
-        gdata_input = yang.gen3.from_data(src_dnode(), i, loose=True, root_path=['orchestron-rfs:rfs', 'mini-rfs:base-config'])
+        gdata_input = yang.gen3.from_data(SRC_DNODE, i, loose=True, root_path=['orchestron-rfs:rfs', 'mini-rfs:base-config'])
         modeled_input = orchestron_rfs__rfs__base_config_entry.from_gdata(gdata_input)
 
         return self.transform(modeled_input, device_info).to_gdata(), None
@@ -63,7 +63,7 @@ class Bar(ttt.RFSFunction):
         """Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         """
-        gdata_input = yang.gen3.from_data(src_dnode(), i, loose=True, root_path=['orchestron-rfs:rfs', 'mini-rfs:bar'])
+        gdata_input = yang.gen3.from_data(SRC_DNODE, i, loose=True, root_path=['orchestron-rfs:rfs', 'mini-rfs:bar'])
         modeled_input = orchestron_rfs__rfs__bar_entry.from_gdata(gdata_input)
 
         return self.transform(modeled_input, device_info).to_gdata(), None

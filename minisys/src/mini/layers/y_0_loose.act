@@ -18,6 +18,27 @@ from yang.type import Decimal, Ranges
 _identities: list[DIdentity] = []
 
 
+SRC_DNODE = DRoot(children=[
+    DContainer(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='netinfra', config=True, description='Network infrastructure', presence=False, children=[
+        DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
+                Ext('orchestron', 'transform', arg='mini.cfs.Router')
+            ], children=[
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='id', config=True, description='router id', mandatory=True, type_=DTypeInteger(name='uint32', description=None, reference=None, exts=[], builtin_type='uint32', default=None, ranges=Ranges([(bigint("0"), bigint("4294967295"))]))),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='type', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+        ]),
+        DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='foo', key=[
+'router',
+'name'
+            ], config=True, min_elements=0, ordered_by='system', exts=[
+                Ext('orchestron', 'transform', arg='mini.cfs.Foo')
+            ], children=[
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+        ])
+    ])
+])
+
 def src_yang():
     res = []
     res.append(r"""module netinfra {
@@ -562,7 +583,7 @@ class netinfra__netinfra__router_entry(yang.adata.MNode):
 
     mut def to_gdata(self) -> yang.gdata.Node:
         if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(src_dnode(), self, loose=True, root_path=['netinfra:netinfra', 'router'])
+            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['netinfra:netinfra', 'router'])
         raise ValueError('unreachable')
 
     @staticmethod
@@ -631,7 +652,7 @@ class netinfra__netinfra__foo_entry(yang.adata.MNode):
 
     mut def to_gdata(self) -> yang.gdata.Node:
         if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(src_dnode(), self, loose=True, root_path=['netinfra:netinfra', 'foo'])
+            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['netinfra:netinfra', 'foo'])
         raise ValueError('unreachable')
 
     @staticmethod
@@ -703,7 +724,7 @@ class netinfra__netinfra(yang.adata.MNode):
 
     mut def to_gdata(self) -> yang.gdata.Node:
         if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(src_dnode(), self, loose=True, root_path=['netinfra:netinfra'])
+            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['netinfra:netinfra'])
         raise ValueError('unreachable')
 
     @staticmethod
@@ -731,7 +752,7 @@ class root(yang.adata.MNode):
 
     mut def to_gdata(self) -> yang.gdata.Node:
         if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(src_dnode(), self, loose=True)
+            return yang.gen3.from_data(SRC_DNODE, self, loose=True)
         raise ValueError('unreachable')
 
     @staticmethod
@@ -744,28 +765,6 @@ class root(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return root.from_gdata(self.to_gdata())
 
-
-def src_dnode():
-    return DRoot(children=[
-    DContainer(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='netinfra', config=True, description='Network infrastructure', presence=False, children=[
-        DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
-                Ext('orchestron', 'transform', arg='mini.cfs.Router')
-            ], children=[
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='id', config=True, description='router id', mandatory=True, type_=DTypeInteger(name='uint32', description=None, reference=None, exts=[], builtin_type='uint32', default=None, ranges=Ranges([(bigint("0"), bigint("4294967295"))]))),
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='type', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
-        ]),
-        DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='foo', key=[
-'router',
-'name'
-            ], config=True, min_elements=0, ordered_by='system', exts=[
-                Ext('orchestron', 'transform', arg='mini.cfs.Foo')
-            ], children=[
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-            DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
-        ])
-    ])
-])
 
 schema_namespaces: set[str] = {
     'http://example.com/netinfra',

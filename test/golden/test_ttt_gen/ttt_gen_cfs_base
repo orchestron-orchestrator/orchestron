@@ -10,7 +10,7 @@ import yang.gdata
 import yang.gen3
 
 from respnet.layers.y_0 import foo__c1__foo__bar_entry
-from respnet.layers.y_0 import src_dnode
+from respnet.layers.y_0 import SRC_DNODE
 from respnet.layers.y_1_loose import root as output_root
 
 def o_root():
@@ -37,7 +37,7 @@ class Foobar(ttt.TransformFunction):
         """Wrap the user provided transform method to convert from XML to
         modeled input and return gdata
         """
-        gdata_input = yang.gen3.from_data(src_dnode(), i, loose=False, root_path=['foo:c1', 'foo', 'bar'])
+        gdata_input = yang.gen3.from_data(SRC_DNODE, i, loose=False, root_path=['foo:c1', 'foo', 'bar'])
         modeled_input = foo__c1__foo__bar_entry.from_gdata(gdata_input)
 
         return self.transform(modeled_input).to_gdata(), None
