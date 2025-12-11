@@ -35,7 +35,7 @@ def rfs_for_device(dev):
     return yang.gdata.Container({
         'rfs': yang.gdata.List(["name"], [
             yang.gdata.Container({
-                "name": yang.gdata.Leaf("string", dev)
+                "name": yang.gdata.Leaf(dev)
             })
         ])
     })
