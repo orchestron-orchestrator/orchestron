@@ -209,7 +209,7 @@ def truncate_conf(conf: ?yang.gdata.Node) -> str:
     """Truncate the configuration to a short string for logging
     """
     if conf is not None:
-        sc = conf.to_json()
+        sc = conf.to_jsonstr()
         trunc_len = min([len(sc), 50])
         if trunc_len < len(sc):
             sc = sc[:trunc_len] + "..."
@@ -398,7 +398,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
 
     def set_dmc(new_dmc: DeviceMetaConfig) -> None:
         old_type = str(dmc.type) if dmc is not None else str(None)
-        _log.debug("DeviceMgr.set_dmc", {"old_type": old_type, "new_dmc": json.encode(json.decode(new_dmc.to_gdata().to_json()), pretty=False)})
+        _log.debug("DeviceMgr.set_dmc", {"old_type": old_type, "new_dmc": new_dmc.to_gdata().to_jsonstr(pretty=False)})
 
         if mock:
             _log.debug("DeviceMgr.set_dmc: mock device")
@@ -827,7 +827,7 @@ class NoAdapter(DeviceAdapter):
         self._log = logging.Logger(self._log_handler)
 
     def set_dmc(self, new_dmc):
-        self._log.debug("NoAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_json()})
+        self._log.debug("NoAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_jsonstr()})
 
     def configure(self, done, new_diff, new_conf, running_conf):
         # The NoAdapter cannot configure anything, so we just call done() with False
@@ -902,7 +902,7 @@ actor MockDriver(dev: DeviceMgr, schema: DeviceSchema, log_handler: logging.Hand
                 if yang.gdata.diff(old_dmcg, new_dmcg) is not None:
                     _log.debug("Device.set_dmc: ignoring new device meta-config identical to current device meta-config")
                     return
-        _log.debug("MockAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_json()})
+        _log.debug("MockAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_jsonstr()})
         _dmc = new_dmc
 
         preset_caps = []
@@ -1098,7 +1098,7 @@ actor NetconfDriver(dev: DeviceMgr, schema: DeviceSchema, init_dmc: DeviceMetaCo
         _log.debug("Notification from device")
 
     def set_dmc(new_dmc: DeviceMetaConfig):
-        _log.debug("Device.set_dmc", {"dmc": dmc.to_gdata().to_json(), "new_dmc": new_dmc.to_gdata().to_json()})
+        _log.debug("Device.set_dmc", {"dmc": dmc.to_gdata().to_jsonstr(), "new_dmc": new_dmc.to_gdata().to_jsonstr()})
         # TODO: implement Eq for adata
         #if dmc is not None and dmc == new_dmc:
         if dmc is not None and new_dmc is not None:
