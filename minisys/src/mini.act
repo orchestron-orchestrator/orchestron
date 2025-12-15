@@ -155,7 +155,7 @@ actor main(env):
                     aheader = accept_header if accept_header is not None else "application/yang-data+json"
                     if data is not None:
                         if aheader == "application/yang-data+json":
-                            out_data = data.to_json()
+                            out_data = data.to_jsonstr()
                         elif aheader == "application/yang-data+xml":
                             out_data = data.to_xmlstr()
                         elif aheader == "application/yang-data+acton-adata":
@@ -200,7 +200,7 @@ actor main(env):
                             config_diff = yang.gdata.diff(running_conf, target_conf)
                             if config_diff is not None:
                                 if format_type == "json":
-                                    diff_str = config_diff.to_json()
+                                    diff_str = config_diff.to_jsonstr()
                                 elif format_type == "xml":
                                     diff_str = config_diff.to_xmlstr()
                                 elif format_type == "gdata":
@@ -208,7 +208,7 @@ actor main(env):
                                 elif format_type == "adata":
                                     diff_str = yang.gen3.pradata(schema.src_dnode, config_diff, loose=True)
                                 else:
-                                    diff_str = config_diff.to_json()  # default to json
+                                    diff_str = config_diff.to_jsonstr()  # default to json
                                 respond(200, {"Content-Type": "text/plain"}, diff_str)
                             else:
                                 respond(200, {"Content-Type": "text/plain"}, "# No differences")
@@ -229,7 +229,7 @@ actor main(env):
                         target_conf = dev.get_target_conf()
                         if target_conf is not None:
                             if format_type == "json":
-                                conf_str = target_conf.to_json()
+                                conf_str = target_conf.to_jsonstr()
                             elif format_type == "xml":
                                 conf_str = target_conf.to_xmlstr()
                             elif format_type == "gdata":
@@ -237,7 +237,7 @@ actor main(env):
                             elif format_type == "adata":
                                 conf_str = yang.gen3.pradata(schema.src_dnode, target_conf, loose=True)
                             else:
-                                conf_str = target_conf.to_json()  # default to json
+                                conf_str = target_conf.to_jsonstr()  # default to json
                             respond(200, {"Content-Type": "text/plain"}, conf_str)
                         else:
                             respond(200, {"Content-Type": "text/plain"}, "# No target configuration available")
@@ -256,7 +256,7 @@ actor main(env):
                         running_conf = dev.get_running_conf()
                         if running_conf is not None:
                             if format_type == "json":
-                                conf_str = running_conf.to_json()
+                                conf_str = running_conf.to_jsonstr()
                             elif format_type == "xml":
                                 conf_str = running_conf.to_xmlstr()
                             elif format_type == "gdata":
@@ -264,7 +264,7 @@ actor main(env):
                             elif format_type == "adata":
                                 conf_str = yang.gen3.pradata(schema.src_dnode, running_conf, loose=True)
                             else:
-                                conf_str = running_conf.to_json()  # default to json
+                                conf_str = running_conf.to_jsonstr()  # default to json
                             respond(200, {"Content-Type": "text/plain"}, conf_str)
                         else:
                             respond(200, {"Content-Type": "text/plain"}, "# No running configuration available")
@@ -333,7 +333,7 @@ actor main(env):
                             conf_diff = item.conf_diff
                             if conf_diff is not None:
                                 if format_type == "json":
-                                    diff_str = conf_diff.to_json()
+                                    diff_str = conf_diff.to_jsonstr()
                                 elif format_type == "xml":
                                     diff_str = conf_diff.to_xmlstr()
                                 elif format_type == "gdata":
@@ -380,7 +380,7 @@ actor main(env):
                                     config_diff_str = None
                                     if config_diff is not None:
                                         if format_type == "json":
-                                            #config_diff_str = config_diff.to_json()
+                                            #config_diff_str = config_diff.to_jsonstr()
                                             config_diff_str = "# JSON diff not available"
                                         elif format_type == "adata":
                                             #config_diff_str = str(config_diff.to_adata())
@@ -422,7 +422,7 @@ actor main(env):
                     layer_config: yang.gdata.Node = session.get()
                     content = ""
                     if request.headers.get("accept") == "application/yang-data+json":
-                        content = layer_config.to_json()
+                        content = layer_config.to_jsonstr()
                     if request.headers.get("accept") == "application/yang-data+xml":
                         content = layer_config.to_xmlstr()
                     if request.headers.get("accept") == "application/yang-data+acton-adata":
