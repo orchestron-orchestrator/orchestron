@@ -490,25 +490,23 @@ class _ContainerTransaction(_Transaction):
 
 ################# Lists ####################
 
-# TODO: remove key_types, now that gdata.Leaf.type attribute is gone?!
-def List(template, key_names: list[str], key_types: list[str], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
-    return lambda path, lower: Node(_List(path, template, key_names, key_types, ns, module, lower))
+def List(template, key_names: list[str], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
+    return lambda path, lower: Node(_List(path, template, key_names, ns, module, lower))
 
 class _List(_Node):
     liststate: ListState
     ns: ?str
     module: ?str
 
-    def __init__(self, path, template, key_names, key_types, ns, module, lower: ?Layer):
+    def __init__(self, path, template, key_names, ns, module, lower: ?Layer):
         self.path = path
         self.key_names = key_names
-        self.key_types = key_types
         self.ns = ns
         self.module = module
         self.liststate = ListState(path, template, ns, module, lower)
 
     def newtrans(self):
-        return ListTransaction(self.path, self.liststate, self.key_names, self.key_types, self.ns, self.module)
+        return ListTransaction(self.path, self.liststate, self.key_names, self.ns, self.module)
 
     def get(self):
         #print('####', '(List)', self.path, 'NODE GET', err=True)
@@ -563,7 +561,6 @@ actor ListState(path, template: proc(list[str], ?Layer) -> Node, ns: ?str, modul
 class _ListTransaction(_Transaction):
     liststate : ListState
     key_names : list[str]
-    key_types : list[str]
     elems : dict[str, Transaction]
     accum : dict[str, value]
     state : ?YieldState
@@ -571,11 +568,10 @@ class _ListTransaction(_Transaction):
     ns: ?str
     module: ?str
 
-    def __init__(self, path, liststate, key_names, key_types, ns, module):
+    def __init__(self, path, liststate, key_names, ns, module):
         self.path = path
         self.liststate = liststate
         self.key_names = key_names
-        self.key_types = key_types
         self.ns = ns
         self.module = module
         self.elems = {}
@@ -730,8 +726,8 @@ class _ListTransaction(_Transaction):
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
-def ListTransaction(path, liststate: ListState, key_names, key_types, ns, module):
-    return Transaction(_ListTransaction(path, liststate, key_names, key_types, ns, module))
+def ListTransaction(path, liststate: ListState, key_names, ns, module):
+    return Transaction(_ListTransaction(path, liststate, key_names, ns, module))
 
 
 ################# Transform #####################

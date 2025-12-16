@@ -92,7 +92,7 @@ class TransF(ttt.TransformFunction):
 
 actor basic_output(t: testing.AsyncT):
     out = ttt.Sink().newsession()
-    tlist = ttt.List(ttt.Transform(TransF), ["name"], ["string"]) ([], None)
+    tlist = ttt.List(ttt.Transform(TransF), ["name"]) ([], None)
     t1 = tlist.newtrans()
 
     t1.configure("1", {'srcA': cfg1}, out)
@@ -112,7 +112,7 @@ actor basic_output(t: testing.AsyncT):
     t1.lock("1", out, cont1)
 
 actor layered_commit(t: testing.AsyncT):
-    stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF), ["name"], ["string"]), ttt.Sink())
+    stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF), ["name"]), ttt.Sink())
 
     sess = stack.newsession()
 
@@ -126,7 +126,7 @@ actor layered_commit(t: testing.AsyncT):
     sess.edit_config(cfg1, cont1)
 
 actor simultaneous_commit(t: testing.AsyncT):
-    stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF), ["name"], ["string"]), ttt.Sink())
+    stack = ttt.Layer("top", ttt.List(ttt.Transform(TransF), ["name"]), ttt.Sink())
 
     sess1 = stack.newsession()
     sess2 = stack.newsession()
