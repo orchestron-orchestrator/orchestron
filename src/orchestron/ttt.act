@@ -11,9 +11,12 @@ def per_src(cfg_per_src: dict[str, gdata.Node]):
     return "\n".join([f"        '{src}': {cfg.prsrc(True, 4)}" for src,cfg in cfg_per_src.items()])
 
 WILDKEY = ""
+WILDID = gdata.Id("", "")
 
-def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
-    cfg_per_key = {}
+# Note the different return types of transpose_list and transpose_container
+def transpose_list(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.Node]]:
+    # outer dict key is the list element key_str
+    cfg_per_key: dict[str, dict[str, gdata.Node]] = {}
     for src, conf in cfg_per_src.items():
         if isinstance(conf, gdata.List):
             for le in conf.elements:
@@ -22,17 +25,26 @@ def transpose(cfg_per_src: dict[str, gdata.Node]) -> dict[str, dict[str, gdata.N
                     cfg_per_key[key][src] = le
                 else:
                     cfg_per_key[key] = {src: le}
-        elif isinstance(conf, gdata.Container):
+        elif isinstance(conf, gdata.Absent):
+            cfg_per_key[WILDKEY] = {src: conf}
+        else:
+            raise NotImplementedError("Cannot transpose configuration type {type(conf)} in transpose_list")
+    return cfg_per_key
+
+def transpose_container(cfg_per_src: dict[str, gdata.Node]) -> dict[gdata.Id, dict[str, gdata.Node]]:
+    # outer dict key is the child node gdata.Id
+    cfg_per_key: dict[gdata.Id, dict[str, gdata.Node]] = {}
+    for src, conf in cfg_per_src.items():
+        if isinstance(conf, gdata.Container):
             for key, subconf in conf.children.items():
                 if key in cfg_per_key:
                     cfg_per_key[key][src] = subconf
                 else:
                     cfg_per_key[key] = {src: subconf}
-        elif isinstance (conf, gdata.Absent):
-            cfg_per_key[WILDKEY] = {src: conf}
+        elif isinstance(conf, gdata.Absent):
+            cfg_per_key[WILDID] = {src: conf}
         else:
-            raise NotImplementedError(f"Cannot transpose configuration type{type(conf)}")
-
+            raise NotImplementedError("Cannot transpose configuration type {type(conf)} in transpose_container")
     return cfg_per_key
 
 def difference(a: ?gdata.Node, b: gdata.Node) -> ?gdata.Node:
@@ -78,16 +90,16 @@ def expect[T](t: ?T, errmsg: str) -> T:
 
 ##################### Node & Transactions #####################
 
-class YieldState(object):
-    it: Iterator[str]
-    key: str
+class YieldState[T(Hashable)](object):
+    it: Iterator[T]
+    key: T
     tid: str
     out: ?Session
-    results: dict[str,value]
+    results: dict[T, value]
     @property
     done: action(value) -> None
 
-    def __init__(self, it, key, tid, out, done):
+    def __init__(self, it: Iterator[T], key: T, tid, out, done):
         self.it = it
         self.key = key
         self.tid = tid
@@ -306,13 +318,13 @@ def Container(template={}, ns:?str=None, module:?str=None) -> proc(list[str], ?L
     return lambda path, lower: Node(_Container(path, template, ns, module, lower))
 
 class _Container(_Node):
-    elems: dict[str, Node]
+    elems: dict[gdata.Id, Node]
     ns: ?str
     module: ?str
 
-    def __init__(self, path, template: dict[str, proc(list[str], ?Layer)->Node], ns, module, lower: ?Layer):
+    def __init__(self, path, template: dict[gdata.Id, proc(list[str], ?Layer)->Node], ns, module, lower: ?Layer):
         self.path = path
-        self.elems = {key: templ(path + [key], lower) for key, templ in template.items()}
+        self.elems = {key: templ(path + [str(key)], lower) for key, templ in template.items()}
         self.ns = ns
         self.module = module
 
@@ -329,9 +341,9 @@ def ContainerTransaction(path, contents, ns:?str=None, module:?str=None):
     return Transaction(_ContainerTransaction(path, contents, ns, module))
 
 class _ContainerTransaction(_Transaction):
-    elems : dict[str, Transaction]
-    accum : dict[str, value]
-    state : ?YieldState
+    elems : dict[gdata.Id, Transaction]
+    accum : dict[gdata.Id, value]
+    state : ?YieldState[gdata.Id]
     ns: ?str
     module: ?str
 
@@ -346,25 +358,25 @@ class _ContainerTransaction(_Transaction):
 
     def configure(self, tid, diff, out, force=False):
         #print('####', tid, '(Container)', self.path, 'configure force:', force, actorid(), err=True)
-        diff_by_child = transpose(diff)
+        diff_by_child = transpose_container(diff)
         # Extra nodes present in diff_by_child represent configuration that is
         # not any of our embedded transforms. These may be key leaf values, or
         # in general any other configuration nodes in the same list element.
         # In any case this container is not responsible for tracking them, so we remove them.
-        for k in set(diff_by_child.keys()) - set(self.elems.keys()) - set([WILDKEY]):
+        for k in set(diff_by_child.keys()) - set(self.elems.keys()) - set([WILDID]):
             del diff_by_child[k]
 
         if len(diff_by_child) == 0 and force:
             for k in self.elems.keys():
                 diff_by_child[k] = {}
-        elif WILDKEY in diff_by_child:
-            wildconf = diff_by_child[WILDKEY]
+        elif WILDID in diff_by_child:
+            wildconf = diff_by_child[WILDID]
             for k in self.elems.keys():
                 if k in diff_by_child:
                     diff_by_child[k].update(wildconf.items())
                 else:
                     diff_by_child[k] = wildconf
-            del diff_by_child[WILDKEY]
+            del diff_by_child[WILDID]
         msgs = {}
         for child,subdiff in diff_by_child.items():
             if child in self.elems:
@@ -391,7 +403,7 @@ class _ContainerTransaction(_Transaction):
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
         #print('####', tid, '(Container)', self.path, 'lock', sorted(self.accum.keys()), err=True)
-        it = iter(sorted(self.accum.keys()))
+        it = iter(gdata.hack_sorted(self.accum.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, out, done)
@@ -432,7 +444,7 @@ class _ContainerTransaction(_Transaction):
     # yield action
     def wait_complete(self, actself, tid, done):
         #print('####', tid, '(Container)', self.path, 'wait_complete', list(self.accum.keys()), err=True)
-        it = iter(sorted(self.elems.keys()))
+        it = iter(gdata.hack_sorted(self.elems.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, None, done)
@@ -568,7 +580,7 @@ class _ListTransaction(_Transaction):
     key_names : list[gdata.Id]
     elems : dict[str, Transaction]
     accum : dict[str, value]
-    state : ?YieldState
+    state : ?YieldState[str]
     reset: bool
     ns: ?str
     module: ?str
@@ -590,7 +602,7 @@ class _ListTransaction(_Transaction):
             self.elems = {}
             self.accum = {}
             self.reset = False
-        diff_by_key = transpose(diff)
+        diff_by_key = transpose_list(diff)
         if len(diff_by_key) == 0 and force:
             for key,node in self.liststate.acquire(tid, None, None).items():
                 diff_by_key[key] = {}
@@ -1019,7 +1031,7 @@ class _RFSTransaction(_TransformTransactionBase):
         self.function = function(log_handler)
         if len(path) < 3:
             raise ValueError(f"RFSTransform {path}: path length < 3")
-        self.devname = path[-3]
+        self.devname = path[-3  ]
         self.dev = dev_registry.get(self.devname)
         self.lower = lower
 
