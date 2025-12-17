@@ -5,67 +5,72 @@ import orchestron.ttt as ttt
 #import orchestron.gdata as gdata
 import yang.gdata as gdata
 
+TEST_NS = "urn:test"
+
+def q(n: str) -> gdata.Id:
+    return gdata.Id(TEST_NS, n)
+
 
 tree1 = gdata.Container({
-    'left': gdata.Container({
-        "l1": gdata.List(["name"], [
+    q('left'): gdata.Container({
+        q("l1"): gdata.List([q("name")], [
             gdata.Container({
-                "name": gdata.Leaf("k1"),
-                "n1": gdata.Leaf(bigint(1)),
-                "n2": gdata.Leaf(bigint(2))
+                q("name"): gdata.Leaf("k1"),
+                q("n1"): gdata.Leaf(bigint(1)),
+                q("n2"): gdata.Leaf(bigint(2))
             }),
             gdata.Container({
-                "name": gdata.Leaf("k4"),
-                "n4": gdata.Leaf(bigint(4))
+                q("name"): gdata.Leaf("k4"),
+                q("n4"): gdata.Leaf(bigint(4))
             })
         ])
     }),
-    'right': gdata.Container({
-        "a": gdata.LeafList([bigint(1),bigint(2),bigint(3)])
+    q('right'): gdata.Container({
+        q("a"): gdata.LeafList([bigint(1),bigint(2),bigint(3)])
     })
 })
 
 tree2 = gdata.Container({
-    'left': gdata.Container({
-        "l1": gdata.List(["name"], [
+    q('left'): gdata.Container({
+        q("l1"): gdata.List([q("name")], [
             gdata.Container({
-                "name": gdata.Leaf("k1"),
-                "n2": gdata.Leaf(bigint(2))
+                q("name"): gdata.Leaf("k1"),
+                q("n2"): gdata.Leaf(bigint(2))
             }),
             gdata.Container({
-                "name": gdata.Leaf("k2"),
-                "n1": gdata.Leaf(bigint(1)),
-                "n3": gdata.Leaf(bigint(3))
+                q("name"): gdata.Leaf("k2"),
+                q("n1"): gdata.Leaf(bigint(1)),
+                q("n3"): gdata.Leaf(bigint(3))
             })
         ]),
     }),
-    'right': gdata.Container({
-        "b": gdata.Leaf(bigint(1))
+    q('right'): gdata.Container({
+        q("b"): gdata.Leaf(bigint(1))
     })
 })
 
 merge_1_2 = gdata.Container({
-    'left': gdata.Container({
-        "l1": gdata.List(["name"], [
+    q('left'): gdata.Container({
+        q("l1"): gdata.List([q("name")], [
             gdata.Container({
-                "name": gdata.Leaf("k1"),
-                "n1": gdata.Leaf(bigint(1)),
-                "n2": gdata.Leaf(bigint(2))
+                q("name"): gdata.Leaf("k1"),
+                q("n1"): gdata.Leaf(bigint(1)),
+                q("n2"): gdata.Leaf(bigint(2))
             }),
             gdata.Container({
-                "name": gdata.Leaf("k2"),
-                "n1": gdata.Leaf(bigint(1)),
-                "n3": gdata.Leaf(bigint(3))
+                q("name"): gdata.Leaf("k2"),
+                q("n1"): gdata.Leaf(bigint(1)),
+                q("n3"): gdata.Leaf(bigint(3))
             }),
             gdata.Container({
-                "name": gdata.Leaf("k4"),
-                "n4": gdata.Leaf(bigint(4))
+                q("name"): gdata.Leaf("k4"),
+                q("n4"): gdata.Leaf(bigint(4))
             })
         ]),
     }),
-    'right': gdata.Container({
-        "a": gdata.LeafList([bigint(1),bigint(2),bigint(3)]),
-        "b": gdata.Leaf(bigint(1))
+    q('right'): gdata.Container({
+        q("a"): gdata.LeafList([bigint(1),bigint(2),bigint(3)]),
+        q("b"): gdata.Leaf(bigint(1))
     })
 })
 
@@ -74,8 +79,8 @@ merge_1_2 = gdata.Container({
 
 actor basic_commit(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     })([], None)
     t1 = container.newtrans()
 
@@ -94,17 +99,17 @@ actor basic_commit(t: testing.AsyncT):
 
 actor all_delete(t: testing.AsyncT):
     in1 = gdata.Container({
-            "left" : gdata.Container({
-                "x": gdata.Leaf(bigint(1))
+            q("left") : gdata.Container({
+                q("x"): gdata.Leaf(bigint(1))
             }),
-            "right": gdata.Container({
-                "x": gdata.Leaf(bigint(2))
+            q("right"): gdata.Container({
+                q("x"): gdata.Leaf(bigint(2))
             })
         })
 
     tlist = ttt.Container({
-                "left": ttt.Transform(ttt.PassThrough),
-                "right": ttt.Transform(ttt.PassThrough)
+                q("left"): ttt.Transform(ttt.PassThrough),
+                q("right"): ttt.Transform(ttt.PassThrough)
             }) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})
@@ -121,8 +126,8 @@ actor all_delete(t: testing.AsyncT):
             t1.commit("1", True)
             out2 = t1.get()
             exp2 = gdata.Container({
-                "left": gdata.Container(),
-                "right": gdata.Container()
+                q("left"): gdata.Container(),
+                q("right"): gdata.Container()
             })
             testing.assertEqual(out2, exp2)
             t.success()
@@ -136,27 +141,27 @@ actor all_delete(t: testing.AsyncT):
 
 actor nested_delete(t: testing.AsyncT):
     in1 = gdata.Container({
-        "left": gdata.List(["name"], [
+        q("left"): gdata.List([q("name")], [
             gdata.Container({
-                "name": gdata.Leaf("k1"),
-                "x": gdata.Leaf(bigint(1))
+                q("name"): gdata.Leaf("k1"),
+                q("x"): gdata.Leaf(bigint(1))
             }),
             gdata.Container({
-                "name": gdata.Leaf("k2"),
-                "x": gdata.Leaf(bigint(2))
+                q("name"): gdata.Leaf("k2"),
+                q("x"): gdata.Leaf(bigint(2))
             })
         ]),
-        "right": gdata.List(["name"], [
+        q("right"): gdata.List([q("name")], [
             gdata.Container({
-                "name": gdata.Leaf("v1"),
-                "y": gdata.Leaf(bigint(1))
+                q("name"): gdata.Leaf("v1"),
+                q("y"): gdata.Leaf(bigint(1))
             }),
         ])
     })
 
     tlist = ttt.Container({
-                "left": ttt.List(ttt.Transform(ttt.PassThrough), ["name"]),
-                "right": ttt.List(ttt.Transform(ttt.PassThrough), ["name"])
+                q("left"): ttt.List(ttt.Transform(ttt.PassThrough), [q("name")]),
+                q("right"): ttt.List(ttt.Transform(ttt.PassThrough), [q("name")])
             }) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})
@@ -173,8 +178,8 @@ actor nested_delete(t: testing.AsyncT):
             t1.commit("1", True)
             out2 = t1.get()
             exp2 = gdata.Container({
-                "left": gdata.List(["name"], []),
-                "right": gdata.List(["name"], [])
+                q("left"): gdata.List([q("name")], []),
+                q("right"): gdata.List([q("name")], [])
             })
             testing.assertEqual(out2, exp2)
             t.success()
@@ -188,8 +193,8 @@ actor nested_delete(t: testing.AsyncT):
 
 actor overlapping_commit(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
@@ -218,8 +223,8 @@ actor overlapping_commit(t: testing.AsyncT):
 
 actor overlapping_commit2(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
@@ -248,8 +253,8 @@ actor overlapping_commit2(t: testing.AsyncT):
 
 actor modified_commit(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
 
@@ -269,8 +274,8 @@ actor modified_commit(t: testing.AsyncT):
 
 actor modified_commit2(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
 
@@ -289,23 +294,23 @@ actor modified_commit2(t: testing.AsyncT):
 ########################
 
 tree0 = gdata.Container({
-    'left': gdata.Container({
-        "l1": gdata.List(["name"], [
+    q('left'): gdata.Container({
+        q("l1"): gdata.List([q("name")], [
             gdata.Container({
-                "name": gdata.Leaf("k4"),
-                "n4": gdata.Leaf(bigint(0))
+                q("name"): gdata.Leaf("k4"),
+                q("n4"): gdata.Leaf(bigint(0))
             })
         ]),
     }),
-    'right': gdata.Container({
-        "a": gdata.LeafList([bigint(1),bigint(2),bigint(3)])
+    q('right'): gdata.Container({
+        q("a"): gdata.LeafList([bigint(1),bigint(2),bigint(3)])
     })
 })
 
 actor modified_overlapping_commit(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
@@ -330,40 +335,40 @@ actor modified_overlapping_commit(t: testing.AsyncT):
 ########################
 
 a0 = gdata.Container({
-    'left': gdata.Container({
-        'a': gdata.Leaf(bigint(0))
+    q('left'): gdata.Container({
+        q('a'): gdata.Leaf(bigint(0))
     }),
-    'right': gdata.Container({
-        'x': gdata.Leaf(bigint(0))
+    q('right'): gdata.Container({
+        q('x'): gdata.Leaf(bigint(0))
     })
 })
 
 a1 = gdata.Container({
-    'left': gdata.Container({
-        'a': gdata.Leaf(bigint(1))
+    q('left'): gdata.Container({
+        q('a'): gdata.Leaf(bigint(1))
     })
 })
 
 b1 = gdata.Container({
-    'left': gdata.Container({
-        'b': gdata.Leaf(bigint(1))
+    q('left'): gdata.Container({
+        q('b'): gdata.Leaf(bigint(1))
     })
 })
 
 a0b1 = gdata.Container({
-    'left': gdata.Container({
-        'a': gdata.Leaf(bigint(0)),
-        'b': gdata.Leaf(bigint(1))
+    q('left'): gdata.Container({
+        q('a'): gdata.Leaf(bigint(0)),
+        q('b'): gdata.Leaf(bigint(1))
     }),
-    'right': gdata.Container({
-        'x': gdata.Leaf(bigint(0))
+    q('right'): gdata.Container({
+        q('x'): gdata.Leaf(bigint(0))
     })
 })
 
 actor config_failure(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
@@ -392,8 +397,8 @@ actor config_failure(t: testing.AsyncT):
 
 actor config_abort(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
@@ -418,8 +423,8 @@ actor config_abort(t: testing.AsyncT):
 
 actor multi_lock(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
 
@@ -442,18 +447,18 @@ actor multi_lock(t: testing.AsyncT):
 ########################
 
 tree3 = gdata.Container({
-    'left': gdata.Container({
-        "l1": gdata.List(["name"], []),
+    q('left'): gdata.Container({
+        q("l1"): gdata.List([q("name")], []),
     }),
-    'right': gdata.Container({
-        "b": gdata.Leaf(bigint(0))
+    q('right'): gdata.Container({
+        q("b"): gdata.Leaf(bigint(0))
     })
 })
 
 actor empty_lock(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
@@ -478,8 +483,8 @@ actor empty_lock(t: testing.AsyncT):
 
 actor empty_lock2(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
@@ -506,8 +511,8 @@ actor empty_lock2(t: testing.AsyncT):
 
 actor no_lock(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
@@ -530,8 +535,8 @@ actor no_lock(t: testing.AsyncT):
 
 actor spurious_commit(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()
@@ -553,8 +558,8 @@ actor spurious_commit(t: testing.AsyncT):
 
 actor spurious_config(t: testing.AsyncT):
     container = ttt.Container({
-        'left': ttt.Transform(ttt.PassThrough),
-        'right': ttt.Transform(ttt.PassThrough)
+        q('left'): ttt.Transform(ttt.PassThrough),
+        q('right'): ttt.Transform(ttt.PassThrough)
     }) ([], None)
     t1 = container.newtrans()
     t2 = container.newtrans()

@@ -46,16 +46,21 @@ def create_test_dmc() -> dmc.orchestron_rfs__device_entry:
 
 
 def create_crpd_gdata_config(seq) -> yang.gdata.Node:
+    JUNOS_NS = "http://xml.juniper.net/xnm/1.1/xnm"
+
+    def q(n):
+        return yang.gdata.Id(JUNOS_NS, n)
+
     system = yang.gdata.Container({
-        "login": yang.gdata.Container({
-            "announcement": yang.gdata.Leaf("string", f"Test banner from Orchestron, seq: {seq}")
+        q("login"): yang.gdata.Container({
+            q("announcement"): yang.gdata.Leaf("string", f"Test banner from Orchestron, seq: {seq}")
         })
     })
     config_children = {
-        "system": system
+        q("system"): system
     }
     config_configuration = {
-        "configuration": yang.gdata.Container(config_children, ns="http://xml.juniper.net/xnm/1.1/xnm")
+        q("configuration"): yang.gdata.Container(config_children, ns="http://xml.juniper.net/xnm/1.1/xnm")
     }
     return yang.gdata.Container(config_configuration)
 
@@ -306,20 +311,20 @@ actor _test_txid(t: testing.EnvT):
 
 actor _test_direct_get_config_with_filter(t: testing.EnvT):
     """Test direct netconf.Client get-config with subtree filter
-    
+
     This test connects directly to the device and performs a get-config
     with a subtree filter to retrieve only the top-level <configuration> container.
     """
     log = logging.Logger(t.log_handler)
     log.info("Testing direct get-config with subtree filter")
-    
+
     def on_connect(c: netconf.Client, err: ?Exception):
         if err is not None:
             log.error("Failed to connect", {"error": str(err)})
             t.failure(err)
         else:
             log.info("Connected successfully")
-            
+
             # Create subtree filter for just the configuration container
             subtree_filter_str = """<configuration xmlns="http://xml.juniper.net/xnm/1.1/xnm"/>"""
             subtree_filter = xml.Node("filter", children=[
@@ -333,12 +338,12 @@ actor _test_direct_get_config_with_filter(t: testing.EnvT):
                         ])
                     ])
                 ])
-            
+
             log.info("Sending get-config with subtree filter", {"filter": subtree_filter_str})
-            
+
             # Perform get-config with filter
             c.get_config(on_get_config, datastore="running", filter=subtree_filter)
-    
+
     def on_get_config(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
         if error is not None:
             log.error("get-config failed", {"error": error.error_message})
@@ -351,15 +356,15 @@ actor _test_direct_get_config_with_filter(t: testing.EnvT):
         else:
             log.error("No response from get-config")
             c.close(on_close_failure)
-    
+
     def on_close_success():
         log.info("Test completed successfully")
         t.success()
-    
+
     def on_close_failure():
         log.info("Test failed")
         t.failure(ValueError("get-config failed"))
-    
+
     # Create the client and connect
     if run_test:
         client = netconf.Client(

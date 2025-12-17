@@ -57,68 +57,68 @@ def create_simple_gdata_config() -> yang.gdata.Node:
 
     # server-identity container with banner
     server_identity_children = {
-        "banner": banner_leaf
+        yang.gdata.Id("urn:cesnet:libnetconf2-netconf-server", "banner"): banner_leaf
     }
     server_identity = yang.gdata.Container(server_identity_children)
 
     # ssh-server-parameters container
     ssh_server_params_children = {
-        "server-identity": server_identity
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "server-identity"): server_identity
     }
     ssh_server_params = yang.gdata.Container(ssh_server_params_children)
 
     # ssh container
     ssh_children = {
-        "ssh-server-parameters": ssh_server_params
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "ssh-server-parameters"): ssh_server_params
     }
     ssh_container = yang.gdata.Container(ssh_children)
 
     # endpoint list entry with key "default-ssh"
     endpoint_children = {
-        "name": yang.gdata.Leaf("default-ssh"),
-        "ssh": ssh_container
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "name"): yang.gdata.Leaf("default-ssh"),
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "ssh"): ssh_container
     }
     endpoint_entry = yang.gdata.Container(endpoint_children)
 
     # endpoints list - the key is "name"
-    endpoints_list = yang.gdata.List(["name"], [endpoint_entry])
+    endpoints_list = yang.gdata.List([yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "name")], [endpoint_entry])
 
     # endpoints container
     endpoints_children = {
-        "endpoint": endpoints_list
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "endpoint"): endpoints_list
     }
     endpoints = yang.gdata.Container(endpoints_children)
 
     # listen container
     listen_children = {
-        "endpoints": endpoints
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "endpoints"): endpoints
     }
     listen = yang.gdata.Container(listen_children)
 
     # netconf-server container (top level)
     netconf_server_children = {
-        "listen": listen
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "listen"): listen
     }
     netconf_server = yang.gdata.Container(netconf_server_children, ns="urn:ietf:params:xml:ns:yang:ietf-netconf-server")
 
     # Root container
     config_children = {
-        "netconf-server": netconf_server
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "netconf-server"): netconf_server
     }
 
     return yang.gdata.Container(config_children)
 
 def create_crpd_gdata_config(seq) -> yang.gdata.Node:
     system = yang.gdata.Container({
-        "login": yang.gdata.Container({
-            "announcement": yang.gdata.Leaf("Test banner from Orchestron, seq: {seq}")
+        yang.gdata.Id("jc", "login"): yang.gdata.Container({
+            yang.gdata.Id("jc", "announcement"): yang.gdata.Leaf("Test banner from Orchestron, seq: {seq}")
         })
     })
     config_children = {
-        "system": system
+        yang.gdata.Id("jc", "system"): system
     }
     config_configuration = {
-        "configuration": yang.gdata.Container(config_children, ns="http://xml.juniper.net/xnm/1.1/xnm")
+        yang.gdata.Id("jc", "configuration"): yang.gdata.Container(config_children, ns="http://xml.juniper.net/xnm/1.1/xnm")
     }
     return yang.gdata.Container(config_configuration)
 
@@ -234,53 +234,53 @@ def create_second_gdata_config() -> yang.gdata.Node:
 
     # server-identity container with banner
     server_identity_children = {
-        "banner": banner_leaf
+        yang.gdata.Id("urn:cesnet:libnetconf2-netconf-server", "banner"): banner_leaf
     }
     server_identity = yang.gdata.Container(server_identity_children)
 
     # ssh-server-parameters container
     ssh_server_params_children = {
-        "server-identity": server_identity
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "server-identity"): server_identity
     }
     ssh_server_params = yang.gdata.Container(ssh_server_params_children)
 
     # ssh container
     ssh_children = {
-        "ssh-server-parameters": ssh_server_params
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "ssh-server-parameters"): ssh_server_params
     }
     ssh_container = yang.gdata.Container(ssh_children)
 
     # endpoint list entry with key "default-ssh"
     endpoint_children = {
-        "name": yang.gdata.Leaf("default-ssh"),
-        "ssh": ssh_container
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "name"): yang.gdata.Leaf("default-ssh"),
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "ssh"): ssh_container
     }
     endpoint_entry = yang.gdata.Container(endpoint_children)
 
     # endpoints list - the key is "name"
-    endpoints_list = yang.gdata.List(["name"], [endpoint_entry])
+    endpoints_list = yang.gdata.List([yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "name")], [endpoint_entry])
 
     # endpoints container
     endpoints_children = {
-        "endpoint": endpoints_list
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "endpoint"): endpoints_list
     }
     endpoints = yang.gdata.Container(endpoints_children)
 
     # listen container
     listen_children = {
-        "endpoints": endpoints
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "endpoints"): endpoints
     }
     listen = yang.gdata.Container(listen_children)
 
     # netconf-server container (top level)
     netconf_server_children = {
-        "listen": listen
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "listen"): listen
     }
     netconf_server = yang.gdata.Container(netconf_server_children, ns="urn:ietf:params:xml:ns:yang:ietf-netconf-server")
 
     # Root container
     config_children = {
-        "netconf-server": netconf_server
+        yang.gdata.Id("urn:ietf:params:xml:ns:yang:ietf-netconf-server", "netconf-server"): netconf_server
     }
 
     return yang.gdata.Container(config_children)
