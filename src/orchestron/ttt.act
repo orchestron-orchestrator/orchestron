@@ -88,6 +88,26 @@ def expect[T](t: ?T, errmsg: str) -> T:
         return t
     raise ValueError(errmsg)
 
+
+def _format_path(path: list[value]) -> list[str]: # list[str|gdata.Id]
+    if len(path) == 0:
+        return []
+    r = []
+    # Start with "empty" qualifier to ensure the first path component always includes a qualifier
+    p0 = WILDID
+    for p1 in path:
+        if isinstance(p1, gdata.Id):
+            if p0.q == p1.q:
+                r.append(p1.name)
+            else:
+                r.append("{p1.name}#{p1.q}")
+            p0 = p1
+        elif isinstance(p1, str):
+            r.append(p1)
+        else:
+            raise ValueError("Unsupported path component in _format_path: {type(p1)}")
+    return r
+
 ##################### Node & Transactions #####################
 
 class YieldState[T(Hashable)](object):
@@ -119,7 +139,7 @@ actor Node(impl: _Node):
         return impl.get()
 
 class _Node(object):
-    path: list[str]
+    path: list[value]
     newtrans: proc() -> Transaction
     get: proc() -> gdata.Node
 
@@ -154,7 +174,7 @@ actor Transaction(impl: _Transaction):
         impl.update_dynstate(dynstate)
 
 class _Transaction(object):
-    path: list[str]
+    path: list[value]
     configure:  proc(tid: str, diff: dict[str,gdata.Node], out: ?Session, force: ?bool) -> value
     # yield action
     lock : proc(actself: Transaction, tid: str, out: ?Session, done: action(value) -> None) -> None
@@ -172,7 +192,7 @@ class _Transaction(object):
 
 ####################### Layer ########################
 
-actor Layer(name: str, rootgen: proc(list[str], ?Layer)->Node, lower: ?Layer):
+actor Layer(name: str, rootgen: proc(list[value], ?Layer)->Node, lower: ?Layer):
     root = rootgen([f"({name})"], lower)
 
     def newsession():
@@ -314,7 +334,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
 
 ############## Containers ##################
 
-def Container(template={}, ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
+def Container(template={}, ns:?str=None, module:?str=None) -> proc(list[value], ?Layer)->Node:
     return lambda path, lower: Node(_Container(path, template, ns, module, lower))
 
 class _Container(_Node):
@@ -322,9 +342,9 @@ class _Container(_Node):
     ns: ?str
     module: ?str
 
-    def __init__(self, path, template: dict[gdata.Id, proc(list[str], ?Layer)->Node], ns, module, lower: ?Layer):
+    def __init__(self, path, template: dict[gdata.Id, proc(list[value], ?Layer)->Node], ns, module, lower: ?Layer):
         self.path = path
-        self.elems = {key: templ(path + [str(key)], lower) for key, templ in template.items()}
+        self.elems = {key: templ(path + [key], lower) for key, templ in template.items()}
         self.ns = ns
         self.module = module
 
@@ -332,7 +352,7 @@ class _Container(_Node):
         return ContainerTransaction(self.path, self.elems, self.ns, self.module)
 
     def get(self):
-        #print('####', '(Container)', self.path, actorid(),'NODE GET', err=True)
+        #print('####', '(Container)', _format_path(self.path), actorid(),'NODE GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
         return gdata.Container(res, ns=self.ns, module=self.module)
 
@@ -357,7 +377,7 @@ class _ContainerTransaction(_Transaction):
         self.module = module
 
     def configure(self, tid, diff, out, force=False):
-        #print('####', tid, '(Container)', self.path, 'configure force:', force, actorid(), err=True)
+        #print('####', tid, '(Container)', _format_path(self.path), 'configure force:', force, actorid(), err=True)
         diff_by_child = transpose_container(diff)
         # Extra nodes present in diff_by_child represent configuration that is
         # not any of our embedded transforms. These may be key leaf values, or
@@ -380,12 +400,12 @@ class _ContainerTransaction(_Transaction):
         msgs = {}
         for child,subdiff in diff_by_child.items():
             if child in self.elems:
-                #print('   #', tid, '(Container)', self.path, 'CONFIGURE CHILD', child, err=True)
+                #print('   #', tid, '(Container)', _format_path(self.path), 'CONFIGURE CHILD', child, err=True)
                 msgs[child] = async self.elems[child].configure(tid, subdiff, out, force)
         results = {}
         for child,msg in msgs.items():
             results[child] = await msg
-            #print('   #', tid, '(Container)', self.path, 'RESULT CHILD', child, ':', results[child], err=True)
+            #print('   #', tid, '(Container)', _format_path(self.path), 'RESULT CHILD', child, ':', results[child], err=True)
         return self._analyze(results)
 
     def _analyze(self, results):
@@ -393,96 +413,96 @@ class _ContainerTransaction(_Transaction):
         res = "Empty"
         for r in results.values():
             if isinstance(r, Exception):
-                #print('   # ...... (Container)', self.path, 'ANALYZE RESULT:', r, err=True)
+                #print('   # ...... (Container)', _format_path(self.path), 'ANALYZE RESULT:', r, err=True)
                 return r
             if isinstance(r, str) and r == "Ok":
                 res = r
-        #print('   # ...... (Container)', self.path, 'ANALYZE RESULT: Ok', err=True)
+        #print('   # ...... (Container)', _format_path(self.path), 'ANALYZE RESULT: Ok', err=True)
         return res
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
-        #print('####', tid, '(Container)', self.path, 'lock', sorted(self.accum.keys()), err=True)
+        #print('####', tid, '(Container)', _format_path(self.path), 'lock', sorted(self.accum.keys()), err=True)
         it = iter(gdata.hack_sorted(self.accum.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
-            #print('   #', tid, '(Container)', self.path, 'LOCK CHILD', key, err=True)
+            #print('   #', tid, '(Container)', _format_path(self.path), 'LOCK CHILD', key, err=True)
             tr.lock(tid, out, actself.lock_cont)                    # yield await
         except StopIteration:
-            #print('   #', tid, '(Container)', self.path, 'LOCK IMMEDIATELY DONE', err=True)
+            #print('   #', tid, '(Container)', _format_path(self.path), 'LOCK IMMEDIATELY DONE', err=True)
             done('Ok')
 
     def lock_cont(self, actself, res):
         state = self.state
         if state is not None:
-            #print('   #', state.tid, '(Container)', self.path, 'LOCK CHILD', state.key, 'RESULT:', res, err=True)
+            #print('   #', state.tid, '(Container)', _format_path(self.path), 'LOCK CHILD', state.key, 'RESULT:', res, err=True)
             state.results[state.key] = res
             try:
                 key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
-                #print('   #', state.tid, '(Container)', self.path, 'LOCK CHILD', key, err=True)
+                #print('   #', state.tid, '(Container)', _format_path(self.path), 'LOCK CHILD', key, err=True)
                 tr.lock(state.tid, state.out, actself.lock_cont)
             except StopIteration:
                 self.state = None
-                #print('   #', state.tid, '(Container)', self.path, 'LOCK DONE', err=True)
+                #print('   #', state.tid, '(Container)', _format_path(self.path), 'LOCK DONE', err=True)
                 state.done(self._analyze(state.results))
         else:
-            #print('#### ...... (Container)', self.path, 'lock_cont empty state!!!', err=True)
+            #print('#### ...... (Container)', _format_path(self.path), 'lock_cont empty state!!!', err=True)
             pass
 
     proc def commit(self, tid, ok):
-        #print('####', tid, '(Container)', self.path, 'commit', ok, err=True)
+        #print('####', tid, '(Container)', _format_path(self.path), 'commit', ok, err=True)
         for child in self.accum.keys():
-            #print('   #', tid, '(Container)', self.path, 'COMMIT CHILD', child, err=True)
+            #print('   #', tid, '(Container)', _format_path(self.path), 'COMMIT CHILD', child, err=True)
             self.elems[child].commit(tid, ok)
-        #print('   #', tid, '(Container)', self.path, 'COMMIT DONE', err=True)
+        #print('   #', tid, '(Container)', _format_path(self.path), 'COMMIT DONE', err=True)
         self.accum = {}
 
     # yield action
     def wait_complete(self, actself, tid, done):
-        #print('####', tid, '(Container)', self.path, 'wait_complete', list(self.accum.keys()), err=True)
+        #print('####', tid, '(Container)', _format_path(self.path), 'wait_complete', list(self.accum.keys()), err=True)
         it = iter(gdata.hack_sorted(self.elems.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, None, done)
             tr = self.elems[key]
-            #print('   #', tid, '(Container)', self.path, 'COMPLETE CHILD', key, err=True)
+            #print('   #', tid, '(Container)', _format_path(self.path), 'COMPLETE CHILD', key, err=True)
             tr.wait_complete(tid, actself.wait_complete_cont)               # yield await
         except StopIteration:
-            #print('   #', tid, '(Container)', self.path, 'COMPLETION IMMEDIATELY DONE', err=True)
+            #print('   #', tid, '(Container)', _format_path(self.path), 'COMPLETION IMMEDIATELY DONE', err=True)
             done('Ok')
 
     proc def wait_complete_cont (self, actself, res):
         state = self.state
         if state is not None:
-            #print('   #', state.tid, '(Container)', self.path, 'COMPLETE CHILD', state.key, 'RESULT:', res, err=True)
+            #print('   #', state.tid, '(Container)', _format_path(self.path), 'COMPLETE CHILD', state.key, 'RESULT:', res, err=True)
             state.results[state.key] = res
             try:
                 key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
-                #print('   #', state.tid, '(Container)', self.path, 'COMPLETE CHILD', key, err=True)
+                #print('   #', state.tid, '(Container)', _format_path(self.path), 'COMPLETE CHILD', key, err=True)
                 tr.wait_complete(state.tid, actself.wait_complete_cont)
             except StopIteration:
                 self.state = None
-                #print('   #', state.tid, '(Container)', self.path, 'COMPLETION DONE', err=True)
+                #print('   #', state.tid, '(Container)', _format_path(self.path), 'COMPLETION DONE', err=True)
                 state.done(self._analyze(state.results))
         else:
-            #print('#### ...... (Container)', self.path, 'wait_complete_cont empty state!!!', err=True)
+            #print('#### ...... (Container)', _format_path(self.path), 'wait_complete_cont empty state!!!', err=True)
             pass
 
     def get(self):
-        #print('####', '(Container)', self.path, actorid(), 'GET', err=True)
+        #print('####', '(Container)', _format_path(self.path), actorid(), 'GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
         return gdata.Container(res, ns=self.ns, module=self.module)
 
 
 ################# Lists ####################
 
-def List(template, key_names: list[gdata.Id], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
+def List(template, key_names: list[gdata.Id], ns:?str=None, module:?str=None) -> proc(list[value], ?Layer)->Node:
     return lambda path, lower: Node(_List(path, template, key_names, ns, module, lower))
 
 class _List(_Node):
@@ -501,7 +521,7 @@ class _List(_Node):
         return ListTransaction(self.path, self.liststate, self.key_names, self.ns, self.module)
 
     def get(self):
-        #print('####', '(List)', self.path, 'NODE GET', err=True)
+        #print('####', '(List)', _format_path(self.path), 'NODE GET', err=True)
         res = []
         for key, (node, key_leaves) in self.liststate.all().items():
             r = node.get()
@@ -515,7 +535,7 @@ class _List(_Node):
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
 
-actor ListState(path, template: proc(list[str], ?Layer) -> Node, ns: ?str, module: ?str, lower: ?Layer):
+actor ListState(path, template: proc(list[value], ?Layer) -> Node, ns: ?str, module: ?str, lower: ?Layer):
     var elems = {}
     var active = {}
     var provisional = set()
@@ -597,7 +617,7 @@ class _ListTransaction(_Transaction):
         self.reset = False
 
     def configure(self, tid, diff, out: ?Session, force=False):
-        #print('####', tid, '(List)', self.path, 'configure', actorid(), err=True)
+        #print('####', tid, '(List)', _format_path(self.path), 'configure', actorid(), err=True)
         if self.reset:
             self.elems = {}
             self.accum = {}
@@ -626,7 +646,7 @@ class _ListTransaction(_Transaction):
                 self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():
-            #print('   #', tid, '(List)', self.path, 'CONFIGURE ELEMENT', key, err=True)
+            #print('   #', tid, '(List)', _format_path(self.path), 'CONFIGURE ELEMENT', key, err=True)
             msgs[key] = async self.elems[key].configure(tid, subdiff, out, force)
         for key in self.accum.keys():
             if key not in diff_by_key:
@@ -635,7 +655,7 @@ class _ListTransaction(_Transaction):
         for key,msg in msgs.items():
             results[key] = await msg
             v = results[key]
-            #print('   #', tid, '(List)', self.path, 'RESULT ELEMENT', key, ':', v, err=True)
+            #print('   #', tid, '(List)', _format_path(self.path), 'RESULT ELEMENT', key, ':', v, err=True)
         return self._analyze(results)
 
     def _analyze(self, results: dict[str,value]):
@@ -643,94 +663,94 @@ class _ListTransaction(_Transaction):
         res = 'Empty'
         for r in results.values():
             if isinstance(r, Exception):
-                #print('   # ...... (List)', self.path, 'ANALYZE RESULT:', r, err=True)
+                #print('   # ...... (List)', _format_path(self.path), 'ANALYZE RESULT:', r, err=True)
                 return r
             if isinstance(r, str) and r == 'Ok':
                 res = r
-        #print('   # ...... (List)', self.path, 'ANALYZE RESULT:', res, err=True)
+        #print('   # ...... (List)', _format_path(self.path), 'ANALYZE RESULT:', res, err=True)
         return res
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
-        #print('####', tid, '(List)', self.path, 'lock', sorted(self.accum.keys()), err=True)
+        #print('####', tid, '(List)', _format_path(self.path), 'lock', sorted(self.accum.keys()), err=True)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, out, done)
             tr = self.elems[key]
-            #print('   #', tid, '(List)', self.path, 'LOCK ELEMENT', key, err=True)
+            #print('   #', tid, '(List)', _format_path(self.path), 'LOCK ELEMENT', key, err=True)
             tr.lock(tid, out, actself.lock_cont)                        # yield await
         except StopIteration:
-            #print('   #', tid, '(List)', self.path, 'LOCK IMMEDIATELY DONE', err=True)
+            #print('   #', tid, '(List)', _format_path(self.path), 'LOCK IMMEDIATELY DONE', err=True)
             done('Ok')
 
     def lock_cont(self, actself, res):
         state = self.state
         if state is not None:
-            #print('   #', state.tid, '(List)', self.path, 'LOCK ELEMENT RESULT:', res, err=True)
+            #print('   #', state.tid, '(List)', _format_path(self.path), 'LOCK ELEMENT RESULT:', res, err=True)
             state.results[state.key] = res
             try:
                 key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
-                #print('   #', state.tid, '(List)', self.path, 'LOCK ELEMENT', key, err=True)
+                #print('   #', state.tid, '(List)', _format_path(self.path), 'LOCK ELEMENT', key, err=True)
                 tr.lock(state.tid, state.out, actself.lock_cont)
             except StopIteration:
                 self.state = None
-                #print('   #', state.tid, '(List)', self.path, 'LOCK DONE', err=True)
+                #print('   #', state.tid, '(List)', _format_path(self.path), 'LOCK DONE', err=True)
                 state.done(self._analyze(state.results))
         else:
             pass
-            #print('#### ...... (List)', self.path, 'lock_cont empty state!!!', err=True)
+            #print('#### ...... (List)', _format_path(self.path), 'lock_cont empty state!!!', err=True)
 
     def commit(self, tid, ok):
-        #print('####', tid, '(List)', self.path, 'commit', ok, err=True)
+        #print('####', tid, '(List)', _format_path(self.path), 'commit', ok, err=True)
         for key,tr in self.elems.items():
-            #print('   #', tid, '(List)', self.path, 'COMMIT ELEMENT', key, err=True)
+            #print('   #', tid, '(List)', _format_path(self.path), 'COMMIT ELEMENT', key, err=True)
             tr.commit(tid, ok)
         deletes = set()
         for key,res in self.accum.items():
             if isinstance(res, str) and res == 'Empty':
-                #print('   #', tid, '(List)', self.path, 'DELETE ELEMENT', key, err=True)
+                #print('   #', tid, '(List)', _format_path(self.path), 'DELETE ELEMENT', key, err=True)
                 deletes.add(key)
         self.liststate.release(tid, ok, deletes)
         self.reset = True       # Defer resetting accum, for the benefit of 'wait_complete'
 
     # yield action
     def wait_complete(self, actself, tid, done):
-        #print('####', tid, '(List)', self.path, 'wait_complete', list(self.accum.keys()), err=True)
+        #print('####', tid, '(List)', _format_path(self.path), 'wait_complete', list(self.accum.keys()), err=True)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
             self.state = YieldState(it, key, tid, None, done)
             tr = self.elems[key]
-            #print('   #', tid, '(List)', self.path, 'COMPLETE ELEMENT', key, err=True)
+            #print('   #', tid, '(List)', _format_path(self.path), 'COMPLETE ELEMENT', key, err=True)
             tr.wait_complete(tid, actself.wait_complete_cont)                   # yield await
         except StopIteration:
-            #print('   #', tid, '(List)', self.path, 'COMPLETION IMMEDIATELY DONE', err=True)
+            #print('   #', tid, '(List)', _format_path(self.path), 'COMPLETION IMMEDIATELY DONE', err=True)
             done('Ok')
 
     def wait_complete_cont (self, actself, res):
         state = self.state
         if state is not None:
-            #print('   #', state.tid, '(List)', self.path, 'COMPLETE ELEMENT', state.key, 'RESULT:', res, err=True)
+            #print('   #', state.tid, '(List)', _format_path(self.path), 'COMPLETE ELEMENT', state.key, 'RESULT:', res, err=True)
             state.results[state.key] = res
             try:
                 key = next(state.it)
                 state.key = key
                 tr = self.elems[key]
-                #print('   #', state.tid, '(List)', self.path, 'COMPLETE ELEMENT', key, err=True)
+                #print('   #', state.tid, '(List)', _format_path(self.path), 'COMPLETE ELEMENT', key, err=True)
                 tr.wait_complete(state.tid, actself.wait_complete_cont)
             except StopIteration:
                 self.state = None
-                #print('   #', state.tid, '(List)', self.path, 'COMPLETION DONE', err=True)
+                #print('   #', state.tid, '(List)', _format_path(self.path), 'COMPLETION DONE', err=True)
                 state.done(self._analyze(state.results))
         else:
             pass
-            #print('#### ...... (List)', self.path, 'wait_complete_cont empty state!!!', err=True)
+            #print('#### ...... (List)', _format_path(self.path), 'wait_complete_cont empty state!!!', err=True)
 
     def get(self):
-        #print('####', '(List)', self.path, 'GET', err=True)
+        #print('####', '(List)', _format_path(self.path), 'GET', err=True)
         res = []
         for key, (node, key_leaves) in self.liststate.all().items():
             if key in self.elems:
@@ -785,7 +805,7 @@ class _TransformTransactionBase(_Transaction):
         self.me = '(src_' + str(self)[-10:-1] + ')'  # Now safe to use str(self)
 
     def configure(self, tid, diff, out: ?Session, force=False):
-        #print('####', tid, '(Transform)', self.path, 'configure', actorid(), self.me, err=True)
+        #print('####', tid, '(Transform)', _format_path(self.path), 'configure', actorid(), self.me, err=True)
 
         if tid not in self.diffs:
             self.diffs[tid] = {}
@@ -794,57 +814,57 @@ class _TransformTransactionBase(_Transaction):
         newconf = patch(self.running, accdiff)
         self.candidates[tid] = newconf
 
-        #print('   #', tid, '(Transform)', self.path, 'NEW DIFF\n' + per_src(diff), err=True)
-        #print('   #', tid, '(Transform)', self.path, 'ACCUMULATED DIFF\n' + per_src(accdiff), err=True)
-        #print('   #', tid, '(Transform)', self.path, 'RUNNING CONFIG\n' + per_src(self.running), err=True)
-        #print('   #', tid, '(Transform)', self.path, 'NEWCONF\n' + per_src(newconf), err=True)
+        #print('   #', tid, '(Transform)', _format_path(self.path), 'NEW DIFF\n' + per_src(diff), err=True)
+        #print('   #', tid, '(Transform)', _format_path(self.path), 'ACCUMULATED DIFF\n' + per_src(accdiff), err=True)
+        #print('   #', tid, '(Transform)', _format_path(self.path), 'RUNNING CONFIG\n' + per_src(self.running), err=True)
+        #print('   #', tid, '(Transform)', _format_path(self.path), 'NEWCONF\n' + per_src(newconf), err=True)
 
         if newconf == {}:
             self.essays[tid] = (None, None) # TODO: do we want to keep memory?
-            #print('   #', tid, '(Transform)', self.path, 'EMPTY CONFIG', err=True)
+            #print('   #', tid, '(Transform)', _format_path(self.path), 'EMPTY CONFIG', err=True)
             self.clear(tid, out)
             return 'Empty'
         else:
             try:
                 merged = assert_complete(merge(newconf))
-                #print('   #', tid, '(Transform)', self.path, 'MERGED\n       ', merged.prsrc(indent=4), err=True)
+                #print('   #', tid, '(Transform)', _format_path(self.path), 'MERGED\n       ', merged.prsrc(indent=4), err=True)
 #                assert self.validate(merged)
             except Exception as e:
-                #print('   #', tid, '(Transform)', self.path, 'FAILURE', e, err=True)
+                #print('   #', tid, '(Transform)', _format_path(self.path), 'FAILURE', e, err=True)
                 return e
             else:
                 newout, newmem = self.compute(tid, merged, out)
                 self.essays[tid] = (newout, newmem)
-                #print('   #', tid, '(Transform)', self.path, 'OUTPUT\n       ', newout.prsrc(indent=4), err=True)
+                #print('   #', tid, '(Transform)', _format_path(self.path), 'OUTPUT\n       ', newout.prsrc(indent=4), err=True)
                 return 'Ok'
         return 'Ok'
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):                          # yield await
-        #print('####', tid, '(Transform)', self.path, 'lock', err=True)
+        #print('####', tid, '(Transform)', _format_path(self.path), 'lock', err=True)
         locker = self.locker
         if locker is not None:
             if locker == tid:
-                #print('   #', tid, '(Transform)', self.path, 'LOCK REDUNDANT', err=True)
+                #print('   #', tid, '(Transform)', _format_path(self.path), 'LOCK REDUNDANT', err=True)
                 done('Ok')
             else:
-                #print('   #', tid, '(Transform)', self.path, 'LOCK SUSPENDING', err=True)
+                #print('   #', tid, '(Transform)', _format_path(self.path), 'LOCK SUSPENDING', err=True)
                 self.pending.append((actself, tid, out, done))                  # suspend
             return
         self.locker = tid
         if tid not in self.candidates:
-            #print('   #', tid, '(Transform)', self.path, 'LOCK - RE-CONFIGURING', err=True)
+            #print('   #', tid, '(Transform)', _format_path(self.path), 'LOCK - RE-CONFIGURING', err=True)
             res = self.configure(tid, {}, out)
             done(res)
         else:
-            #print('   #', tid, '(Transform)', self.path, 'LOCKED', err=True)
+            #print('   #', tid, '(Transform)', _format_path(self.path), 'LOCKED', err=True)
             done('Ok' if self.candidates[tid] else 'Empty')
 
     def lock_cont (self, actself, res):
         pass
 
     def commit(self, tid, ok):
-        #print('####', tid, '(Transform)', self.path, 'commit', ok, err=True)
+        #print('####', tid, '(Transform)', _format_path(self.path), 'commit', ok, err=True)
         self.diffs.pop(tid)
         candidate = self.candidates.pop_def(tid, {})
         essay = self.essays.pop(tid)
@@ -853,21 +873,21 @@ class _TransformTransactionBase(_Transaction):
                 self.running = candidate
                 self.output = essay.0 if essay is not None else None
                 self.update_memory(essay.1 if essay is not None else None)
-                #print('   #', tid, '(Transform)', self.path, 'COMMITTING\n' + per_src(candidate), err=True)
+                #print('   #', tid, '(Transform)', _format_path(self.path), 'COMMITTING\n' + per_src(candidate), err=True)
                 if self.candidates:
-                    #print('   #', tid, '(Transform)', self.path, 'INVALIDATING', set(self.candidates.keys()), err=True)
+                    #print('   #', tid, '(Transform)', _format_path(self.path), 'INVALIDATING', set(self.candidates.keys()), err=True)
                     self.candidates = {}
                 self.finalize(tid)
             else:
-                #print('   #', tid, '(Transform)', self.path, 'ABORTING', err=True)
+                #print('   #', tid, '(Transform)', _format_path(self.path), 'ABORTING', err=True)
                 pass
             self.locker = None
             if self.pending:
                 (actself, tid2, out, done) = self.pending.pop(0)
-                #print('   #', tid2, '(Transform)', self.path, 'RESUMING', err=True)
+                #print('   #', tid2, '(Transform)', _format_path(self.path), 'RESUMING', err=True)
                 self.lock(actself, tid2, out, done)                             # resume
         else:
-            #print('   #', tid, '(Transform)', self.path, 'IGNORING', err=True)
+            #print('   #', tid, '(Transform)', _format_path(self.path), 'IGNORING', err=True)
             pass
 
     mut def update_memory(self, newmem: ?gdata.Node):
@@ -877,7 +897,7 @@ class _TransformTransactionBase(_Transaction):
         pass
 
     def wait_complete(self, actself, tid, done):                                # (yield await)
-        #print('####', tid, '(Transform)', self.path, 'wait_complete', err=True)
+        #print('####', tid, '(Transform)', _format_path(self.path), 'wait_complete', err=True)
         done('Ok')
 
     def wait_complete_cont (self, actself, res):
@@ -896,7 +916,7 @@ class TransformActorParams:
         self.dev = dev
 
 
-def Transform(function, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+def Transform(function, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
     proc def _create_transform_node(path, lower):
         transform = _Transform(path, function, lower, log_handler)
         node = Node(transform)
@@ -942,7 +962,7 @@ class _TransformTransaction(_TransformTransactionBase):
     def clear(self, tid, out):
         output = self.output
         if output is not None:
-            #print('   #', tid, '(Transform)', self.path, 'CLEARING ' + output.prsrc(), err=True)
+            #print('   #', tid, '(Transform)', _format_path(self.path), 'CLEARING ' + output.prsrc(), err=True)
             res = difference(self.output, gdata.Container())
             if out is not None and res is not None:
                 out.configure(tid, {self.me: res})
@@ -961,7 +981,7 @@ class _TransformTransaction(_TransformTransactionBase):
             Session(self.me, _node, self.lower).recompute() # TODO: Verify that this always succeeds (due to no input diff)?
 
     def finalize(self, tid):
-        #print('####', tid, '(_TransformTransaction)', self.path, 'finalize', actorid(), err=True)
+        #print('####', tid, '(_TransformTransaction)', _format_path(self.path), 'finalize', actorid(), err=True)
         # Run transform.on_conf only When we have an updated running config
         if self.running:
             self.function.on_conf(self.get(), self.memory)
@@ -992,7 +1012,7 @@ class TransformFunction(object):
 
 ################# RFSTransform ###################
 
-def RFSTransform(function, dev_registry: odev.DeviceRegistry, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+def RFSTransform(function, dev_registry: odev.DeviceRegistry, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
     proc def _create_rfs_transform_node(path, lower):
         rfs_transform = _RFSTransform(path, function, dev_registry, lower, log_handler)
         node = Node(rfs_transform)
@@ -1031,13 +1051,16 @@ class _RFSTransaction(_TransformTransactionBase):
         self.function = function(log_handler)
         if len(path) < 3:
             raise ValueError(f"RFSTransform {path}: path length < 3")
-        self.devname = path[-3  ]
-        self.dev = dev_registry.get(self.devname)
+        dev_name = path[-3]
+        if isinstance(dev_name, str):
+            self.devname = dev_name
+            self.dev = dev_registry.get(dev_name)
+        else:
+            raise ValueError("_RFSTransaction: path component [-3] is not a string: {dev_name} ({type(dev_name)})")
         self.lower = lower
 
     def compute(self, tid, merged, out):
-        #print('####', tid, '(RFSTransform)', self.path, 'compute', actorid(), err=True)
-        ns = "http://orchestron.org/yang/orchestron-device.yang"
+        #print('####', tid, '(RFSTransform)', _format_path(self.path), 'compute', actorid(), err=True)
         dev_content = {
             gdata.Id(NS_orchestron_device, "name"): gdata.Leaf(self.devname),
         }
@@ -1045,14 +1068,14 @@ class _RFSTransaction(_TransformTransactionBase):
         if modset_id is not None:
             dev_content[gdata.Id(NS_orchestron_device, "modset_id")] = gdata.Leaf(modset_id)
         if len(modset) > 0:
-            #print('####', tid, '(RFSTransform)', self.path, 'compute', self.devname, err=True)
+            #print('####', tid, '(RFSTransform)', _format_path(self.path), 'compute', self.devname, err=True)
             newoutmem = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset), self.memory, self.dynstate)
             newout = newoutmem.0
             res = difference(self.output, newout)
             if isinstance(res, gdata.Container):
                 dev_content[gdata.Id(NS_orchestron_device, "config")] = res
         else:
-            #print('####', tid, '(RFSTransform)', self.path, 'compute', ": No device capabilities, skipping RFS transform for", self.devname, err=True)
+            #print('####', tid, '(RFSTransform)', _format_path(self.path), 'compute', ": No device capabilities, skipping RFS transform for", self.devname, err=True)
             newoutmem = (gdata.Container({}), None)
 
         if out is not None:
@@ -1096,7 +1119,7 @@ class _RFSTransaction(_TransformTransactionBase):
             Session(self.me, _node, self.lower).recompute() # TODO: Verify that this always succeeds (due to no input diff)?
 
     def finalize(self, tid):
-        #print('####', tid, '(_TransformTransaction)', self.path, 'finalize', actorid(), err=True)
+        #print('####', tid, '(_TransformTransaction)', _format_path(self.path), 'finalize', actorid(), err=True)
         # Run transform.on_conf only When we have an updated running config and there is actual output (i.e. the transform function was run)
         if self.running:
             output = self.output
@@ -1139,7 +1162,7 @@ class RFSFunction(object):
 
 ################# Device #####################
 
-def Device(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+def Device(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
     return lambda path, _lower: Node(_Device(path, dev_registry, log_handler))
 
 class _Device(_TransformBase):
@@ -1156,7 +1179,11 @@ class _DeviceTransaction(_TransformTransactionBase):
 
     def __init__(self, path, dev_registry: odev.DeviceRegistry, log_handler):
         _TransformTransactionBase.__init__(self, path)
-        self.dev = dev_registry.get(path[-1])
+        dev_name = path[-1]
+        if isinstance(dev_name, str):
+            self.dev = dev_registry.get(dev_name)
+        else:
+            raise ValueError("DeviceTransaction: path component is not a string: {dev_name} ({type(dev_name)})")
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
@@ -1166,7 +1193,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         pass
 
     def finalize(self, tid):
-        #print('####', tid, '(DeviceMeta)', self.path, 'finalize', actorid(), err=True)
+        #print('####', tid, '(DeviceMeta)', _format_path(self.path), 'finalize', actorid(), err=True)
         config = self.output
         if config is not None:
             meta_config = DeviceMetaConfig.from_gdata(config)
@@ -1175,7 +1202,7 @@ class _DeviceTransaction(_TransformTransactionBase):
 
 ################# DeviceConfig #####################
 
-def DeviceConfig(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str], ?Layer)->Node:
+def DeviceConfig(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
     return lambda path, _lower: Node(_DeviceConfig(path, dev_registry, log_handler))
 
 class _DeviceConfig(_TransformBase):
@@ -1192,7 +1219,11 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
 
     def __init__(self, path, dev_registry: odev.DeviceRegistry, log_handler):
         _TransformTransactionBase.__init__(self, path)
-        self.dev = dev_registry.get(path[-1])
+        dev_name = path[-1]
+        if isinstance(dev_name, str):
+            self.dev = dev_registry.get(dev_name)
+        else:
+            raise ValueError("DeviceConfigTransaction: path component is not a string: {dev_name} ({type(dev_name)})")
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
@@ -1202,7 +1233,7 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
         pass
 
     def finalize(self, tid):
-        #print('####', tid, '(DeviceConfig)', self.path, 'finalize', actorid(), err=True)
+        #print('####', tid, '(DeviceConfig)', _format_path(self.path), 'finalize', actorid(), err=True)
         device = self.output
         if device is not None:
             if isinstance(device, gdata.Container):
@@ -1218,12 +1249,12 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
                         cfg = gdata.Container(config.children)
                         self.dev.configure(cfg, cfg_modset_id, tid)
                 else:
-                    #print('   #', tid, '(DeviceConfig)', self.path, "No config in device config, registering interest...", err=True)
+                    #print('   #', tid, '(DeviceConfig)', _format_path(self.path), "No config in device config, registering interest...", err=True)
                     self.dev.configure(None, None, tid)
 
 
     def wait_complete(self, actself, tid, done):                                # (yield await)
-        #print('####', tid, '(DeviceConfig)', self.path, 'wait_complete', err=True)
+        #print('####', tid, '(DeviceConfig)', _format_path(self.path), 'wait_complete', err=True)
         self.dev.wait_complete(tid, done)
 
 
