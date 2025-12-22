@@ -1733,19 +1733,22 @@ def config_fixer(old: ?yang.gdata.Node, new: yang.gdata.Node):
     # MgmtEth0/RP0/CPU0/0 interface in the currently running configuraton on the
     # device and then brings that over into the new target config.
     def get_xr_mgmt_interface(n: ?yang.gdata.Node) -> yang.gdata.Node:
+        def q(n):
+            return yang.gdata.Id("http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg", n)
+
         if n is not None:
-            xr_interfaces = n.children["interfaces"]
+            xr_interfaces = n.children[q("interfaces")]
             if xr_interfaces.ns != "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg":
                 raise ValueError("No XR interfaces found")
-            xr_interface = xr_interfaces.children["interface"]
+            xr_interface = xr_interfaces.children[q("interface")]
             if isinstance(xr_interface, yang.gdata.List):
                 for elem in xr_interface.elements:
-                    if_name = elem.get_leaf("interface-name").val
+                    if_name = elem.get_leaf(q("interface-name")).val
                     if isinstance(if_name, str):
                         if if_name == "MgmtEth0/RP0/CPU0/0":
                             return yang.gdata.Container({
-    'interfaces': yang.gdata.Container({
-        'interface': yang.gdata.List(['interface-name'], elements=[elem])
+    q('interfaces'): yang.gdata.Container({
+        q('interface'): yang.gdata.List([q('interface-name')], elements=[elem])
     }, ns='http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg', module='Cisco-IOS-XR-um-interface-cfg')
     })
         raise ValueError("No XR mgmt interface found")

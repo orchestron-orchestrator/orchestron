@@ -2498,6 +2498,10 @@ def src_yang():
     return res
 
 
+NS_ietf_netconf_acm = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
+NS_ietf_system = 'urn:ietf:params:xml:ns:yang:ietf-system'
+
+
 class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
     name: str
     user_name: list[str]
@@ -2521,7 +2525,7 @@ class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_netconf_acm__nacm__groups__group_entry:
-        return ietf_netconf_acm__nacm__groups__group_entry(name=n.get_str('name'), user_name=n.get_opt_strs('user-name'))
+        return ietf_netconf_acm__nacm__groups__group_entry(name=n.get_str(yang.gdata.Id(NS_ietf_netconf_acm, 'name')), user_name=n.get_opt_strs(yang.gdata.Id(NS_ietf_netconf_acm, 'user-name')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -2587,7 +2591,7 @@ class ietf_netconf_acm__nacm__groups(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_netconf_acm__nacm__groups:
         if n is not None:
-            return ietf_netconf_acm__nacm__groups(group=ietf_netconf_acm__nacm__groups__group.from_gdata(n.get_opt_list('group')))
+            return ietf_netconf_acm__nacm__groups(group=ietf_netconf_acm__nacm__groups__group.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_netconf_acm, 'group'))))
         return ietf_netconf_acm__nacm__groups()
 
     def copy(self):
@@ -2642,7 +2646,7 @@ class ietf_netconf_acm__nacm__rule_list__rule_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_netconf_acm__nacm__rule_list__rule_entry:
-        return ietf_netconf_acm__nacm__rule_list__rule_entry(name=n.get_str('name'), module_name=n.get_opt_str('module-name'), rpc_name=n.get_opt_str('rpc-name'), notification_name=n.get_opt_str('notification-name'), path=n.get_opt_str('path'), access_operations=n.get_opt_value('access-operations'), action_=n.get_opt_str('action'), comment=n.get_opt_str('comment'))
+        return ietf_netconf_acm__nacm__rule_list__rule_entry(name=n.get_str(yang.gdata.Id(NS_ietf_netconf_acm, 'name')), module_name=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'module-name')), rpc_name=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'rpc-name')), notification_name=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'notification-name')), path=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'path')), access_operations=n.get_opt_value(yang.gdata.Id(NS_ietf_netconf_acm, 'access-operations')), action_=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'action')), comment=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'comment')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -2715,7 +2719,7 @@ class ietf_netconf_acm__nacm__rule_list_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_netconf_acm__nacm__rule_list_entry:
-        return ietf_netconf_acm__nacm__rule_list_entry(name=n.get_str('name'), group=n.get_opt_strs('group'), rule=ietf_netconf_acm__nacm__rule_list__rule.from_gdata(n.get_opt_list('rule')))
+        return ietf_netconf_acm__nacm__rule_list_entry(name=n.get_str(yang.gdata.Id(NS_ietf_netconf_acm, 'name')), group=n.get_opt_strs(yang.gdata.Id(NS_ietf_netconf_acm, 'group')), rule=ietf_netconf_acm__nacm__rule_list__rule.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_netconf_acm, 'rule'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -2805,7 +2809,7 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_netconf_acm__nacm:
         if n is not None:
-            return ietf_netconf_acm__nacm(enable_nacm=n.get_opt_bool('enable-nacm'), read_default=n.get_opt_str('read-default'), write_default=n.get_opt_str('write-default'), exec_default=n.get_opt_str('exec-default'), enable_external_groups=n.get_opt_bool('enable-external-groups'), groups=ietf_netconf_acm__nacm__groups.from_gdata(n.get_opt_cnt('groups')), rule_list=ietf_netconf_acm__nacm__rule_list.from_gdata(n.get_opt_list('rule-list')))
+            return ietf_netconf_acm__nacm(enable_nacm=n.get_opt_bool(yang.gdata.Id(NS_ietf_netconf_acm, 'enable-nacm')), read_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'read-default')), write_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'write-default')), exec_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'exec-default')), enable_external_groups=n.get_opt_bool(yang.gdata.Id(NS_ietf_netconf_acm, 'enable-external-groups')), groups=ietf_netconf_acm__nacm__groups.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_netconf_acm, 'groups'))), rule_list=ietf_netconf_acm__nacm__rule_list.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_netconf_acm, 'rule-list'))))
         return ietf_netconf_acm__nacm()
 
     def copy(self):
@@ -2837,7 +2841,7 @@ class ietf_system__system__clock(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__clock:
         if n is not None:
-            return ietf_system__system__clock(timezone_name=n.get_opt_str('timezone-name'), timezone_utc_offset=n.get_opt_bigint('timezone-utc-offset'))
+            return ietf_system__system__clock(timezone_name=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'timezone-name')), timezone_utc_offset=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'timezone-utc-offset')))
         return ietf_system__system__clock()
 
     def copy(self):
@@ -2869,7 +2873,7 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__ntp__server__udp:
         if n is not None:
-            return ietf_system__system__ntp__server__udp(address=n.get_opt_str('address'), port=n.get_opt_bigint('port'))
+            return ietf_system__system__ntp__server__udp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), port=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'port')))
         raise ValueError('Missing required subtree ietf_system__system__ntp__server__udp')
 
     def copy(self):
@@ -2912,7 +2916,7 @@ class ietf_system__system__ntp__server_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__ntp__server_entry:
-        return ietf_system__system__ntp__server_entry(name=n.get_str('name'), udp=ietf_system__system__ntp__server__udp.from_gdata(n.get_opt_cnt('udp')), association_type=n.get_opt_str('association-type'), iburst=n.get_opt_bool('iburst'), prefer=n.get_opt_bool('prefer'))
+        return ietf_system__system__ntp__server_entry(name=n.get_str(yang.gdata.Id(NS_ietf_system, 'name')), udp=ietf_system__system__ntp__server__udp.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'udp'))), association_type=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'association-type')), iburst=n.get_opt_bool(yang.gdata.Id(NS_ietf_system, 'iburst')), prefer=n.get_opt_bool(yang.gdata.Id(NS_ietf_system, 'prefer')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -2982,7 +2986,7 @@ class ietf_system__system__ntp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ?ietf_system__system__ntp:
         if n is not None:
-            return ietf_system__system__ntp(enabled=n.get_opt_bool('enabled'), server=ietf_system__system__ntp__server.from_gdata(n.get_opt_list('server')))
+            return ietf_system__system__ntp(enabled=n.get_opt_bool(yang.gdata.Id(NS_ietf_system, 'enabled')), server=ietf_system__system__ntp__server.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_system, 'server'))))
         return None
 
     def copy(self):
@@ -3017,7 +3021,7 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__server__udp_and_tcp:
         if n is not None:
-            return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str('address'), port=n.get_opt_bigint('port'))
+            return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), port=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'port')))
         raise ValueError('Missing required subtree ietf_system__system__dns_resolver__server__udp_and_tcp')
 
     def copy(self):
@@ -3048,7 +3052,7 @@ class ietf_system__system__dns_resolver__server_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__dns_resolver__server_entry:
-        return ietf_system__system__dns_resolver__server_entry(name=n.get_str('name'), udp_and_tcp=ietf_system__system__dns_resolver__server__udp_and_tcp.from_gdata(n.get_opt_cnt('udp-and-tcp')))
+        return ietf_system__system__dns_resolver__server_entry(name=n.get_str(yang.gdata.Id(NS_ietf_system, 'name')), udp_and_tcp=ietf_system__system__dns_resolver__server__udp_and_tcp.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'udp-and-tcp'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3118,7 +3122,7 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__options:
         if n is not None:
-            return ietf_system__system__dns_resolver__options(timeout=n.get_opt_bigint('timeout'), attempts=n.get_opt_bigint('attempts'))
+            return ietf_system__system__dns_resolver__options(timeout=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'timeout')), attempts=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'attempts')))
         return ietf_system__system__dns_resolver__options()
 
     def copy(self):
@@ -3154,7 +3158,7 @@ class ietf_system__system__dns_resolver(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver:
         if n is not None:
-            return ietf_system__system__dns_resolver(search=n.get_opt_strs('search'), server=ietf_system__system__dns_resolver__server.from_gdata(n.get_opt_list('server')), options=ietf_system__system__dns_resolver__options.from_gdata(n.get_opt_cnt('options')))
+            return ietf_system__system__dns_resolver(search=n.get_opt_strs(yang.gdata.Id(NS_ietf_system, 'search')), server=ietf_system__system__dns_resolver__server.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_system, 'server'))), options=ietf_system__system__dns_resolver__options.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'options'))))
         return ietf_system__system__dns_resolver()
 
     def copy(self):
@@ -3190,7 +3194,7 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__server__udp:
         if n is not None:
-            return ietf_system__system__radius__server__udp(address=n.get_opt_str('address'), authentication_port=n.get_opt_bigint('authentication-port'), shared_secret=n.get_opt_str('shared-secret'))
+            return ietf_system__system__radius__server__udp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), authentication_port=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'authentication-port')), shared_secret=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'shared-secret')))
         raise ValueError('Missing required subtree ietf_system__system__radius__server__udp')
 
     def copy(self):
@@ -3225,7 +3229,7 @@ class ietf_system__system__radius__server_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__radius__server_entry:
-        return ietf_system__system__radius__server_entry(name=n.get_str('name'), udp=ietf_system__system__radius__server__udp.from_gdata(n.get_opt_cnt('udp')), authentication_type=n.get_opt_Identityref('authentication-type'))
+        return ietf_system__system__radius__server_entry(name=n.get_str(yang.gdata.Id(NS_ietf_system, 'name')), udp=ietf_system__system__radius__server__udp.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'udp'))), authentication_type=n.get_opt_Identityref(yang.gdata.Id(NS_ietf_system, 'authentication-type')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3295,7 +3299,7 @@ class ietf_system__system__radius__options(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__options:
         if n is not None:
-            return ietf_system__system__radius__options(timeout=n.get_opt_bigint('timeout'), attempts=n.get_opt_bigint('attempts'))
+            return ietf_system__system__radius__options(timeout=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'timeout')), attempts=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'attempts')))
         return ietf_system__system__radius__options()
 
     def copy(self):
@@ -3327,7 +3331,7 @@ class ietf_system__system__radius(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius:
         if n is not None:
-            return ietf_system__system__radius(server=ietf_system__system__radius__server.from_gdata(n.get_opt_list('server')), options=ietf_system__system__radius__options.from_gdata(n.get_opt_cnt('options')))
+            return ietf_system__system__radius(server=ietf_system__system__radius__server.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_system, 'server'))), options=ietf_system__system__radius__options.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'options'))))
         return ietf_system__system__radius()
 
     def copy(self):
@@ -3362,7 +3366,7 @@ class ietf_system__system__authentication__user__authorized_key_entry(yang.adata
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__authentication__user__authorized_key_entry:
-        return ietf_system__system__authentication__user__authorized_key_entry(name=n.get_str('name'), algorithm=n.get_opt_str('algorithm'), key_data=n.get_opt_bytes('key-data'))
+        return ietf_system__system__authentication__user__authorized_key_entry(name=n.get_str(yang.gdata.Id(NS_ietf_system, 'name')), algorithm=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'algorithm')), key_data=n.get_opt_bytes(yang.gdata.Id(NS_ietf_system, 'key-data')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3435,7 +3439,7 @@ class ietf_system__system__authentication__user_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__authentication__user_entry:
-        return ietf_system__system__authentication__user_entry(name=n.get_str('name'), password=n.get_opt_str('password'), authorized_key=ietf_system__system__authentication__user__authorized_key.from_gdata(n.get_opt_list('authorized-key')))
+        return ietf_system__system__authentication__user_entry(name=n.get_str(yang.gdata.Id(NS_ietf_system, 'name')), password=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'password')), authorized_key=ietf_system__system__authentication__user__authorized_key.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_system, 'authorized-key'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3505,7 +3509,7 @@ class ietf_system__system__authentication(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__authentication:
         if n is not None:
-            return ietf_system__system__authentication(user_authentication_order=n.get_opt_Identityrefs('user-authentication-order'), user=ietf_system__system__authentication__user.from_gdata(n.get_opt_list('user')))
+            return ietf_system__system__authentication(user_authentication_order=n.get_opt_Identityrefs(yang.gdata.Id(NS_ietf_system, 'user-authentication-order')), user=ietf_system__system__authentication__user.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_system, 'user'))))
         return ietf_system__system__authentication()
 
     def copy(self):
@@ -3569,7 +3573,7 @@ class ietf_system__system(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system:
         if n is not None:
-            return ietf_system__system(contact=n.get_opt_str('contact'), hostname=n.get_opt_str('hostname'), location=n.get_opt_str('location'), clock=ietf_system__system__clock.from_gdata(n.get_opt_cnt('clock')), ntp=ietf_system__system__ntp.from_gdata(n.get_opt_cnt('ntp')), dns_resolver=ietf_system__system__dns_resolver.from_gdata(n.get_opt_cnt('dns-resolver')), radius=ietf_system__system__radius.from_gdata(n.get_opt_cnt('radius')), authentication=ietf_system__system__authentication.from_gdata(n.get_opt_cnt('authentication')))
+            return ietf_system__system(contact=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'contact')), hostname=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'hostname')), location=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'location')), clock=ietf_system__system__clock.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'clock'))), ntp=ietf_system__system__ntp.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'ntp'))), dns_resolver=ietf_system__system__dns_resolver.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'dns-resolver'))), radius=ietf_system__system__radius.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'radius'))), authentication=ietf_system__system__authentication.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'authentication'))))
         return ietf_system__system()
 
     def copy(self):
@@ -3601,7 +3605,7 @@ class root(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
         if n is not None:
-            return root(nacm=ietf_netconf_acm__nacm.from_gdata(n.get_opt_cnt('nacm')), system=ietf_system__system.from_gdata(n.get_opt_cnt('system')))
+            return root(nacm=ietf_netconf_acm__nacm.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_netconf_acm, 'nacm'))), system=ietf_system__system.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'system'))))
         return root()
 
     def copy(self):
@@ -3629,7 +3633,7 @@ class ietf_system__set_current_datetime__input(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__set_current_datetime__input:
         if n is not None:
-            return ietf_system__set_current_datetime__input(current_datetime=n.get_opt_str('current-datetime'))
+            return ietf_system__set_current_datetime__input(current_datetime=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'current-datetime')))
         raise ValueError('Missing required subtree ietf_system__set_current_datetime__input')
 
     def copy(self):

@@ -3,6 +3,10 @@ import yang
 import yang.schema as schema
 
 
+def _fq_list_keys(l: schema.DList) -> str:
+    return """[{", ".join(['yang.gdata.Id("{l.namespace}", "{k}")' for k in l.key])}]"""
+
+
 class TTTSrc(object):
     def __init__(self, src: str, input_classes: list[str], state_classes: list[str], imports: list[str], defs: list[str], base_defs: list[str], act_defs: list[str]):
         self.src = src
@@ -31,7 +35,7 @@ def children_to_tttsrc(sn: schema.DNodeInner, spath: list[schema.DNode]) -> TTTS
         defs.extend(res.defs)
         base_defs.extend(res.base_defs)
         act_defs.extend(res.act_defs)
-        elems.append(f'"{child.name}": {res.src}')
+        elems.append('yang.gdata.Id("{child.namespace}", "{child.name}"): {res.src}')
     children_src = ", ".join(elems)
     return TTTSrc(src=children_src, input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
@@ -143,7 +147,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
-                            return TTTSrc(src="ttt.List(ttt.Transform({transform}, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                            return TTTSrc(src="ttt.List(ttt.Transform({transform}, {transform_actor_ctor}, lower, log_handler), {_fq_list_keys(sn)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
                         elif ext.name == "rfs-transform":
                             base_defs.append(f"""class {transform_name}(ttt.RFSFunction):
@@ -169,18 +173,18 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
-                            return TTTSrc(src="ttt.List(ttt.RFSTransform({transform}, dev_registry, {transform_actor_ctor}, lower, log_handler), {repr(sn.key)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                            return TTTSrc(src="ttt.List(ttt.RFSTransform({transform}, dev_registry, {transform_actor_ctor}, lower, log_handler), {_fq_list_keys(sn)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
                         raise ValueError("Unknown extension name: {ext.name}")
                     else:
                         raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
                 elif ext.name == "device":
                     if extarg is not None:
                         raise ValueError("Extraneous argument to orchestron:device. Remove argument.")
-                    return TTTSrc(src="ttt.List(ttt.Device(dev_registry, log_handler), {repr(sn.key)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                    return TTTSrc(src="ttt.List(ttt.Device(dev_registry, log_handler), {_fq_list_keys(sn)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
                 elif ext.name == "device-config":
                     if extarg is not None:
                         raise ValueError("Extraneous argument to orchestron:device-config. Remove argument.")
-                    return TTTSrc(src="ttt.List(ttt.DeviceConfig(dev_registry, log_handler), {repr(sn.key)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+                    return TTTSrc(src="ttt.List(ttt.DeviceConfig(dev_registry, log_handler), {_fq_list_keys(sn)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
         # List without an extension
         children_res = children_to_tttsrc(sn, spath)
@@ -190,7 +194,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         defs.extend(children_res.defs)
         base_defs.extend(children_res.base_defs)
         act_defs.extend(children_res.act_defs)
-        return TTTSrc(src="ttt.List(ttt.Container({{{children_res.src}}}), {repr(sn.key)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+        return TTTSrc(src="ttt.List(ttt.Container({{{children_res.src}}}), {_fq_list_keys(sn)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
     elif isinstance(sn, schema.DNodeInner):
         sn_children = sn.children
@@ -234,7 +238,7 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     for sc in ts.state_classes:
         ttt_src += "from %s import %s\n" % (input_yang_module, sc)
     ttt_src += "\n"
-    ttt_src += "def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str],?ttt.Layer)->ttt.Node:\n"
+    ttt_src += "def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value],?ttt.Layer)->ttt.Node:\n"
     ttt_src += f"    r = {ts.src}\n    return r\n"
     if len(ts.act_defs) > 0:
         ttt_src += "\n"

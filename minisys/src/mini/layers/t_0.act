@@ -11,6 +11,6 @@ import yang.gdata
 import mini.cfs
 
 
-def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str],?ttt.Layer)->ttt.Node:
-    r = ttt.Container({"netinfra": ttt.Container({"router": ttt.List(ttt.Transform(mini.cfs.Router, None, lower, log_handler), ['name']), "foo": ttt.List(ttt.Transform(mini.cfs.Foo, None, lower, log_handler), ['router', 'name'])}, ns='http://example.com/netinfra', module='netinfra')})
+def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value],?ttt.Layer)->ttt.Node:
+    r = ttt.Container({yang.gdata.Id("http://example.com/netinfra", "netinfra"): ttt.Container({yang.gdata.Id("http://example.com/netinfra", "router"): ttt.List(ttt.Transform(mini.cfs.Router, None, lower, log_handler), [yang.gdata.Id("http://example.com/netinfra", "name")]), yang.gdata.Id("http://example.com/netinfra", "foo"): ttt.List(ttt.Transform(mini.cfs.Foo, None, lower, log_handler), [yang.gdata.Id("http://example.com/netinfra", "router"), yang.gdata.Id("http://example.com/netinfra", "name")])}, ns='http://example.com/netinfra', module='netinfra')})
     return r

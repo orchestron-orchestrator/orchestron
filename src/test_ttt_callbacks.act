@@ -10,6 +10,11 @@ from orchestron.device_meta_config import \
     orchestron_rfs__device__credentials as Credentials, \
     orchestron_rfs__device__mock as Mock
 
+TEST_NS = "urn:test"
+
+def q(n: str) -> gdata.Id:
+    return gdata.Id(TEST_NS, n)
+
 ########################
 
 actor reconf(t: testing.AsyncT):
@@ -26,24 +31,24 @@ actor reconf(t: testing.AsyncT):
 
 ########################
 
-cfg2 = gdata.List(["name"], [
+cfg2 = gdata.List([q("name")], [
     gdata.Container({
-        "name": gdata.Leaf("k1"),
-        "config": gdata.Container({
-            "val": gdata.Leaf("one")
+        q("name"): gdata.Leaf("k1"),
+        q("config"): gdata.Container({
+            q("val"): gdata.Leaf("one")
         })
     }),
     gdata.Container({
-        "name": gdata.Leaf("k2"),
-        "config": gdata.Container({
-            "val": gdata.Leaf("two")
+        q("name"): gdata.Leaf("k2"),
+        q("config"): gdata.Container({
+            q("val"): gdata.Leaf("two")
         })
     })
 ])
 
 actor reconf2(t: testing.AsyncT):
     dev_registry = odev.DeviceRegistry(log_handler=t.log_handler)
-    stack = ttt.Layer("devices", ttt.List(ttt.DeviceConfig(dev_registry), ["name"]), None)
+    stack = ttt.Layer("devices", ttt.List(ttt.DeviceConfig(dev_registry), [q("name")]), None)
     
     var devs = set()
     
@@ -71,22 +76,22 @@ class Fun(ttt.RFSFunction):
         return (gdata.Container(cfg.children), memory)
 
 cfg3 = gdata.Container({
-    "rfs": gdata.List(["name"], [
+    q("rfs"): gdata.List([q("name")], [
         gdata.Container({
-            "name": gdata.Leaf("k1"),
-            "base": gdata.List(["id"], [
+            q("name"): gdata.Leaf("k1"),
+            q("base"): gdata.List([q("id")], [
                 gdata.Container({
-                    "id": gdata.Leaf("A"),
-                    "val": gdata.Leaf("one")
+                    q("id"): gdata.Leaf("A"),
+                    q("val"): gdata.Leaf("one")
                 })
             ])
         }),
         gdata.Container({
-            "name": gdata.Leaf("k2"),
-            "base": gdata.List(["id"], [
+            q("name"): gdata.Leaf("k2"),
+            q("base"): gdata.List([q("id")], [
                 gdata.Container({
-                    "id": gdata.Leaf("A"),
-                    "val": gdata.Leaf("two")
+                    q("id"): gdata.Leaf("A"),
+                    q("val"): gdata.Leaf("two")
                 })
             ])
         })
@@ -95,17 +100,17 @@ cfg3 = gdata.Container({
 
 def rfs_for_device(dev):
     return gdata.Container({
-        'rfs': gdata.List(["name"], [
+        q('rfs'): gdata.List([q("name")], [
             gdata.Container({
-                "name": gdata.Leaf(dev)
+                q("name"): gdata.Leaf(dev)
             })
         ])
     })
 
 actor complete(t: testing.AsyncT):
     dev_registry = odev.DeviceRegistry(log_handler=t.log_handler)
-    stack = ttt.Layer("rfs", ttt.Container({"rfs": ttt.List(ttt.Container({"base": ttt.List(ttt.RFSTransform(Fun, dev_registry), ["id"])}), ["name"])}),
-            ttt.Layer("devices", ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_registry), ["name"])})}),
+    stack = ttt.Layer("rfs", ttt.Container({q("rfs"): ttt.List(ttt.Container({q("base"): ttt.List(ttt.RFSTransform(Fun, dev_registry), [q("id")])}), [q("name")])}),
+            ttt.Layer("devices", ttt.Container({q("devices"): ttt.Container({q("device"): ttt.List(ttt.DeviceConfig(dev_registry), [q("name")])})}),
             None))
 
     def reconf_cb(dev):
@@ -128,4 +133,3 @@ actor complete(t: testing.AsyncT):
 
 
 ########################
-
