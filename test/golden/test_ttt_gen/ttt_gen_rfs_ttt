@@ -15,7 +15,7 @@ from respnet.layers.y_1 import orchestron_rfs__rfs__backbone_interface__dynstate
 from respnet.layers.y_1 import orchestron_rfs__rfs__backbone_interface__memory
 
 def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str],?ttt.Layer)->ttt.Node:
-    r = ttt.Container({"device": ttt.List(ttt.Device(dev_registry, log_handler), ['name'], ['string'], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs'), "rfs": ttt.List(ttt.Container({"backbone-interface": ttt.List(ttt.RFSTransform(respnet.rfs.BBInterface, dev_registry, BBInterfaceTransformCtor, lower, log_handler), ['name'], ['string'], ns='http://example.com/foo', module='foo')}), ['name'], ['string'], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')})
+    r = ttt.Container({"device": ttt.List(ttt.Device(dev_registry, log_handler), ['name'], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs'), "rfs": ttt.List(ttt.Container({"backbone-interface": ttt.List(ttt.RFSTransform(respnet.rfs.BBInterface, dev_registry, BBInterfaceTransformCtor, lower, log_handler), ['name'], ns='http://example.com/foo', module='foo')}), ['name'], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')})
     return r
 
 def BBInterfaceTransformCtor(params: ttt.TransformActorParams) -> ?proc(yang.gdata.Node, ?yang.gdata.Node) -> None:

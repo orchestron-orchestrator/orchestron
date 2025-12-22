@@ -155,8 +155,8 @@ actor nested_delete(t: testing.AsyncT):
     })
 
     tlist = ttt.Container({
-                "left": ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]),
-                "right": ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"])
+                "left": ttt.List(ttt.Transform(ttt.PassThrough), ["name"]),
+                "right": ttt.List(ttt.Transform(ttt.PassThrough), ["name"])
             }) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})

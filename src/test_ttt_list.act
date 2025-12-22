@@ -69,7 +69,7 @@ merge_1_2 = gdata.List(["name"], [
 ########################
 
 actor basic_commit(t: testing.AsyncT):
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([], None)
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"]) ([], None)
     t1 = tlist.newtrans()
 
     t1.configure("1", {'srcA': tree1}, None)
@@ -86,7 +86,7 @@ actor basic_commit(t: testing.AsyncT):
 ########################
 
 actor basic_delete(t: testing.AsyncT):
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([], None)
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"]) ([], None)
     t1 = tlist.newtrans()
 
     def cont2(_r: value):
@@ -120,7 +120,7 @@ actor all_delete(t: testing.AsyncT):
             }),
         ])
 
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([], None)
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"]) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})
 
@@ -168,7 +168,7 @@ actor partial_delete(t: testing.AsyncT):
             }),
         ])
 
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["str"]) ([], None)
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"]) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": inA, "srcB": inB})
 
@@ -230,7 +230,7 @@ actor nested_delete(t: testing.AsyncT):
                 ttt.Container({
                     "left": ttt.Transform(ttt.PassThrough),
                     "right": ttt.Transform(ttt.PassThrough)
-                }), ["name"], ["str"]
+                }), ["name"]
             ) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {"srcA": in1})
@@ -279,7 +279,7 @@ list1 = gdata.List(["name"], [
 ])
 
 actor simultaneous_create(t: testing.AsyncT):
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([], None)
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"]) ([], None)
     t1 = tlist.newtrans()
     t2 = tlist.newtrans()
 
@@ -300,7 +300,7 @@ actor simultaneous_create(t: testing.AsyncT):
 ########################
 
 actor aborted_create(t: testing.AsyncT):
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([], None)
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"]) ([], None)
     t1 = tlist.newtrans()
 
     def cont1(_r: value):
@@ -344,7 +344,7 @@ y2b = gdata.List(["name"], [
 ])
 
 actor aborted_create2(t: testing.AsyncT):
-    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"], ["string"]) ([], None)
+    tlist = ttt.List(ttt.Transform(ttt.PassThrough), ["name"]) ([], None)
     t1 = tlist.newtrans()
     t2 = tlist.newtrans()
 
@@ -369,20 +369,21 @@ actor aborted_create2(t: testing.AsyncT):
 # read the data from TTT, we must get the same valid data back. That includes
 # the key attribute and key child leafs set for the list element Container.
 nested_tree = gdata.Container({
-    "top-list": gdata.List(["name"], [
+    "top-list": gdata.List(["name", "id"], [
         gdata.Container({
             # This is the key leaf for the top-list list element, and it must remain in the output.
             "name": gdata.Leaf("k1"),
+            "id": gdata.Leaf(bigint(1)),
             "nested-list": gdata.List(["id"], [
                 gdata.Container({
                     "id": gdata.Leaf("k1-k1"),
                     "a": gdata.Leaf(bigint(1))
                 })
             ])
-        # This is the key attribute for the top-list list element, and it must remain in the output.
         }),
         gdata.Container({
             "name": gdata.Leaf("k2"),
+            "id": gdata.Leaf(bigint(2)),
             "nested-list": gdata.List(["id"], [
                 gdata.Container({
                     "id": gdata.Leaf("k2-k1"),
@@ -394,7 +395,7 @@ nested_tree = gdata.Container({
 })
 
 actor nested_list(t: testing.AsyncT):
-    tlist = ttt.Container({"top-list": ttt.List(ttt.Container({"nested-list": ttt.List(ttt.Transform(ttt.PassThrough), ["id"], ["string"])}), ["name"], ["string"])}) ([], None)
+    tlist = ttt.Container({"top-list": ttt.List(ttt.Container({"nested-list": ttt.List(ttt.Transform(ttt.PassThrough), ["id"])}), ["name", "id"])}) ([], None)
     t1 = tlist.newtrans()
     t1.configure("1", {'srcA': nested_tree}, None)
 
@@ -408,5 +409,18 @@ actor nested_list(t: testing.AsyncT):
             t.failure(Exception("Diff:\n{diff.diff(nested_tree.prsrc(), r.prsrc(), color=True)}"))
     t1.lock("1", None, cont1)
 
-########################
+actor nested_list_session_get(t: testing.AsyncT):
+    layer = ttt.Layer("top", ttt.Container({"top-list": ttt.List(ttt.Container({"nested-list": ttt.List(ttt.Transform(ttt.PassThrough), ["id"])}), ["name", "id"])}, None), None)
+    sess = layer.newsession()
 
+    def cont1(_r: value):
+        r = sess.get()
+        try:
+            testing.assertEqual(nested_tree, r)
+            t.success()
+        except Exception as e:
+            t.failure(Exception("Diff:\n{diff.diff(nested_tree.prsrc(), r.prsrc(), color=True)}"))
+
+    sess.edit_config(nested_tree, cont1)
+
+########################

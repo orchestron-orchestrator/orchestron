@@ -67,32 +67,6 @@ def merge(cfg_per_src: dict[str,gdata.Node]):
     else:
         raise ValueError("Nothing to merge")
 
-def split_key_str(key_str: str) -> list[str]:
-    """
-    Split a comma-separated string into individual components,
-    respecting escaped commas (\\,).
-    """
-    result = []
-    current = ""
-    i = 0
-
-    while i < len(key_str):
-        if key_str[i] == '\\' and i + 1 < len(key_str) and key_str[i + 1] == ',':
-            current += ','
-            i += 2
-        elif key_str[i] == ',':
-            result.append(current)
-            current = ""
-            i += 1
-        else:
-            current += key_str[i]
-            i += 1
-
-    # Last, or only element
-    if current != "" or i > 0:
-        result.append(current)
-
-    return result
 
 def expect[T](t: ?T, errmsg: str) -> T:
     if t is not None:
@@ -120,6 +94,9 @@ class YieldState(object):
 
 
 actor Node(impl: _Node):
+    # Make the impl actor argument available as a public constant, for runtime
+    # inspection of the transaction implementation
+    pub_impl = impl
     def newtrans():
         return impl.newtrans()
 
@@ -490,33 +467,36 @@ class _ContainerTransaction(_Transaction):
 
 ################# Lists ####################
 
-# TODO: remove key_types, now that gdata.Leaf.type attribute is gone?!
-def List(template, key_names: list[str], key_types: list[str], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
-    return lambda path, lower: Node(_List(path, template, key_names, key_types, ns, module, lower))
+def List(template, key_names: list[str], ns:?str=None, module:?str=None) -> proc(list[str], ?Layer)->Node:
+    return lambda path, lower: Node(_List(path, template, key_names, ns, module, lower))
 
 class _List(_Node):
     liststate: ListState
     ns: ?str
     module: ?str
 
-    def __init__(self, path, template, key_names, key_types, ns, module, lower: ?Layer):
+    def __init__(self, path, template, key_names, ns, module, lower: ?Layer):
         self.path = path
         self.key_names = key_names
-        self.key_types = key_types
         self.ns = ns
         self.module = module
         self.liststate = ListState(path, template, ns, module, lower)
 
     def newtrans(self):
-        return ListTransaction(self.path, self.liststate, self.key_names, self.key_types, self.ns, self.module)
+        return ListTransaction(self.path, self.liststate, self.key_names, self.ns, self.module)
 
     def get(self):
         #print('####', '(List)', self.path, 'NODE GET', err=True)
         res = []
-        for key,node in self.liststate.all().items():
+        for key, (node, key_leaves) in self.liststate.all().items():
             r = node.get()
-            if isinstance(r, gdata.Container):
-                res.append(r)
+            # TODO: if this (_List.get) function is removed, consider
+            # refactoring key leaf restore entirely in _ListTransaction. The
+            # only reason key leaf values are passed to ListState is to support
+            # this function.
+            if isinstance(r, gdata.Container) and key_leaves is not None:
+                r.children.update(key_leaves.items())
+            res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
 
@@ -524,8 +504,10 @@ actor ListState(path, template: proc(list[str], ?Layer) -> Node, ns: ?str, modul
     var elems = {}
     var active = {}
     var provisional = set()
+    var key_leaves = {}
+    var staged_key_leaves = {}
 
-    def acquire(tid: str, keys: ?set[str]):
+    def acquire(tid: str, keys: ?set[str], key_leaves_by_key: ?dict[str, dict[str, gdata.Leaf]]):
         if keys is not None:
             keys1 = keys
             new = keys - set(elems.keys())
@@ -537,6 +519,17 @@ actor ListState(path, template: proc(list[str], ?Layer) -> Node, ns: ?str, modul
             keys1 = set(elems.keys())
             #print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
         active[tid] = keys1
+        if key_leaves_by_key is not None:
+            for k in keys1:
+                node = elems[k]
+                # Peek at the first node implementation type (they are all the same).
+                # The list element is either:
+                # - _TransformBase if this list contains an embedded transform,
+                # - or _Container if this is a structural list where a transform is nested deeper in a descendant
+                # We only keep track of key leaves for the latter case.
+                if isinstance(node.pub_impl, _Container):
+                    staged_key_leaves[tid] = key_leaves_by_key
+                break
 
         return {k: elems[k] for k in keys1}
 
@@ -545,25 +538,31 @@ actor ListState(path, template: proc(list[str], ?Layer) -> Node, ns: ?str, modul
         if ok:
             provisional -= active[tid]
             provisional |= deletes
+            if tid in staged_key_leaves:
+                for k, leaves in staged_key_leaves[tid].items():
+                    key_leaves[k] = leaves
+            for k in deletes:
+                del key_leaves[k]
         del active[tid]
+        del staged_key_leaves[tid]
         if not active:
             #print('====', tid, path, 'deleting:', provisional, err=True)
             for k in provisional:
                 del elems[k]
+                del key_leaves[k]
             provisional = set()
 
     def all():
         #print('====', 'all:', elems.keys(), 'provosional:', provisional, "active:", active)
         if provisional:
-            return {k: elems[k] for k in elems if k not in provisional}
+            return {k: (elems[k], key_leaves.get(k)) for k in elems if k not in provisional}
         else:
-            return dict(elems.items())
+            return {k: (node, key_leaves.get(k)) for k, node in elems.items()}
 
 
 class _ListTransaction(_Transaction):
     liststate : ListState
     key_names : list[str]
-    key_types : list[str]
     elems : dict[str, Transaction]
     accum : dict[str, value]
     state : ?YieldState
@@ -571,11 +570,10 @@ class _ListTransaction(_Transaction):
     ns: ?str
     module: ?str
 
-    def __init__(self, path, liststate, key_names, key_types, ns, module):
+    def __init__(self, path, liststate, key_names, ns, module):
         self.path = path
         self.liststate = liststate
         self.key_names = key_names
-        self.key_types = key_types
         self.ns = ns
         self.module = module
         self.elems = {}
@@ -591,12 +589,12 @@ class _ListTransaction(_Transaction):
             self.reset = False
         diff_by_key = transpose(diff)
         if len(diff_by_key) == 0 and force:
-            for key,node in self.liststate.acquire(tid, None).items():
+            for key,node in self.liststate.acquire(tid, None, None).items():
                 diff_by_key[key] = {}
                 self.elems[key] = node.newtrans()
         elif WILDKEY in diff_by_key:
             wildconf = diff_by_key[WILDKEY]
-            for key,node in self.liststate.acquire(tid, None).items():
+            for key,node in self.liststate.acquire(tid, None, None).items():
                 if key in diff_by_key:
                     diff_by_key[key].update(wildconf.items())
                 else:
@@ -604,7 +602,12 @@ class _ListTransaction(_Transaction):
                 self.elems[key] = node.newtrans()
             del diff_by_key[WILDKEY]
         else:
-            for key,node in self.liststate.acquire(tid, set(diff_by_key.keys())).items():
+            key_leaves_by_key = {}
+            for key,subdiff in diff_by_key.items():
+                for node in subdiff.values():
+                    kc = node.key_children(self.key_names)
+                    key_leaves_by_key[key] = kc
+            for key,node in self.liststate.acquire(tid, set(diff_by_key.keys()), key_leaves_by_key).items():
                 self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():
@@ -714,24 +717,18 @@ class _ListTransaction(_Transaction):
     def get(self):
         #print('####', '(List)', self.path, 'GET', err=True)
         res = []
-        for key,node in self.liststate.all().items():
+        for key, (node, key_leaves) in self.liststate.all().items():
             if key in self.elems:
                 r = self.elems[key].get()
             else:
                 r = node.get()
-            if isinstance(r, gdata.Container):
-                # Restore the list element key leaf leaf children to keep the
-                # gdata valid. This is only necessary when the elements of this
-                # list are not any of the ttt.Transform, but ttt.Container.
-                #print('####', '(List)', self.path, 'RESTORING KEY', key, err=True)
-                split_key = split_key_str(key)
-                for i, kn in enumerate(self.key_names):
-                    r.children.setdefault(kn, gdata.Leaf(split_key[i]))
+            if isinstance(r, gdata.Container) and key_leaves is not None:
+                r.children.update(key_leaves.items())
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
-def ListTransaction(path, liststate: ListState, key_names, key_types, ns, module):
-    return Transaction(_ListTransaction(path, liststate, key_names, key_types, ns, module))
+def ListTransaction(path, liststate: ListState, key_names, ns, module):
+    return Transaction(_ListTransaction(path, liststate, key_names, ns, module))
 
 
 ################# Transform #####################
