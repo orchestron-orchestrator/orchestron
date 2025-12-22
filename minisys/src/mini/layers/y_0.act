@@ -561,6 +561,9 @@ def src_yang():
     return res
 
 
+NS_netinfra = 'http://example.com/netinfra'
+
+
 class netinfra__netinfra__router_entry(yang.adata.MNode):
     name: str
     id: bigint
@@ -588,7 +591,7 @@ class netinfra__netinfra__router_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> netinfra__netinfra__router_entry:
-        return netinfra__netinfra__router_entry(name=n.get_str('name'), id=n.get_bigint('id'), type=n.get_str('type'))
+        return netinfra__netinfra__router_entry(name=n.get_str(yang.gdata.Id(NS_netinfra, 'name')), id=n.get_bigint(yang.gdata.Id(NS_netinfra, 'id')), type=n.get_str(yang.gdata.Id(NS_netinfra, 'type')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -657,7 +660,7 @@ class netinfra__netinfra__foo_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> netinfra__netinfra__foo_entry:
-        return netinfra__netinfra__foo_entry(router=n.get_str('router'), name=n.get_str('name'))
+        return netinfra__netinfra__foo_entry(router=n.get_str(yang.gdata.Id(NS_netinfra, 'router')), name=n.get_str(yang.gdata.Id(NS_netinfra, 'name')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -730,7 +733,7 @@ class netinfra__netinfra(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> netinfra__netinfra:
         if n is not None:
-            return netinfra__netinfra(router=netinfra__netinfra__router.from_gdata(n.get_opt_list('router')), foo=netinfra__netinfra__foo.from_gdata(n.get_opt_list('foo')))
+            return netinfra__netinfra(router=netinfra__netinfra__router.from_gdata(n.get_opt_list(yang.gdata.Id(NS_netinfra, 'router'))), foo=netinfra__netinfra__foo.from_gdata(n.get_opt_list(yang.gdata.Id(NS_netinfra, 'foo'))))
         return netinfra__netinfra()
 
     def copy(self):
@@ -758,7 +761,7 @@ class root(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
         if n is not None:
-            return root(netinfra=netinfra__netinfra.from_gdata(n.get_opt_cnt('netinfra')))
+            return root(netinfra=netinfra__netinfra.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_netinfra, 'netinfra'))))
         return root()
 
     def copy(self):

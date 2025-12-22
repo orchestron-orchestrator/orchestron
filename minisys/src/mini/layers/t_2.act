@@ -11,6 +11,6 @@ import yang.gdata
 
 
 
-def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[str],?ttt.Layer)->ttt.Node:
-    r = ttt.Container({"devices": ttt.Container({"device": ttt.List(ttt.DeviceConfig(dev_registry, log_handler), ['name'])}, ns='http://orchestron.org/yang/orchestron-device.yang', module='orchestron-device')})
+def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value],?ttt.Layer)->ttt.Node:
+    r = ttt.Container({yang.gdata.Id("http://orchestron.org/yang/orchestron-device.yang", "devices"): ttt.Container({yang.gdata.Id("http://orchestron.org/yang/orchestron-device.yang", "device"): ttt.List(ttt.DeviceConfig(dev_registry, log_handler), [yang.gdata.Id("http://orchestron.org/yang/orchestron-device.yang", "name")])}, ns='http://orchestron.org/yang/orchestron-device.yang', module='orchestron-device')})
     return r

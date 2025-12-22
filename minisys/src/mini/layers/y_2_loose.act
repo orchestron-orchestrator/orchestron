@@ -62,6 +62,9 @@ def src_yang():
     return res
 
 
+NS_orchestron_device = 'http://orchestron.org/yang/orchestron-device.yang'
+
+
 class orchestron_device__devices__device_entry(yang.adata.MNode):
     name: str
     modset_id: ?str
@@ -85,7 +88,7 @@ class orchestron_device__devices__device_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_device__devices__device_entry:
-        return orchestron_device__devices__device_entry(name=n.get_str('name'), modset_id=n.get_opt_str('modset_id'))
+        return orchestron_device__devices__device_entry(name=n.get_str(yang.gdata.Id(NS_orchestron_device, 'name')), modset_id=n.get_opt_str(yang.gdata.Id(NS_orchestron_device, 'modset_id')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -151,7 +154,7 @@ class orchestron_device__devices(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_device__devices:
         if n is not None:
-            return orchestron_device__devices(device=orchestron_device__devices__device.from_gdata(n.get_opt_list('device')))
+            return orchestron_device__devices(device=orchestron_device__devices__device.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_device, 'device'))))
         return orchestron_device__devices()
 
     def copy(self):
@@ -179,7 +182,7 @@ class root(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
         if n is not None:
-            return root(devices=orchestron_device__devices.from_gdata(n.get_opt_cnt('devices')))
+            return root(devices=orchestron_device__devices.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_orchestron_device, 'devices'))))
         return root()
 
     def copy(self):
