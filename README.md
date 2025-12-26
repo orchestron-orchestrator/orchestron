@@ -3,6 +3,7 @@
 </p>
 
 [![REUSE Compliance Check](https://github.com/orchestron-orchestrator/orchestron/actions/workflows/reuse-compliance.yml/badge.svg)](https://github.com/orchestron-orchestrator/orchestron/actions/workflows/reuse-compliance.yml)
+[![OpenSSF Scorecard Score](https://api.scorecard.dev/projects/github.com/orchestron-orchestrator/orchestron/badge)](https://scorecard.dev/viewer/?uri=github.com/orchestron-orchestrator/orchestron/badge)
 
 Orchestron is a platform for the development of robust network orchestration systems based on model-driven declarative transforms. It does the heavy lifting so you can focus on building automation that makes sense. With native support for streaming telemetry, Orchestron enables you to build reactive closed loop automation.
 
