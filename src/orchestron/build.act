@@ -226,7 +226,7 @@ class Layer(object):
         models = [file.ReadFile(rfc, f"{dir}/{f}").read().decode() for f in fs.listdir(dir) if f.endswith(".yang")]
         return Layer(models, name)
 
-class _CompiledLayerBase(object):
+class CompiledLayerBase(object):
     root: yang.schema.DRoot
     src: list[str]
 
@@ -240,13 +240,13 @@ class _CompiledLayerBase(object):
         """
         return self.root.prdaclass(schema_yang=self.src, loose=loose)
 
-class CompiledLayer(_CompiledLayerBase):
+class CompiledLayer(CompiledLayerBase):
     def __init__(self, root: yang.schema.DRoot, src: list[str], name: ?str=None):
         self.root = root
         self.src = src
         self.name = name
 
-class CompiledDeviceType(_CompiledLayerBase):
+class CompiledDeviceType(CompiledLayerBase):
     def __init__(self, root: yang.schema.DRoot, src: list[str], name: str):
         self.root = root
         self.src = src
