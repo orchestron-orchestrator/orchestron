@@ -30,7 +30,7 @@ def create_test_dmc() -> dmc.orchestron_rfs__device_entry:
     address_entry = dmc.orchestron_rfs__device__address_entry(
         name="primary",
         address=test_address,
-        port=bigint(test_port)
+        port=u64(test_port)
     )
 
     # Create the device entry (DeviceMetaConfig)

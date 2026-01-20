@@ -2820,9 +2820,9 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
 
 class ietf_system__system__clock(yang.adata.MNode):
     timezone_name: ?str
-    timezone_utc_offset: ?bigint
+    timezone_utc_offset: ?int
 
-    mut def __init__(self, timezone_name: ?str, timezone_utc_offset: ?bigint):
+    mut def __init__(self, timezone_name: ?str, timezone_utc_offset: ?int):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.timezone_name = timezone_name
         self.timezone_utc_offset = timezone_utc_offset
@@ -2842,7 +2842,7 @@ class ietf_system__system__clock(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__clock:
         if n is not None:
-            return ietf_system__system__clock(timezone_name=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'timezone-name')), timezone_utc_offset=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'timezone-utc-offset')))
+            return ietf_system__system__clock(timezone_name=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'timezone-name')), timezone_utc_offset=n.get_opt_int(yang.gdata.Id(NS_ietf_system, 'timezone-utc-offset')))
         return ietf_system__system__clock()
 
     def copy(self):
@@ -2852,9 +2852,9 @@ class ietf_system__system__clock(yang.adata.MNode):
 
 class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     address: ?str
-    port: ?bigint
+    port: ?u64
 
-    mut def __init__(self, address: ?str, port: ?bigint):
+    mut def __init__(self, address: ?str, port: ?u64):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.address = address
         self.port = port
@@ -2874,7 +2874,7 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__ntp__server__udp:
         if n is not None:
-            return ietf_system__system__ntp__server__udp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), port=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'port')))
+            return ietf_system__system__ntp__server__udp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), port=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'port')))
         raise ValueError('Missing required subtree ietf_system__system__ntp__server__udp')
 
     def copy(self):
@@ -3000,9 +3000,9 @@ class ietf_system__system__ntp(yang.adata.MNode):
 
 class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     address: ?str
-    port: ?bigint
+    port: ?u64
 
-    mut def __init__(self, address: ?str, port: ?bigint):
+    mut def __init__(self, address: ?str, port: ?u64):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.address = address
         self.port = port
@@ -3022,7 +3022,7 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__server__udp_and_tcp:
         if n is not None:
-            return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), port=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'port')))
+            return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), port=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'port')))
         raise ValueError('Missing required subtree ietf_system__system__dns_resolver__server__udp_and_tcp')
 
     def copy(self):
@@ -3100,10 +3100,10 @@ extension ietf_system__system__dns_resolver__server(Iterable[ietf_system__system
         return self.elements.__iter__()
 
 class ietf_system__system__dns_resolver__options(yang.adata.MNode):
-    timeout: ?bigint
-    attempts: ?bigint
+    timeout: ?u64
+    attempts: ?u64
 
-    mut def __init__(self, timeout: ?bigint, attempts: ?bigint):
+    mut def __init__(self, timeout: ?u64, attempts: ?u64):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.timeout = timeout
         self.attempts = attempts
@@ -3123,7 +3123,7 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__options:
         if n is not None:
-            return ietf_system__system__dns_resolver__options(timeout=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'timeout')), attempts=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'attempts')))
+            return ietf_system__system__dns_resolver__options(timeout=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'timeout')), attempts=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'attempts')))
         return ietf_system__system__dns_resolver__options()
 
     def copy(self):
@@ -3169,10 +3169,10 @@ class ietf_system__system__dns_resolver(yang.adata.MNode):
 
 class ietf_system__system__radius__server__udp(yang.adata.MNode):
     address: ?str
-    authentication_port: ?bigint
+    authentication_port: ?u64
     shared_secret: ?str
 
-    mut def __init__(self, address: ?str, authentication_port: ?bigint, shared_secret: ?str):
+    mut def __init__(self, address: ?str, authentication_port: ?u64, shared_secret: ?str):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.address = address
         self.authentication_port = authentication_port
@@ -3195,7 +3195,7 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__server__udp:
         if n is not None:
-            return ietf_system__system__radius__server__udp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), authentication_port=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'authentication-port')), shared_secret=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'shared-secret')))
+            return ietf_system__system__radius__server__udp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), authentication_port=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'authentication-port')), shared_secret=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'shared-secret')))
         raise ValueError('Missing required subtree ietf_system__system__radius__server__udp')
 
     def copy(self):
@@ -3277,10 +3277,10 @@ extension ietf_system__system__radius__server(Iterable[ietf_system__system__radi
         return self.elements.__iter__()
 
 class ietf_system__system__radius__options(yang.adata.MNode):
-    timeout: ?bigint
-    attempts: ?bigint
+    timeout: ?u64
+    attempts: ?u64
 
-    mut def __init__(self, timeout: ?bigint, attempts: ?bigint):
+    mut def __init__(self, timeout: ?u64, attempts: ?u64):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
         self.timeout = timeout
         self.attempts = attempts
@@ -3300,7 +3300,7 @@ class ietf_system__system__radius__options(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__options:
         if n is not None:
-            return ietf_system__system__radius__options(timeout=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'timeout')), attempts=n.get_opt_bigint(yang.gdata.Id(NS_ietf_system, 'attempts')))
+            return ietf_system__system__radius__options(timeout=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'timeout')), attempts=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'attempts')))
         return ietf_system__system__radius__options()
 
     def copy(self):

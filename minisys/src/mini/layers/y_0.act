@@ -567,10 +567,10 @@ NS_netinfra = 'http://example.com/netinfra'
 
 class netinfra__netinfra__router_entry(yang.adata.MNode):
     name: str
-    id: bigint
+    id: u64
     type: str
 
-    mut def __init__(self, name: str, id: bigint, type: str):
+    mut def __init__(self, name: str, id: u64, type: str):
         self._ns = 'http://example.com/netinfra'
         self.name = name
         self.id = id
@@ -592,7 +592,7 @@ class netinfra__netinfra__router_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> netinfra__netinfra__router_entry:
-        return netinfra__netinfra__router_entry(name=n.get_str(yang.gdata.Id(NS_netinfra, 'name')), id=n.get_bigint(yang.gdata.Id(NS_netinfra, 'id')), type=n.get_str(yang.gdata.Id(NS_netinfra, 'type')))
+        return netinfra__netinfra__router_entry(name=n.get_str(yang.gdata.Id(NS_netinfra, 'name')), id=n.get_u64(yang.gdata.Id(NS_netinfra, 'id')), type=n.get_str(yang.gdata.Id(NS_netinfra, 'type')))
 
     def copy(self):
         """Create a deep copy of this adata object"""

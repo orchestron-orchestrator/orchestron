@@ -15,12 +15,12 @@ def q(n: str) -> gdata.Id:
 tree1 = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("k1"),
-        q("n1"): gdata.Leaf(bigint(1)),
-        q("n2"): gdata.Leaf(bigint(2))
+        q("n1"): gdata.Leaf(1),
+        q("n2"): gdata.Leaf(2)
     }),
     gdata.Container({
         q("name"): gdata.Leaf("k4"),
-        q("n4"): gdata.Leaf(bigint(4))
+        q("n4"): gdata.Leaf(4)
     })
 ])
 
@@ -30,43 +30,43 @@ tree1diff = gdata.List([q("name")], [
     }),
     gdata.Container({
         q("name"): gdata.Leaf("k4"),
-        q("n4"): gdata.Leaf(bigint(0))
+        q("n4"): gdata.Leaf(0)
     })
 ])
 
 tree1pruned = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("k4"),
-        q("n4"): gdata.Leaf(bigint(0))
+        q("n4"): gdata.Leaf(0)
     })
 ])
 
 tree2 = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("k1"),
-        q("n2"): gdata.Leaf(bigint(2))
+        q("n2"): gdata.Leaf(2)
     }),
     gdata.Container({
         q("name"): gdata.Leaf("k2"),
-        q("n1"): gdata.Leaf(bigint(1)),
-        q("n3"): gdata.Leaf(bigint(3))
+        q("n1"): gdata.Leaf(1),
+        q("n3"): gdata.Leaf(3)
     })
 ])
 
 merge_1_2 = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("k1"),
-        q("n1"): gdata.Leaf(bigint(1)),
-        q("n2"): gdata.Leaf(bigint(2))
+        q("n1"): gdata.Leaf(1),
+        q("n2"): gdata.Leaf(2)
     }),
     gdata.Container({
         q("name"): gdata.Leaf("k2"),
-        q("n1"): gdata.Leaf(bigint(1)),
-        q("n3"): gdata.Leaf(bigint(3))
+        q("n1"): gdata.Leaf(1),
+        q("n3"): gdata.Leaf(3)
     }),
     gdata.Container({
         q("name"): gdata.Leaf("k4"),
-        q("n4"): gdata.Leaf(bigint(4))
+        q("n4"): gdata.Leaf(4)
     })
 ])
 
@@ -117,11 +117,11 @@ actor all_delete(t: testing.AsyncT):
     in1 = gdata.List([q("name")], [
             gdata.Container({
                 q("name"): gdata.Leaf("k1"),
-                q("x"): gdata.Leaf(bigint(1))
+                q("x"): gdata.Leaf(1)
             }),
             gdata.Container({
                 q("name"): gdata.Leaf("k2"),
-                q("x"): gdata.Leaf(bigint(2))
+                q("x"): gdata.Leaf(2)
             }),
         ])
 
@@ -154,22 +154,22 @@ actor partial_delete(t: testing.AsyncT):
     inA = gdata.List([q("name")], [
             gdata.Container({
                 q("name"): gdata.Leaf("k1"),
-                q("x"): gdata.Leaf(bigint(1))
+                q("x"): gdata.Leaf(1)
             }),
             gdata.Container({
                 q("name"): gdata.Leaf("k2"),
-                q("x"): gdata.Leaf(bigint(2))
+                q("x"): gdata.Leaf(2)
             })
         ])
 
     inB = gdata.List([q("name")], [
             gdata.Container({
                 q("name"): gdata.Leaf("k2"),
-                q("x"): gdata.Leaf(bigint(2))
+                q("x"): gdata.Leaf(2)
             }),
             gdata.Container({
                 q("name"): gdata.Leaf("k3"),
-                q("x"): gdata.Leaf(bigint(3))
+                q("x"): gdata.Leaf(3)
             }),
         ])
 
@@ -183,15 +183,15 @@ actor partial_delete(t: testing.AsyncT):
         exp1 = gdata.List([q("name")], [
                 gdata.Container({
                     q("name"): gdata.Leaf("k1"),
-                    q("x"): gdata.Leaf(bigint(1))
+                    q("x"): gdata.Leaf(1)
                 }),
                 gdata.Container({
                     q("name"): gdata.Leaf("k2"),
-                    q("x"): gdata.Leaf(bigint(2))
+                    q("x"): gdata.Leaf(2)
                 }),
                 gdata.Container({
                     q("name"): gdata.Leaf("k3"),
-                    q("x"): gdata.Leaf(bigint(3))
+                    q("x"): gdata.Leaf(3)
                 }),
             ])
         testing.assertEqual(out1, exp1)
@@ -214,19 +214,19 @@ actor nested_delete(t: testing.AsyncT):
             gdata.Container({
                 q("name"): gdata.Leaf("k1"),
                 q("left"): gdata.Container({
-                    q("x"): gdata.Leaf(bigint(1))
+                    q("x"): gdata.Leaf(1)
                 }),
                 q("right"): gdata.Container({
-                    q("y"): gdata.Leaf(bigint(1))
+                    q("y"): gdata.Leaf(1)
                 }),
             }),
             gdata.Container({
                 q("name"): gdata.Leaf("k2"),
                 q("left"): gdata.Container({
-                    q("x"): gdata.Leaf(bigint(2))
+                    q("x"): gdata.Leaf(2)
                 }),
                 q("right"): gdata.Container({
-                    q("y"): gdata.Leaf(bigint(2))
+                    q("y"): gdata.Leaf(2)
                 }),
             }),
         ])
@@ -264,22 +264,22 @@ actor nested_delete(t: testing.AsyncT):
 list1a = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("key1"),
-        q("a"): gdata.Leaf(bigint(0))
+        q("a"): gdata.Leaf(0)
     })
 ])
 
 list1b = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("key1"),
-        q("b"): gdata.Leaf(bigint(1))
+        q("b"): gdata.Leaf(1)
     })
 ])
 
 list1 = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("key1"),
-        q("a"): gdata.Leaf(bigint(0)),
-        q("b"): gdata.Leaf(bigint(1))
+        q("a"): gdata.Leaf(0),
+        q("b"): gdata.Leaf(1)
     })
 ])
 
@@ -322,29 +322,29 @@ actor aborted_create(t: testing.AsyncT):
 y1 = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("key0"),
-        q("a"): gdata.Leaf(bigint(0))
+        q("a"): gdata.Leaf(0)
     }),
     gdata.Container({
         q("name"): gdata.Leaf("key1"),
-        q("a"): gdata.Leaf(bigint(1))
+        q("a"): gdata.Leaf(1)
     })
 ])
 
 y2 = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("key1"),
-        q("b"): gdata.Leaf(bigint(1))
+        q("b"): gdata.Leaf(1)
     }),
     gdata.Container({
         q("name"): gdata.Leaf("key2"),
-        q("a"): gdata.Leaf(bigint(1))
+        q("a"): gdata.Leaf(1)
     })
 ])
 
 y2b = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("key1"),
-        q("b"): gdata.Leaf(bigint(1))
+        q("b"): gdata.Leaf(1)
     })
 ])
 
@@ -378,21 +378,21 @@ nested_tree = gdata.Container({
         gdata.Container({
             # This is the key leaf for the top-list list element, and it must remain in the output.
             q("name"): gdata.Leaf("k1"),
-            q("id"): gdata.Leaf(bigint(1)),
+            q("id"): gdata.Leaf(1),
             q("nested-list"): gdata.List([q("id")], [
                 gdata.Container({
                     q("id"): gdata.Leaf("k1-k1"),
-                    q("a"): gdata.Leaf(bigint(1))
+                    q("a"): gdata.Leaf(1)
                 })
             ])
         }),
         gdata.Container({
             q("name"): gdata.Leaf("k2"),
-            q("id"): gdata.Leaf(bigint(2)),
+            q("id"): gdata.Leaf(2),
             q("nested-list"): gdata.List([q("id")], [
                 gdata.Container({
                     q("id"): gdata.Leaf("k2-k1"),
-                    q("a"): gdata.Leaf(bigint(2))
+                    q("a"): gdata.Leaf(2)
                 })
             ])
         })
