@@ -31,12 +31,12 @@ class SysSpec(object):
         self.layers = layers
         self.device_types = device_types
 
-    def gen_app(self, fc: file.FileCap, output_dir: str):
-        return self.compile().gen_app(fc, output_dir)
+    def gen_app(self, fc: file.FileCap, output_dir: str, allow_failure: ?list[str]=None):
+        return self.compile(allow_failure).gen_app(fc, output_dir)
 
-    def compile(self):
-        compiled_layers = [CompiledLayer(yang.compile(l.models), l.models, l.name) for l in self.layers]
-        compiled_dev_types = [CompiledDeviceType(yang.compile(dev_type.models), dev_type.models, dev_type.name) for dev_type in self.device_types]
+    def compile(self, allow_failure: ?list[str]):
+        compiled_layers = [CompiledLayer(yang.compile(l.models, allow_failure=allow_failure), l.models, l.name) for l in self.layers]
+        compiled_dev_types = [CompiledDeviceType(yang.compile(dev_type.models, allow_failure=allow_failure), dev_type.models, dev_type.name) for dev_type in self.device_types]
         return CompiledSysSpec(self.name, compiled_layers, compiled_dev_types)
 
 class CompiledSysSpec(object):
