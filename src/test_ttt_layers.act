@@ -14,25 +14,25 @@ def q(n: str) -> gdata.Id:
 cfg1 = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("k1"),
-        q("n1"): gdata.Leaf(bigint(1)),
-        q("n2"): gdata.Leaf(bigint(2))
+        q("n1"): gdata.Leaf(1),
+        q("n2"): gdata.Leaf(2)
     }),
     gdata.Container({
         q("name"): gdata.Leaf("k2"),
-        q("n1"): gdata.Leaf(bigint(4))
+        q("n1"): gdata.Leaf(4)
     })
 ])
 
 cfg2 = gdata.List([q("name")], [
     gdata.Container({
         q("name"): gdata.Leaf("k1"),
-        q("n2"): gdata.Leaf(bigint(2)),
-        q("n3"): gdata.Leaf(bigint(3))
+        q("n2"): gdata.Leaf(2),
+        q("n3"): gdata.Leaf(3)
     }),
     gdata.Container({
         q("name"): gdata.Leaf("k3"),
-        q("n1"): gdata.Leaf(bigint(1)),
-        q("n3"): gdata.Leaf(bigint(3))
+        q("n1"): gdata.Leaf(1),
+        q("n3"): gdata.Leaf(3)
     })
 ])
 
@@ -40,12 +40,12 @@ out1 = gdata.Container({
     q('devices'): gdata.List([q("id")], [
         gdata.Container({
             q("id"): gdata.Leaf("k1"),
-            q("n1"): gdata.Leaf(bigint(1)),
-            q("n2"): gdata.Leaf(bigint(2))
+            q("n1"): gdata.Leaf(1),
+            q("n2"): gdata.Leaf(2)
         }),
         gdata.Container({
             q("id"): gdata.Leaf("k2"),
-            q("n1"): gdata.Leaf(bigint(4))
+            q("n1"): gdata.Leaf(4)
         })
     ])
 })
@@ -54,18 +54,18 @@ out1_2 = gdata.Container({
     q('devices'): gdata.List([q("id")], [
         gdata.Container({
             q("id"): gdata.Leaf("k1"),
-            q("n1"): gdata.Leaf(bigint(1)),
-            q("n2"): gdata.Leaf(bigint(2)),
-            q("n3"): gdata.Leaf(bigint(3))
+            q("n1"): gdata.Leaf(1),
+            q("n2"): gdata.Leaf(2),
+            q("n3"): gdata.Leaf(3)
         }),
         gdata.Container({
             q("id"): gdata.Leaf("k3"),
-            q("n1"): gdata.Leaf(bigint(1)),
-            q("n3"): gdata.Leaf(bigint(3))
+            q("n1"): gdata.Leaf(1),
+            q("n3"): gdata.Leaf(3)
         }),
         gdata.Container({
             q("id"): gdata.Leaf("k2"),
-            q("n1"): gdata.Leaf(bigint(4))
+            q("n1"): gdata.Leaf(4)
         })
     ])
 })
@@ -153,29 +153,29 @@ actor simultaneous_commit(t: testing.AsyncT):
 
 cfg3 = gdata.Container({
     q("left"): gdata.Container({
-        q("a"): gdata.Leaf(bigint(1))
+        q("a"): gdata.Leaf(1)
     }),
     q("right"): gdata.Container({
-        q("a"): gdata.Leaf(bigint(2))
+        q("a"): gdata.Leaf(2)
     })
 })
 
 out3 = gdata.Container({
     q('devices'): gdata.List([q("id")], [
         gdata.Container({
-            q("id"): gdata.Leaf(bigint(1)),
-            q("val"): gdata.Leaf(bigint(1))
+            q("id"): gdata.Leaf(1),
+            q("val"): gdata.Leaf(1)
         }),
         gdata.Container({
-            q("id"): gdata.Leaf(bigint(2)),
-            q("val"): gdata.Leaf(bigint(2))
+            q("id"): gdata.Leaf(2),
+            q("val"): gdata.Leaf(2)
         })
     ])
 })
 
 class WriteDev(ttt.TransformFunction):
     def transform_wrapper(self, cfg: gdata.Node, memory, dynstate):
-        i = cfg.get_bigint(q("a"))
+        i = cfg.get_int(q("a"))
         return gdata.Container({
             q('devices'): gdata.List([q("id")], [
                 gdata.Container({
@@ -205,14 +205,14 @@ actor diamond_commit(t: testing.AsyncT):
 ########################
 
 cfg4 = gdata.Container({
-    q("ll"): gdata.Leaf(bigint(1)),
-    q("rr"): gdata.Leaf(bigint(2))
+    q("ll"): gdata.Leaf(1),
+    q("rr"): gdata.Leaf(2)
 })
 
 class ServiceMap(ttt.TransformFunction):
     def transform_wrapper(self, cfg, memory, dynstate):
-        ll = cfg.get_bigint(q("ll"))
-        rr = cfg.get_bigint(q("rr"))
+        ll = cfg.get_int(q("ll"))
+        rr = cfg.get_int(q("rr"))
         return gdata.Container({
             q("left"): gdata.Container({
                 q("a"): gdata.Leaf(ll)
@@ -246,15 +246,15 @@ actor multi_layer(t: testing.AsyncT):
 ########################
 
 cfg5 = gdata.Container({
-    q("a"): gdata.Leaf(bigint(1)),
+    q("a"): gdata.Leaf(1),
 })
 
 cfg6 = gdata.Container({
-    q("a"): gdata.Leaf(bigint(2)),
+    q("a"): gdata.Leaf(2),
 })
 
 out5 = gdata.Container({
-    q("b"): gdata.Leaf(bigint(3)),
+    q("b"): gdata.Leaf(3),
 })
 
 

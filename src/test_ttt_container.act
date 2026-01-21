@@ -16,17 +16,17 @@ tree1 = gdata.Container({
         q("l1"): gdata.List([q("name")], [
             gdata.Container({
                 q("name"): gdata.Leaf("k1"),
-                q("n1"): gdata.Leaf(bigint(1)),
-                q("n2"): gdata.Leaf(bigint(2))
+                q("n1"): gdata.Leaf(1),
+                q("n2"): gdata.Leaf(2)
             }),
             gdata.Container({
                 q("name"): gdata.Leaf("k4"),
-                q("n4"): gdata.Leaf(bigint(4))
+                q("n4"): gdata.Leaf(4)
             })
         ])
     }),
     q('right'): gdata.Container({
-        q("a"): gdata.LeafList([bigint(1),bigint(2),bigint(3)])
+        q("a"): gdata.LeafList([1,2,3])
     })
 })
 
@@ -35,17 +35,17 @@ tree2 = gdata.Container({
         q("l1"): gdata.List([q("name")], [
             gdata.Container({
                 q("name"): gdata.Leaf("k1"),
-                q("n2"): gdata.Leaf(bigint(2))
+                q("n2"): gdata.Leaf(2)
             }),
             gdata.Container({
                 q("name"): gdata.Leaf("k2"),
-                q("n1"): gdata.Leaf(bigint(1)),
-                q("n3"): gdata.Leaf(bigint(3))
+                q("n1"): gdata.Leaf(1),
+                q("n3"): gdata.Leaf(3)
             })
         ]),
     }),
     q('right'): gdata.Container({
-        q("b"): gdata.Leaf(bigint(1))
+        q("b"): gdata.Leaf(1)
     })
 })
 
@@ -54,23 +54,23 @@ merge_1_2 = gdata.Container({
         q("l1"): gdata.List([q("name")], [
             gdata.Container({
                 q("name"): gdata.Leaf("k1"),
-                q("n1"): gdata.Leaf(bigint(1)),
-                q("n2"): gdata.Leaf(bigint(2))
+                q("n1"): gdata.Leaf(1),
+                q("n2"): gdata.Leaf(2)
             }),
             gdata.Container({
                 q("name"): gdata.Leaf("k2"),
-                q("n1"): gdata.Leaf(bigint(1)),
-                q("n3"): gdata.Leaf(bigint(3))
+                q("n1"): gdata.Leaf(1),
+                q("n3"): gdata.Leaf(3)
             }),
             gdata.Container({
                 q("name"): gdata.Leaf("k4"),
-                q("n4"): gdata.Leaf(bigint(4))
+                q("n4"): gdata.Leaf(4)
             })
         ]),
     }),
     q('right'): gdata.Container({
-        q("a"): gdata.LeafList([bigint(1),bigint(2),bigint(3)]),
-        q("b"): gdata.Leaf(bigint(1))
+        q("a"): gdata.LeafList([1,2,3]),
+        q("b"): gdata.Leaf(1)
     })
 })
 
@@ -100,10 +100,10 @@ actor basic_commit(t: testing.AsyncT):
 actor all_delete(t: testing.AsyncT):
     in1 = gdata.Container({
             q("left") : gdata.Container({
-                q("x"): gdata.Leaf(bigint(1))
+                q("x"): gdata.Leaf(1)
             }),
             q("right"): gdata.Container({
-                q("x"): gdata.Leaf(bigint(2))
+                q("x"): gdata.Leaf(2)
             })
         })
 
@@ -144,17 +144,17 @@ actor nested_delete(t: testing.AsyncT):
         q("left"): gdata.List([q("name")], [
             gdata.Container({
                 q("name"): gdata.Leaf("k1"),
-                q("x"): gdata.Leaf(bigint(1))
+                q("x"): gdata.Leaf(1)
             }),
             gdata.Container({
                 q("name"): gdata.Leaf("k2"),
-                q("x"): gdata.Leaf(bigint(2))
+                q("x"): gdata.Leaf(2)
             })
         ]),
         q("right"): gdata.List([q("name")], [
             gdata.Container({
                 q("name"): gdata.Leaf("v1"),
-                q("y"): gdata.Leaf(bigint(1))
+                q("y"): gdata.Leaf(1)
             }),
         ])
     })
@@ -298,12 +298,12 @@ tree0 = gdata.Container({
         q("l1"): gdata.List([q("name")], [
             gdata.Container({
                 q("name"): gdata.Leaf("k4"),
-                q("n4"): gdata.Leaf(bigint(0))
+                q("n4"): gdata.Leaf(0)
             })
         ]),
     }),
     q('right'): gdata.Container({
-        q("a"): gdata.LeafList([bigint(1),bigint(2),bigint(3)])
+        q("a"): gdata.LeafList([1,2,3])
     })
 })
 
@@ -336,32 +336,32 @@ actor modified_overlapping_commit(t: testing.AsyncT):
 
 a0 = gdata.Container({
     q('left'): gdata.Container({
-        q('a'): gdata.Leaf(bigint(0))
+        q('a'): gdata.Leaf(0)
     }),
     q('right'): gdata.Container({
-        q('x'): gdata.Leaf(bigint(0))
+        q('x'): gdata.Leaf(0)
     })
 })
 
 a1 = gdata.Container({
     q('left'): gdata.Container({
-        q('a'): gdata.Leaf(bigint(1))
+        q('a'): gdata.Leaf(1)
     })
 })
 
 b1 = gdata.Container({
     q('left'): gdata.Container({
-        q('b'): gdata.Leaf(bigint(1))
+        q('b'): gdata.Leaf(1)
     })
 })
 
 a0b1 = gdata.Container({
     q('left'): gdata.Container({
-        q('a'): gdata.Leaf(bigint(0)),
-        q('b'): gdata.Leaf(bigint(1))
+        q('a'): gdata.Leaf(0),
+        q('b'): gdata.Leaf(1)
     }),
     q('right'): gdata.Container({
-        q('x'): gdata.Leaf(bigint(0))
+        q('x'): gdata.Leaf(0)
     })
 })
 
@@ -451,7 +451,7 @@ tree3 = gdata.Container({
         q("l1"): gdata.List([q("name")], []),
     }),
     q('right'): gdata.Container({
-        q("b"): gdata.Leaf(bigint(0))
+        q("b"): gdata.Leaf(0)
     })
 })
 

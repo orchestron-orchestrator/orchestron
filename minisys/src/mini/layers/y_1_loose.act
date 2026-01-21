@@ -821,10 +821,10 @@ extension orchestron_rfs__device__address__initial_credentials(Iterable[orchestr
 class orchestron_rfs__device__address_entry(yang.adata.MNode):
     name: str
     address: ?str
-    port: ?bigint
+    port: ?u64
     initial_credentials: orchestron_rfs__device__address__initial_credentials
 
-    mut def __init__(self, name: str, address: ?str, port: ?bigint, initial_credentials: list[orchestron_rfs__device__address__initial_credentials_entry]=[]):
+    mut def __init__(self, name: str, address: ?str, port: ?u64, initial_credentials: list[orchestron_rfs__device__address__initial_credentials_entry]=[]):
         self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
         self.name = name
         self.address = address
@@ -849,7 +849,7 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
-        return orchestron_rfs__device__address_entry(name=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'name')), address=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'address')), port=n.get_opt_bigint(yang.gdata.Id(NS_orchestron_rfs, 'port')), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'initial-credentials'))))
+        return orchestron_rfs__device__address_entry(name=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'name')), address=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'address')), port=n.get_opt_u64(yang.gdata.Id(NS_orchestron_rfs, 'port')), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'initial-credentials'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""

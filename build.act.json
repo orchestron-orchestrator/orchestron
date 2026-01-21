@@ -7,8 +7,8 @@
         },
         "yang": {
             "repo_url": "https://github.com/orchestron-orchestrator/acton-yang.git",
-            "url": "https://github.com/orchestron-orchestrator/acton-yang/archive/b5ead236733c1d2b40454f874b8abf40895d5f6e.zip",
-            "hash": "N-V-__8AAN0BIAC3WvHrZyTuwc78ggBSXfq83ikpEnqABl2I"
+            "url": "https://github.com/orchestron-orchestrator/acton-yang/archive/407a9e28547ee109d0da8ac3db91f618ed7a830f.zip",
+            "hash": "N-V-__8AAMjwHwAsAir1MFR1olXVElGsVejmv1RV1DFib28m"
         }
     },
     "zig_dependencies": {}

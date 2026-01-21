@@ -14,33 +14,33 @@ def q(n: str) -> gdata.Id:
     return gdata.Id(TEST_NS, n)
 
 y1 = gdata.Container({
-    q("a"): gdata.Leaf(bigint(1)),
+    q("a"): gdata.Leaf(1),
     q("l1"): gdata.List([q("name")], [
         gdata.Container({
             q("name"): gdata.Leaf("k1"),
-            q("n1"): gdata.Leaf(bigint(1)),
-            q("n2"): gdata.Leaf(bigint(2))
+            q("n1"): gdata.Leaf(1),
+            q("n2"): gdata.Leaf(2)
         }),
         gdata.Container({
             q("name"): gdata.Leaf("k4"),
-            q("n4"): gdata.Leaf(bigint(4))
+            q("n4"): gdata.Leaf(4)
         })
     ])
 })
 y1_transp = {
     q("a"): {
-        'src': gdata.Leaf(bigint(1))
+        'src': gdata.Leaf(1)
     },
     q("l1"): {
         'src': gdata.List([q("name")], [
             gdata.Container({
                 q("name"): gdata.Leaf("k1"),
-                q("n1"): gdata.Leaf(bigint(1)),
-                q("n2"): gdata.Leaf(bigint(2))
+                q("n1"): gdata.Leaf(1),
+                q("n2"): gdata.Leaf(2)
             }),
             gdata.Container({
                 q("name"): gdata.Leaf("k4"),
-                q("n4"): gdata.Leaf(bigint(4))
+                q("n4"): gdata.Leaf(4)
             })
         ])
     }
@@ -49,62 +49,62 @@ y1_transp_l1 = {
     "k1": {
         'src': gdata.Container({
             q("name"): gdata.Leaf("k1"),
-            q("n1"): gdata.Leaf(bigint(1)),
-            q("n2"): gdata.Leaf(bigint(2))
+            q("n1"): gdata.Leaf(1),
+            q("n2"): gdata.Leaf(2)
         })
     },
     "k4": {
         'src': gdata.Container({
             q("name"): gdata.Leaf("k4"),
-            q("n4"): gdata.Leaf(bigint(4))
+            q("n4"): gdata.Leaf(4)
         })
     }
 }
 y1_transp_l1_k1 = {
     q("n1"): {
-        'src': gdata.Leaf(bigint(1))
+        'src': gdata.Leaf(1)
     },
     q("n2"): {
-        'src': gdata.Leaf(bigint(2))
+        'src': gdata.Leaf(2)
     },
     q("name"): {
         'src': gdata.Leaf("k1")
     }
 }
 y2 = gdata.Container({
-    q("b"): gdata.Leaf(bigint(2)),
-    q("c"): gdata.Leaf(bigint(3)),
+    q("b"): gdata.Leaf(2),
+    q("c"): gdata.Leaf(3),
     q("l1"): gdata.List([q("name")], [
         gdata.Container({
             q("name"): gdata.Leaf("k1"),
-            q("n2"): gdata.Leaf(bigint(2))
+            q("n2"): gdata.Leaf(2)
         }),
         gdata.Container({
             q("name"): gdata.Leaf("k2"),
-            q("n1"): gdata.Leaf(bigint(1)),
-            q("n3"): gdata.Leaf(bigint(3))
+            q("n1"): gdata.Leaf(1),
+            q("n3"): gdata.Leaf(3)
         })
     ]),
     q("d"): gdata.LeafList(["a", "b", "c"])
 })
 merge_y1_y2 = gdata.Container({
-    q("a"): gdata.Leaf(bigint(1)),
-    q("b"): gdata.Leaf(bigint(2)),
-    q("c"): gdata.Leaf(bigint(3)),
+    q("a"): gdata.Leaf(1),
+    q("b"): gdata.Leaf(2),
+    q("c"): gdata.Leaf(3),
     q("l1"): gdata.List([q("name")], [
         gdata.Container({
             q("name"): gdata.Leaf("k1"),
-            q("n1"): gdata.Leaf(bigint(1)),
-            q("n2"): gdata.Leaf(bigint(2))
+            q("n1"): gdata.Leaf(1),
+            q("n2"): gdata.Leaf(2)
         }),
         gdata.Container({
             q("name"): gdata.Leaf("k2"),
-            q("n1"): gdata.Leaf(bigint(1)),
-            q("n3"): gdata.Leaf(bigint(3))
+            q("n1"): gdata.Leaf(1),
+            q("n3"): gdata.Leaf(3)
         }),
         gdata.Container({
             q("name"): gdata.Leaf("k4"),
-            q("n4"): gdata.Leaf(bigint(4))
+            q("n4"): gdata.Leaf(4)
         })
     ]),
     q("d"): gdata.LeafList(["a", "b", "c"])
@@ -128,18 +128,18 @@ def _test_transpose_absent():
         "srcA": gdata.List([q("id")], [
             gdata.Container({
                 q("id"): gdata.Leaf("k1"),
-                q("x"): gdata.Leaf(bigint(1))
+                q("x"): gdata.Leaf(1)
             }),
             gdata.Container({
                 q("id"): gdata.Leaf("k2"),
-                q("x"): gdata.Leaf(bigint(2))
+                q("x"): gdata.Leaf(2)
             }),
         ]),
         "srcB": gdata.Absent(),
         "srcC": gdata.List([q("id")], [
             gdata.Container({
                 q("id"): gdata.Leaf("k2"),
-                q("x"): gdata.Leaf(bigint(2))
+                q("x"): gdata.Leaf(2)
             })
         ])
     }
@@ -148,7 +148,7 @@ def _test_transpose_absent():
         "k1": {
             "srcA": gdata.Container({
                 q("id"): gdata.Leaf("k1"),
-                q("x"): gdata.Leaf(bigint(1)),
+                q("x"): gdata.Leaf(1),
             })
         },
         ttt.WILDKEY: {
@@ -157,11 +157,11 @@ def _test_transpose_absent():
         "k2": {
             "srcA": gdata.Container({
                 q("id"): gdata.Leaf("k2"),
-                q("x"): gdata.Leaf(bigint(2)),
+                q("x"): gdata.Leaf(2),
             }),
             "srcC": gdata.Container({
                 q("id"): gdata.Leaf("k2"),
-                q("x"): gdata.Leaf(bigint(2)),
+                q("x"): gdata.Leaf(2),
             })
         }
     }
@@ -191,7 +191,7 @@ def _test_patch():
             q('l1'): gdata.Absent()
         }),
         'srcB': gdata.Container({
-            q("b"): gdata.Leaf(bigint(0)),
+            q("b"): gdata.Leaf(0),
             q('l1'): gdata.List([q("name")], [
                 gdata.Absent({
                     q("name"): gdata.Leaf("k2")
@@ -203,15 +203,15 @@ def _test_patch():
     res = ttt.patch(fst, snd)
     exp = {
         'srcA': gdata.Container({
-            q('a'): gdata.Leaf(bigint(1))
+            q('a'): gdata.Leaf(1)
         }),
         'srcB': gdata.Container({
-            q("b"): gdata.Leaf(bigint(0)),
-            q("c"): gdata.Leaf(bigint(3)),
+            q("b"): gdata.Leaf(0),
+            q("c"): gdata.Leaf(3),
             q("l1"): gdata.List([q("name")], [
                 gdata.Container({
                     q("name"): gdata.Leaf("k1"),
-                    q("n2"): gdata.Leaf(bigint(2))
+                    q("n2"): gdata.Leaf(2)
                 })
             ])
         })
@@ -250,17 +250,17 @@ actor basic_commit(t: testing.AsyncT):
                 t3.commit("3", True)
                 r = t3.get()
                 expected = gdata.Container({
-                    q('a'): gdata.Leaf(bigint(1)),
-                    q('c'): gdata.Leaf(bigint(3)),
+                    q('a'): gdata.Leaf(1),
+                    q('c'): gdata.Leaf(3),
                     q('l1'): gdata.List([q('name')], [
                         gdata.Container({
                             q("name"): gdata.Leaf("k1"),
-                            q('n2'): gdata.Leaf(bigint(2))
+                            q('n2'): gdata.Leaf(2)
                         }),
                         gdata.Container({
                             q("name"): gdata.Leaf("k2"),
-                            q('n1'): gdata.Leaf(bigint(1)),
-                            q('n3'): gdata.Leaf(bigint(3))
+                            q('n1'): gdata.Leaf(1),
+                            q('n3'): gdata.Leaf(3)
                         })
                     ]),
                     q('d'): gdata.LeafList(['a', 'c'])
@@ -338,11 +338,11 @@ actor modified_commit2(t: testing.AsyncT):
 ########################
 
 y0 = gdata.Container({
-    q("a"): gdata.Leaf(bigint(0)),
+    q("a"): gdata.Leaf(0),
     q("l1"): gdata.List([q("name")], [
         gdata.Container({
             q("name"): gdata.Leaf("k4"),
-            q("n4"): gdata.Leaf(bigint(0))
+            q("n4"): gdata.Leaf(0)
         })
     ]),
     q("d"): gdata.LeafList(["a", "b"])
@@ -372,8 +372,8 @@ actor modified_overlapping_commit(t: testing.AsyncT):
 ########################
 
 y3 = gdata.Container({
-    q("b"): gdata.Leaf(bigint(0)),
-    q("c"): gdata.Leaf(bigint(0)),
+    q("b"): gdata.Leaf(0),
+    q("c"): gdata.Leaf(0),
 })
 
 actor modified_overlapping_commit2(t: testing.AsyncT):
@@ -400,20 +400,20 @@ actor modified_overlapping_commit2(t: testing.AsyncT):
 ########################
 
 a0 = gdata.Container({
-    q('a'): gdata.Leaf(bigint(0))
+    q('a'): gdata.Leaf(0)
 })
 
 a1 = gdata.Container({
-    q('a'): gdata.Leaf(bigint(1))
+    q('a'): gdata.Leaf(1)
 })
 
 b1 = gdata.Container({
-    q('b'): gdata.Leaf(bigint(1))
+    q('b'): gdata.Leaf(1)
 })
 
 a0b1 = gdata.Container({
-    q('a'): gdata.Leaf(bigint(0)),
-    q('b'): gdata.Leaf(bigint(1))
+    q('a'): gdata.Leaf(0),
+    q('b'): gdata.Leaf(1)
 })
 
 actor config_failure(t: testing.AsyncT):
@@ -595,16 +595,14 @@ class MemoryTransform(ttt.TransformFunction):
         if memory is not None and isinstance(memory, gdata.Leaf):
             _memory: gdata.Leaf = memory
             val = _memory.val
-            if isinstance(val, bigint):
-                if val == 42:
-                    return (cfg, memory)
+            if isinstance(val, int) and val == 42:
+                return (cfg, memory)
         elif isinstance(cfg, gdata.Leaf):
             _cfg: gdata.Leaf = cfg
             val = _cfg.val
-            if isinstance(val, bigint):
-                if val == 42:
-                    new_memory = gdata.Leaf(bigint(42))
-                    return (cfg, new_memory)
+            if isinstance(val, int) and val == 42:
+                new_memory = gdata.Leaf(42)
+                return (cfg, new_memory)
 
         # testing.error()
         raise AssertionError("Test error")
@@ -619,9 +617,9 @@ actor transform_memory(t: testing.AsyncT):
 
     def cont1(_r: value):
         s2 = ttt.Session("s2", router, None)
-        s2.edit_config(gdata.Leaf(bigint(0)), None, cont2)
+        s2.edit_config(gdata.Leaf(0), None, cont2)
 
-    s1.edit_config(gdata.Leaf(bigint(42)), None, cont1)
+    s1.edit_config(gdata.Leaf(42), None, cont1)
 
 ########################
 
@@ -638,18 +636,18 @@ class GDataWrapper(adata.MNode):
 
 actor DynstateActor(update_dynstate: proc(?adata.MNode)->None, t: testing.AsyncT):
     def on_conf(conf: gdata.Node, memory: ?gdata.Node):
-        if conf is not None and conf == gdata.Leaf(bigint(39)):
-            if memory is not None and memory == gdata.Leaf(bigint(40)):
-                update_dynstate(GDataWrapper(gdata.Leaf(bigint(41))))
-            elif memory is not None and memory == gdata.Leaf(bigint(42)):
+        if conf is not None and conf == gdata.Leaf(39):
+            if memory is not None and memory == gdata.Leaf(40):
+                update_dynstate(GDataWrapper(gdata.Leaf(41)))
+            elif memory is not None and memory == gdata.Leaf(42):
                 t.success()
 
 class DynstateTransform(ttt.TransformFunction):
     def transform_wrapper(self, cfg: gdata.Node, memory: ?gdata.Node, dynstate: ?gdata.Node):
-        if dynstate is not None and dynstate == gdata.Leaf(bigint(41)):
-            return (cfg, gdata.Leaf(bigint(42)))
-        elif cfg is not None and cfg == gdata.Leaf(bigint(39)):
-            return (cfg, gdata.Leaf(bigint(40)))
+        if dynstate is not None and dynstate == gdata.Leaf(41):
+            return (cfg, gdata.Leaf(42))
+        elif cfg is not None and cfg == gdata.Leaf(39):
+            return (cfg, gdata.Leaf(40))
         return (cfg, memory)
 
 actor transform_dynstate(t: testing.AsyncT):
@@ -661,6 +659,6 @@ actor transform_dynstate(t: testing.AsyncT):
 
     router = ttt.Transform(DynstateTransform, DynstateActorCtor) ([], None)
     s1 = ttt.Session("s1", router, None)
-    s1.edit_config(gdata.Leaf(bigint(39)))
+    s1.edit_config(gdata.Leaf(39))
 
 ########################
