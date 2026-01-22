@@ -124,6 +124,13 @@ rfs = r"""module orchestron-rfs {
       }
     }
 
+    container feature-flags {
+      leaf runtime-schema-fetch {
+        type boolean;
+        default false;
+      }
+    }
+
     container state {
       config false;
     }

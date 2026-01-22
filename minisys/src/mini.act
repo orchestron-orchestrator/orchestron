@@ -155,26 +155,14 @@ actor main(env):
                 return
 
             if len(path_elements) > 3 and path_elements[1] == "device":
-                def respond_with_data(data: ?yang.gdata.Node, schema: odev.DeviceSchema, accept_header: ?str):
-                    aheader = accept_header if accept_header is not None else "application/yang-data+json"
-                    if data is not None:
-                        if aheader == "application/yang-data+json":
-                            out_data = data.to_jsonstr()
-                        elif aheader == "application/yang-data+xml":
-                            out_data = data.to_xmlstr()
-                        elif aheader == "application/yang-data+acton-adata":
-                            out_data = yang.gen3.pradata(schema.src_dnode, data, loose=True)
-                        else:
-                            respond(404, {}, "Unsupported media type")
-                            return
-                        respond(200, {"Content-type": aheader}, out_data)
-                    else:
-                        respond(500, {}, "No data")
-
                 try:
                     dev_name = path_elements[2]
                     dev = dev_registry.get(dev_name)
-                    schema = dev.get_schema()
+                    dmc = dev.get_dmc()
+                    if dmc.feature_flags.runtime_schema_fetch:
+                        schema = dev.get_fetched_schema()
+                    else:
+                        schema = dev.get_bundled_schema().src_dnode
                     if path_elements[3] == "capabilities":
                         respond(200, {}, str(dev.get_capabilities()))
                         return
@@ -210,7 +198,12 @@ actor main(env):
                                 elif format_type == "gdata":
                                     diff_str = config_diff.prsrc()
                                 elif format_type == "adata":
-                                    diff_str = yang.gen3.pradata(schema.src_dnode, config_diff, loose=True)
+                                    # TODO: avoid "actonc: #### findAttr' fails for __builtin__.str . val"
+                                    # schema = dev.get_fetched_schema()
+                                    if schema is not None:
+                                        diff_str = yang.gen3.pradata(schema, config_diff, loose=True)
+                                    else:
+                                        diff_str = "# Adata format not available for diff (schemas not compiled)"
                                 else:
                                     diff_str = config_diff.to_jsonstr()  # default to json
                                 respond(200, {"Content-Type": "text/plain"}, diff_str)
@@ -239,7 +232,11 @@ actor main(env):
                             elif format_type == "gdata":
                                 conf_str = target_conf.prsrc()
                             elif format_type == "adata":
-                                conf_str = yang.gen3.pradata(schema.src_dnode, target_conf, loose=True)
+                                if schema is not None:
+                                    conf_str = yang.gen3.pradata(schema, target_conf, loose=True)
+                                else:
+                                    respond(500, {}, "Schemas not compiled")
+                                    return
                             else:
                                 conf_str = target_conf.to_jsonstr()  # default to json
                             respond(200, {"Content-Type": "text/plain"}, conf_str)
@@ -266,7 +263,12 @@ actor main(env):
                             elif format_type == "gdata":
                                 conf_str = running_conf.prsrc()
                             elif format_type == "adata":
-                                conf_str = yang.gen3.pradata(schema.src_dnode, running_conf, loose=True)
+                                # TODO: avoid "actonc: #### findAttr' fails for __builtin__.str . val"
+                                # schema = dev.get_fetched_schema()
+                                if schema is not None:
+                                    conf_str = yang.gen3.pradata(schema, running_conf, loose=True)
+                                else:
+                                    conf_str = "# Adata format not available (schemas not compiled)"
                             else:
                                 conf_str = running_conf.to_jsonstr()  # default to json
                             respond(200, {"Content-Type": "text/plain"}, conf_str)
@@ -282,7 +284,6 @@ actor main(env):
 
                     if path_elements[3] == 'info':
                         # Get device meta configuration and state
-                        dmc = dev.get_dmc()
                         dev_state = dev.get_state()
 
                         info = {
