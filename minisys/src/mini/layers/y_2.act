@@ -4,7 +4,7 @@ import xml
 import yang
 import yang.adata
 import yang.gdata
-import yang.gen3
+import yang.xml
 import yang.xpath
 from yang.identityref import Identityref, PartialIdentityref
 from yang.pattern import YangPattern
@@ -83,9 +83,7 @@ class orchestron_device__devices__device_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_device__devices__device')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-device:devices', 'device'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-device:devices', 'device'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_device__devices__device_entry:
@@ -148,9 +146,7 @@ class orchestron_device__devices(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_device__devices')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-device:devices'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-device:devices'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_device__devices:
@@ -176,9 +172,7 @@ class root(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in root')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False)
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False)
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:

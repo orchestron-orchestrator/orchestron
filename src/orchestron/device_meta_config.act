@@ -4,7 +4,7 @@ import xml
 import yang
 import yang.adata
 import yang.gdata
-import yang.gen3
+import yang.xml
 import yang.xpath
 from yang.identityref import Identityref, PartialIdentityref
 from yang.pattern import YangPattern
@@ -716,9 +716,7 @@ class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNod
         raise ValueError('Attribute {name} not found in orchestron_rfs__device__address__initial_credentials')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'address', 'initial-credentials'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'address', 'initial-credentials'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address__initial_credentials_entry:
@@ -799,9 +797,7 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_rfs__device__address')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'address'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'address'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
@@ -868,9 +864,7 @@ class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_rfs__device__credentials__key')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'credentials', 'key'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'credentials', 'key'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__credentials__key_entry:
@@ -941,9 +935,7 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_rfs__device__credentials')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'credentials'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'credentials'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__credentials:
@@ -977,9 +969,7 @@ class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_rfs__device__initial_credentials')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'initial-credentials'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'initial-credentials'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__initial_credentials_entry:
@@ -1060,9 +1050,7 @@ class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_rfs__device__mock__module')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'mock', 'module'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'mock', 'module'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__mock__module_entry:
@@ -1129,9 +1117,7 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_rfs__device__mock')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'mock'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'mock'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__mock:
@@ -1157,9 +1143,7 @@ class orchestron_rfs__device__debug(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_rfs__device__debug')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'debug'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'debug'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__debug:
@@ -1185,9 +1169,7 @@ class orchestron_rfs__device__feature_flags(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_rfs__device__feature_flags')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'feature-flags'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device', 'feature-flags'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__feature_flags:
@@ -1249,9 +1231,7 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in orchestron_rfs__device')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:device'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device_entry:

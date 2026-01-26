@@ -10,7 +10,7 @@ import yang
 import yang.schema
 import yang.adata
 import yang.gdata
-import yang.gen3
+import yang.xml
 
 from orchestron.device_meta_config import \
     orchestron_rfs__device_entry as DeviceMetaConfig, \
@@ -1376,11 +1376,11 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
                     if dmc.feature_flags.runtime_schema_fetch:
                         fetched_schema = schema_registry.get_schema(schema_hash)
                         if fetched_schema is not None:
-                            current = yang.gen3.from_data(fetched_schema, data_tag, loose=True)
+                            current = yang.xml.from_xml(fetched_schema, data_tag, loose=True)
                         else:
                             _log.error("Device.get_txid_generic: no schemas compiled", {"schema_hash": schema_hash})
                     else:
-                        current = yang.gen3.from_data(bundled_schema.src_dnode, data_tag, loose=True)
+                        current = yang.xml.from_xml(bundled_schema.src_dnode, data_tag, loose=True)
                     if current is not None:
                         # Compute hash of the entire config as txid
                         current_xml_bytes = current.to_xmlstr().encode()
@@ -1714,11 +1714,11 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
                     if dmc.feature_flags.runtime_schema_fetch:
                         fetched_schema = schema_registry.get_schema(schema_hash)
                         if fetched_schema is not None:
-                            new_conf = yang.gen3.from_data(fetched_schema, r.children[0], loose=True)
+                            new_conf = yang.xml.from_xml(fetched_schema, r.children[0], loose=True)
                         else:
                             _log.error("Device.on_get_config: no schemas compiled", {"schema_hash": schema_hash})
                     else:
-                        new_conf = yang.gen3.from_data(bundled_schema.src_dnode, r.children[0], loose=True)
+                        new_conf = yang.xml.from_xml(bundled_schema.src_dnode, r.children[0], loose=True)
                     if new_conf is not None:
                         if new_conf.txid is None:
                             txid = extract_txid(data_tag)
