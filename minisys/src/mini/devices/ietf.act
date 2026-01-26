@@ -4,7 +4,7 @@ import xml
 import yang
 import yang.adata
 import yang.gdata
-import yang.gen3
+import yang.xml
 import yang.xpath
 from yang.identityref import Identityref, PartialIdentityref
 from yang.pattern import YangPattern
@@ -2520,9 +2520,7 @@ class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_netconf_acm__nacm__groups__group')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'groups', 'group'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'groups', 'group'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_netconf_acm__nacm__groups__group_entry:
@@ -2585,9 +2583,7 @@ class ietf_netconf_acm__nacm__groups(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_netconf_acm__nacm__groups')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'groups'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'groups'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_netconf_acm__nacm__groups:
@@ -2641,9 +2637,7 @@ class ietf_netconf_acm__nacm__rule_list__rule_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_netconf_acm__nacm__rule_list__rule')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'rule-list', 'rule'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'rule-list', 'rule'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_netconf_acm__nacm__rule_list__rule_entry:
@@ -2714,9 +2708,7 @@ class ietf_netconf_acm__nacm__rule_list_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_netconf_acm__nacm__rule_list')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'rule-list'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'rule-list'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_netconf_acm__nacm__rule_list_entry:
@@ -2803,9 +2795,7 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_netconf_acm__nacm')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_netconf_acm__nacm:
@@ -2835,9 +2825,7 @@ class ietf_system__system__clock(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__clock')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'clock'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'clock'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__clock:
@@ -2867,9 +2855,7 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__ntp__server__udp')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'ntp', 'server', 'udp'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'ntp', 'server', 'udp'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__ntp__server__udp:
@@ -2911,9 +2897,7 @@ class ietf_system__system__ntp__server_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__ntp__server')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'ntp', 'server'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'ntp', 'server'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__ntp__server_entry:
@@ -2980,9 +2964,7 @@ class ietf_system__system__ntp(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__ntp')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'ntp'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'ntp'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ?ietf_system__system__ntp:
@@ -3015,9 +2997,7 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__dns_resolver__server__udp_and_tcp')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'server', 'udp-and-tcp'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'server', 'udp-and-tcp'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__server__udp_and_tcp:
@@ -3047,9 +3027,7 @@ class ietf_system__system__dns_resolver__server_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__dns_resolver__server')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'server'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'server'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__dns_resolver__server_entry:
@@ -3116,9 +3094,7 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__dns_resolver__options')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'options'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'options'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__options:
@@ -3152,9 +3128,7 @@ class ietf_system__system__dns_resolver(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__dns_resolver')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver:
@@ -3188,9 +3162,7 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__radius__server__udp')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius', 'server', 'udp'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius', 'server', 'udp'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__server__udp:
@@ -3224,9 +3196,7 @@ class ietf_system__system__radius__server_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__radius__server')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius', 'server'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius', 'server'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__radius__server_entry:
@@ -3293,9 +3263,7 @@ class ietf_system__system__radius__options(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__radius__options')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius', 'options'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius', 'options'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__options:
@@ -3325,9 +3293,7 @@ class ietf_system__system__radius(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__radius')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius:
@@ -3361,9 +3327,7 @@ class ietf_system__system__authentication__user__authorized_key_entry(yang.adata
         raise ValueError('Attribute {name} not found in ietf_system__system__authentication__user__authorized_key')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'authentication', 'user', 'authorized-key'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'authentication', 'user', 'authorized-key'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__authentication__user__authorized_key_entry:
@@ -3434,9 +3398,7 @@ class ietf_system__system__authentication__user_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__authentication__user')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'authentication', 'user'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'authentication', 'user'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> ietf_system__system__authentication__user_entry:
@@ -3503,9 +3465,7 @@ class ietf_system__system__authentication(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system__authentication')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'authentication'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'authentication'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__authentication:
@@ -3567,9 +3527,7 @@ class ietf_system__system(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__system')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:system'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system:
@@ -3599,9 +3557,7 @@ class root(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in root')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True)
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True)
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
@@ -3627,9 +3583,7 @@ class ietf_system__set_current_datetime__input(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in ietf_system__set_current_datetime__input')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=True, root_path=['ietf-system:set-current-datetime', 'input'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:set-current-datetime', 'input'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__set_current_datetime__input:
@@ -3646,7 +3600,7 @@ actor rpc_root(tp: yang.gdata.TreeProvider):
     def set_current_datetime(cb: action(?Exception) -> None, inp: ietf_system__set_current_datetime__input):
         rpc_xml = xml.Node('set-current-datetime', nsdefs=[(None, 'urn:ietf:params:xml:ns:yang:ietf-system')])
         if inp is not None:
-            gdata_inp = yang.gen3.from_data(SRC_DNODE, inp, True, ["ietf-system:set-current-datetime", "input"])
+            gdata_inp = yang.adata.from_adata(SRC_DNODE, inp, True, ["ietf-system:set-current-datetime", "input"])
             rpc_xml.children.extend(gdata_inp.to_xml())
         tp.rpc_xml(lambda _, err: cb(err), rpc_xml)
 

@@ -4,7 +4,7 @@ import xml
 import yang
 import yang.adata
 import yang.gdata
-import yang.gen3
+import yang.xml
 import yang.xpath
 from yang.identityref import Identityref, PartialIdentityref
 from yang.pattern import YangPattern
@@ -586,9 +586,7 @@ class netinfra__netinfra__router_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in netinfra__netinfra__router')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['netinfra:netinfra', 'router'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['netinfra:netinfra', 'router'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> netinfra__netinfra__router_entry:
@@ -655,9 +653,7 @@ class netinfra__netinfra__foo_entry(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in netinfra__netinfra__foo')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['netinfra:netinfra', 'foo'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['netinfra:netinfra', 'foo'])
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> netinfra__netinfra__foo_entry:
@@ -727,9 +723,7 @@ class netinfra__netinfra(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in netinfra__netinfra')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False, root_path=['netinfra:netinfra'])
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['netinfra:netinfra'])
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> netinfra__netinfra:
@@ -755,9 +749,7 @@ class root(yang.adata.MNode):
         raise ValueError('Attribute {name} not found in root')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        if isinstance(self, yang.adata.MNode):
-            return yang.gen3.from_data(SRC_DNODE, self, loose=False)
-        raise ValueError('unreachable')
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False)
 
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:

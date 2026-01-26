@@ -11,7 +11,9 @@ import orchestron.ttt as ttt
 import yang
 import yang.adata
 import yang.gdata
-import yang.gen3
+import yang.data
+import yang.json
+import yang.xml
 
 import mini.layers
 import mini.layers.y_0_loose as cfs_layer
@@ -201,7 +203,7 @@ actor main(env):
                                     # TODO: avoid "actonc: #### findAttr' fails for __builtin__.str . val"
                                     # schema = dev.get_fetched_schema()
                                     if schema is not None:
-                                        diff_str = yang.gen3.pradata(schema, config_diff, loose=True)
+                                        diff_str = yang.data.pradata(schema, config_diff, loose=True)
                                     else:
                                         diff_str = "# Adata format not available for diff (schemas not compiled)"
                                 else:
@@ -233,7 +235,7 @@ actor main(env):
                                 conf_str = target_conf.prsrc()
                             elif format_type == "adata":
                                 if schema is not None:
-                                    conf_str = yang.gen3.pradata(schema, target_conf, loose=True)
+                                    conf_str = yang.data.pradata(schema, target_conf, loose=True)
                                 else:
                                     respond(500, {}, "Schemas not compiled")
                                     return
@@ -266,7 +268,7 @@ actor main(env):
                                 # TODO: avoid "actonc: #### findAttr' fails for __builtin__.str . val"
                                 # schema = dev.get_fetched_schema()
                                 if schema is not None:
-                                    conf_str = yang.gen3.pradata(schema, running_conf, loose=True)
+                                    conf_str = yang.data.pradata(schema, running_conf, loose=True)
                                 else:
                                     conf_str = "# Adata format not available (schemas not compiled)"
                             else:
@@ -432,7 +434,7 @@ actor main(env):
                         content = layer_config.to_xmlstr()
                     if request.headers.get("accept") == "application/yang-data+acton-adata":
                         src_dnode = schema_for_layer(layer_idx)
-                        content = yang.gen3.pradata(src_dnode, layer_config, loose=True)
+                        content = yang.data.pradata(src_dnode, layer_config, loose=True)
                     respond(200, {}, content)
                     return
             else:
@@ -441,7 +443,7 @@ actor main(env):
         elif request.method == "DELETE":
             p = split_restconf_path(request.path)
             if p[0] == "restconf":
-                input_config = yang.gen3.from_json_path(top_schema, {}, p[1:], "remove", loose=True)
+                input_config = yang.json.from_json_path(top_schema, {}, p[1:], "remove", loose=True)
                 session = cfs.newsession()
                 session.edit_config(input_config, config_done)
                 return
@@ -456,11 +458,11 @@ actor main(env):
                 if request.headers.get("content-type") == "application/yang-data+json":
                     json_in = json.decode(request.body.decode())
                     p = split_restconf_path(request.path)[1:]
-                    input_config = yang.gen3.from_json_path(top_schema, json_in, p, loose=True)
+                    input_config = yang.json.from_json_path(top_schema, json_in, p, loose=True)
                 elif request.headers.get("content-type") == "application/yang-data+xml":
                     try:
                         xml_in = xml.decode(request.body.decode())
-                        input_config = yang.gen3.from_data(top_schema, xml_in, loose=True)
+                        input_config = yang.xml.from_xml(top_schema, xml_in, loose=True)
                     except Exception as e:
                         respond(400, {}, "Error parsing XML: {e}")
                         return
@@ -541,7 +543,7 @@ actor main(env):
             config = configs.pop(0)
             # Grab the first config
             log.info("Applying config file...", {"config_file": config.filename})
-            input_config = yang.gen3.from_data(top_schema, config.config, loose=True)
+            input_config = yang.xml.from_xml(top_schema, config.config, loose=True)
             session.edit_config(input_config, None, lambda result: _conf_file_done(config, result))
         except IndexError:
             log.info("All config files applied")
