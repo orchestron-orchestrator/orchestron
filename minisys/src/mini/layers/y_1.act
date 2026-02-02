@@ -76,10 +76,10 @@ SRC_DNODE = DRoot(children=[
     ]),
     DList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='rfs', key=['name'], config=True, min_elements=0, ordered_by='system', children=[
         DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='name', config=True, description='Device name', mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-        DList(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='base-config', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
+        DContainer(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='base-config', config=True, presence=False, exts=[
                 Ext('orchestron', 'rfs-transform', arg='mini.rfs.BaseConfig')
             ], children=[
-            DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='name', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
             DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='ipv4-address', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
         ]),
         DList(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='bar', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
@@ -105,14 +105,12 @@ def src_yang():
     }
 
     augment "/orfs:rfs" {
-        // TODO: should really be a P-container
-        list base-config {
-            key name;
-
+        container base-config {
             orchestron:rfs-transform mini.rfs.BaseConfig;
 
             leaf name {
                 type string;
+                mandatory true;
             }
 
             leaf ipv4-address {
@@ -1335,7 +1333,7 @@ extension orchestron_rfs__device(Iterable[orchestron_rfs__device_entry]):
     def __iter__(self) -> Iterator[orchestron_rfs__device_entry]:
         return self.elements.__iter__()
 
-class orchestron_rfs__rfs__base_config_entry(yang.adata.MNode):
+class orchestron_rfs__rfs__base_config(yang.adata.MNode):
     name: str
     ipv4_address: str
 
@@ -1355,52 +1353,15 @@ class orchestron_rfs__rfs__base_config_entry(yang.adata.MNode):
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-rfs:rfs', 'mini-rfs:base-config'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs__base_config_entry:
-        return orchestron_rfs__rfs__base_config_entry(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')), ipv4_address=n.get_str(yang.gdata.Id(NS_mini_rfs, 'ipv4-address')))
+    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__rfs__base_config:
+        if n is not None:
+            return orchestron_rfs__rfs__base_config(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')), ipv4_address=n.get_str(yang.gdata.Id(NS_mini_rfs, 'ipv4-address')))
+        raise ValueError('Missing required subtree orchestron_rfs__rfs__base_config')
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__rfs__base_config_entry.from_gdata(self.to_gdata())
+        return orchestron_rfs__rfs__base_config.from_gdata(self.to_gdata())
 
-class orchestron_rfs__rfs__base_config(yang.adata.MNode):
-    elements: list[orchestron_rfs__rfs__base_config_entry]
-    mut def __init__(self, elements=[]):
-        self._ns = 'http://example.com/mini-rfs'
-        self._name = 'base-config'
-        self.elements = elements
-
-    mut def create(self, name, ipv4_address):
-        for e in self:
-            match = True
-            if e.name != name:
-                match = False
-                continue
-            if match:
-                return e
-
-        res = orchestron_rfs__rfs__base_config_entry(name, ipv4_address)
-        self.elements.append(res)
-        return res
-
-    @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__rfs__base_config_entry]:
-        if n is not None:
-            return [orchestron_rfs__rfs__base_config_entry.from_gdata(e) for e in n.elements]
-        return []
-
-    def copy(self):
-        """Create a deep copy of this list object"""
-        # Copy each element in the list
-        copied_elements = []
-        for e in self:
-            ce = e.copy()
-            if ce is not None:
-                copied_elements.append(ce)
-        return orchestron_rfs__rfs__base_config(elements=copied_elements)
-
-extension orchestron_rfs__rfs__base_config(Iterable[orchestron_rfs__rfs__base_config_entry]):
-    def __iter__(self) -> Iterator[orchestron_rfs__rfs__base_config_entry]:
-        return self.elements.__iter__()
 
 class orchestron_rfs__rfs__bar_entry(yang.adata.MNode):
     name: str
@@ -1470,17 +1431,17 @@ class orchestron_rfs__rfs_entry(yang.adata.MNode):
     base_config: orchestron_rfs__rfs__base_config
     bar: orchestron_rfs__rfs__bar
 
-    mut def __init__(self, name: str, base_config: list[orchestron_rfs__rfs__base_config_entry]=[], bar: list[orchestron_rfs__rfs__bar_entry]=[]):
+    mut def __init__(self, name: str, base_config: orchestron_rfs__rfs__base_config, bar: list[orchestron_rfs__rfs__bar_entry]=[]):
         self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
         self.name = name
-        self.base_config = orchestron_rfs__rfs__base_config(elements=base_config)
+        self.base_config = base_config
         self.bar = orchestron_rfs__rfs__bar(elements=bar)
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'name':
             return self.name
         if name == 'base_config':
-            return iter(self.base_config)
+            return self.base_config
         if name == 'bar':
             return iter(self.bar)
         raise ValueError('Attribute {name} not found in orchestron_rfs__rfs')
@@ -1490,7 +1451,7 @@ class orchestron_rfs__rfs_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs_entry:
-        return orchestron_rfs__rfs_entry(name=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'name')), base_config=orchestron_rfs__rfs__base_config.from_gdata(n.get_opt_list(yang.gdata.Id(NS_mini_rfs, 'base-config'))), bar=orchestron_rfs__rfs__bar.from_gdata(n.get_opt_list(yang.gdata.Id(NS_mini_rfs, 'bar'))))
+        return orchestron_rfs__rfs_entry(name=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'name')), base_config=orchestron_rfs__rfs__base_config.from_gdata(n.get_cnt(yang.gdata.Id(NS_mini_rfs, 'base-config'))), bar=orchestron_rfs__rfs__bar.from_gdata(n.get_opt_list(yang.gdata.Id(NS_mini_rfs, 'bar'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -1503,7 +1464,7 @@ class orchestron_rfs__rfs(yang.adata.MNode):
         self._name = 'rfs'
         self.elements = elements
 
-    mut def create(self, name):
+    mut def create(self, name, base_config):
         for e in self:
             match = True
             if e.name != name:
@@ -1512,7 +1473,7 @@ class orchestron_rfs__rfs(yang.adata.MNode):
             if match:
                 return e
 
-        res = orchestron_rfs__rfs_entry(name)
+        res = orchestron_rfs__rfs_entry(name, base_config)
         self.elements.append(res)
         return res
 

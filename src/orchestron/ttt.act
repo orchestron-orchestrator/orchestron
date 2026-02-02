@@ -1051,12 +1051,17 @@ class _RFSTransaction(_TransformTransactionBase):
         self.function = function(log_handler)
         if len(path) < 3:
             raise ValueError(f"RFSTransform {path}: path length < 3")
-        dev_name = path[-3]
-        if isinstance(dev_name, str):
-            self.devname = dev_name
-            self.dev = dev_registry.get(dev_name)
-        else:
-            raise ValueError("_RFSTransaction: path component [-3] is not a string: {dev_name} ({type(dev_name)})")
+        dev_name = None
+        for i in range(len(path) - 1):
+            p = path[i]
+            if isinstance(p, gdata.Id) and p.name == "rfs":
+                cand = path[i + 1]
+                if isinstance(cand, str):
+                    dev_name = cand
+                    break
+        dev_name_str: str = expect(dev_name, "_RFSTransaction: unable to determine device name from path: {path}")
+        self.devname = dev_name_str
+        self.dev = dev_registry.get(dev_name_str)
         self.lower = lower
 
     def compute(self, tid, merged, out):
