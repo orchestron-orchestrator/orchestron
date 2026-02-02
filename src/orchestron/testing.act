@@ -1,0 +1,56 @@
+import yang.data
+import yang.gdata as gdata
+import yang.schema
+import orchestron.device as odev
+
+def _sanitize_ident(name: str) -> str:
+    if name == "":
+        return "dev"
+    res = ""
+    for c in name:
+        if (ord(c) < 128 and c.isalnum()) or c == "_":
+            res += c
+        else:
+            res += "_"
+    if res == "":
+        return "dev"
+    first = res[0]
+    if not (first == "_" or (ord(first) < 128 and first.isalpha())):
+        res = "dev_" + res
+    return res
+
+def expect[T](a: ?T, msg: str) -> T:
+    if a is not None:
+        return a
+    raise ValueError(msg)
+
+def device_config_adata_snapshot(dev_registry: odev.DeviceRegistry, dev_types: ?dict[str, odev.DeviceType]=None) -> str:
+    names = sorted([n for n in dev_registry.list()])
+    parts = []
+    for name in names:
+        dev = dev_registry.get(name)
+        conf_opt = dev.get_running_conf()
+        if conf_opt is None:
+            conf_opt = dev.get_target_conf()
+        conf = expect(conf_opt, f"Missing device config for {name}")
+
+        schema_opt = dev.get_fetched_schema()
+        if schema_opt is None and dev_types is not None:
+            dmc = dev.get_dmc()
+            if dmc is not None:
+                dtype_opt = dmc.type
+                if dtype_opt is not None:
+                    dtype: str = dtype_opt
+                    dev_type = dev_types.get(dtype)
+                else:
+                    dev_type = None
+                if dev_type is not None:
+                    schema_opt = dev_type.bundled_schema.src_dnode
+        if schema_opt is None:
+            schema_opt = dev.get_bundled_schema().src_dnode
+        schema = expect(schema_opt, f"Missing schema for {name}")
+
+        self_name = _sanitize_ident(name)
+        adata = yang.data.pradata(schema, conf, self_name=self_name, loose=True)
+        parts.append(f"# device {name}\n{adata}")
+    return "\n\n".join(parts)
