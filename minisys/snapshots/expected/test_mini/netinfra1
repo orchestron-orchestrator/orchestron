@@ -1,0 +1,11 @@
+<devices xmlns="http://orchestron.org/yang/orchestron-device.yang">
+  <device>
+    <name>rtr1</name>
+    <config>
+      <system xmlns="urn:ietf:params:xml:ns:yang:ietf-system">
+        <hostname>rtr1</hostname>
+      </system>
+    </config>
+    <modset_id>16472558147751081952</modset_id>
+  </device>
+</devices>

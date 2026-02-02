@@ -955,6 +955,10 @@ actor MockDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, log_handler: logg
                 "http://xml.juniper.net/netconf/junos/1.0",
                 "http://xml.juniper.net/dmi/system/1.0",
             ])
+        if "ietf" in new_dmc.mock.preset:
+            preset_caps.extend([
+                "urn:ietf:params:xml:ns:yang:ietf-system?module=ietf-system&revision=2014-08-06",
+            ])
         for cap in preset_caps:
             m = parse_cap(cap)
             modset[m.name] = m
