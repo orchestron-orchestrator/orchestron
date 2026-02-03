@@ -6,6 +6,7 @@ import orchestron.device as odev
 import mini.layers
 import mini.layers.y_0 as cfs_layer
 import mini.sysspec
+import orchestron.testing as ts
 
 NS_ORFS = "http://orchestron.org/yang/orchestron-rfs.yang"
 
@@ -35,12 +36,7 @@ actor _test_netinfra1(t: testing.AsyncT):
     session = cfs.newsession()
 
     def cont(_r: value):
-        l2_xml = session.below().below().get().to_xmlstr(deterministic=True)
-
-        if "hostname" not in l2_xml or "rtr1" not in l2_xml:
-            testing.assertEqual(True, False)
-
-        t.success(l2_xml)
+        t.success(ts.device_config_adata_snapshot(dev_registry, mini.sysspec.device_types))
 
     session.edit_config(input_config, None, cont)
 
