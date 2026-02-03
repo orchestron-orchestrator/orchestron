@@ -42,7 +42,7 @@ check-dep-consistency:
 
 .PHONY: test-mini
 test-mini: check-mini-is-up-to-date
-	$(MAKE) build-mini
+	cd minisys && acton test
 
 .PHONY: check-mini-is-up-to-date
 check-mini-is-up-to-date:

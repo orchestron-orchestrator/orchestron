@@ -1,0 +1,49 @@
+import testing
+
+import yang.gdata as gdata
+import orchestron.device as odev
+
+import mini.layers
+import mini.layers.y_0 as cfs_layer
+import mini.sysspec
+
+NS_ORFS = "http://orchestron.org/yang/orchestron-rfs.yang"
+
+def rfs_for_device(dev):
+    def q(n):
+        return gdata.Id(NS_ORFS, n)
+
+    return gdata.Container({
+        q('rfs'): gdata.List([q("name")], [
+            gdata.Container({
+                q("name"): gdata.Leaf(dev)
+            })
+        ])
+    })
+
+actor _test_netinfra1(t: testing.AsyncT):
+    # Test input config
+    root = cfs_layer.root()
+    router = root.netinfra.router.create("rtr1", 1, "ietf")
+    router.mock = "ietf"
+
+    input_config = root.to_gdata()
+    dev_registry = odev.DeviceRegistry(mini.sysspec.device_types, None, t.log_handler)
+    cfs = mini.layers.get_layers(dev_registry, t.log_handler)
+    rfs = cfs.below()
+    dev_registry.on_reconf(lambda dev: rfs.edit_config(rfs_for_device(dev), force=True))
+    session = cfs.newsession()
+
+    def cont(_r: value):
+        l2_xml = session.below().below().get().to_xmlstr(deterministic=True)
+
+        if "hostname" not in l2_xml or "rtr1" not in l2_xml:
+            testing.assertEqual(True, False)
+
+        t.success(l2_xml)
+
+    session.edit_config(input_config, None, cont)
+
+    def fail():
+        t.failure(ValueError())
+    after 2.5: fail()

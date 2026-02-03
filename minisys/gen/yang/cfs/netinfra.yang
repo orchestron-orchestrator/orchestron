@@ -30,6 +30,11 @@ module netinfra {
         type string;
         mandatory true;
       }
+      leaf mock {
+        type enumeration {
+          enum ietf;
+        }
+      }
     }
 
     list foo {
