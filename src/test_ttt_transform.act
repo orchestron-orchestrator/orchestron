@@ -242,7 +242,7 @@ actor basic_commit(t: testing.AsyncT):
                 }),
                 'srcB': gdata.Container({
                     q('b'): gdata.Absent(),
-                    q('d'): gdata.LeafList(['a','c'])
+                    q('d'): gdata.LeafList(['b'], [gdata.OP_REMOVE])
                 })
             }, None)
 
