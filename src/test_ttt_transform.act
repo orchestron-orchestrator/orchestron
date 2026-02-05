@@ -85,7 +85,7 @@ y2 = gdata.Container({
             q("n3"): gdata.Leaf(3)
         })
     ]),
-    q("d"): gdata.LeafList(["a", "b", "c"])
+    q("d"): gdata.LeafList([gdata.LeafListEntryMerge("a"), gdata.LeafListEntryMerge("b"), gdata.LeafListEntryMerge("c")])
 })
 merge_y1_y2 = gdata.Container({
     q("a"): gdata.Leaf(1),
@@ -107,7 +107,7 @@ merge_y1_y2 = gdata.Container({
             q("n4"): gdata.Leaf(4)
         })
     ]),
-    q("d"): gdata.LeafList(["a", "b", "c"])
+    q("d"): gdata.LeafList([gdata.LeafListEntryMerge("a"), gdata.LeafListEntryMerge("b"), gdata.LeafListEntryMerge("c")])
 })
 
 
@@ -242,7 +242,7 @@ actor basic_commit(t: testing.AsyncT):
                 }),
                 'srcB': gdata.Container({
                     q('b'): gdata.Absent(),
-                    q('d'): gdata.LeafList(['a','c'])
+                    q('d'): gdata.LeafList([gdata.LeafListEntryRemove('b')])
                 })
             }, None)
 
@@ -263,7 +263,7 @@ actor basic_commit(t: testing.AsyncT):
                             q('n3'): gdata.Leaf(3)
                         })
                     ]),
-                    q('d'): gdata.LeafList(['a', 'c'])
+                    q('d'): gdata.LeafList([gdata.LeafListEntryMerge('a'), gdata.LeafListEntryMerge('c')])
                 })
                 testing.assertEqual(r, expected)
                 t.success()
@@ -345,7 +345,7 @@ y0 = gdata.Container({
             q("n4"): gdata.Leaf(0)
         })
     ]),
-    q("d"): gdata.LeafList(["a", "b"])
+    q('d'): gdata.LeafList([gdata.LeafListEntryMerge('a'), gdata.LeafListEntryMerge('b')])
 })
 
 actor modified_overlapping_commit(t: testing.AsyncT):
