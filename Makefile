@@ -44,6 +44,10 @@ check-dep-consistency:
 test-mini: check-mini-is-up-to-date
 	cd minisys && acton test
 
+.PHONY: test-mini-ldep
+test-mini-ldep: check-mini-is-up-to-date
+	cd minisys && acton test --dep yang=../../acton-yang --dep netconf=../../netconf --dep actmf=../../actmf
+
 .PHONY: check-mini-is-up-to-date
 check-mini-is-up-to-date:
 	$(MAKE) gen-mini
