@@ -11,7 +11,8 @@ path = [
     "gen_dmc/**",
     "test/**",
     "minisys/**",
-    "scripts/**"
+    "scripts/**",
+    "**/snapshots/expected/**"
 ]
 SPDX-FileCopyrightText = "Deutsche Telekom AG"
 SPDX-License-Identifier = "BSD-3-Clause"

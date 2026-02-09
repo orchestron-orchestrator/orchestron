@@ -4,3 +4,4 @@ build.zig*
 .actonc.lock
 out
 .vscode/
+**/snapshots/output
