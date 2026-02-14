@@ -1,0 +1,14 @@
+name = "orchestron"
+fingerprint = 0xe602cd36fdb33ec8
+dependencies = {    "netconf": (
+        repo_url="https://github.com/orchestron-orchestrator/netconf.git",
+        url="https://github.com/orchestron-orchestrator/netconf/archive/15999924215ca50387340becb2e559d11d148bad.zip",
+        hash="N-V-__8AAOL3AQD7Oy0qj2nAbYZ0u3dGWSGfvqABuALB3K0y"
+    ),
+    "yang": (
+        repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
+        url="https://github.com/orchestron-orchestrator/acton-yang/archive/9703cd83d5eea8122c1252e17c3b9899fcaa49d9.zip",
+        hash="N-V-__8AAIOYIABUmXlnf1AZF-mtRvZcsWOi3MzODQhXHGxf"
+    )
+}
+zig_dependencies = {}

@@ -6,7 +6,7 @@ version = 1
 path = [
     "Makefile",
     "*.mk",
-    "*.act.json",
+    "**/Build.act",
     "src/**",
     "gen_dmc/**",
     "test/**",
