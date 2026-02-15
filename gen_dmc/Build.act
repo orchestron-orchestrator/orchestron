@@ -1,9 +1,10 @@
 name = "orchestron_gen_dmc"
 fingerprint = 0x056275683c869ace
-dependencies = {    "yang": (
+dependencies = {
+    "yang": (
         repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
-        url="https://github.com/orchestron-orchestrator/acton-yang/archive/9703cd83d5eea8122c1252e17c3b9899fcaa49d9.zip",
-        hash="N-V-__8AAIOYIABUmXlnf1AZF-mtRvZcsWOi3MzODQhXHGxf"
+        url="https://github.com/orchestron-orchestrator/acton-yang/archive/2d2a44f6b606404f5bd04f5177acf58d8f17d56a.zip",
+        hash="N-V-__8AACP2IACZD26Ll_1JNHu5R8G_dViBbIHZx_4grysm"
     )
 }
 zig_dependencies = {}
