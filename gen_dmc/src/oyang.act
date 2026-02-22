@@ -93,6 +93,10 @@ rfs = r"""module orchestron-rfs {
     }
 
     container mock {
+      leaf enabled {
+        type boolean;
+        default "false";
+      }
       leaf-list preset {
         type enumeration {
           enum cisco-ios-xr;
