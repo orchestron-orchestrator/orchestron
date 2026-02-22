@@ -77,6 +77,7 @@ actor _test_txid(t: testing.EnvT):
     4. Send a configuration through the adapter TWICE to test check_txid efficiency
     5. Use a direct netconf.Client to verify the configuration was applied
     """
+    t.require("crpd")
     log = logging.Logger(t.log_handler)
     log.info("Testing NetconfAdapter")
 
@@ -302,12 +303,7 @@ actor _test_txid(t: testing.EnvT):
         )
 
     # Start the test by first setting up and verifying the server
-    if run_test:
-        setup_test()
-    else:
-        print("Skipping test")
-        # TODO: there should be a t.skip()
-        t.success()
+    setup_test()
 
 
 actor _test_direct_get_config_with_filter(t: testing.EnvT):
@@ -316,6 +312,7 @@ actor _test_direct_get_config_with_filter(t: testing.EnvT):
     This test connects directly to the device and performs a get-config
     with a subtree filter to retrieve only the top-level <configuration> container.
     """
+    t.require("crpd")
     log = logging.Logger(t.log_handler)
     log.info("Testing direct get-config with subtree filter")
 
@@ -367,17 +364,13 @@ actor _test_direct_get_config_with_filter(t: testing.EnvT):
         t.failure(ValueError("get-config failed"))
 
     # Create the client and connect
-    if run_test:
-        client = netconf.Client(
-            t.env.auth,
-            test_address,
-            test_port,
-            test_username,
-            test_password,
-            on_connect=on_connect,
-            log_handler=t.log_handler,
-            skip_host_key_check=True
-        )
-    else:
-        print("Skipping test")
-        t.success()
+    client = netconf.Client(
+        t.env.auth,
+        test_address,
+        test_port,
+        test_username,
+        test_password,
+        on_connect=on_connect,
+        log_handler=t.log_handler,
+        skip_host_key_check=True
+    )
