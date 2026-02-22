@@ -1,0 +1,121 @@
+"""DeviceMgr tests for adapter-level NETCONF mocking."""
+
+import logging
+import testing
+import xml
+import yang.gdata
+import yang.schema
+
+import orchestron.device
+
+from orchestron.device_meta_config import \
+    orchestron_rfs__device_entry as DeviceMetaConfig, \
+    orchestron_rfs__device__credentials as Credentials, \
+    orchestron_rfs__device__address_entry as Address, \
+    orchestron_rfs__device__mock as Mock
+
+IETF_SYSTEM_NS = "urn:ietf:params:xml:ns:yang:ietf-system"
+IETF_SYSTEM_MODULE = "ietf-system"
+
+def _data_xml_from_rpc_reply(r: ?xml.Node) -> ?str:
+    if r is not None:
+        if r.tag != "rpc-reply":
+            return None
+        for rpc_child in r.children:
+            if rpc_child.tag == "data":
+                return rpc_child.encode()
+    return None
+
+
+def make_netconf_mock_dmc(name: str) -> DeviceMetaConfig:
+    return DeviceMetaConfig(
+        name=name,
+        credentials=Credentials("admin", "admin"),
+        type="netconf",
+        address=[Address(name="primary", address="127.0.0.1", port=u64(830))],
+        mock=Mock(enabled=True)
+    )
+
+def new_netconf_mock_device_mgr(t: testing.EnvT, name: str, on_reconf: action(str) -> None) -> orchestron.device.DeviceMgr:
+    dev_types = {
+        "netconf": orchestron.device.DeviceType(
+            name="netconf",
+            adapter_type=orchestron.device.NetconfAdapter,
+            schema_namespaces=set(),
+            src_dnode=yang.schema.DRoot()
+        )
+    }
+
+    schema_registry = orchestron.device.SchemaRegistry()
+    dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, name, t.log_handler, on_reconf, schema_registry)
+    dev.set_dmc(make_netconf_mock_dmc(name))
+    return dev
+
+#################################################################################
+## Tests
+#################################################################################
+
+actor _test_get(t: testing.EnvT):
+    """Do a simple NETCONF GET
+    1. Create DeviceMgr in NETCONF mock-server mode.
+    2. Side-load gdata operational datastore on the mock NETCONF server.
+    3. Send <get> with subtree filter for current-datetime.
+    4. Snapshot the returned filtered <data> XML.
+    """
+    mock_current_datetime = "2026-02-21T10:11:12Z"
+    mock_boot_datetime = "2025-12-31T00:00:00Z"
+
+    def _mock_oper_ds(current_datetime: str, boot_datetime: str) -> yang.gdata.Node:
+        """Mock data for the operational datastore of the mock NETCONF server
+        - we populate datetimes
+        """
+        def q(name: str) -> yang.gdata.Id:
+            return yang.gdata.Id(IETF_SYSTEM_NS, name)
+
+        return yang.gdata.Container({
+            q("system-state"): yang.gdata.Container({
+                q("clock"): yang.gdata.Container({
+                    q("current-datetime"): yang.gdata.Leaf(current_datetime, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE),
+                    q("boot-datetime"): yang.gdata.Leaf(boot_datetime, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE)
+                }, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE)
+            }, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE)
+        })
+
+    def noop_on_reconf(name: str):
+        pass
+    dev = new_netconf_mock_device_mgr(t, "dev1", noop_on_reconf)
+
+    def fail(msg: str):
+        t.failure(ValueError(msg))
+
+    def on_get(r: ?xml.Node, err: ?Exception):
+        if err is not None:
+            fail("Mock <get> failed: {err}")
+            return
+
+        t.success(_data_xml_from_rpc_reply(r))
+
+    def on_mock_server(mock_server: ?orchestron.device.NetconfMockServer):
+        rpc = xml.Node("get", children=[
+            xml.Node("filter", attributes=[("type", "subtree")], children=[
+                xml.Node("system-state", [(None, IETF_SYSTEM_NS)], children=[
+                    xml.Node("clock", children=[
+                        xml.Node("current-datetime")
+                    ])
+                ])
+            ])
+        ])
+
+        if mock_server is not None:
+            mock_server.set_oper_ds(_mock_oper_ds(mock_current_datetime, mock_boot_datetime))
+            dev.rpc_xml(on_get, rpc)
+        else:
+            fail("Expected NetconfMockServer from NetconfAdapter")
+
+    def on_adapter(adapter: orchestron.device.DeviceAdapter):
+        if isinstance(adapter, orchestron.device.NetconfAdapter):
+            adapter.get_mock_server(on_mock_server)
+        else:
+            fail("Expected NetconfAdapter from DeviceMgr")
+
+    dev.get_adapter(on_adapter)

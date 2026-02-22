@@ -3,8 +3,8 @@ fingerprint = 0xe602cd36fdb33ec8
 dependencies = {
     "netconf": (
         repo_url="https://github.com/orchestron-orchestrator/netconf.git",
-        url="https://github.com/orchestron-orchestrator/netconf/archive/1de911729de432fd6da63cd41b6ab82a0835405c.zip",
-        hash="N-V-__8AAGL4AQBbvv2Grh2i6fAUkck-FKilllk35b_vuBhP"
+        url="https://github.com/orchestron-orchestrator/netconf/archive/eefb3f78b3fe34f748ba1c2d63e6be7ebad67aad.zip",
+        hash="N-V-__8AACtkAgCbljvBDZaQmHFCBUMewApO-sTgr-eGIPzF"
     ),
     "yang": (
         repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
