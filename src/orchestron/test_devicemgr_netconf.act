@@ -3,6 +3,7 @@
 import logging
 import testing
 import xml
+import yang
 import yang.gdata
 import yang.schema
 
@@ -17,6 +18,57 @@ from orchestron.device_meta_config import \
 IETF_SYSTEM_NS = "urn:ietf:params:xml:ns:yang:ietf-system"
 IETF_SYSTEM_MODULE = "ietf-system"
 
+def _q(name: str) -> yang.gdata.Id:
+    return yang.gdata.Id(IETF_SYSTEM_NS, name)
+
+def _mock_oper_ds(current_datetime: str, boot_datetime: str) -> yang.gdata.Node:
+    """Mock data for the operational datastore of the mock NETCONF server."""
+    return yang.gdata.Container({
+        _q("system-state"): yang.gdata.Container({
+            _q("clock"): yang.gdata.Container({
+                _q("current-datetime"): yang.gdata.Leaf(current_datetime, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE),
+                _q("boot-datetime"): yang.gdata.Leaf(boot_datetime, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE)
+            }, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE)
+        }, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE)
+    })
+
+def _current_datetime_filter() -> yang.gdata.FNode:
+    """Filter matching only system-state/clock/current-datetime."""
+    return yang.gdata.FNode(None, None, [
+        yang.gdata.FNode(_q("system-state"), children=[
+            yang.gdata.FNode(_q("clock"), children=[
+                yang.gdata.FNode(_q("current-datetime"))
+            ])
+        ])
+    ])
+
+def _current_datetime_from_tree(n: ?yang.gdata.Node) -> ?str:
+    if n is not None and isinstance(n, yang.gdata.Container):
+        sys_state = n.get_opt_cnt(_q("system-state"))
+        if sys_state is not None:
+            clock = sys_state.get_opt_cnt(_q("clock"))
+            if clock is not None:
+                leaf = clock.get_opt_leaf(_q("current-datetime"))
+                if leaf is not None:
+                    val = leaf.val
+                    if isinstance(val, str):
+                        return val
+    return None
+
+def _has_boot_datetime(n: ?yang.gdata.Node) -> bool:
+    if n is not None and isinstance(n, yang.gdata.Container):
+        sys_state = n.get_opt_cnt(_q("system-state"))
+        if sys_state is not None:
+            clock = sys_state.get_opt_cnt(_q("clock"))
+            if clock is not None:
+                return clock.get_opt_leaf(_q("boot-datetime")) is not None
+    return False
+
+def _subtree_filter_xml(filt: yang.gdata.FNode) -> xml.Node:
+    return xml.Node("filter", attributes=[("type", "subtree")], children=filt.to_filter_xml(deterministic=True))
+
+
+
 def _data_xml_from_rpc_reply(r: ?xml.Node) -> ?str:
     if r is not None:
         if r.tag != "rpc-reply":
@@ -25,7 +77,6 @@ def _data_xml_from_rpc_reply(r: ?xml.Node) -> ?str:
             if rpc_child.tag == "data":
                 return rpc_child.encode()
     return None
-
 
 def make_netconf_mock_dmc(name: str) -> DeviceMetaConfig:
     return DeviceMetaConfig(
@@ -37,12 +88,13 @@ def make_netconf_mock_dmc(name: str) -> DeviceMetaConfig:
     )
 
 def new_netconf_mock_device_mgr(t: testing.EnvT, name: str, on_reconf: action(str) -> None) -> orchestron.device.DeviceMgr:
+    schema = yang.compile([orchestron.device.NETCONF_MOCK_IETF_SYSTEM_YANG])
     dev_types = {
         "netconf": orchestron.device.DeviceType(
             name="netconf",
             adapter_type=orchestron.device.NetconfAdapter,
-            schema_namespaces=set(),
-            src_dnode=yang.schema.DRoot()
+            schema_namespaces={IETF_SYSTEM_NS},
+            src_dnode=schema
         )
     }
 
@@ -54,7 +106,6 @@ def new_netconf_mock_device_mgr(t: testing.EnvT, name: str, on_reconf: action(st
 #################################################################################
 ## Tests
 #################################################################################
-
 actor _test_get(t: testing.EnvT):
     """Do a simple NETCONF GET
     1. Create DeviceMgr in NETCONF mock-server mode.
@@ -64,22 +115,6 @@ actor _test_get(t: testing.EnvT):
     """
     mock_current_datetime = "2026-02-21T10:11:12Z"
     mock_boot_datetime = "2025-12-31T00:00:00Z"
-
-    def _mock_oper_ds(current_datetime: str, boot_datetime: str) -> yang.gdata.Node:
-        """Mock data for the operational datastore of the mock NETCONF server
-        - we populate datetimes
-        """
-        def q(name: str) -> yang.gdata.Id:
-            return yang.gdata.Id(IETF_SYSTEM_NS, name)
-
-        return yang.gdata.Container({
-            q("system-state"): yang.gdata.Container({
-                q("clock"): yang.gdata.Container({
-                    q("current-datetime"): yang.gdata.Leaf(current_datetime, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE),
-                    q("boot-datetime"): yang.gdata.Leaf(boot_datetime, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE)
-                }, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE)
-            }, ns=IETF_SYSTEM_NS, module=IETF_SYSTEM_MODULE)
-        })
 
     def noop_on_reconf(name: str):
         pass
@@ -95,27 +130,109 @@ actor _test_get(t: testing.EnvT):
 
         t.success(_data_xml_from_rpc_reply(r))
 
-    def on_mock_server(mock_server: ?orchestron.device.NetconfMockServer):
-        rpc = xml.Node("get", children=[
-            xml.Node("filter", attributes=[("type", "subtree")], children=[
-                xml.Node("system-state", [(None, IETF_SYSTEM_NS)], children=[
-                    xml.Node("clock", children=[
-                        xml.Node("current-datetime")
-                    ])
-                ])
-            ])
-        ])
-
-        if mock_server is not None:
-            mock_server.set_oper_ds(_mock_oper_ds(mock_current_datetime, mock_boot_datetime))
-            dev.rpc_xml(on_get, rpc)
-        else:
-            fail("Expected NetconfMockServer from NetconfAdapter")
-
-    def on_adapter(adapter: orchestron.device.DeviceAdapter):
+    def start():
+        msg = async dev.get_adapter()
+        adapter = await msg
         if isinstance(adapter, orchestron.device.NetconfAdapter):
-            adapter.get_mock_server(on_mock_server)
+            rpc = xml.Node("get", children=[
+                _subtree_filter_xml(_current_datetime_filter())
+            ])
+
+            mock_server = adapter.get_mock_server()
+            if mock_server is not None:
+                mock_server.set_oper_ds(_mock_oper_ds(mock_current_datetime, mock_boot_datetime))
+                dev.rpc_xml(on_get, rpc)
+            else:
+                fail("Expected NetconfMockServer from NetconfAdapter")
         else:
             fail("Expected NetconfAdapter from DeviceMgr")
 
-    dev.get_adapter(on_adapter)
+    start()
+
+
+actor _test_subscribe_periodic(t: testing.EnvT):
+    """Periodic subscription via NETCONF mock server.
+
+    1. Create DeviceMgr in NETCONF mock-server mode with IETF system schema.
+    2. Seed the mock server oper datastore with system-state/clock (both datetimes).
+    3. Start a periodic subtree subscription that selects only system-state/clock/current-datetime.
+    4. On the first update, validate current-datetime (and absence of boot-datetime), then mutate the mock oper datastore once.
+    5. On the second update, validate the new current-datetime and cancel the subscription.
+    6. Fail fast via a short timeout if updates never arrive.
+    """
+    mock_current_datetime_1 = "2026-02-21T10:11:12Z"
+    mock_current_datetime_2 = "2026-02-21T10:11:13Z"
+    mock_boot_datetime = "2025-12-31T00:00:00Z"
+
+    var updates = 0
+    var done = False
+    var handle: ?orchestron.device.SubscriptionHandle = None
+    var mock_server: ?orchestron.device.NetconfMockServer = None
+
+    def noop_on_reconf(name: str):
+        pass
+    dev = new_netconf_mock_device_mgr(t, "dev-sub", noop_on_reconf)
+
+    def fail(msg: str):
+        if done:
+            return
+        done = True
+        t.failure(ValueError(msg))
+
+    def succeed():
+        if done:
+            return
+        done = True
+        t.success()
+
+    def on_update(n: ?yang.gdata.Node, err: ?Exception):
+        if done:
+            return
+        if err is not None:
+            fail("Subscription update error: {err}")
+            return
+        dt = _current_datetime_from_tree(n)
+        if dt is None:
+            fail("Subscription update missing current-datetime")
+            return
+        if _has_boot_datetime(n):
+            fail("Subscription update should not include boot-datetime")
+            return
+
+        updates += 1
+        if updates == 1:
+            if dt != mock_current_datetime_1:
+                fail("Unexpected first datetime: {dt}")
+                return
+            if mock_server is not None:
+                mock_server.set_oper_ds(_mock_oper_ds(mock_current_datetime_2, mock_boot_datetime))
+            else:
+                fail("Missing mock server for subscription update")
+                return
+        elif updates == 2:
+            if dt != mock_current_datetime_2:
+                fail("Unexpected second datetime: {dt}")
+                return
+            if handle is not None:
+                handle.cancel()
+            succeed()
+        else:
+            fail("Unexpected extra subscription update: {updates}")
+
+    def start():
+        adapter = dev.get_adapter()
+        if isinstance(adapter, orchestron.device.NetconfAdapter):
+            mock_server = adapter.get_mock_server()
+            if mock_server is not None:
+                mock_server.set_oper_ds(_mock_oper_ds(mock_current_datetime_1, mock_boot_datetime))
+                opts = orchestron.device.SubscriptionOpts(orchestron.device.SUB_PERIODIC, period=u64(10000000))
+                handle = dev.subscribe(on_update, _current_datetime_filter(), opts)
+            else:
+                fail("Expected NetconfMockServer from NetconfAdapter")
+                return
+        else:
+            fail("Expected NetconfAdapter from DeviceMgr")
+
+    start()
+
+    after 0.1: fail("Timed out waiting for periodic subscription updates")

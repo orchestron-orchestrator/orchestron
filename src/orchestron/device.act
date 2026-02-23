@@ -25,6 +25,38 @@ CONNECTING    = 1
 CONNECTED     = 2
 TRANSACTION   = 3
 
+SUB_ON_CHANGE = "on_change"
+SUB_PERIODIC = "periodic"
+
+class SubscriptionOpts(object):
+    mode: str
+    period: ?u64 # nanoseconds; 0 means as fast as possible
+
+    def __init__(self, mode: str=SUB_PERIODIC, period: ?u64=None):
+        self.mode = mode
+        self.period = period
+        self._validate()
+
+    def _validate(self):
+        if self.mode not in {SUB_ON_CHANGE, SUB_PERIODIC}:
+            raise ValueError("Unknown subscription mode: {self.mode}")
+        if self.mode == SUB_PERIODIC:
+            if self.period is None:
+                raise ValueError("period (nanoseconds) is required for periodic subscriptions")
+        elif self.period is not None:
+            raise ValueError("period (nanoseconds) is only valid for periodic subscriptions")
+
+
+class SubscriptionHandle(object):
+    """Handle returned by subscribe() for cancellation."""
+    id: int
+    @property
+    cancel: proc() -> None
+
+    def __init__(self, id: int, cancel: proc() -> None):
+        self.id = id
+        self.cancel = cancel
+
 class DeviceSchema(object):
     name: str
 
@@ -362,6 +394,19 @@ class LogItem():
         self.ts = time.now()
         self.event = event
         self.conf_diff = conf_diff
+
+class Subscription(object):
+    @property
+    cb: action(?yang.gdata.Node, ?Exception) -> None
+    filt: ?yang.gdata.FNode
+    opts: SubscriptionOpts
+    active: bool
+
+    def __init__(self, cb, filt, opts):
+        self.cb = cb
+        self.filt = filt
+        self.opts = opts
+        self.active = True
 
 actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None, schema_registry: SchemaRegistry, device_registry: ?DeviceRegistry=None):
     """Device Manager manages a device and represents that device, as an
@@ -922,8 +967,11 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     def rpc_xml(cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node):
         adapter.rpc_xml(cb, xml_rpc)
 
-    def get_adapter(cb: action(DeviceAdapter) -> None):
-        cb(adapter)
+    def subscribe(cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: SubscriptionOpts) -> SubscriptionHandle:
+        return adapter.subscribe(cb, filt, opts)
+
+    def get_adapter() -> DeviceAdapter:
+        return adapter
 
     def list_confq():
         return confq
@@ -1029,6 +1077,8 @@ class DeviceAdapter(object):
 
     rpc_xml: proc(cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None
 
+    subscribe: proc(action(?yang.gdata.Node, ?Exception) -> None, ?yang.gdata.FNode, SubscriptionOpts) -> SubscriptionHandle
+
 
 class NoAdapter(DeviceAdapter):
     def __init__(self, dev: DeviceMgr, bundled_schema: DeviceSchema, schema_registry: SchemaRegistry, log_handler, wcap):
@@ -1060,6 +1110,10 @@ class NoAdapter(DeviceAdapter):
 
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         pass
+
+    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: SubscriptionOpts) -> SubscriptionHandle:
+        cb(None, NotConnectedError())
+        return SubscriptionHandle(0, lambda: None)
 
 class MockAdapter(DeviceAdapter):
     """Mock device adapter
@@ -1095,6 +1149,11 @@ class MockAdapter(DeviceAdapter):
 
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         return self._driver.rpc_xml(cb, xml_rpc)
+
+    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: SubscriptionOpts) -> SubscriptionHandle:
+        # TODO: can / should subscribe do something on a MockAdapter ?
+        cb(None, NotConnectedError())
+        return SubscriptionHandle(0, lambda: None)
 
 actor MockDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
     _log = logging.Logger(log_handler)
@@ -1365,6 +1424,9 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
     var modset: dict[str, ModCap] = {}
     var schema_hash = None
 
+    var sub_id_seq = 0
+    var subs: dict[int, Subscription] = {}
+
     NS_NC_1_0 = "urn:ietf:params:xml:ns:netconf:base:1.0"
 
     def _on_connect(c: netconf.Client, err):
@@ -1547,8 +1609,8 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
                                log_handler=_con_log_handler)
             client = c
 
-    def get_mock_server(cb: action(?NetconfMockServer) -> None):
-        cb(mock_server)
+    def get_mock_server() -> ?NetconfMockServer:
+        return mock_server
 
     # TODO: Close protocol
     def close(on_close: ?action() -> None=None):
@@ -2054,6 +2116,92 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
         if client is not None:
             client.rpc(xml_rpc, rpc_reply)
 
+    def _sub_delay(opts: SubscriptionOpts) -> float:
+        def ns_to_s(ns: u64) -> float:
+            return float(ns) / 1000000000.0
+        pn = opts.period
+        if pn is not None:
+            return ns_to_s(pn)
+        return float(1)
+
+    def _build_subtree_filter(filt: yang.gdata.FNode) -> xml.Node:
+        return xml.Node("filter", attributes=[("type", "subtree")], children=filt.to_filter_xml(deterministic=True))
+
+    def _parse_get_reply(r: ?xml.Node) -> ?yang.gdata.Node:
+        if r is not None:
+            if r.tag != "rpc-reply" or len(r.children) != 1 or r.children[0].tag != "data":
+                return None
+            data_tag = r.children[0]
+            if dmc.feature_flags.runtime_schema_fetch:
+                fetched_schema = schema_registry.get_schema(schema_hash)
+                if fetched_schema is not None:
+                    return yang.xml.from_xml(fetched_schema, data_tag, loose=True)
+                return None
+            return yang.xml.from_xml(bundled_schema.src_dnode, data_tag, loose=True)
+        return None
+
+    def _sub_cancel(sid: int):
+        if sid in subs:
+            subs[sid].active = False
+            del subs[sid]
+
+    def _sub_schedule_next(sid: int):
+        if sid not in subs:
+            return
+        st = subs[sid]
+        if not st.active:
+            return
+        delay = _sub_delay(st.opts)
+        after delay: _sub_tick(sid)
+
+    def _sub_tick(sid: int):
+        if sid not in subs:
+            return
+        st = subs[sid]
+        if not st.active:
+            return
+        if st.opts.mode != SUB_PERIODIC:
+            cb = st.cb
+            if cb is not None:
+                cb(None, ValueError("NetconfDriver only supports periodic subscriptions"))
+            _sub_cancel(sid)
+            return
+
+        def on_get(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+            if sid not in subs:
+                return
+            st2 = subs[sid]
+            if not st2.active:
+                return
+            cb = st2.cb
+            if error is not None:
+                if cb is not None:
+                    cb(None, error)
+            else:
+                parsed = _parse_get_reply(r)
+                if parsed is None:
+                    if cb is not None:
+                        cb(None, ValueError("Unexpected rpc-reply for periodic get"))
+                else:
+                    if cb is not None:
+                        cb(parsed, None)
+            _sub_schedule_next(sid)
+
+        filt_xml = None
+        if st.filt is not None:
+            filt_xml = _build_subtree_filter(yang.gdata.expect(st.filt, "subscription filter"))
+        if client is not None:
+            client.get(on_get, filt_xml)
+        else:
+            _sub_schedule_next(sid)
+
+    def subscribe(cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: SubscriptionOpts) -> SubscriptionHandle:
+        sub_id_seq += 1
+        sid = sub_id_seq
+        subs[sid] = Subscription(cb, filt, opts)
+        _sub_tick(sid)
+        return SubscriptionHandle(sid, lambda: _sub_cancel(sid))
+
     _connect(dmc)
 
 
@@ -2096,8 +2244,12 @@ class NetconfAdapter(DeviceAdapter):
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         return self._driver.rpc_xml(cb, xml_rpc)
 
-    def get_mock_server(self, cb):
-        self._driver.get_mock_server(cb)
+    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: SubscriptionOpts) -> SubscriptionHandle:
+        return self._driver.subscribe(cb, filt, opts)
+
+    # TODO: try removing proc. at the time of writing this, it led to crash in CPS
+    proc def get_mock_server(self) -> ?NetconfMockServer:
+        return self._driver.get_mock_server()
 
 
 class DeviceTreeProvider(yang.gdata.TreeProvider):
