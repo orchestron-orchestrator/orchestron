@@ -548,7 +548,7 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
         _log.debug("Modset updated", {"new_modset": new_modset})
         on_reconf(name)
 
-    def on_connect(new_modset: dict[str, ModCap], new_schema_hash):
+    def on_connect(new_modset: dict[str, ModCap], new_schema_hash: ?u64):
         _log.debug("Device connected", {"new_modset": new_modset, "new_schema_hash": new_schema_hash})
         resync()
         if modset_eq(modset, new_modset):
