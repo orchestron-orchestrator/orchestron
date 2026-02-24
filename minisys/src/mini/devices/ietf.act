@@ -2828,7 +2828,7 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_netconf_acm__nacm:
         if n is not None:
             return ietf_netconf_acm__nacm(enable_nacm=n.get_opt_bool(yang.gdata.Id(NS_ietf_netconf_acm, 'enable-nacm')), read_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'read-default')), write_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'write-default')), exec_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'exec-default')), enable_external_groups=n.get_opt_bool(yang.gdata.Id(NS_ietf_netconf_acm, 'enable-external-groups')), denied_operations=n.get_opt_u64(yang.gdata.Id(NS_ietf_netconf_acm, 'denied-operations')), denied_data_writes=n.get_opt_u64(yang.gdata.Id(NS_ietf_netconf_acm, 'denied-data-writes')), denied_notifications=n.get_opt_u64(yang.gdata.Id(NS_ietf_netconf_acm, 'denied-notifications')), groups=ietf_netconf_acm__nacm__groups.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_netconf_acm, 'groups'))), rule_list=ietf_netconf_acm__nacm__rule_list.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_netconf_acm, 'rule-list'))))
-        raise ValueError('Missing required subtree ietf_netconf_acm__nacm')
+        return ietf_netconf_acm__nacm()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -2888,7 +2888,7 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__ntp__server__udp:
         if n is not None:
             return ietf_system__system__ntp__server__udp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), port=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'port')))
-        raise ValueError('Missing required subtree ietf_system__system__ntp__server__udp')
+        return ietf_system__system__ntp__server__udp()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3030,7 +3030,7 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__server__udp_and_tcp:
         if n is not None:
             return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), port=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'port')))
-        raise ValueError('Missing required subtree ietf_system__system__dns_resolver__server__udp_and_tcp')
+        return ietf_system__system__dns_resolver__server__udp_and_tcp()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3195,7 +3195,7 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__server__udp:
         if n is not None:
             return ietf_system__system__radius__server__udp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), authentication_port=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'authentication-port')), shared_secret=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'shared-secret')))
-        raise ValueError('Missing required subtree ietf_system__system__radius__server__udp')
+        return ietf_system__system__radius__server__udp()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3692,7 +3692,7 @@ class root(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
         if n is not None:
             return root(nacm=ietf_netconf_acm__nacm.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_netconf_acm, 'nacm'))), system=ietf_system__system.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'system'))), system_state=ietf_system__system_state.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'system-state'))))
-        raise ValueError('Missing required subtree root')
+        return root()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3718,7 +3718,7 @@ class ietf_system__set_current_datetime__input(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__set_current_datetime__input:
         if n is not None:
             return ietf_system__set_current_datetime__input(current_datetime=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'current-datetime')))
-        raise ValueError('Missing required subtree ietf_system__set_current_datetime__input')
+        return ietf_system__set_current_datetime__input()
 
     def copy(self):
         """Create a deep copy of this adata object"""

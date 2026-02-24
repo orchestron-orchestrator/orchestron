@@ -1009,7 +1009,7 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__credentials:
         if n is not None:
             return orchestron_rfs__device__credentials(username=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'username')), password=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'password')), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'key'))))
-        raise ValueError('Missing required subtree orchestron_rfs__device__credentials')
+        return orchestron_rfs__device__credentials()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -1376,7 +1376,7 @@ class orchestron_rfs__rfs__base_config(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__rfs__base_config:
         if n is not None:
             return orchestron_rfs__rfs__base_config(name=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'name')), ipv4_address=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'ipv4-address')))
-        raise ValueError('Missing required subtree orchestron_rfs__rfs__base_config')
+        return orchestron_rfs__rfs__base_config()
 
     def copy(self):
         """Create a deep copy of this adata object"""
