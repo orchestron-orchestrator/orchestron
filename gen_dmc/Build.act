@@ -3,8 +3,8 @@ fingerprint = 0x056275683c869ace
 dependencies = {
     "yang": (
         repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
-        url="https://github.com/orchestron-orchestrator/acton-yang/archive/b8f7588f54503962f4566812cdbfd163b07b53ed.zip",
-        hash="N-V-__8AAMP3IACnwIYYEysfAHESUVfzBblf1CvnjUF3gDhH"
+        url="https://github.com/orchestron-orchestrator/acton-yang/archive/1203c339a7f44e35afdd77d1e75eda646889ec32.zip",
+        hash="N-V-__8AAIIUIQAl_Ti6xqR7t7DqjGrjL5VR9PGLvAD8kYLR"
     )
 }
 zig_dependencies = {}
