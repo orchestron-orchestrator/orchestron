@@ -123,7 +123,7 @@ class CompiledSysSpec(object):
         for dev_type in self.dev_types.values():
             print(f"Generating device type {dev_type.name}")
             name = f"{output_dir}/{self.name}/devices/{dev_type.name}.act"
-            if _maybe_write_file(fc, name, dev_type.print(loose=True, gen_json=False)):
+            if _maybe_write_file(fc, name, dev_type.print(loose=True, gen_json=False, include_state=True)):
                 print(f"+ Device type {dev_type.name} adata changed")
             else:
                 print(f"+ Device type {dev_type.name} adata unchanged")
@@ -230,7 +230,7 @@ class CompiledLayerBase(object):
     root: yang.schema.DRoot
     src: list[str]
 
-    def print(self, loose=False, gen_json=True):
+    def print(self, loose=False, gen_json=True, include_state=False):
         """Print the Acton (adata) classes for the layer
 
         This prints the entire contents of the Acton module representing a
@@ -238,7 +238,7 @@ class CompiledLayerBase(object):
         classes, XML and JSON deserializers and the schema info. The schema is
         used by the XML and JSON schema-driven deserializers.
         """
-        return self.root.prdaclass(schema_yang=self.src, loose=loose)
+        return self.root.prdaclass(schema_yang=self.src, loose=loose, include_state=include_state)
 
 class CompiledLayer(CompiledLayerBase):
     def __init__(self, root: yang.schema.DRoot, src: list[str], name: ?str=None):
