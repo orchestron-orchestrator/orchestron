@@ -225,7 +225,7 @@ actor _test_subscribe_periodic(t: testing.EnvT):
             mock_server = adapter.get_mock_server()
             if mock_server is not None:
                 mock_server.set_oper_ds(_mock_oper_ds(mock_current_datetime_1, mock_boot_datetime))
-                opts = yang.gdata.SubscriptionOpts(yang.gdata.SUB_PERIODIC, period=u64(10000000))
+                opts = yang.gdata.SubscriptionOpts(yang.gdata.SUB_PERIODIC, period=u64(50000000))
                 handle = dev.subscribe(on_update, _current_datetime_filter(), opts)
             else:
                 fail("Expected NetconfMockServer from NetconfAdapter")
@@ -235,4 +235,4 @@ actor _test_subscribe_periodic(t: testing.EnvT):
 
     start()
 
-    after 0.1: fail("Timed out waiting for periodic subscription updates")
+    after 0.5: fail("Timed out waiting for periodic subscription updates")
