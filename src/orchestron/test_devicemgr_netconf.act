@@ -166,7 +166,7 @@ actor _test_subscribe_periodic(t: testing.EnvT):
 
     var updates = 0
     var done = False
-    var handle: ?orchestron.device.SubscriptionHandle = None
+    var handle: ?yang.gdata.SubscriptionHandle = None
     var mock_server: ?orchestron.device.NetconfMockServer = None
 
     def noop_on_reconf(name: str):
@@ -225,7 +225,7 @@ actor _test_subscribe_periodic(t: testing.EnvT):
             mock_server = adapter.get_mock_server()
             if mock_server is not None:
                 mock_server.set_oper_ds(_mock_oper_ds(mock_current_datetime_1, mock_boot_datetime))
-                opts = orchestron.device.SubscriptionOpts(orchestron.device.SUB_PERIODIC, period=u64(10000000))
+                opts = yang.gdata.SubscriptionOpts(yang.gdata.SUB_PERIODIC, period=u64(10000000))
                 handle = dev.subscribe(on_update, _current_datetime_filter(), opts)
             else:
                 fail("Expected NetconfMockServer from NetconfAdapter")

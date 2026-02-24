@@ -25,38 +25,6 @@ CONNECTING    = 1
 CONNECTED     = 2
 TRANSACTION   = 3
 
-SUB_ON_CHANGE = "on_change"
-SUB_PERIODIC = "periodic"
-
-class SubscriptionOpts(object):
-    mode: str
-    period: ?u64 # nanoseconds; 0 means as fast as possible
-
-    def __init__(self, mode: str=SUB_PERIODIC, period: ?u64=None):
-        self.mode = mode
-        self.period = period
-        self._validate()
-
-    def _validate(self):
-        if self.mode not in {SUB_ON_CHANGE, SUB_PERIODIC}:
-            raise ValueError("Unknown subscription mode: {self.mode}")
-        if self.mode == SUB_PERIODIC:
-            if self.period is None:
-                raise ValueError("period (nanoseconds) is required for periodic subscriptions")
-        elif self.period is not None:
-            raise ValueError("period (nanoseconds) is only valid for periodic subscriptions")
-
-
-class SubscriptionHandle(object):
-    """Handle returned by subscribe() for cancellation."""
-    id: int
-    @property
-    cancel: proc() -> None
-
-    def __init__(self, id: int, cancel: proc() -> None):
-        self.id = id
-        self.cancel = cancel
-
 class DeviceSchema(object):
     name: str
 
@@ -399,7 +367,7 @@ class Subscription(object):
     @property
     cb: action(?yang.gdata.Node, ?Exception) -> None
     filt: ?yang.gdata.FNode
-    opts: SubscriptionOpts
+    opts: yang.gdata.SubscriptionOpts
     active: bool
 
     def __init__(self, cb, filt, opts):
@@ -407,6 +375,25 @@ class Subscription(object):
         self.filt = filt
         self.opts = opts
         self.active = True
+
+class DeviceTreeProvider(yang.gdata.TreeProvider):
+    dev: DeviceMgr
+
+    def __init__(self, dev: DeviceMgr):
+        self.dev = dev
+
+    # TODO: remove this, standardize on gdata
+    proc def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node):
+        self.dev.rpc_xml(cb, xml_rpc)
+
+    proc def rpc(self, cb: action(?yang.gdata.Node, ?Exception) -> None, rpc_input: yang.gdata.Node):
+        pass
+        # self.dev.rpc(cb, rpc_input)
+
+    proc def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
+        return self.dev.subscribe(cb, filt, opts)
+
+
 
 actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None, schema_registry: SchemaRegistry, device_registry: ?DeviceRegistry=None):
     """Device Manager manages a device and represents that device, as an
@@ -964,8 +951,11 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     def rpc_xml(cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node):
         adapter.rpc_xml(cb, xml_rpc)
 
-    def subscribe(cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: SubscriptionOpts) -> SubscriptionHandle:
+    def subscribe(cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
         return adapter.subscribe(cb, filt, opts)
+
+    def tree_provider() -> yang.gdata.TreeProvider:
+        return DeviceTreeProvider(self)
 
     def get_adapter() -> DeviceAdapter:
         return adapter
@@ -1074,7 +1064,7 @@ class DeviceAdapter(object):
 
     rpc_xml: proc(cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None
 
-    subscribe: proc(action(?yang.gdata.Node, ?Exception) -> None, ?yang.gdata.FNode, SubscriptionOpts) -> SubscriptionHandle
+    subscribe: proc(action(?yang.gdata.Node, ?Exception) -> None, ?yang.gdata.FNode, yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle
 
 
 class NoAdapter(DeviceAdapter):
@@ -1108,9 +1098,9 @@ class NoAdapter(DeviceAdapter):
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         pass
 
-    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: SubscriptionOpts) -> SubscriptionHandle:
+    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
         cb(None, NotConnectedError())
-        return SubscriptionHandle(0, lambda: None)
+        return yang.gdata.SubscriptionHandle(0, lambda: None)
 
 class MockAdapter(DeviceAdapter):
     """Mock device adapter
@@ -1147,10 +1137,10 @@ class MockAdapter(DeviceAdapter):
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         return self._driver.rpc_xml(cb, xml_rpc)
 
-    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: SubscriptionOpts) -> SubscriptionHandle:
+    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
         # TODO: can / should subscribe do something on a MockAdapter ?
         cb(None, NotConnectedError())
-        return SubscriptionHandle(0, lambda: None)
+        return yang.gdata.SubscriptionHandle(0, lambda: None)
 
 actor MockDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
     _log = logging.Logger(log_handler)
@@ -2213,7 +2203,7 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
         if client is not None:
             client.rpc(xml_rpc, rpc_reply)
 
-    def _sub_delay(opts: SubscriptionOpts) -> float:
+    def _sub_delay(opts: yang.gdata.SubscriptionOpts) -> float:
         def ns_to_s(ns: u64) -> float:
             return float(ns) / 1000000000.0
         pn = opts.period
@@ -2257,7 +2247,7 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
         st = subs[sid]
         if not st.active:
             return
-        if st.opts.mode != SUB_PERIODIC:
+        if st.opts.mode != yang.gdata.SUB_PERIODIC:
             cb = st.cb
             if cb is not None:
                 cb(None, ValueError("NetconfDriver only supports periodic subscriptions"))
@@ -2292,12 +2282,12 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
         else:
             _sub_schedule_next(sid)
 
-    def subscribe(cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: SubscriptionOpts) -> SubscriptionHandle:
+    def subscribe(cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
         sub_id_seq += 1
         sid = sub_id_seq
         subs[sid] = Subscription(cb, filt, opts)
         _sub_tick(sid)
-        return SubscriptionHandle(sid, lambda: _sub_cancel(sid))
+        return yang.gdata.SubscriptionHandle(sid, lambda: _sub_cancel(sid))
 
     _connect(dmc)
 
@@ -2341,27 +2331,13 @@ class NetconfAdapter(DeviceAdapter):
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         return self._driver.rpc_xml(cb, xml_rpc)
 
-    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: SubscriptionOpts) -> SubscriptionHandle:
+    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
         return self._driver.subscribe(cb, filt, opts)
 
     # TODO: try removing proc. at the time of writing this, it led to crash in CPS
     proc def get_mock_server(self) -> ?NetconfMockServer:
         return self._driver.get_mock_server()
 
-
-class DeviceTreeProvider(yang.gdata.TreeProvider):
-    dev: DeviceMgr
-
-    def __init__(self, dev: DeviceMgr):
-        self.dev = dev
-
-    # TODO: remove this, standardize on gdata
-    proc def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node):
-        self.dev.rpc_xml(cb, xml_rpc)
-
-    proc def rpc(self, cb: action(?yang.gdata.Node, ?Exception) -> None, rpc_input: yang.gdata.Node):
-        pass
-        # self.dev.rpc(cb, rpc_input)
 
 
 def _test_parse_cap_base():
