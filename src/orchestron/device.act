@@ -1276,7 +1276,9 @@ def _netconf_mock_default_oper_ds() -> yang.gdata.Node:
 
 
 def _mock_capabilities_from_dmc(new_dmc: DeviceMetaConfig) -> list[str]:
-    caps: list[str] = [netconf.CAP_NC_1_0, netconf.CAP_NC_1_1]
+    caps: list[str] = [netconf.CAP_NC_1_0, netconf.CAP_NC_1_1,
+        "urn:ietf:params:netconf:capability:writable-running:1.0",
+        "urn:ietf:params:netconf:capability:candidate:1.0"]
     preset_caps: list[str] = []
     if "cisco-xr" in new_dmc.mock.preset:
         preset_caps.extend([
@@ -1308,11 +1310,15 @@ def _mock_capabilities_from_dmc(new_dmc: DeviceMetaConfig) -> list[str]:
     return caps
 
 
-actor NetconfMockServer(pipe, log_handler: logging.Handler, capabilities: ?list[str]=None):
+actor NetconfMockServer(pipe, log_handler: logging.Handler, capabilities: ?list[str]=None, config_schema: ?yang.schema.DRoot=None):
     _log = logging.Logger(log_handler)
 
     var oper_schema: yang.schema.DRoot = _netconf_mock_default_oper_schema()
     var oper_ds: yang.gdata.Node = _netconf_mock_default_oper_ds()
+    var conf_schema: yang.schema.DRoot = oper_schema
+    if config_schema is not None:
+        conf_schema = config_schema
+    var conf_ds: yang.gdata.Node = yang.gdata.Container({})
     var rpc_log: list[(message_id: str, op: xml.Node)] = []
     NS_NC_1_0 = "urn:ietf:params:xml:ns:netconf:base:1.0"
 
@@ -1358,6 +1364,42 @@ actor NetconfMockServer(pipe, log_handler: logging.Handler, capabilities: ?list[
 
         return current.to_xml(deterministic=True)
 
+    def _filtered_conf_data(filter_node: ?xml.Node) -> list[xml.Node]:
+        current: yang.gdata.Node = conf_ds
+
+        if filter_node is not None:
+            filt = yang.xml.from_filter_xml(conf_schema, filter_node)
+            filtered: ?yang.gdata.Node = yang.gdata.filter(current, filt)
+            if filtered is not None:
+                return filtered.to_xml(deterministic=True)
+            return []
+
+        return current.to_xml(deterministic=True)
+
+    def _extract_config(op: xml.Node) -> ?xml.Node:
+        for child in op.children:
+            if isinstance(child, xml.Node) and child.tag == "config":
+                return child
+        return None
+
+    def _expect_xml_node(n: ?xml.Node, ctx: str) -> xml.Node:
+        if n is not None:
+            return n
+        raise ValueError("expected xml.Node for: {ctx}")
+
+    def _expect_gdata_node(n: ?yang.gdata.Node, ctx: str) -> yang.gdata.Node:
+        if n is not None:
+            return n
+        raise ValueError("expected gdata.Node for: {ctx}")
+
+    def _parse_config_patch(config_node: xml.Node) -> yang.gdata.Container:
+        data_children: list[xml.Node] = []
+        for child in config_node.children:
+            if isinstance(child, xml.Node):
+                data_children.append(child)
+        wrapper = xml.Node("data", children=data_children)
+        return yang.xml.from_xml(conf_schema, wrapper, loose=True)
+
     def on_rpc(s: netconf.Server, message_id: str, op: xml.Node):
         rpc_log.append((message_id=message_id, op=op))
         _log.debug("NetconfMockServer received rpc", {"message_id": message_id, "op": op.tag, "rpc_xml": op.encode()})
@@ -1370,13 +1412,33 @@ actor NetconfMockServer(pipe, log_handler: logging.Handler, capabilities: ?list[
 
             data_children: list[xml.Node] = []
             try:
-                data_children = _filtered_oper_data(filter_node)
+                if op.tag == "get":
+                    data_children = _filtered_oper_data(filter_node)
+                else:
+                    data_children = _filtered_conf_data(filter_node)
             except Exception as e:
                 send_error(s, message_id, "invalid-value", "Failed to apply subtree filter: {e}")
                 return
 
             send_reply_with_log(s, message_id, [xml.Node("data", [(None, NS_NC_1_0)], children=data_children)])
-        elif op.tag == "edit-config" or op.tag == "commit" or op.tag == "discard-changes" or op.tag == "lock" or op.tag == "unlock":
+        elif op.tag == "edit-config":
+            config_node = _extract_config(op)
+            if config_node is None:
+                send_error(s, message_id, "missing-element", "Missing <config> in <edit-config>")
+                return
+            cfg = _expect_xml_node(config_node, "edit-config config")
+            try:
+                patch = _parse_config_patch(cfg)
+                next_conf_opt = yang.gdata.patch(conf_ds, patch)
+                if next_conf_opt is None:
+                    conf_ds = yang.gdata.Container({})
+                else:
+                    conf_ds = _expect_gdata_node(next_conf_opt, "edit-config result")
+            except Exception as e:
+                send_error(s, message_id, "invalid-value", "Failed to apply edit-config: {e}")
+                return
+            send_ok(s, message_id)
+        elif op.tag == "commit" or op.tag == "discard-changes" or op.tag == "lock" or op.tag == "unlock":
             send_ok(s, message_id)
         else:
             send_error(s, message_id, "operation-not-supported", "Unsupported RPC operation: {op.tag}")
@@ -1384,10 +1446,16 @@ actor NetconfMockServer(pipe, log_handler: logging.Handler, capabilities: ?list[
     var server: netconf.Server = netconf.Server(pipe=pipe, on_rpc=on_rpc, log_handler=log_handler, capabilities=capabilities)
 
     def set_oper_ds(new_oper_ds: yang.gdata.Node, schema: ?yang.schema.DRoot=None):
-        """Set operational datastore for replies to <get>/<get-config>."""
+        """Set operational datastore for replies to <get>."""
         oper_ds = new_oper_ds
         if schema is not None:
             oper_schema = schema
+
+    def set_conf_ds(new_conf_ds: yang.gdata.Node, schema: ?yang.schema.DRoot=None):
+        """Set configuration datastore for replies to <get-config>."""
+        conf_ds = new_conf_ds
+        if schema is not None:
+            conf_schema = schema
 
 
 actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: DeviceMetaConfig, schema_registry: SchemaRegistry, log_handler: logging.Handler, wcap: ?WorldCap):
@@ -1601,7 +1669,7 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
         if use_mock_server:
             state = CONNECTING
             pipes = transport.actor_pipe_pair()
-            mock_server = NetconfMockServer(pipes.server, _con_log_handler, _mock_capabilities_from_dmc(new_dmc))
+            mock_server = NetconfMockServer(pipes.server, _con_log_handler, _mock_capabilities_from_dmc(new_dmc), bundled_schema.src_dnode)
             client = netconf.Client(wcap,
                                     "dummy-address",
                                     0,
