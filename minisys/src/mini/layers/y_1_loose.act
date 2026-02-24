@@ -86,7 +86,12 @@ SRC_DNODE = DRoot(children=[
         DList(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='bar', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
                 Ext('orchestron', 'rfs-transform', arg='mini.rfs.Bar')
             ], children=[
-            DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+            DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DContainer(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='dynstate', config=True, presence=False, exts=[
+                    Ext('orchestron', 'dynstate')
+                ], children=[
+                DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='current-datetime', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+            ])
         ])
     ])
 ])
@@ -129,8 +134,14 @@ def src_yang():
                 type string;
             }
 
+            container dynstate {
+                orchestron:dynstate;
+                leaf current-datetime {
+                    type string;
+                }
+            }
         }
-  }
+    }
 }
 """)
     res.append(r"""module orchestron-rfs {
@@ -998,7 +1009,7 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__credentials:
         if n is not None:
             return orchestron_rfs__device__credentials(username=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'username')), password=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'password')), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'key'))))
-        raise ValueError('Missing required subtree orchestron_rfs__device__credentials')
+        return orchestron_rfs__device__credentials()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -1365,23 +1376,53 @@ class orchestron_rfs__rfs__base_config(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__rfs__base_config:
         if n is not None:
             return orchestron_rfs__rfs__base_config(name=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'name')), ipv4_address=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'ipv4-address')))
-        raise ValueError('Missing required subtree orchestron_rfs__rfs__base_config')
+        return orchestron_rfs__rfs__base_config()
 
     def copy(self):
         """Create a deep copy of this adata object"""
         return orchestron_rfs__rfs__base_config.from_gdata(self.to_gdata())
 
 
+class orchestron_rfs__rfs__bar__dynstate(yang.adata.MNode):
+    current_datetime: ?str
+
+    mut def __init__(self, current_datetime: ?str):
+        self._ns = 'http://example.com/mini-rfs'
+        self.current_datetime = current_datetime
+
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'current_datetime':
+            return self.current_datetime
+        raise ValueError('Attribute {name} not found in orchestron_rfs__rfs__bar__dynstate')
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:rfs', 'mini-rfs:bar', 'dynstate'])
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__rfs__bar__dynstate:
+        if n is not None:
+            return orchestron_rfs__rfs__bar__dynstate(current_datetime=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'current-datetime')))
+        return orchestron_rfs__rfs__bar__dynstate()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return orchestron_rfs__rfs__bar__dynstate.from_gdata(self.to_gdata())
+
+
 class orchestron_rfs__rfs__bar_entry(yang.adata.MNode):
     name: str
+    dynstate: orchestron_rfs__rfs__bar__dynstate
 
-    mut def __init__(self, name: str):
+    mut def __init__(self, name: str, dynstate: ?orchestron_rfs__rfs__bar__dynstate=None):
         self._ns = 'http://example.com/mini-rfs'
         self.name = name
+        self.dynstate = dynstate if dynstate is not None else orchestron_rfs__rfs__bar__dynstate()
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'name':
             return self.name
+        if name == 'dynstate':
+            return self.dynstate
         raise ValueError('Attribute {name} not found in orchestron_rfs__rfs__bar')
 
     mut def to_gdata(self) -> yang.gdata.Node:
@@ -1389,7 +1430,7 @@ class orchestron_rfs__rfs__bar_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs__bar_entry:
-        return orchestron_rfs__rfs__bar_entry(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')))
+        return orchestron_rfs__rfs__bar_entry(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')), dynstate=orchestron_rfs__rfs__bar__dynstate.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_mini_rfs, 'dynstate'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""

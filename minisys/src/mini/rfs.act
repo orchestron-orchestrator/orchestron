@@ -1,16 +1,31 @@
 import logging
-
 import yang.adata
+import yang.gdata as gdata
 import orchestron.device as odev
+import yang.gdata
 import orchestron.ttt
 from orchestron import UnsupportedDevice
 
 import mini.layers.base_1 as base
+from mini.layers.y_1 import orchestron_rfs__rfs__bar__dynstate as BarDynstate
+from mini.layers.y_1 import orchestron_rfs__rfs__base_config, orchestron_rfs__rfs__bar_entry
+import mini.layers.y_1 as y1
 
 import mini.devices.ietf as ietf_dev
+from mini.devices.ietf import root as ietf_root
+
+NS_IETF_SYSTEM = "urn:ietf:params:xml:ns:yang:ietf-system"
+
+def _q_sys(name: str) -> gdata.Id:
+    return gdata.Id(NS_IETF_SYSTEM, name)
+
+def _ms_to_ns(ms: u64) -> u64:
+    return ms * 1000 * 1000
+
+
 
 class BaseConfig(base.BaseConfig):
-    def transform(self, i, di):
+    def transform(self, i: orchestron_rfs__rfs__base_config, di: orchestron.ttt.DeviceInfo):
         print("RFS /rfs{{{di.name}}}/base-config transform running", err=True)
 
         if "ietf-system" in di.modules:
@@ -23,14 +38,43 @@ class BaseConfig(base.BaseConfig):
 
 
 class Bar(base.Bar):
-    def transform(self, i, di):
+    def transform(self, i: orchestron_rfs__rfs__bar_entry, di: orchestron.ttt.DeviceInfo, dynstate: ?BarDynstate):
         print("RFS /rfs{{{di.name}}}/bar transform running", err=True)
 
         if "ietf-system" in di.modules:
             dev = ietf_dev.root()
             d = dev.system.dns_resolver.server.create(i.name)
-            #ntp.server.create(i.name)
+            if dynstate is not None:
+                dev.system.contact = dynstate.current_datetime
 
             return dev
 
         raise UnsupportedDevice()
+
+
+actor BarTransform(update_dynstate: proc(?BarDynstate)->None, dev: odev.DeviceMgr):
+    var handle: ?yang.gdata.SubscriptionHandle = None
+
+    def on_update(t: ?ietf_root, err: ?Exception):
+        if err is not None:
+            print("BarTransform subscription error: {err}", err=True)
+            return
+        if t is not None:
+            tss = t.system_state
+            if tss is not None:
+                clock = tss.clock
+                if clock is not None:
+                    update_dynstate(BarDynstate(clock.current_datetime))
+
+    def on_conf(conf: y1.orchestron_rfs__rfs__bar_entry):
+        if handle is not None:
+            return
+        opts = yang.gdata.SubscriptionOpts(yang.gdata.SUB_PERIODIC, period=_ms_to_ns(u64(10)))
+        tp = dev.tree_provider()
+        # TODO: how to pick ietf_dev.rpc_root?? got to look at di.modules, right?
+        handle = ietf_dev.rpc_root(tp).subscribe(on_update, _system_state_filter(), opts)
+
+def _system_state_filter() -> gdata.FNode:
+    return gdata.FNode(None, None, [
+        gdata.FNode(_q_sys("system-state"), children=[])
+    ])

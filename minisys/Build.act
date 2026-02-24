@@ -3,16 +3,16 @@ fingerprint = 0x29e03fe4be9af090
 dependencies = {
     "netconf": (
         repo_url="https://github.com/orchestron-orchestrator/netconf.git",
-        url="https://github.com/orchestron-orchestrator/netconf/archive/eefb3f78b3fe34f748ba1c2d63e6be7ebad67aad.zip",
-        hash="N-V-__8AACtkAgCbljvBDZaQmHFCBUMewApO-sTgr-eGIPzF"
+        url="https://github.com/orchestron-orchestrator/netconf/archive/699905a4c9e420ee4a84ebc1a7618a43a6aa8e35.zip",
+        hash="N-V-__8AALRkAgAhc1fQmBVpaZDJTmqPnB0iw3DxN9SGcX3r"
     ),
     "orchestron": (
         path="../"
     ),
     "yang": (
         repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
-        url="https://github.com/orchestron-orchestrator/acton-yang/archive/2d2a44f6b606404f5bd04f5177acf58d8f17d56a.zip",
-        hash="N-V-__8AACP2IACZD26Ll_1JNHu5R8G_dViBbIHZx_4grysm"
+        url="https://github.com/orchestron-orchestrator/acton-yang/archive/a9e7a3acceeb62416334503ca68dbb2b458ead77.zip",
+        hash="N-V-__8AALMtIQCBWu4TAmFmhgbd5HUQbdtHNkT1QU7y3BbL"
     )
 }
 zig_dependencies = {}

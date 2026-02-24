@@ -81,6 +81,9 @@ SRC_DNODE = DRoot(rpcs=[
         DLeaf(module='ietf-netconf-acm', namespace='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', prefix='nacm', name='write-default', config=True, description='Controls whether create, update, or delete access\nis granted if no appropriate rule is found for a\nparticular write request.', default='deny', mandatory=False, type_=DTypeEnum(name='action-type', description='Action taken by the server when a particular\nrule matches.', reference=None, exts=[], builtin_type='enumeration', default=None, name_to_val={'permit':0, 'deny':1})),
         DLeaf(module='ietf-netconf-acm', namespace='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', prefix='nacm', name='exec-default', config=True, description='Controls whether exec access is granted if no appropriate\nrule is found for a particular protocol operation request.', default='permit', mandatory=False, type_=DTypeEnum(name='action-type', description='Action taken by the server when a particular\nrule matches.', reference=None, exts=[], builtin_type='enumeration', default=None, name_to_val={'permit':0, 'deny':1})),
         DLeaf(module='ietf-netconf-acm', namespace='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', prefix='nacm', name='enable-external-groups', config=True, description="Controls whether the server uses the groups reported by the\nNETCONF transport layer when it assigns the user to a set of\nNACM groups.  If this leaf has the value 'false', any group\nnames reported by the transport layer are ignored by the\nserver.", default='true', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None)),
+        DLeaf(module='ietf-netconf-acm', namespace='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', prefix='nacm', name='denied-operations', config=False, description='Number of times since the server last restarted that a\nprotocol operation request was denied.', mandatory=True, type_=DTypeIntegerUnsigned(name='yang:zero-based-counter32', description="The zero-based-counter32 type represents a counter32\nthat has the defined 'initial' value zero.\n\nA schema node of this type will be set to zero (0) on creation\nand will thereafter increase monotonically until it reaches\na maximum value of 2^32-1 (4294967295 decimal), when it\nwraps around and starts increasing again from zero.\n\nProvided that an application discovers a new schema node\nof this type within the minimum time to wrap, it can use the\n'initial' value as a delta.  It is important for a management\nstation to be aware of this minimum time and the actual time\nbetween polls, and to discard data if the actual time is too\nlong or there is no defined minimum time.\n\nIn the value set and its semantics, this type is equivalent\nto the ZeroBasedCounter32 textual convention of the SMIv2.", reference='RFC 4502: Remote Network Monitoring Management Information\n          Base Version 2', exts=[], builtin_type='uint32', default='0', ranges=Ranges([(0, 4294967295)]))),
+        DLeaf(module='ietf-netconf-acm', namespace='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', prefix='nacm', name='denied-data-writes', config=False, description='Number of times since the server last restarted that a\nprotocol operation request to alter\na configuration datastore was denied.', mandatory=True, type_=DTypeIntegerUnsigned(name='yang:zero-based-counter32', description="The zero-based-counter32 type represents a counter32\nthat has the defined 'initial' value zero.\n\nA schema node of this type will be set to zero (0) on creation\nand will thereafter increase monotonically until it reaches\na maximum value of 2^32-1 (4294967295 decimal), when it\nwraps around and starts increasing again from zero.\n\nProvided that an application discovers a new schema node\nof this type within the minimum time to wrap, it can use the\n'initial' value as a delta.  It is important for a management\nstation to be aware of this minimum time and the actual time\nbetween polls, and to discard data if the actual time is too\nlong or there is no defined minimum time.\n\nIn the value set and its semantics, this type is equivalent\nto the ZeroBasedCounter32 textual convention of the SMIv2.", reference='RFC 4502: Remote Network Monitoring Management Information\n          Base Version 2', exts=[], builtin_type='uint32', default='0', ranges=Ranges([(0, 4294967295)]))),
+        DLeaf(module='ietf-netconf-acm', namespace='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', prefix='nacm', name='denied-notifications', config=False, description='Number of times since the server last restarted that\na notification was dropped for a subscription because\naccess to the event type was denied.', mandatory=True, type_=DTypeIntegerUnsigned(name='yang:zero-based-counter32', description="The zero-based-counter32 type represents a counter32\nthat has the defined 'initial' value zero.\n\nA schema node of this type will be set to zero (0) on creation\nand will thereafter increase monotonically until it reaches\na maximum value of 2^32-1 (4294967295 decimal), when it\nwraps around and starts increasing again from zero.\n\nProvided that an application discovers a new schema node\nof this type within the minimum time to wrap, it can use the\n'initial' value as a delta.  It is important for a management\nstation to be aware of this minimum time and the actual time\nbetween polls, and to discard data if the actual time is too\nlong or there is no defined minimum time.\n\nIn the value set and its semantics, this type is equivalent\nto the ZeroBasedCounter32 textual convention of the SMIv2.", reference='RFC 4502: Remote Network Monitoring Management Information\n          Base Version 2', exts=[], builtin_type='uint32', default='0', ranges=Ranges([(0, 4294967295)]))),
         DContainer(module='ietf-netconf-acm', namespace='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', prefix='nacm', name='groups', config=True, description='NETCONF access control groups.', presence=False, children=[
             DList(module='ietf-netconf-acm', namespace='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', prefix='nacm', name='group', key=['name'], config=True, description='One NACM group entry.  This list will only contain\nconfigured entries, not any entries learned from\nany transport protocols.', min_elements=0, ordered_by='system', children=[
                 DLeaf(module='ietf-netconf-acm', namespace='urn:ietf:params:xml:ns:yang:ietf-netconf-acm', prefix='nacm', name='name', config=True, description='Group name associated with this entry.', mandatory=False, type_=DTypeString(name='group-name-type', description='Name of administrative group to which\nusers can be assigned.', reference=None, exts=[], builtin_type='string', default=None, length=Ranges([(1, 9223372036854775807)]), patterns=[YangPattern(yang_regex='[^\\*].*', pcre='^([^\\*].*)$', invert=False)])),
@@ -169,6 +172,18 @@ DMust(condition='(. != "sys:radius" or ../../radius/server)', description="When 
                     DLeaf(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='key-data', config=True, description='The binary public key data for this SSH key, as\nspecified by RFC 4253, Section 6.6, i.e.:\n\n  string    certificate or public key format\n            identifier\n  byte[n]   key/certificate data.', mandatory=True, reference='RFC 4253: The Secure Shell (SSH) Transport Layer\n          Protocol', type_=DTypeBinary(name='binary', description=None, reference=None, exts=[], builtin_type='binary', default=None, length=None))
                 ])
             ])
+        ])
+    ]),
+    DContainer(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='system-state', config=False, description='System group operational state.', presence=False, children=[
+        DContainer(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='platform', config=False, description='Contains vendor-specific information for\nidentifying the system platform and operating system.', presence=False, reference='IEEE Std 1003.1-2008 - sys/utsname.h', children=[
+            DLeaf(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='os-name', config=False, description="The name of the operating system in use -\nfor example, 'Linux'.", mandatory=False, reference='IEEE Std 1003.1-2008 - utsname.sysname', type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='os-release', config=False, description='The current release level of the operating\nsystem in use.  This string MAY indicate\nthe OS source code revision.', mandatory=False, reference='IEEE Std 1003.1-2008 - utsname.release', type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='os-version', config=False, description='The current version level of the operating\nsystem in use.  This string MAY indicate\nthe specific OS build date and target variant\ninformation.', mandatory=False, reference='IEEE Std 1003.1-2008 - utsname.version', type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+            DLeaf(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='machine', config=False, description='A vendor-specific identifier string representing\nthe hardware in use.', mandatory=False, reference='IEEE Std 1003.1-2008 - utsname.machine', type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+        ]),
+        DContainer(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='clock', config=False, description='Monitoring of the system date and time properties.', presence=False, children=[
+            DLeaf(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='current-datetime', config=False, description='The current system date and time.', mandatory=False, type_=DTypeString(name='yang:date-and-time', description="The date-and-time type is a profile of the ISO 8601\nstandard for representation of dates and times using the\nGregorian calendar.  The profile is defined by the\ndate-time production in Section 5.6 of RFC 3339.\n\nThe date-and-time type is compatible with the dateTime XML\nschema type with the following notable exceptions:\n\n(a) The date-and-time type does not allow negative years.\n\n(b) The date-and-time time-offset -00:00 indicates an unknown\n    time zone (see RFC 3339) while -00:00 and +00:00 and Z\n    all represent the same time zone in dateTime.\n\n(c) The canonical format (see below) of data-and-time values\n    differs from the canonical format used by the dateTime XML\n    schema type, which requires all times to be in UTC using\n    the time-offset 'Z'.\n\nThis type is not equivalent to the DateAndTime textual\nconvention of the SMIv2 since RFC 3339 uses a different\nseparator between full-date and full-time and provides\nhigher resolution of time-secfrac.\n\nThe canonical format for date-and-time values with a known time\nzone uses a numeric time zone offset that is calculated using\nthe device's configured known offset to UTC time.  A change of\nthe device's offset to UTC time will cause date-and-time values\nto change accordingly.  Such changes might happen periodically\nin case a server follows automatically daylight saving time\n(DST) time zone offset changes.  The canonical format for\ndate-and-time values with an unknown time zone (usually\nreferring to the notion of local time) uses the time-offset\n-00:00.", reference='RFC 3339: Date and Time on the Internet: Timestamps\nRFC 2579: Textual Conventions for SMIv2\nXSD-TYPES: XML Schema Part 2: Datatypes Second Edition', exts=[], builtin_type='string', default=None, length=None, patterns=[YangPattern(yang_regex='\\d{{4}}-\\d{{2}}-\\d{{2}}T\\d{{2}}:\\d{{2}}:\\d{{2}}(\\.\\d+)?(Z|[\\+\\-]\\d{{2}}:\\d{{2}})', pcre='^(\\p{{Nd}}{{4}}-\\p{{Nd}}{{2}}-\\p{{Nd}}{{2}}T\\p{{Nd}}{{2}}:\\p{{Nd}}{{2}}:\\p{{Nd}}{{2}}(\\.\\p{{Nd}}+)?(Z|[\\+\\-]\\p{{Nd}}{{2}}:\\p{{Nd}}{{2}}))$', invert=False)])),
+            DLeaf(module='ietf-system', namespace='urn:ietf:params:xml:ns:yang:ietf-system', prefix='sys', name='boot-datetime', config=False, description='The system date and time when the system last restarted.', mandatory=False, type_=DTypeString(name='yang:date-and-time', description="The date-and-time type is a profile of the ISO 8601\nstandard for representation of dates and times using the\nGregorian calendar.  The profile is defined by the\ndate-time production in Section 5.6 of RFC 3339.\n\nThe date-and-time type is compatible with the dateTime XML\nschema type with the following notable exceptions:\n\n(a) The date-and-time type does not allow negative years.\n\n(b) The date-and-time time-offset -00:00 indicates an unknown\n    time zone (see RFC 3339) while -00:00 and +00:00 and Z\n    all represent the same time zone in dateTime.\n\n(c) The canonical format (see below) of data-and-time values\n    differs from the canonical format used by the dateTime XML\n    schema type, which requires all times to be in UTC using\n    the time-offset 'Z'.\n\nThis type is not equivalent to the DateAndTime textual\nconvention of the SMIv2 since RFC 3339 uses a different\nseparator between full-date and full-time and provides\nhigher resolution of time-secfrac.\n\nThe canonical format for date-and-time values with a known time\nzone uses a numeric time zone offset that is calculated using\nthe device's configured known offset to UTC time.  A change of\nthe device's offset to UTC time will cause date-and-time values\nto change accordingly.  Such changes might happen periodically\nin case a server follows automatically daylight saving time\n(DST) time zone offset changes.  The canonical format for\ndate-and-time values with an unknown time zone (usually\nreferring to the notion of local time) uses the time-offset\n-00:00.", reference='RFC 3339: Date and Time on the Internet: Timestamps\nRFC 2579: Textual Conventions for SMIv2\nXSD-TYPES: XML Schema Part 2: Datatypes Second Edition', exts=[], builtin_type='string', default=None, length=None, patterns=[YangPattern(yang_regex='\\d{{4}}-\\d{{2}}-\\d{{2}}T\\d{{2}}:\\d{{2}}:\\d{{2}}(\\.\\d+)?(Z|[\\+\\-]\\d{{2}}:\\d{{2}})', pcre='^(\\p{{Nd}}{{4}}-\\p{{Nd}}{{2}}-\\p{{Nd}}{{2}}T\\p{{Nd}}{{2}}:\\p{{Nd}}{{2}}:\\p{{Nd}}{{2}}(\\.\\p{{Nd}}+)?(Z|[\\+\\-]\\p{{Nd}}{{2}}:\\p{{Nd}}{{2}}))$', invert=False)]))
         ])
     ])
 ])
@@ -2764,16 +2779,22 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
     write_default: ?str
     exec_default: ?str
     enable_external_groups: ?bool
+    denied_operations: ?u64
+    denied_data_writes: ?u64
+    denied_notifications: ?u64
     groups: ietf_netconf_acm__nacm__groups
     rule_list: ietf_netconf_acm__nacm__rule_list
 
-    mut def __init__(self, enable_nacm: ?bool, read_default: ?str, write_default: ?str, exec_default: ?str, enable_external_groups: ?bool, groups: ?ietf_netconf_acm__nacm__groups=None, rule_list: list[ietf_netconf_acm__nacm__rule_list_entry]=[]):
+    mut def __init__(self, enable_nacm: ?bool, read_default: ?str, write_default: ?str, exec_default: ?str, enable_external_groups: ?bool, denied_operations: ?u64, denied_data_writes: ?u64, denied_notifications: ?u64, groups: ?ietf_netconf_acm__nacm__groups=None, rule_list: list[ietf_netconf_acm__nacm__rule_list_entry]=[]):
         self._ns = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
         self.enable_nacm = enable_nacm
         self.read_default = read_default
         self.write_default = write_default
         self.exec_default = exec_default
         self.enable_external_groups = enable_external_groups
+        self.denied_operations = denied_operations
+        self.denied_data_writes = denied_data_writes
+        self.denied_notifications = denied_notifications
         self.groups = groups if groups is not None else ietf_netconf_acm__nacm__groups()
         self.rule_list = ietf_netconf_acm__nacm__rule_list(elements=rule_list)
 
@@ -2788,6 +2809,12 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
             return self.exec_default
         if name == 'enable_external_groups':
             return self.enable_external_groups
+        if name == 'denied_operations':
+            return self.denied_operations
+        if name == 'denied_data_writes':
+            return self.denied_data_writes
+        if name == 'denied_notifications':
+            return self.denied_notifications
         if name == 'groups':
             return self.groups
         if name == 'rule_list':
@@ -2800,7 +2827,7 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_netconf_acm__nacm:
         if n is not None:
-            return ietf_netconf_acm__nacm(enable_nacm=n.get_opt_bool(yang.gdata.Id(NS_ietf_netconf_acm, 'enable-nacm')), read_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'read-default')), write_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'write-default')), exec_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'exec-default')), enable_external_groups=n.get_opt_bool(yang.gdata.Id(NS_ietf_netconf_acm, 'enable-external-groups')), groups=ietf_netconf_acm__nacm__groups.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_netconf_acm, 'groups'))), rule_list=ietf_netconf_acm__nacm__rule_list.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_netconf_acm, 'rule-list'))))
+            return ietf_netconf_acm__nacm(enable_nacm=n.get_opt_bool(yang.gdata.Id(NS_ietf_netconf_acm, 'enable-nacm')), read_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'read-default')), write_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'write-default')), exec_default=n.get_opt_str(yang.gdata.Id(NS_ietf_netconf_acm, 'exec-default')), enable_external_groups=n.get_opt_bool(yang.gdata.Id(NS_ietf_netconf_acm, 'enable-external-groups')), denied_operations=n.get_opt_u64(yang.gdata.Id(NS_ietf_netconf_acm, 'denied-operations')), denied_data_writes=n.get_opt_u64(yang.gdata.Id(NS_ietf_netconf_acm, 'denied-data-writes')), denied_notifications=n.get_opt_u64(yang.gdata.Id(NS_ietf_netconf_acm, 'denied-notifications')), groups=ietf_netconf_acm__nacm__groups.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_netconf_acm, 'groups'))), rule_list=ietf_netconf_acm__nacm__rule_list.from_gdata(n.get_opt_list(yang.gdata.Id(NS_ietf_netconf_acm, 'rule-list'))))
         return ietf_netconf_acm__nacm()
 
     def copy(self):
@@ -2861,7 +2888,7 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__ntp__server__udp:
         if n is not None:
             return ietf_system__system__ntp__server__udp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), port=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'port')))
-        raise ValueError('Missing required subtree ietf_system__system__ntp__server__udp')
+        return ietf_system__system__ntp__server__udp()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3003,7 +3030,7 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__dns_resolver__server__udp_and_tcp:
         if n is not None:
             return ietf_system__system__dns_resolver__server__udp_and_tcp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), port=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'port')))
-        raise ValueError('Missing required subtree ietf_system__system__dns_resolver__server__udp_and_tcp')
+        return ietf_system__system__dns_resolver__server__udp_and_tcp()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3168,7 +3195,7 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system__radius__server__udp:
         if n is not None:
             return ietf_system__system__radius__server__udp(address=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'address')), authentication_port=n.get_opt_u64(yang.gdata.Id(NS_ietf_system, 'authentication-port')), shared_secret=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'shared-secret')))
-        raise ValueError('Missing required subtree ietf_system__system__radius__server__udp')
+        return ietf_system__system__radius__server__udp()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3540,20 +3567,122 @@ class ietf_system__system(yang.adata.MNode):
         return ietf_system__system.from_gdata(self.to_gdata())
 
 
+class ietf_system__system_state__platform(yang.adata.MNode):
+    os_name: ?str
+    os_release: ?str
+    os_version: ?str
+    machine: ?str
+
+    mut def __init__(self, os_name: ?str, os_release: ?str, os_version: ?str, machine: ?str):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.os_name = os_name
+        self.os_release = os_release
+        self.os_version = os_version
+        self.machine = machine
+
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'os_name':
+            return self.os_name
+        if name == 'os_release':
+            return self.os_release
+        if name == 'os_version':
+            return self.os_version
+        if name == 'machine':
+            return self.machine
+        raise ValueError('Attribute {name} not found in ietf_system__system_state__platform')
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system-state', 'platform'])
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system_state__platform:
+        if n is not None:
+            return ietf_system__system_state__platform(os_name=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'os-name')), os_release=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'os-release')), os_version=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'os-version')), machine=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'machine')))
+        return ietf_system__system_state__platform()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system_state__platform.from_gdata(self.to_gdata())
+
+
+class ietf_system__system_state__clock(yang.adata.MNode):
+    current_datetime: ?str
+    boot_datetime: ?str
+
+    mut def __init__(self, current_datetime: ?str, boot_datetime: ?str):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.current_datetime = current_datetime
+        self.boot_datetime = boot_datetime
+
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'current_datetime':
+            return self.current_datetime
+        if name == 'boot_datetime':
+            return self.boot_datetime
+        raise ValueError('Attribute {name} not found in ietf_system__system_state__clock')
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system-state', 'clock'])
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system_state__clock:
+        if n is not None:
+            return ietf_system__system_state__clock(current_datetime=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'current-datetime')), boot_datetime=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'boot-datetime')))
+        return ietf_system__system_state__clock()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system_state__clock.from_gdata(self.to_gdata())
+
+
+class ietf_system__system_state(yang.adata.MNode):
+    platform: ietf_system__system_state__platform
+    clock: ietf_system__system_state__clock
+
+    mut def __init__(self, platform: ?ietf_system__system_state__platform=None, clock: ?ietf_system__system_state__clock=None):
+        self._ns = 'urn:ietf:params:xml:ns:yang:ietf-system'
+        self.platform = platform if platform is not None else ietf_system__system_state__platform()
+        self.clock = clock if clock is not None else ietf_system__system_state__clock()
+
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'platform':
+            return self.platform
+        if name == 'clock':
+            return self.clock
+        raise ValueError('Attribute {name} not found in ietf_system__system_state')
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system-state'])
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__system_state:
+        if n is not None:
+            return ietf_system__system_state(platform=ietf_system__system_state__platform.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'platform'))), clock=ietf_system__system_state__clock.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'clock'))))
+        return ietf_system__system_state()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return ietf_system__system_state.from_gdata(self.to_gdata())
+
+
 class root(yang.adata.MNode):
     nacm: ietf_netconf_acm__nacm
     system: ietf_system__system
+    system_state: ietf_system__system_state
 
-    mut def __init__(self, nacm: ?ietf_netconf_acm__nacm=None, system: ?ietf_system__system=None):
+    mut def __init__(self, nacm: ?ietf_netconf_acm__nacm=None, system: ?ietf_system__system=None, system_state: ?ietf_system__system_state=None):
         self._ns = ''
         self.nacm = nacm if nacm is not None else ietf_netconf_acm__nacm()
         self.system = system if system is not None else ietf_system__system()
+        self.system_state = system_state if system_state is not None else ietf_system__system_state()
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'nacm':
             return self.nacm
         if name == 'system':
             return self.system
+        if name == 'system_state':
+            return self.system_state
         raise ValueError('Attribute {name} not found in root')
 
     mut def to_gdata(self) -> yang.gdata.Node:
@@ -3562,7 +3691,7 @@ class root(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
         if n is not None:
-            return root(nacm=ietf_netconf_acm__nacm.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_netconf_acm, 'nacm'))), system=ietf_system__system.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'system'))))
+            return root(nacm=ietf_netconf_acm__nacm.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_netconf_acm, 'nacm'))), system=ietf_system__system.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'system'))), system_state=ietf_system__system_state.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_ietf_system, 'system-state'))))
         return root()
 
     def copy(self):
@@ -3589,7 +3718,7 @@ class ietf_system__set_current_datetime__input(yang.adata.MNode):
     mut def from_gdata(n: ?yang.gdata.Node) -> ietf_system__set_current_datetime__input:
         if n is not None:
             return ietf_system__set_current_datetime__input(current_datetime=n.get_opt_str(yang.gdata.Id(NS_ietf_system, 'current-datetime')))
-        raise ValueError('Missing required subtree ietf_system__set_current_datetime__input')
+        return ietf_system__set_current_datetime__input()
 
     def copy(self):
         """Create a deep copy of this adata object"""
@@ -3597,6 +3726,7 @@ class ietf_system__set_current_datetime__input(yang.adata.MNode):
 
 
 actor rpc_root(tp: yang.gdata.TreeProvider):
+    var tree: ?yang.gdata.Node = root().to_gdata()
     def set_current_datetime(cb: action(?Exception) -> None, inp: ietf_system__set_current_datetime__input):
         rpc_xml = xml.Node('set-current-datetime', nsdefs=[(None, 'urn:ietf:params:xml:ns:yang:ietf-system')])
         if inp is not None:
@@ -3611,6 +3741,28 @@ actor rpc_root(tp: yang.gdata.TreeProvider):
     def system_shutdown(cb: action(?Exception) -> None):
         rpc_xml = xml.Node('system-shutdown', nsdefs=[(None, 'urn:ietf:params:xml:ns:yang:ietf-system')])
         tp.rpc_xml(lambda _, err: cb(err), rpc_xml)
+
+    def subscribe(cb: action(?root, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
+        def cb_wrap(n: ?yang.gdata.Node, err: ?Exception):
+            if n is not None:
+                prev = tree
+                # TODO: fix yang.gdata.patch() to accept None as old tree
+                base = prev if prev is not None else yang.gdata.Container({})
+                tree2 = yang.gdata.patch(base, n)
+
+                if tree2 is not None:
+                    d = yang.gdata.diff(prev, tree2)
+                    if d is not None:
+                        cb(root.from_gdata(tree2), err)
+                    tree = tree2
+                else:
+                    if prev is not None:
+                        cb(root.from_gdata(None), err)
+                    tree = None
+            else:
+                cb(None, err)
+
+        return tp.subscribe(cb_wrap, filt, opts)
 
 
 

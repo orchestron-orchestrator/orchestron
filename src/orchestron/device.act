@@ -363,6 +363,38 @@ class LogItem():
         self.event = event
         self.conf_diff = conf_diff
 
+class Subscription(object):
+    @property
+    cb: action(?yang.gdata.Node, ?Exception) -> None
+    filt: ?yang.gdata.FNode
+    opts: yang.gdata.SubscriptionOpts
+    active: bool
+
+    def __init__(self, cb, filt, opts):
+        self.cb = cb
+        self.filt = filt
+        self.opts = opts
+        self.active = True
+
+class DeviceTreeProvider(yang.gdata.TreeProvider):
+    dev: DeviceMgr
+
+    def __init__(self, dev: DeviceMgr):
+        self.dev = dev
+
+    # TODO: remove this, standardize on gdata
+    proc def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node):
+        self.dev.rpc_xml(cb, xml_rpc)
+
+    proc def rpc(self, cb: action(?yang.gdata.Node, ?Exception) -> None, rpc_input: yang.gdata.Node):
+        pass
+        # self.dev.rpc(cb, rpc_input)
+
+    proc def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
+        return self.dev.subscribe(cb, filt, opts)
+
+
+
 actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name: str, log_handler: logging.Handler, on_reconf: action(str) -> None, schema_registry: SchemaRegistry, device_registry: ?DeviceRegistry=None):
     """Device Manager manages a device and represents that device, as an
     abstract device, in the system. Platform specific handling is implemented in
@@ -572,9 +604,6 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
             return False
 
         def build_adapter(device_type: DeviceType, new_dmc: DeviceMetaConfig, effective_mock: bool) -> DeviceAdapter:
-            if effective_mock and wcap is None:
-                return MockAdapter(self, device_type.bundled_schema, schema_registry, _log_handler, wcap)
-
             candidate = device_type.adapter_type(self, device_type.bundled_schema, new_dmc, schema_registry, _log_handler, wcap)
             if effective_mock and not candidate.supports_mocking():
                 return MockAdapter(self, device_type.bundled_schema, schema_registry, _log_handler, wcap)
@@ -922,8 +951,14 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, wcap: ?WorldCap=None, name:
     def rpc_xml(cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node):
         adapter.rpc_xml(cb, xml_rpc)
 
-    def get_adapter(cb: action(DeviceAdapter) -> None):
-        cb(adapter)
+    def subscribe(cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
+        return adapter.subscribe(cb, filt, opts)
+
+    def tree_provider() -> yang.gdata.TreeProvider:
+        return DeviceTreeProvider(self)
+
+    def get_adapter() -> DeviceAdapter:
+        return adapter
 
     def list_confq():
         return confq
@@ -1029,6 +1064,8 @@ class DeviceAdapter(object):
 
     rpc_xml: proc(cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None
 
+    subscribe: proc(action(?yang.gdata.Node, ?Exception) -> None, ?yang.gdata.FNode, yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle
+
 
 class NoAdapter(DeviceAdapter):
     def __init__(self, dev: DeviceMgr, bundled_schema: DeviceSchema, schema_registry: SchemaRegistry, log_handler, wcap):
@@ -1060,6 +1097,10 @@ class NoAdapter(DeviceAdapter):
 
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         pass
+
+    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
+        cb(None, NotConnectedError())
+        return yang.gdata.SubscriptionHandle(0, lambda: None)
 
 class MockAdapter(DeviceAdapter):
     """Mock device adapter
@@ -1095,6 +1136,11 @@ class MockAdapter(DeviceAdapter):
 
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         return self._driver.rpc_xml(cb, xml_rpc)
+
+    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
+        # TODO: can / should subscribe do something on a MockAdapter ?
+        cb(None, NotConnectedError())
+        return yang.gdata.SubscriptionHandle(0, lambda: None)
 
 actor MockDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, log_handler: logging.Handler, wcap: ?WorldCap):
     _log = logging.Logger(log_handler)
@@ -1219,11 +1265,50 @@ def _netconf_mock_default_oper_ds() -> yang.gdata.Node:
     })
 
 
-actor NetconfMockServer(pipe, log_handler: logging.Handler):
+def _mock_capabilities_from_dmc(new_dmc: DeviceMetaConfig) -> list[str]:
+    caps: list[str] = [netconf.CAP_NC_1_0, netconf.CAP_NC_1_1,
+        "urn:ietf:params:netconf:capability:writable-running:1.0",
+        "urn:ietf:params:netconf:capability:candidate:1.0"]
+    preset_caps: list[str] = []
+    if "cisco-xr" in new_dmc.mock.preset:
+        preset_caps.extend([
+            "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&revision=2022-07-11",
+            "http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&revision=2022-07-11",
+        ])
+    if "juniper-junos" in new_dmc.mock.preset:
+        preset_caps.extend([
+            "http://xml.juniper.net/netconf/junos/1.0",
+            "http://xml.juniper.net/dmi/system/1.0",
+        ])
+    if "ietf" in new_dmc.mock.preset:
+        preset_caps.extend([
+            "urn:ietf:params:xml:ns:yang:ietf-system?module=ietf-system&revision=2014-08-06",
+        ])
+    for cap in preset_caps:
+        caps.append(cap)
+
+    for mock_cap in new_dmc.mock.module.elements:
+        cap = mock_cap.namespace + "?module=" + mock_cap.name
+        rev = mock_cap.revision
+        if rev is not None:
+            cap = cap + "&revision=" + rev
+        features = mock_cap.feature
+        if len(features) > 0:
+            cap = cap + "&features=" + ",".join(features)
+        caps.append(cap)
+
+    return caps
+
+
+actor NetconfMockServer(pipe, log_handler: logging.Handler, capabilities: ?list[str]=None, config_schema: ?yang.schema.DRoot=None):
     _log = logging.Logger(log_handler)
 
     var oper_schema: yang.schema.DRoot = _netconf_mock_default_oper_schema()
     var oper_ds: yang.gdata.Node = _netconf_mock_default_oper_ds()
+    var conf_schema: yang.schema.DRoot = oper_schema
+    if config_schema is not None:
+        conf_schema = config_schema
+    var conf_ds: yang.gdata.Node = yang.gdata.Container({})
     var rpc_log: list[(message_id: str, op: xml.Node)] = []
     NS_NC_1_0 = "urn:ietf:params:xml:ns:netconf:base:1.0"
 
@@ -1269,6 +1354,42 @@ actor NetconfMockServer(pipe, log_handler: logging.Handler):
 
         return current.to_xml(deterministic=True)
 
+    def _filtered_conf_data(filter_node: ?xml.Node) -> list[xml.Node]:
+        current: yang.gdata.Node = conf_ds
+
+        if filter_node is not None:
+            filt = yang.xml.from_filter_xml(conf_schema, filter_node)
+            filtered: ?yang.gdata.Node = yang.gdata.filter(current, filt)
+            if filtered is not None:
+                return filtered.to_xml(deterministic=True)
+            return []
+
+        return current.to_xml(deterministic=True)
+
+    def _extract_config(op: xml.Node) -> ?xml.Node:
+        for child in op.children:
+            if isinstance(child, xml.Node) and child.tag == "config":
+                return child
+        return None
+
+    def _expect_xml_node(n: ?xml.Node, ctx: str) -> xml.Node:
+        if n is not None:
+            return n
+        raise ValueError("expected xml.Node for: {ctx}")
+
+    def _expect_gdata_node(n: ?yang.gdata.Node, ctx: str) -> yang.gdata.Node:
+        if n is not None:
+            return n
+        raise ValueError("expected gdata.Node for: {ctx}")
+
+    def _parse_config_patch(config_node: xml.Node) -> yang.gdata.Container:
+        data_children: list[xml.Node] = []
+        for child in config_node.children:
+            if isinstance(child, xml.Node):
+                data_children.append(child)
+        wrapper = xml.Node("data", children=data_children)
+        return yang.xml.from_xml(conf_schema, wrapper, loose=True)
+
     def on_rpc(s: netconf.Server, message_id: str, op: xml.Node):
         rpc_log.append((message_id=message_id, op=op))
         _log.debug("NetconfMockServer received rpc", {"message_id": message_id, "op": op.tag, "rpc_xml": op.encode()})
@@ -1281,24 +1402,50 @@ actor NetconfMockServer(pipe, log_handler: logging.Handler):
 
             data_children: list[xml.Node] = []
             try:
-                data_children = _filtered_oper_data(filter_node)
+                if op.tag == "get":
+                    data_children = _filtered_oper_data(filter_node)
+                else:
+                    data_children = _filtered_conf_data(filter_node)
             except Exception as e:
                 send_error(s, message_id, "invalid-value", "Failed to apply subtree filter: {e}")
                 return
 
             send_reply_with_log(s, message_id, [xml.Node("data", [(None, NS_NC_1_0)], children=data_children)])
-        elif op.tag == "edit-config" or op.tag == "commit" or op.tag == "discard-changes" or op.tag == "lock" or op.tag == "unlock":
+        elif op.tag == "edit-config":
+            config_node = _extract_config(op)
+            if config_node is None:
+                send_error(s, message_id, "missing-element", "Missing <config> in <edit-config>")
+                return
+            cfg = _expect_xml_node(config_node, "edit-config config")
+            try:
+                patch = _parse_config_patch(cfg)
+                next_conf_opt = yang.gdata.patch(conf_ds, patch)
+                if next_conf_opt is None:
+                    conf_ds = yang.gdata.Container({})
+                else:
+                    conf_ds = _expect_gdata_node(next_conf_opt, "edit-config result")
+            except Exception as e:
+                send_error(s, message_id, "invalid-value", "Failed to apply edit-config: {e}")
+                return
+            send_ok(s, message_id)
+        elif op.tag == "commit" or op.tag == "discard-changes" or op.tag == "lock" or op.tag == "unlock":
             send_ok(s, message_id)
         else:
             send_error(s, message_id, "operation-not-supported", "Unsupported RPC operation: {op.tag}")
 
-    var server: netconf.Server = netconf.Server(pipe=pipe, on_rpc=on_rpc, log_handler=log_handler)
+    var server: netconf.Server = netconf.Server(pipe=pipe, on_rpc=on_rpc, log_handler=log_handler, capabilities=capabilities)
 
     def set_oper_ds(new_oper_ds: yang.gdata.Node, schema: ?yang.schema.DRoot=None):
-        """Set operational datastore for replies to <get>/<get-config>."""
+        """Set operational datastore for replies to <get>."""
         oper_ds = new_oper_ds
         if schema is not None:
             oper_schema = schema
+
+    def set_conf_ds(new_conf_ds: yang.gdata.Node, schema: ?yang.schema.DRoot=None):
+        """Set configuration datastore for replies to <get-config>."""
+        conf_ds = new_conf_ds
+        if schema is not None:
+            conf_schema = schema
 
 
 actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: DeviceMetaConfig, schema_registry: SchemaRegistry, log_handler: logging.Handler, wcap: ?WorldCap):
@@ -1349,6 +1496,8 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
     _con_log_handler = logging.Handler("ssh")
     _con_log_handler.set_handler(log_handler)
 
+    system_mock = True if wcap is None else False
+
     # The currently running configuration on the device (which in NMDA lingo is
     # the "intended configuration" of the device)
     var running_conf: ?yang.gdata.Node = None
@@ -1364,6 +1513,9 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
 
     var modset: dict[str, ModCap] = {}
     var schema_hash = None
+
+    var sub_id_seq = 0
+    var subs: dict[int, Subscription] = {}
 
     NS_NC_1_0 = "urn:ietf:params:xml:ns:netconf:base:1.0"
 
@@ -1499,28 +1651,25 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
         dmc = new_dmc
 
     def _connect(new_dmc):
-        use_mock_server = new_dmc.mock.enabled or len(new_dmc.mock.preset) > 0 or len(new_dmc.mock.module.elements) > 0
+        use_mock_server = system_mock or new_dmc.mock.enabled or len(new_dmc.mock.preset) > 0 or len(new_dmc.mock.module.elements) > 0
 
         username = new_dmc.credentials.username
         password = new_dmc.credentials.password
 
         if use_mock_server:
-            if wcap is not None:
-                state = CONNECTING
-                pipes = transport.actor_pipe_pair()
-                mock_server = NetconfMockServer(pipes.server, _con_log_handler)
-                client = netconf.Client(wcap,
-                                        "dummy-address",
-                                        0,
-                                        username,
-                                        password,
-                                        on_connect=_on_connect,
-                                        on_notif=_on_notif,
-                                        skip_host_key_check=True,
-                                        log_handler=_con_log_handler,
-                                        pipe=pipes.client)
-            else:
-                _log.error("Device._connect: netconf-server mock requires WorldCap")
+            state = CONNECTING
+            pipes = transport.actor_pipe_pair()
+            mock_server = NetconfMockServer(pipes.server, _con_log_handler, _mock_capabilities_from_dmc(new_dmc), bundled_schema.src_dnode)
+            client = netconf.Client(wcap,
+                                    "dummy-address",
+                                    0,
+                                    username,
+                                    password,
+                                    on_connect=_on_connect,
+                                    on_notif=_on_notif,
+                                    skip_host_key_check=True,
+                                    log_handler=_con_log_handler,
+                                    pipe=pipes.client)
             return
 
         mock_server = None
@@ -1547,8 +1696,8 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
                                log_handler=_con_log_handler)
             client = c
 
-    def get_mock_server(cb: action(?NetconfMockServer) -> None):
-        cb(mock_server)
+    def get_mock_server() -> ?NetconfMockServer:
+        return mock_server
 
     # TODO: Close protocol
     def close(on_close: ?action() -> None=None):
@@ -2054,6 +2203,92 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
         if client is not None:
             client.rpc(xml_rpc, rpc_reply)
 
+    def _sub_delay(opts: yang.gdata.SubscriptionOpts) -> float:
+        def ns_to_s(ns: u64) -> float:
+            return float(ns) / 1000000000.0
+        pn = opts.period
+        if pn is not None:
+            return ns_to_s(pn)
+        return float(1)
+
+    def _build_subtree_filter(filt: yang.gdata.FNode) -> xml.Node:
+        return xml.Node("filter", attributes=[("type", "subtree")], children=filt.to_filter_xml(deterministic=True))
+
+    def _parse_get_reply(r: ?xml.Node) -> ?yang.gdata.Node:
+        if r is not None:
+            if r.tag != "rpc-reply" or len(r.children) != 1 or r.children[0].tag != "data":
+                return None
+            data_tag = r.children[0]
+            if dmc.feature_flags.runtime_schema_fetch:
+                fetched_schema = schema_registry.get_schema(schema_hash)
+                if fetched_schema is not None:
+                    return yang.xml.from_xml(fetched_schema, data_tag, loose=True)
+                return None
+            return yang.xml.from_xml(bundled_schema.src_dnode, data_tag, loose=True)
+        return None
+
+    def _sub_cancel(sid: int):
+        if sid in subs:
+            subs[sid].active = False
+            del subs[sid]
+
+    def _sub_schedule_next(sid: int):
+        if sid not in subs:
+            return
+        st = subs[sid]
+        if not st.active:
+            return
+        delay = _sub_delay(st.opts)
+        after delay: _sub_tick(sid)
+
+    def _sub_tick(sid: int):
+        if sid not in subs:
+            return
+        st = subs[sid]
+        if not st.active:
+            return
+        if st.opts.mode != yang.gdata.SUB_PERIODIC:
+            cb = st.cb
+            if cb is not None:
+                cb(None, ValueError("NetconfDriver only supports periodic subscriptions"))
+            _sub_cancel(sid)
+            return
+
+        def on_get(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
+            if sid not in subs:
+                return
+            st2 = subs[sid]
+            if not st2.active:
+                return
+            cb = st2.cb
+            if error is not None:
+                if cb is not None:
+                    cb(None, error)
+            else:
+                parsed = _parse_get_reply(r)
+                if parsed is None:
+                    if cb is not None:
+                        cb(None, ValueError("Unexpected rpc-reply for periodic get"))
+                else:
+                    if cb is not None:
+                        cb(parsed, None)
+            _sub_schedule_next(sid)
+
+        filt_xml = None
+        if st.filt is not None:
+            filt_xml = _build_subtree_filter(yang.gdata.expect(st.filt, "subscription filter"))
+        if client is not None:
+            client.get(on_get, filt_xml)
+        else:
+            _sub_schedule_next(sid)
+
+    def subscribe(cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
+        sub_id_seq += 1
+        sid = sub_id_seq
+        subs[sid] = Subscription(cb, filt, opts)
+        _sub_tick(sid)
+        return yang.gdata.SubscriptionHandle(sid, lambda: _sub_cancel(sid))
+
     _connect(dmc)
 
 
@@ -2096,23 +2331,13 @@ class NetconfAdapter(DeviceAdapter):
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         return self._driver.rpc_xml(cb, xml_rpc)
 
-    def get_mock_server(self, cb):
-        self._driver.get_mock_server(cb)
+    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
+        return self._driver.subscribe(cb, filt, opts)
 
+    # TODO: try removing proc. at the time of writing this, it led to crash in CPS
+    proc def get_mock_server(self) -> ?NetconfMockServer:
+        return self._driver.get_mock_server()
 
-class DeviceTreeProvider(yang.gdata.TreeProvider):
-    dev: DeviceMgr
-
-    def __init__(self, dev: DeviceMgr):
-        self.dev = dev
-
-    # TODO: remove this, standardize on gdata
-    proc def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node):
-        self.dev.rpc_xml(cb, xml_rpc)
-
-    proc def rpc(self, cb: action(?yang.gdata.Node, ?Exception) -> None, rpc_input: yang.gdata.Node):
-        pass
-        # self.dev.rpc(cb, rpc_input)
 
 
 def _test_parse_cap_base():
