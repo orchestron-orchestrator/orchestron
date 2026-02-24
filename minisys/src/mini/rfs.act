@@ -52,22 +52,17 @@ class Bar(base.Bar):
 
 actor BarTransform(update_dynstate: proc(?BarDynstate)->None, dev: odev.DeviceMgr):
     var handle: ?odev.SubscriptionHandle = None
-    # TODO: bah, ietf tree has some mandatory config false leafs at the root under NACM
-    var tree = ietf_root()
-    tree.nacm.denied_operations = 0
-    tree.nacm.denied_data_writes = 0
-    tree.nacm.denied_notifications = 0
-    var gtree = tree.to_gdata()
+    var tree = ietf_root().to_gdata()
 
     def on_update(n: ?gdata.Node, err: ?Exception):
         if err is not None:
             print("BarTransform subscription error: {err}", err=True)
             return
         if n is not None:
-            gtree2 = gdata.patch(gtree, n)
-            if gtree2 is not None:
-                gtree = gtree2
-            t = ietf_root.from_gdata(gtree)
+            tree2 = gdata.patch(tree, n)
+            if tree2 is not None:
+                tree = tree2
+            t = ietf_root.from_gdata(tree)
             if t is not None:
                 tss = t.system_state
                 if tss is not None:
