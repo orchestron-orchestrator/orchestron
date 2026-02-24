@@ -34,6 +34,12 @@ module mini-rfs {
                 type string;
             }
 
+            container dynstate {
+                orchestron:dynstate;
+                leaf current-datetime {
+                    type string;
+                }
+            }
         }
-  }
+    }
 }

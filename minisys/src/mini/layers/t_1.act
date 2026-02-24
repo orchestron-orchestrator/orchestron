@@ -10,7 +10,15 @@ import yang.gdata
 
 import mini.rfs
 
+from mini.layers.y_1 import orchestron_rfs__rfs__bar_entry
+from mini.layers.y_1 import orchestron_rfs__rfs__bar__dynstate
 
 def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value],?ttt.Layer)->ttt.Node:
-    r = ttt.Container({yang.gdata.Id("http://orchestron.org/yang/orchestron-rfs.yang", "device"): ttt.List(ttt.Device(dev_registry, log_handler), [yang.gdata.Id("http://orchestron.org/yang/orchestron-rfs.yang", "name")], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs'), yang.gdata.Id("http://orchestron.org/yang/orchestron-rfs.yang", "rfs"): ttt.List(ttt.Container({yang.gdata.Id("http://example.com/mini-rfs", "base-config"): ttt.RFSTransform(mini.rfs.BaseConfig, dev_registry, None, lower, log_handler), yang.gdata.Id("http://example.com/mini-rfs", "bar"): ttt.List(ttt.RFSTransform(mini.rfs.Bar, dev_registry, None, lower, log_handler), [yang.gdata.Id("http://example.com/mini-rfs", "name")], ns='http://example.com/mini-rfs', module='mini-rfs')}), [yang.gdata.Id("http://orchestron.org/yang/orchestron-rfs.yang", "name")], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')})
+    r = ttt.Container({yang.gdata.Id("http://orchestron.org/yang/orchestron-rfs.yang", "device"): ttt.List(ttt.Device(dev_registry, log_handler), [yang.gdata.Id("http://orchestron.org/yang/orchestron-rfs.yang", "name")], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs'), yang.gdata.Id("http://orchestron.org/yang/orchestron-rfs.yang", "rfs"): ttt.List(ttt.Container({yang.gdata.Id("http://example.com/mini-rfs", "base-config"): ttt.RFSTransform(mini.rfs.BaseConfig, dev_registry, None, lower, log_handler), yang.gdata.Id("http://example.com/mini-rfs", "bar"): ttt.List(ttt.RFSTransform(mini.rfs.Bar, dev_registry, BarTransformCtor, lower, log_handler), [yang.gdata.Id("http://example.com/mini-rfs", "name")], ns='http://example.com/mini-rfs', module='mini-rfs')}), [yang.gdata.Id("http://orchestron.org/yang/orchestron-rfs.yang", "name")], ns='http://orchestron.org/yang/orchestron-rfs.yang', module='orchestron-rfs')})
     return r
+
+def BarTransformCtor(params: ttt.TransformActorParams) -> ?proc(yang.gdata.Node, ?yang.gdata.Node) -> None:
+    def update_dynstate_type_wrapper(dynstate: ?orchestron_rfs__rfs__bar__dynstate):
+        params.update_dynstate(dynstate.to_gdata() if dynstate is not None else None)
+    act = mini.rfs.BarTransform(update_dynstate_type_wrapper, ttt.expect(params.dev, "Missing expected DeviceMgr param to mini.rfs.BarTransform."))
+    return proc lambda c, m: act.on_conf(orchestron_rfs__rfs__bar_entry.from_gdata(c))
