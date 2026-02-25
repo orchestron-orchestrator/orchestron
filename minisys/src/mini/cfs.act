@@ -4,13 +4,12 @@ import yang.adata
 import orchestron.ttt
 
 import mini.layers.base_0 as base
-from mini.layers.y_0 import netinfra__netinfra__router_entry, netinfra__netinfra__foo_entry
 # TODO: this import is required by the compiler, maybe related to
 # https://github.com/actonlang/acton/issues/2390
-import yang.identityref
+import yang.identityref, mini.layers.y_0
 
 class Router(base.Router):
-    def transform(self, i: netinfra__netinfra__router_entry):
+    def transform(self, i):
         o = base.o_root()
         print("CFS router transform running", i.name)
         dev = o.device.create(i.name)
@@ -31,7 +30,7 @@ class Router(base.Router):
         return o
 
 class Foo(base.Foo):
-    def transform(self, i: netinfra__netinfra__foo_entry):
+    def transform(self, i):
         o = base.o_root()
         rfs = o.rfs.create(i.router)
         b = rfs.bar.create(i.name)
