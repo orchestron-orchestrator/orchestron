@@ -8,7 +8,6 @@ from orchestron import UnsupportedDevice
 
 import mini.layers.base_1 as base
 from mini.layers.y_1 import orchestron_rfs__rfs__bar__dynstate as BarDynstate
-from mini.layers.y_1 import orchestron_rfs__rfs__base_config, orchestron_rfs__rfs__bar_entry
 import mini.layers.y_1 as y1
 
 import mini.devices.ietf as ietf_dev
@@ -25,7 +24,7 @@ def _ms_to_ns(ms: u64) -> u64:
 
 
 class BaseConfig(base.BaseConfig):
-    def transform(self, i: orchestron_rfs__rfs__base_config, di: orchestron.ttt.DeviceInfo):
+    def transform(self, i, di):
         print("RFS /rfs{{{di.name}}}/base-config transform running", err=True)
 
         if "ietf-system" in di.modules:
@@ -38,7 +37,7 @@ class BaseConfig(base.BaseConfig):
 
 
 class Bar(base.Bar):
-    def transform(self, i: orchestron_rfs__rfs__bar_entry, di: orchestron.ttt.DeviceInfo, dynstate: ?BarDynstate):
+    def transform(self, i, di, dynstate: ?BarDynstate):
         print("RFS /rfs{{{di.name}}}/bar transform running", err=True)
 
         if "ietf-system" in di.modules:
