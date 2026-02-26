@@ -291,6 +291,26 @@ def parse_cap(tcap: str) -> ModCap:
     return ModCap(name, namespace, revision, feature)
 
 
+def _mock_preset_capabilities(presets: list[str]) -> list[str]:
+    caps: list[str] = []
+    if "cisco-ios-xr" in presets:
+        caps.extend([
+            "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21",
+            "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&revision=2022-07-11",
+            "http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&revision=2022-07-11",
+        ])
+    if "juniper-junos" in presets:
+        caps.extend([
+            "http://xml.juniper.net/netconf/junos/1.0",
+            "http://xml.juniper.net/dmi/system/1.0",
+        ])
+    if "ietf" in presets:
+        caps.extend([
+            "urn:ietf:params:xml:ns:yang:ietf-system?module=ietf-system&revision=2014-08-06",
+        ])
+    return caps
+
+
 def extract_txid(conf: ?xml.Node) -> ?str:
     """Attempt to extract a txid from configuration
 
@@ -1163,22 +1183,7 @@ actor MockDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, log_handler: logg
         _log.debug("MockAdapter.set_dmc", {"new_dmc": new_dmc.to_gdata().to_jsonstr()})
         _dmc = new_dmc
 
-        preset_caps = []
-        if "cisco-ios-xr" in new_dmc.mock.preset:
-            preset_caps.extend([
-                "http://cisco.com/ns/yang/Cisco-IOS-XR-um-hostname-cfg?module=Cisco-IOS-XR-um-hostname-cfg&revision=2021-04-21",
-                "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&revision=2022-07-11",
-                "http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&revision=2022-07-11",
-            ])
-        if "juniper-junos" in new_dmc.mock.preset:
-            preset_caps.extend([
-                "http://xml.juniper.net/netconf/junos/1.0",
-                "http://xml.juniper.net/dmi/system/1.0",
-            ])
-        if "ietf" in new_dmc.mock.preset:
-            preset_caps.extend([
-                "urn:ietf:params:xml:ns:yang:ietf-system?module=ietf-system&revision=2014-08-06",
-            ])
+        preset_caps = _mock_preset_capabilities(new_dmc.mock.preset)
         for cap in preset_caps:
             m = parse_cap(cap)
             modset[m.name] = m
@@ -1269,21 +1274,7 @@ def _mock_capabilities_from_dmc(new_dmc: DeviceMetaConfig) -> list[str]:
     caps: list[str] = [netconf.CAP_NC_1_0, netconf.CAP_NC_1_1,
         "urn:ietf:params:netconf:capability:writable-running:1.0",
         "urn:ietf:params:netconf:capability:candidate:1.0"]
-    preset_caps: list[str] = []
-    if "cisco-xr" in new_dmc.mock.preset:
-        preset_caps.extend([
-            "http://cisco.com/ns/yang/Cisco-IOS-XR-um-interface-cfg?module=Cisco-IOS-XR-um-interface-cfg&revision=2022-07-11",
-            "http://cisco.com/ns/yang/Cisco-IOS-XR-um-if-ipv4-cfg?module=Cisco-IOS-XR-um-if-ipv4-cfg&revision=2022-07-11",
-        ])
-    if "juniper-junos" in new_dmc.mock.preset:
-        preset_caps.extend([
-            "http://xml.juniper.net/netconf/junos/1.0",
-            "http://xml.juniper.net/dmi/system/1.0",
-        ])
-    if "ietf" in new_dmc.mock.preset:
-        preset_caps.extend([
-            "urn:ietf:params:xml:ns:yang:ietf-system?module=ietf-system&revision=2014-08-06",
-        ])
+    preset_caps = _mock_preset_capabilities(new_dmc.mock.preset)
     for cap in preset_caps:
         caps.append(cap)
 
