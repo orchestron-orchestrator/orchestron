@@ -1,18 +1,8 @@
 name = "orchestron_minisys_gen"
 fingerprint = 0x27d4d1b23521bbaa
 dependencies = {
-    "netconf": (
-        repo_url="https://github.com/orchestron-orchestrator/netconf.git",
-        url="https://github.com/orchestron-orchestrator/netconf/archive/2c7a5050881eb6e19d06e740add06699d9f5ad06.zip",
-        hash="N-V-__8AACCwAgCDCdukQxaYQwCoLtP9JslqTv8bnSHwfBMW"
-    ),
     "orchestron": (
         path="../../"
-    ),
-    "yang": (
-        repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
-        url="https://github.com/orchestron-orchestrator/acton-yang/archive/f0ee31fcf61754d9fa6d0872149b3433137d00a1.zip",
-        hash="N-V-__8AAJ4_IQDRHd4-0vQoIL4cYmBTNi7_mkF69Y3ICfbR"
     )
 }
 zig_dependencies = {}
