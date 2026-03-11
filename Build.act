@@ -6,6 +6,11 @@ dependencies = {
         url="https://github.com/orchestron-orchestrator/actmf/archive/5f82b58ff96a7c68d70914e7c8f57e4147d27d36.zip",
         hash="N-V-__8AAN3dBADQ_4cR1IqUhR0stD8mu7llpLLbkmJBS5pm"
     ),
+    "http_router": (
+        repo_url="https://github.com/orchestron-orchestrator/http-router.git",
+        url="https://github.com/orchestron-orchestrator/http-router/archive/45dc24a88b0849289b1653abacbd066982548372.zip",
+        hash="N-V-__8AAI2FAAA27_BvAysIDu88hX9mPSgZkbdwcIqDWJje"
+    ),
     "lmdb": (
         repo_url="https://github.com/stratoweave/acton-lmdb",
         url="https://github.com/stratoweave/acton-lmdb/archive/14a08d2d5743bcd127fdb4c33660eb5928d8e09b.zip",
