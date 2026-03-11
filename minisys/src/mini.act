@@ -1,4 +1,3 @@
-import argparse
 import file
 import http
 import json
@@ -7,6 +6,8 @@ import net
 import process
 import xml
 
+import orchestron.app   # https://github.com/actonlang/acton/issues/2699
+import orchestron.app as oapp
 import orchestron.device as odev
 import orchestron.ttt as ttt
 import yang
@@ -505,51 +506,8 @@ actor main(env):
 
     server = http.Listener(tcpl_cap, "::", 80, _on_http_accept, log_handler=logh_http)
 
-    configs = []
-    env_exit_on_done = env.getenv("EXIT_ON_DONE")
-    exit_on_done = env_exit_on_done if env_exit_on_done is not None else ""
-
-    def _conf_file(session):
-
-        def _conf_file_done(config, result):
-            if isinstance(result, str):
-                log.info("Config file successfully applied", {"config_file": config.filename})
-                _conf_file(session)
-            else:
-                log.error("Error applying config file", {"config_file": config.filename})
-
-        try:
-            config = configs.pop(0)
-            # Grab the first config
-            log.info("Applying config file...", {"config_file": config.filename})
-            input_config = yang.xml.from_xml(top_schema, config.config, loose=True)
-            session.edit_config(input_config, None, lambda result: _conf_file_done(config, result))
-        except IndexError:
-            log.info("All config files applied")
-            # TODO: exit_on_done.lower() once Acton bug is fixed!?
-            if exit_on_done in ["1", "true", "yes"]:
-                log.info("No more config files to apply, exiting..")
-                after 3: _exit()
-
-    def _exit():
-        env.exit(0)
-
-    if len(env.argv) > 1:
-        # Read and apply config files, but paced
-        for i in range(1, len(env.argv)):
-            if i > 0:
-                filename = env.argv[i]
-                f = file.ReadFile(rfcap, filename)
-                nb_input = await async f.read()
-                f.close()
-                try:
-                    configs.append((filename=filename, config=xml.decode(nb_input.decode())))
-                except Exception as e:
-                    print("Error reading config file {filename}: {e}")
-                    env.exit(1)
-
-        # start to apply..
-        after 0.5: _conf_file(cfs.newsession())
+    args = orchestron.app.AppArgs.from_args(env.argv, env.exit)
+    oapp.StartupConfigApplier(args.config_files, args.exit_on_done, top_schema, cfs, env.exit, rfcap, logh)
 
     print("Orchestron/mini running..")
 

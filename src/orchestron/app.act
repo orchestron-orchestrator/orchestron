@@ -1,0 +1,76 @@
+import argparse
+import file
+import logging
+import net
+import xml
+
+import orchestron.ttt as ttt
+import yang.gdata
+import yang.schema
+import yang.xml
+
+
+class AppArgs(value):
+    config_files: list[str]
+    exit_on_done: bool
+
+    def __init__(self, config_files: list[str]=[], exit_on_done: bool=False):
+        self.config_files = config_files
+        self.exit_on_done = exit_on_done
+
+
+    @staticmethod
+    def from_args(argv: list[str], exit: action(int) -> None) -> AppArgs:
+        p = argparse.Parser()
+        p.add_arg("file", "Config XML file(s)", False, "+")
+        p.add_bool("exit-on-done", "Exit after startup config has been applied")
+
+        try:
+            args = p.parse(argv)
+            return AppArgs(args.get_strlist("file"), args.get_bool("exit-on-done"))
+        except argparse.PrintUsage as exc:
+            print(exc.error_message)
+            exit(0)
+        except argparse.ArgumentError as exc:
+            print(exc.error_message, err=True)
+            exit(1)
+
+        return AppArgs()
+
+
+actor StartupConfigApplier(config_files: list[str], exit_on_done: bool, top_schema: yang.schema.DRoot, cfs: ttt.Layer, exit: action(int) -> None, rfcap: file.ReadFileCap, log_handler: logging.Handler):
+    var log = logging.Logger(log_handler)
+
+    def _conf_load_done(result):
+        if isinstance(result, str):
+            log.info("All config files applied")
+            if exit_on_done:
+                log.info("No more config files to apply, exiting..")
+                exit(0)
+        else:
+            log.error("Error applying config file(s)", {"result": result})
+            exit(1)
+
+    def _apply():
+        # Read and apply config files; merge multiple snippets (files) into a single intent
+        input_merge = yang.gdata.Container()
+        for filename in config_files:
+            log.debug("Reading config file", {"config_file": filename})
+            f = file.ReadFile(rfcap, filename)
+            nb_input = await async f.read()
+            f.close()
+            try:
+                conf_xml = xml.decode(nb_input.decode())
+                conf_gd = yang.xml.from_xml(top_schema, conf_xml, loose=True)
+                input_merge = yang.gdata.merge(input_merge, conf_gd)
+            except Exception as e:
+                print("Error reading config file {filename}: {e}")
+                exit(1)
+                return
+
+        log.info("Applying config file(s)...")
+        session = cfs.newsession()
+        session.edit_config(input_merge, None, _conf_load_done)
+
+    if len(config_files) > 0:    
+        after 0.5: _apply()
