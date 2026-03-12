@@ -67,27 +67,21 @@ class CompiledSysSpec(object):
         tttsrc += "import yang.adata\n"
         tttsrc += "import yang.gdata\n\n"
         tttsrc_getlayers = "def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None):\n"
-        # for idx, layer in reversed(enumerate(self.layers)):
-        layers_len = len(self.layers)
-        idx = layers_len
-        for layer in reversed(self.layers):
-            idx -= 1
+        tttsrc_schema_for_layer = "def schema_for_layer(layer):\n"
+        for (idx, layer) in reversed(list(enumerate(self.layers))):
             print(f"Generating layer {idx}")
             layer_name = layer.name
             lname = layer_name if layer_name is not None else str(idx)
-            name = f"{output_dir}/{self.name}/layers/y_{lname}.act"
+            y_name = f"{output_dir}/{self.name}/layers/y_{lname}.act"
             modname = f"{self.name}.layers.y_{lname}"
-    #        if idx == 0:
-    #            name = "src/y_cfs.act"
-    #        elif idx == len(layers) - 1:
-    #            name = "src/y_rfs.act"
 
-            if _maybe_write_file(fc, name, layer.print()):
+            if _maybe_write_file(fc, y_name, layer.print()):
                 print(f"+ Layer {idx} adata changed")
             else:
                 print(f"+ Layer {idx} adata unchanged")
 
             tttsrc += f"import {self.name}.layers.t_{idx}\n"
+            tttsrc += f"import {self.name}.layers.y_{idx}\n"
             print(f"Generating base & TTT(?) for layer {idx}")
 
             # Not for the last layer
@@ -109,8 +103,19 @@ class CompiledSysSpec(object):
             else:
                 print(f"+ Layer {idx} TTT(?) unchanged")
 
-            lowerlayer = f"layer{idx+1}" if idx < layers_len -1 else "None"
+            lowerlayer = f"layer{idx+1}" if idx < len(self.layers) - 1 else "None"
             tttsrc_getlayers += f"    layer{idx} = ttt.Layer('{lname}', {self.name}.layers.t_{idx}.get_ttt({lowerlayer}, dev_registry, log_handler), {lowerlayer})\n"
+            tttsrc_schema_for_layer += "    if layer == {idx}:\n"
+            if idx == len(self.layers) - 1:
+                tttsrc_schema_for_layer += """        # Layer {idx} is a bit special, in that there is more than one schema:
+        # 1. The device manager, defined in orchestron-device.yang
+        # 2. The device configuration, defined in the devices own YANG models
+        # and selected with the chosen device type.
+        # The contents of layer {idx} (gdata) is a combination of both, here we
+        # return the device manager tree.
+"""
+
+            tttsrc_schema_for_layer += "        return {self.name}.layers.y_{idx}.SRC_DNODE\n"
 
             loose_name = f"{output_dir}/{self.name}/layers/y_{idx}_loose.act"
             if _maybe_write_file(fc, loose_name, layer.print(loose=True)):
@@ -146,7 +151,9 @@ class CompiledSysSpec(object):
 
         print("Generating app layers.act")
         tttsrc_getlayers += "    return layer0\n"
-        tttsrc += tttsrc_getlayers
+        tttsrc_schema_for_layer += "    raise ValueError('Invalid layer: {{layer}}')"
+        tttsrc += "\n{tttsrc_getlayers}"
+        tttsrc += "\n{tttsrc_schema_for_layer}"
         if _maybe_write_file(fc, f"{output_dir}/{self.name}/layers.act", tttsrc):
             print("+ App layers.act changed")
         else:

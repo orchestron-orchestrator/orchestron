@@ -16,18 +16,9 @@ import yang.json
 import yang.xml
 
 import mini.layers
-import mini.layers.y_0_loose as cfs_layer
 import mini.layers.y_0
-import mini.layers.y_1
-import mini.layers.y_2
-
-import mini.layers.y_0_loose
-import mini.layers.y_1_loose
-import mini.layers.y_2_loose
 
 import mini.sysspec
-
-import testing
 
 class Unreachable(Exception):
     """Exception raised when code is unreachable."""
@@ -45,16 +36,6 @@ def rfs_for_device(dev):
             })
         ])
     })
-
-def schema_for_layer(layer):
-    if layer == 0:
-        return mini.layers.y_0_loose.SRC_DNODE
-    elif layer == 1:
-        return mini.layers.y_1_loose.SRC_DNODE
-    elif layer == 2:
-        return mini.layers.y_2_loose.SRC_DNODE
-    else:
-        raise ValueError("Invalid layer: {layer}")
 
 actor main(env):
     rfcap = file.ReadFileCap(file.FileCap(env.cap))
@@ -433,7 +414,7 @@ actor main(env):
                     if request.headers.get("accept") == "application/yang-data+xml":
                         content = layer_config.to_xmlstr()
                     if request.headers.get("accept") == "application/yang-data+acton-adata":
-                        src_dnode = schema_for_layer(layer_idx)
+                        src_dnode = mini.layers.schema_for_layer(layer_idx)
                         content = yang.data.pradata(src_dnode, layer_config, loose=True)
                     respond(200, {}, content)
                     return

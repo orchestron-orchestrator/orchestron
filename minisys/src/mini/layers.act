@@ -10,10 +10,29 @@ import yang.adata
 import yang.gdata
 
 import mini.layers.t_2
+import mini.layers.y_2
 import mini.layers.t_1
+import mini.layers.y_1
 import mini.layers.t_0
+import mini.layers.y_0
+
 def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None):
     layer2 = ttt.Layer('2', mini.layers.t_2.get_ttt(None, dev_registry, log_handler), None)
     layer1 = ttt.Layer('1', mini.layers.t_1.get_ttt(layer2, dev_registry, log_handler), layer2)
     layer0 = ttt.Layer('0', mini.layers.t_0.get_ttt(layer1, dev_registry, log_handler), layer1)
     return layer0
+
+def schema_for_layer(layer):
+    if layer == 2:
+        # Layer 2 is a bit special, in that there is more than one schema:
+        # 1. The device manager, defined in orchestron-device.yang
+        # 2. The device configuration, defined in the devices own YANG models
+        # and selected with the chosen device type.
+        # The contents of layer 2 (gdata) is a combination of both, here we
+        # return the device manager tree.
+        return mini.layers.y_2.SRC_DNODE
+    if layer == 1:
+        return mini.layers.y_1.SRC_DNODE
+    if layer == 0:
+        return mini.layers.y_0.SRC_DNODE
+    raise ValueError('Invalid layer: {layer}')
