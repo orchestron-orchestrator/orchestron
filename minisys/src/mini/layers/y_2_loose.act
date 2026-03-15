@@ -19,16 +19,20 @@ from yang.type import Decimal, Ranges
 _identities: list[DIdentity] = []
 
 
-SRC_DNODE = DRoot(children=[
-    DContainer(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='devices', config=True, presence=False, children=[
-        DList(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='device', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
-                Ext('orchestron', 'device-config')
-            ], children=[
-            DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-            DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='modset_id', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
-        ])
+SRC_DNODE_CHILD_0 = DContainer(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='devices', config=True, presence=False, children=[
+    DList(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='device', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
+            Ext('orchestron', 'device-config')
+        ], children=[
+        DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='modset_id', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
     ])
 ])
+
+SRC_DNODE = DRoot(
+    children=[SRC_DNODE_CHILD_0],
+    identities=[],
+    rpcs=[],
+)
 
 def src_yang():
     res = []
@@ -66,6 +70,7 @@ def src_yang():
 NS_orchestron_device = 'http://orchestron.org/yang/orchestron-device.yang'
 
 
+_breaker = 1
 class orchestron_device__devices__device_entry(yang.adata.MNode):
     name: str
     modset_id: ?str
@@ -93,6 +98,7 @@ class orchestron_device__devices__device_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return orchestron_device__devices__device_entry.from_gdata(self.to_gdata())
 
+_breaker = 1
 class orchestron_device__devices__device(yang.adata.MNode):
     elements: list[orchestron_device__devices__device_entry]
     mut def __init__(self, elements=[]):
@@ -133,6 +139,7 @@ extension orchestron_device__devices__device(Iterable[orchestron_device__devices
     def __iter__(self) -> Iterator[orchestron_device__devices__device_entry]:
         return self.elements.__iter__()
 
+_breaker = 1
 class orchestron_device__devices(yang.adata.MNode):
     device: orchestron_device__devices__device
 
@@ -159,6 +166,7 @@ class orchestron_device__devices(yang.adata.MNode):
         return orchestron_device__devices.from_gdata(self.to_gdata())
 
 
+_breaker = 1
 class root(yang.adata.MNode):
     devices: orchestron_device__devices
 
