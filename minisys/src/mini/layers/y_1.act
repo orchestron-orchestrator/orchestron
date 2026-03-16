@@ -832,7 +832,7 @@ class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
             if match:
                 return e
 
-        res = orchestron_rfs__device__address__initial_credentials_entry(username, password, key)
+        res = orchestron_rfs__device__address__initial_credentials_entry(username=username, password=password, key=key)
         self.elements.append(res)
         return res
 
@@ -900,16 +900,19 @@ class orchestron_rfs__device__address(yang.adata.MNode):
         self._name = 'address'
         self.elements = elements
 
-    mut def create(self, name, address):
+    mut def create(self, name, address, port=None):
         for e in self:
             match = True
             if e.name != name:
                 match = False
                 continue
             if match:
+                e.address = address
+                if port is not None:
+                    e.port = port
                 return e
 
-        res = orchestron_rfs__device__address_entry(name, address)
+        res = orchestron_rfs__device__address_entry(name=name, address=address, port=port)
         self.elements.append(res)
         return res
 
@@ -969,16 +972,18 @@ class orchestron_rfs__device__credentials__key(yang.adata.MNode):
         self._name = 'key'
         self.elements = elements
 
-    mut def create(self, key):
+    mut def create(self, key, private_key=None):
         for e in self:
             match = True
             if e.key != key:
                 match = False
                 continue
             if match:
+                if private_key is not None:
+                    e.private_key = private_key
                 return e
 
-        res = orchestron_rfs__device__credentials__key_entry(key)
+        res = orchestron_rfs__device__credentials__key_entry(key=key, private_key=private_key)
         self.elements.append(res)
         return res
 
@@ -1092,7 +1097,7 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
             if match:
                 return e
 
-        res = orchestron_rfs__device__initial_credentials_entry(username, password, key)
+        res = orchestron_rfs__device__initial_credentials_entry(username=username, password=password, key=key)
         self.elements.append(res)
         return res
 
@@ -1160,16 +1165,19 @@ class orchestron_rfs__device__mock__module(yang.adata.MNode):
         self._name = 'module'
         self.elements = elements
 
-    mut def create(self, name, namespace):
+    mut def create(self, name, namespace, revision=None):
         for e in self:
             match = True
             if e.name != name:
                 match = False
                 continue
             if match:
+                e.namespace = namespace
+                if revision is not None:
+                    e.revision = revision
                 return e
 
-        res = orchestron_rfs__device__mock__module_entry(name, namespace)
+        res = orchestron_rfs__device__mock__module_entry(name=name, namespace=namespace, revision=revision)
         self.elements.append(res)
         return res
 
@@ -1350,16 +1358,23 @@ class orchestron_rfs__device(yang.adata.MNode):
         self._name = 'device'
         self.elements = elements
 
-    mut def create(self, name, credentials):
+    mut def create(self, name, credentials, description=None, type=None, approval_required=None):
         for e in self:
             match = True
             if e.name != name:
                 match = False
                 continue
             if match:
+                e.credentials = credentials
+                if description is not None:
+                    e.description = description
+                if type is not None:
+                    e.type = type
+                if approval_required is not None:
+                    e.approval_required = approval_required
                 return e
 
-        res = orchestron_rfs__device_entry(name, credentials)
+        res = orchestron_rfs__device_entry(name=name, credentials=credentials, description=description, type=type, approval_required=approval_required)
         self.elements.append(res)
         return res
 
@@ -1486,7 +1501,7 @@ class orchestron_rfs__rfs__bar(yang.adata.MNode):
             if match:
                 return e
 
-        res = orchestron_rfs__rfs__bar_entry(name)
+        res = orchestron_rfs__rfs__bar_entry(name=name)
         self.elements.append(res)
         return res
 
@@ -1557,9 +1572,10 @@ class orchestron_rfs__rfs(yang.adata.MNode):
                 match = False
                 continue
             if match:
+                e.base_config = base_config
                 return e
 
-        res = orchestron_rfs__rfs_entry(name, base_config)
+        res = orchestron_rfs__rfs_entry(name=name, base_config=base_config)
         self.elements.append(res)
         return res
 

@@ -106,16 +106,18 @@ class orchestron_device__devices__device(yang.adata.MNode):
         self._name = 'device'
         self.elements = elements
 
-    mut def create(self, name):
+    mut def create(self, name, modset_id=None):
         for e in self:
             match = True
             if e.name != name:
                 match = False
                 continue
             if match:
+                if modset_id is not None:
+                    e.modset_id = modset_id
                 return e
 
-        res = orchestron_device__devices__device_entry(name)
+        res = orchestron_device__devices__device_entry(name=name, modset_id=modset_id)
         self.elements.append(res)
         return res
 
