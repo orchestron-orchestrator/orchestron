@@ -61,7 +61,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
             # reference is valid, i.e. an instance of ttt.Transform
             transform_module = ".".join(transform.split(".")[:-1])
             transform_name = transform.split(".")[-1]
-            imports.append("import %s" % transform_module)
+            imports.append("import {transform_module}")
             input_class = schema.get_path_name(spath)
             if is_list:
                 input_class += "_entry"
@@ -90,38 +90,38 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
             transform_extra_typed_params = ""
             if memory_class is not None:
                 wrapper_extra_params += ", modeled_memory"
-                wrapper_extra_models += "        modeled_memory = %s.from_gdata(memory) if memory is not None else None\n" % memory_class
-                transform_extra_typed_params += ", memory: ?%s" % memory_class
+                wrapper_extra_models += "        modeled_memory = {memory_class}.from_gdata(memory) if memory is not None else None\n"
+                transform_extra_typed_params += ", memory: ?{memory_class}"
                 transform_output = "(yang.adata.MNode, ?yang.adata.MNode)"
             else:
                 transform_output = "yang.adata.MNode"
             if dynstate_class is not None:
                 wrapper_extra_params += ", modeled_dynstate"
-                wrapper_extra_models += "        modeled_dynstate = %s.from_gdata(dynstate) if dynstate is not None else None\n" % dynstate_class
-                transform_extra_typed_params += ", dynstate: ?%s" % dynstate_class
+                wrapper_extra_models += "        modeled_dynstate = {dynstate_class}.from_gdata(dynstate) if dynstate is not None else None\n"
+                transform_extra_typed_params += ", dynstate: ?{dynstate_class}"
                 transform_actor_fq = transform + "Transform"
                 transform_actor_ctor = transform_name + "TransformCtor"
                 transform_actor_extra_params = ", ttt.expect(params.dev, \"Missing expected DeviceMgr param to {transform_actor_fq}.\")" if ext.name == "rfs-transform" else ""
-                memory_conv = ", %s.from_gdata(m) if m is not None else None" % memory_class if memory_class is not None else ""
-                act_defs.append("""def %s(params: ttt.TransformActorParams) -> ?proc(yang.gdata.Node, ?yang.gdata.Node) -> None:
-    def update_dynstate_type_wrapper(dynstate: ?%s):
+                memory_conv = ", {memory_class}.from_gdata(m) if m is not None else None" if memory_class is not None else ""
+                act_defs.append("""def {transform_actor_ctor}(params: ttt.TransformActorParams) -> ?proc(yang.gdata.Node, ?yang.gdata.Node) -> None:
+    def update_dynstate_type_wrapper(dynstate: ?{dynstate_class}):
         params.update_dynstate(dynstate.to_gdata() if dynstate is not None else None)
-    act = %s(update_dynstate_type_wrapper%s)
-    return proc lambda c, m: act.on_conf(%s.from_gdata(c)%s)
-""" % (transform_actor_ctor, dynstate_class, transform_actor_fq, transform_actor_extra_params, input_class, memory_conv))
+    act = {transform_actor_fq}(update_dynstate_type_wrapper{transform_actor_extra_params})
+    return proc lambda c, m: act.on_conf({input_class}.from_gdata(c){memory_conv})
+""")
             else:
                 transform_actor_ctor = "None"
             if memory_class is not None:
-                wrapper_return = "output, new_memory = self.transform(modeled_input%s)\n" % wrapper_extra_params + \
+                wrapper_return = "output, new_memory = self.transform(modeled_input{wrapper_extra_params})\n" + \
                     "        return output.to_gdata(), new_memory.to_gdata() if new_memory is not None else None"
             else:
-                wrapper_return = "return self.transform(modeled_input%s).to_gdata(), None" % wrapper_extra_params
+                wrapper_return = "return self.transform(modeled_input{wrapper_extra_params}).to_gdata(), None"
 
             root_path = ["{'{node.module}:' if prev.module != node.module else ''}{node.name}" if node is not None else None for prev, node in zip(spath, spath[1:] + [None])]
             deserializer = root_path[:-1]
 
             if ext.name == "transform":
-                base_defs.append(f"""class {transform_name}(ttt.TransformFunction):
+                base_defs.append("""class {transform_name}(ttt.TransformFunction):
     transform: mut({input_class}{transform_extra_typed_params}) -> {transform_output}
 
     @staticmethod
@@ -151,7 +151,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
                 return TTTSrc(src=src, input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
             elif ext.name == "rfs-transform":
-                base_defs.append(f"""class {transform_name}(ttt.RFSFunction):
+                base_defs.append("""class {transform_name}(ttt.RFSFunction):
     transform: mut({input_class}, ttt.DeviceInfo{transform_extra_typed_params}) -> {transform_output}
 
     @staticmethod
@@ -225,7 +225,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         act_defs.extend(children_res.act_defs)
         return TTTSrc(src="ttt.Container({{{children_res.src}}}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
-    raise NotImplementedError(f"Unhandled schema type: {type(sn)}")
+    raise NotImplementedError("Unhandled schema type: {type(sn)}")
 
 def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str) -> (base: str, ttt: str):
     ts = dschema_to_tttsrc(sn, [sn])
@@ -235,11 +235,11 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     base_src += "# WARNING WARNING WARNING WARNING WARNING\n\n"
     base_src += "import logging\nimport xml\nimport orchestron.ttt as ttt\nimport yang.adata\nimport yang.gdata\nimport yang.xml\n\n"
     for ic in ts.input_classes:
-        base_src += f"from {input_yang_module} import {ic}\n"
+        base_src += "from {input_yang_module} import {ic}\n"
     base_src += "from {input_yang_module} import SRC_DNODE\n"
 
     if output_yang_module is not None:
-        base_src += f"from {output_yang_module} import root as output_root\n\n"
+        base_src += "from {output_yang_module} import root as output_root\n\n"
         base_src += "def o_root():\n"
         base_src += "    return output_root()\n\n"
 
@@ -254,10 +254,10 @@ def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str
     ttt_src += "import orchestron.ttt as ttt\nimport yang.gdata\n\n"
     ttt_src += "\n".join(list(set(ts.imports))) + "\n\n"
     for sc in ts.state_classes:
-        ttt_src += "from %s import %s\n" % (input_yang_module, sc)
+        ttt_src += "from {input_yang_module} import {sc}\n"
     ttt_src += "\n"
     ttt_src += "def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value],?ttt.Layer)->ttt.Node:\n"
-    ttt_src += f"    r = {ts.src}\n    return r\n"
+    ttt_src += "    r = {ts.src}\n    return r\n"
     if len(ts.act_defs) > 0:
         ttt_src += "\n"
     ttt_src += "\n\n".join(list(set(ts.act_defs)))
