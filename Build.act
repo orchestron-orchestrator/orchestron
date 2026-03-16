@@ -1,10 +1,15 @@
 name = "orchestron"
 fingerprint = 0xe602cd36fdb33ec8
 dependencies = {
+    "lmdb": (
+        repo_url="https://github.com/stratoweave/acton-lmdb",
+        url="https://github.com/stratoweave/acton-lmdb/archive/14a08d2d5743bcd127fdb4c33660eb5928d8e09b.zip",
+        hash="N-V-__8AANS6AACPiaMUFwpl8zfcg0W2h-Dt8KwCNAx9vasJ"
+    ),
     "netconf": (
         repo_url="https://github.com/orchestron-orchestrator/netconf.git",
-        url="https://github.com/orchestron-orchestrator/netconf/archive/2c7a5050881eb6e19d06e740add06699d9f5ad06.zip",
-        hash="N-V-__8AACCwAgCDCdukQxaYQwCoLtP9JslqTv8bnSHwfBMW"
+        url="https://github.com/orchestron-orchestrator/netconf/archive/a15adeba1399d2a0e073856836c6378622b08595.zip",
+        hash="N-V-__8AAFKwAgCUXadRFGEvRQsHeljRzOxDHb8lBkmf1p9O"
     ),
     "yang": (
         repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
