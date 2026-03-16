@@ -58,16 +58,15 @@ class CompiledSysSpec(object):
         fs.mkdir(file.join_path([output_dir, self.name, "layers"]))
         await async fs.mkdir(file.join_path([output_dir, self.name, "devices"]))
 
-        tttsrc = "# WARNING WARNING WARNING WARNING WARNING\n"
-        tttsrc += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
-        tttsrc += "# WARNING WARNING WARNING WARNING WARNING\n\n"
-        tttsrc += "import logging\n\n"
-        tttsrc += "import orchestron.device as odev\n"
-        tttsrc += "import orchestron.ttt as ttt\n"
-        tttsrc += "import yang.adata\n"
-        tttsrc += "import yang.gdata\n\n"
-        tttsrc_getlayers = "def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None):\n"
-        tttsrc_schema_for_layer = "def schema_for_layer(layer):\n"
+        syssrc = "# WARNING WARNING WARNING WARNING WARNING\n"
+        syssrc += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
+        syssrc += "# WARNING WARNING WARNING WARNING WARNING\n\n"
+        syssrc += "import logging\n\n"
+        syssrc += "import orchestron.device as odev\n"
+        syssrc += "import orchestron.ttt as ttt\n"
+        syssrc += "\n"
+        syssrc_getlayers = "def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None):\n"
+        syssrc_schema_for_layer = "def schema_for_layer(layer):\n"
         for (idx, layer) in reversed(list(enumerate(self.layers))):
             print(f"Generating layer {idx}")
             layer_name = layer.name
@@ -80,8 +79,8 @@ class CompiledSysSpec(object):
             else:
                 print(f"+ Layer {idx} adata unchanged")
 
-            tttsrc += f"import {self.name}.layers.t_{idx}\n"
-            tttsrc += f"import {self.name}.layers.y_{idx}\n"
+            syssrc += "import {self.name}.layers.t_{idx}\n"
+            syssrc += "import {self.name}.layers.y_{idx}\n"
             print(f"Generating base & TTT(?) for layer {idx}")
 
             # Not for the last layer
@@ -104,10 +103,10 @@ class CompiledSysSpec(object):
                 print(f"+ Layer {idx} TTT(?) unchanged")
 
             lowerlayer = f"layer{idx+1}" if idx < len(self.layers) - 1 else "None"
-            tttsrc_getlayers += f"    layer{idx} = ttt.Layer('{lname}', {self.name}.layers.t_{idx}.get_ttt({lowerlayer}, dev_registry, log_handler), {lowerlayer})\n"
-            tttsrc_schema_for_layer += "    if layer == {idx}:\n"
+            syssrc_getlayers += "    layer{idx} = ttt.Layer('{lname}', {self.name}.layers.t_{idx}.get_ttt({lowerlayer}, dev_registry, log_handler), {lowerlayer})\n"
+            syssrc_schema_for_layer += "    if layer == {idx}:\n"
             if idx == len(self.layers) - 1:
-                tttsrc_schema_for_layer += """        # Layer {idx} is a bit special, in that there is more than one schema:
+                syssrc_schema_for_layer += """        # Layer {idx} is a bit special, in that there is more than one schema:
         # 1. The device manager, defined in orchestron-device.yang
         # 2. The device configuration, defined in the devices own YANG models
         # and selected with the chosen device type.
@@ -115,7 +114,7 @@ class CompiledSysSpec(object):
         # return the device manager tree.
 """
 
-            tttsrc_schema_for_layer += "        return {self.name}.layers.y_{idx}.SRC_DNODE\n"
+            syssrc_schema_for_layer += "        return {self.name}.layers.y_{idx}.SRC_DNODE\n"
 
             loose_name = f"{output_dir}/{self.name}/layers/y_{idx}_loose.act"
             if _maybe_write_file(fc, loose_name, layer.print(loose=True)):
@@ -123,7 +122,9 @@ class CompiledSysSpec(object):
             else:
                 print(f"+ Layer {idx} loose adata unchanged")
 
-        syssrc = "import orchestron.device as odev\n\n"
+        syssrc_getlayers += "    return layer0\n"
+        syssrc_schema_for_layer += "    raise ValueError('Invalid layer: {{layer}}')"
+
         syssrc_devtypes = ""
         for dev_type in self.dev_types.values():
             print(f"Generating device type {dev_type.name}")
@@ -141,23 +142,16 @@ class CompiledSysSpec(object):
             src_dnode={modname}.SRC_DNODE,
         ),
 """
-        syssrc += "device_types: dict[str, odev.DeviceType] = {{\n"
+        print("Generating app sysspec.act")
+        syssrc += "\n\ndevice_types: dict[str, odev.DeviceType] = {{\n"
         syssrc += syssrc_devtypes
         syssrc += "}}\n"
+        syssrc += "\n{syssrc_getlayers}\n"
+        syssrc += "\n{syssrc_schema_for_layer}\n"
         if _maybe_write_file(fc, "{output_dir}/{self.name}/sysspec.act", syssrc):
-            print("+ Sys spec changed")
+            print("+ App sysspec.act changed")
         else:
-            print("+ Sys spec unchanged")
-
-        print("Generating app layers.act")
-        tttsrc_getlayers += "    return layer0\n"
-        tttsrc_schema_for_layer += "    raise ValueError('Invalid layer: {{layer}}')"
-        tttsrc += "\n{tttsrc_getlayers}"
-        tttsrc += "\n{tttsrc_schema_for_layer}"
-        if _maybe_write_file(fc, f"{output_dir}/{self.name}/layers.act", tttsrc):
-            print("+ App layers.act changed")
-        else:
-            print("+ App layers.act unchanged")
+            print("+ App sysspec.act unchanged")
 
 class SchemaTransformChain:
     """SchemaTransform chain to be applied to a YANG module

@@ -15,9 +15,6 @@ import yang.data
 import yang.json
 import yang.xml
 
-import mini.layers
-import mini.layers.y_0
-
 import mini.sysspec
 
 class Unreachable(Exception):
@@ -57,10 +54,10 @@ actor main(env):
 
     log = logging.Logger(logh)
 
-    top_schema = mini.layers.y_0.SRC_DNODE
+    top_schema = mini.sysspec.schema_for_layer(0)
 
     dev_registry = odev.DeviceRegistry(mini.sysspec.device_types, env.cap, logh_dev)
-    cfs = mini.layers.get_layers(dev_registry, logh_ttt)
+    cfs = mini.sysspec.get_layers(dev_registry, logh_ttt)
     rfs = cfs.below()
     dev_registry.on_reconf(lambda dev: rfs.edit_config(rfs_for_device(dev), force=True))
 
@@ -414,7 +411,7 @@ actor main(env):
                     if request.headers.get("accept") == "application/yang-data+xml":
                         content = layer_config.to_xmlstr()
                     if request.headers.get("accept") == "application/yang-data+acton-adata":
-                        src_dnode = mini.layers.schema_for_layer(layer_idx)
+                        src_dnode = mini.sysspec.schema_for_layer(layer_idx)
                         content = yang.data.pradata(src_dnode, layer_config, loose=True)
                     respond(200, {}, content)
                     return
