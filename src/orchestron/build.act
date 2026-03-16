@@ -68,41 +68,41 @@ class CompiledSysSpec(object):
         syssrc_getlayers = "def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None):\n"
         syssrc_schema_for_layer = "def schema_for_layer(layer):\n"
         for (idx, layer) in reversed(list(enumerate(self.layers))):
-            print(f"Generating layer {idx}")
+            print("Generating layer {idx}")
             layer_name = layer.name
             lname = layer_name if layer_name is not None else str(idx)
-            y_name = f"{output_dir}/{self.name}/layers/y_{lname}.act"
-            modname = f"{self.name}.layers.y_{lname}"
+            y_name = "{output_dir}/{self.name}/layers/y_{lname}.act"
+            modname = "{self.name}.layers.y_{lname}"
 
             if _maybe_write_file(fc, y_name, layer.print()):
-                print(f"+ Layer {idx} adata changed")
+                print("+ Layer {idx} adata changed")
             else:
-                print(f"+ Layer {idx} adata unchanged")
+                print("+ Layer {idx} adata unchanged")
 
             syssrc += "import {self.name}.layers.t_{idx}\n"
             syssrc += "import {self.name}.layers.y_{idx}\n"
-            print(f"Generating base & TTT(?) for layer {idx}")
+            print("Generating base & TTT(?) for layer {idx}")
 
             # Not for the last layer
             out_layer_modname = None
             if idx < len(self.layers) - 1:
-                out_layer_modname = f"{self.name}.layers.y_{idx+1}_loose"
+                out_layer_modname = "{self.name}.layers.y_{idx+1}_loose"
 
             tttl = ttt_gen.ttt_prsrc(layer.root, modname, out_layer_modname)
 
-            base_name = f"{output_dir}/{self.name}/layers/base_{idx}.act"
+            base_name = "{output_dir}/{self.name}/layers/base_{idx}.act"
             if _maybe_write_file(fc, base_name, tttl.base):
-                print(f"+ Layer {idx} base changed")
+                print("+ Layer {idx} base changed")
             else:
-                print(f"+ Layer {idx} base unchanged")
+                print("+ Layer {idx} base unchanged")
 
-            t_name = f"{output_dir}/{self.name}/layers/t_{idx}.act"
+            t_name = "{output_dir}/{self.name}/layers/t_{idx}.act"
             if _maybe_write_file(fc, t_name, tttl.ttt):
-                print(f"+ Layer {idx} TTT(?) changed")
+                print("+ Layer {idx} TTT(?) changed")
             else:
-                print(f"+ Layer {idx} TTT(?) unchanged")
+                print("+ Layer {idx} TTT(?) unchanged")
 
-            lowerlayer = f"layer{idx+1}" if idx < len(self.layers) - 1 else "None"
+            lowerlayer = "layer{idx+1}" if idx < len(self.layers) - 1 else "None"
             syssrc_getlayers += "    layer{idx} = ttt.Layer('{lname}', {self.name}.layers.t_{idx}.get_ttt({lowerlayer}, dev_registry, log_handler), {lowerlayer})\n"
             syssrc_schema_for_layer += "    if layer == {idx}:\n"
             if idx == len(self.layers) - 1:
@@ -116,23 +116,23 @@ class CompiledSysSpec(object):
 
             syssrc_schema_for_layer += "        return {self.name}.layers.y_{idx}.SRC_DNODE\n"
 
-            loose_name = f"{output_dir}/{self.name}/layers/y_{idx}_loose.act"
+            loose_name = "{output_dir}/{self.name}/layers/y_{idx}_loose.act"
             if _maybe_write_file(fc, loose_name, layer.print(loose=True)):
-                print(f"+ Layer {idx} loose adata changed")
+                print("+ Layer {idx} loose adata changed")
             else:
-                print(f"+ Layer {idx} loose adata unchanged")
+                print("+ Layer {idx} loose adata unchanged")
 
         syssrc_getlayers += "    return layer0\n"
         syssrc_schema_for_layer += "    raise ValueError('Invalid layer: {{layer}}')"
 
         syssrc_devtypes = ""
         for dev_type in self.dev_types.values():
-            print(f"Generating device type {dev_type.name}")
-            name = f"{output_dir}/{self.name}/devices/{dev_type.name}.act"
+            print("Generating device type {dev_type.name}")
+            name = "{output_dir}/{self.name}/devices/{dev_type.name}.act"
             if _maybe_write_file(fc, name, dev_type.print(loose=True, gen_json=False, include_state=True)):
-                print(f"+ Device type {dev_type.name} adata changed")
+                print("+ Device type {dev_type.name} adata changed")
             else:
-                print(f"+ Device type {dev_type.name} adata unchanged")
+                print("+ Device type {dev_type.name} adata unchanged")
 
             modname = "{self.name}.devices.{dev_type.name}"
             syssrc += "import {modname}\n"
@@ -224,7 +224,7 @@ class Layer(object):
         """
         rfc = file.ReadFileCap(fc)
         fs = file.FS(fc)
-        models = [file.ReadFile(rfc, f"{dir}/{f}").read().decode() for f in fs.listdir(dir) if f.endswith(".yang")]
+        models = [file.ReadFile(rfc, "{dir}/{f}").read().decode() for f in fs.listdir(dir) if f.endswith(".yang")]
         return Layer(models, name)
 
 class CompiledLayerBase(object):
@@ -275,12 +275,12 @@ def apply_schema_transforms_to_dir(fc: file.FileCap, dir: str, transforms: list[
                 yang_text = rf.read().decode()
             if yang_text is not None:
                 for t in tc.transforms:
-                    print(f"Applying transform {t.name} to {in_name}")
+                    print("Applying transform {t.name} to {in_name}")
                     yang_text = t.apply(yang_text)
         if yang_text is not None:
             # Remove the .orig suffix
             out_name = in_name[:-5]
-            print(f"Writing {out_name}")
+            print("Writing {out_name}")
             wf = file.WriteFile(wfc, file.join_path([dir, out_name]))
             await async wf.write(yang_text.encode())
 
@@ -298,5 +298,5 @@ class DeviceType(object):
         """
         rfc = file.ReadFileCap(fc)
         fs = file.FS(fc)
-        models = [file.ReadFile(rfc, f"{dir}/{f}").read().decode() for f in fs.listdir(dir) if f.endswith(".yang")]
+        models = [file.ReadFile(rfc, "{dir}/{f}").read().decode() for f in fs.listdir(dir) if f.endswith(".yang")]
         return DeviceType(name, models)
