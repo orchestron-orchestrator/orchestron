@@ -3,7 +3,6 @@ import testing
 import yang.gdata as gdata
 import orchestron.device as odev
 
-import mini.layers
 import mini.layers.y_0 as cfs_layer
 import mini.sysspec
 import orchestron.testing as ts
@@ -30,7 +29,7 @@ actor _test_netinfra1(t: testing.AsyncT):
 
     input_config = root.to_gdata()
     dev_registry = odev.DeviceRegistry(mini.sysspec.device_types, None, t.log_handler)
-    cfs = mini.layers.get_layers(dev_registry, t.log_handler)
+    cfs = mini.sysspec.get_layers(dev_registry, t.log_handler)
     rfs = cfs.below()
     dev_registry.on_reconf(lambda dev: rfs.edit_config(rfs_for_device(dev), force=True))
     session = cfs.newsession()
