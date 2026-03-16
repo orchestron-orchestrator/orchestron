@@ -619,16 +619,22 @@ class netinfra__netinfra__router(yang.adata.MNode):
         self._name = 'router'
         self.elements = elements
 
-    mut def create(self, name, id, type):
+    mut def create(self, name, id=None, type=None, mock=None):
         for e in self:
             match = True
             if e.name != name:
                 match = False
                 continue
             if match:
+                if id is not None:
+                    e.id = id
+                if type is not None:
+                    e.type = type
+                if mock is not None:
+                    e.mock = mock
                 return e
 
-        res = netinfra__netinfra__router_entry(name, id, type)
+        res = netinfra__netinfra__router_entry(name=name, id=id, type=type, mock=mock)
         self.elements.append(res)
         return res
 
@@ -700,7 +706,7 @@ class netinfra__netinfra__foo(yang.adata.MNode):
             if match:
                 return e
 
-        res = netinfra__netinfra__foo_entry(router, name)
+        res = netinfra__netinfra__foo_entry(router=router, name=name)
         self.elements.append(res)
         return res
 

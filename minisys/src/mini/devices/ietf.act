@@ -2592,7 +2592,7 @@ class ietf_netconf_acm__nacm__groups__group(yang.adata.MNode):
             if match:
                 return e
 
-        res = ietf_netconf_acm__nacm__groups__group_entry(name)
+        res = ietf_netconf_acm__nacm__groups__group_entry(name=name)
         self.elements.append(res)
         return res
 
@@ -2703,16 +2703,30 @@ class ietf_netconf_acm__nacm__rule_list__rule(yang.adata.MNode):
         self._name = 'rule'
         self.elements = elements
 
-    mut def create(self, name, action_):
+    mut def create(self, name, module_name=None, rpc_name=None, notification_name=None, path=None, access_operations=None, action_=None, comment=None):
         for e in self:
             match = True
             if e.name != name:
                 match = False
                 continue
             if match:
+                if module_name is not None:
+                    e.module_name = module_name
+                if rpc_name is not None:
+                    e.rpc_name = rpc_name
+                if notification_name is not None:
+                    e.notification_name = notification_name
+                if path is not None:
+                    e.path = path
+                if access_operations is not None:
+                    e.access_operations = access_operations
+                if action_ is not None:
+                    e.action_ = action_
+                if comment is not None:
+                    e.comment = comment
                 return e
 
-        res = ietf_netconf_acm__nacm__rule_list__rule_entry(name, action_)
+        res = ietf_netconf_acm__nacm__rule_list__rule_entry(name=name, module_name=module_name, rpc_name=rpc_name, notification_name=notification_name, path=path, access_operations=access_operations, action_=action_, comment=comment)
         self.elements.append(res)
         return res
 
@@ -2785,7 +2799,7 @@ class ietf_netconf_acm__nacm__rule_list(yang.adata.MNode):
             if match:
                 return e
 
-        res = ietf_netconf_acm__nacm__rule_list_entry(name)
+        res = ietf_netconf_acm__nacm__rule_list_entry(name=name)
         self.elements.append(res)
         return res
 
@@ -2982,16 +2996,22 @@ class ietf_system__system__ntp__server(yang.adata.MNode):
         self._name = 'server'
         self.elements = elements
 
-    mut def create(self, name):
+    mut def create(self, name, association_type=None, iburst=None, prefer=None):
         for e in self:
             match = True
             if e.name != name:
                 match = False
                 continue
             if match:
+                if association_type is not None:
+                    e.association_type = association_type
+                if iburst is not None:
+                    e.iburst = iburst
+                if prefer is not None:
+                    e.prefer = prefer
                 return e
 
-        res = ietf_system__system__ntp__server_entry(name)
+        res = ietf_system__system__ntp__server_entry(name=name, association_type=association_type, iburst=iburst, prefer=prefer)
         self.elements.append(res)
         return res
 
@@ -3125,7 +3145,7 @@ class ietf_system__system__dns_resolver__server(yang.adata.MNode):
             if match:
                 return e
 
-        res = ietf_system__system__dns_resolver__server_entry(name)
+        res = ietf_system__system__dns_resolver__server_entry(name=name)
         self.elements.append(res)
         return res
 
@@ -3290,16 +3310,18 @@ class ietf_system__system__radius__server(yang.adata.MNode):
         self._name = 'server'
         self.elements = elements
 
-    mut def create(self, name):
+    mut def create(self, name, authentication_type=None):
         for e in self:
             match = True
             if e.name != name:
                 match = False
                 continue
             if match:
+                if authentication_type is not None:
+                    e.authentication_type = authentication_type
                 return e
 
-        res = ietf_system__system__radius__server_entry(name)
+        res = ietf_system__system__radius__server_entry(name=name, authentication_type=authentication_type)
         self.elements.append(res)
         return res
 
@@ -3425,16 +3447,20 @@ class ietf_system__system__authentication__user__authorized_key(yang.adata.MNode
         self._name = 'authorized-key'
         self.elements = elements
 
-    mut def create(self, name, algorithm, key_data):
+    mut def create(self, name, algorithm=None, key_data=None):
         for e in self:
             match = True
             if e.name != name:
                 match = False
                 continue
             if match:
+                if algorithm is not None:
+                    e.algorithm = algorithm
+                if key_data is not None:
+                    e.key_data = key_data
                 return e
 
-        res = ietf_system__system__authentication__user__authorized_key_entry(name, algorithm, key_data)
+        res = ietf_system__system__authentication__user__authorized_key_entry(name=name, algorithm=algorithm, key_data=key_data)
         self.elements.append(res)
         return res
 
@@ -3498,16 +3524,18 @@ class ietf_system__system__authentication__user(yang.adata.MNode):
         self._name = 'user'
         self.elements = elements
 
-    mut def create(self, name):
+    mut def create(self, name, password=None):
         for e in self:
             match = True
             if e.name != name:
                 match = False
                 continue
             if match:
+                if password is not None:
+                    e.password = password
                 return e
 
-        res = ietf_system__system__authentication__user_entry(name)
+        res = ietf_system__system__authentication__user_entry(name=name, password=password)
         self.elements.append(res)
         return res
 
@@ -3584,11 +3612,13 @@ class ietf_system__system(yang.adata.MNode):
         self.radius = radius if radius is not None else ietf_system__system__radius()
         self.authentication = authentication if authentication is not None else ietf_system__system__authentication()
 
-    mut def create_ntp(self):
+    mut def create_ntp(self, enabled=None):
         existing = self.ntp
         if existing is not None:
+            if enabled is not None:
+                existing.enabled = enabled
             return existing
-        res = ietf_system__system__ntp()
+        res = ietf_system__system__ntp(enabled=enabled)
         self.ntp = res
         return res
 
