@@ -8,13 +8,13 @@ dependencies = {
     ),
     "netconf": (
         repo_url="https://github.com/orchestron-orchestrator/netconf.git",
-        url="https://github.com/orchestron-orchestrator/netconf/archive/a15adeba1399d2a0e073856836c6378622b08595.zip",
-        hash="N-V-__8AAFKwAgCUXadRFGEvRQsHeljRzOxDHb8lBkmf1p9O"
+        url="https://github.com/orchestron-orchestrator/netconf/archive/00bf463d562c58e3f75567ac7d8acb4473bb51d8.zip",
+        hash="N-V-__8AAJ66AgBmmXM_ZwPYAwetJ0WrtUIfJmLef-09UONa"
     ),
     "yang": (
         repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
-        url="https://github.com/orchestron-orchestrator/acton-yang/archive/cb338ccffdc7b296558aab5479a2dc05f0ff0fed.zip",
-        hash="N-V-__8AAF-rIQDUTCVgeAqZIgkVoPRaugeV6xBOsidbWVKj"
+        url="https://github.com/orchestron-orchestrator/acton-yang/archive/aa8e40ccd4c59f3d951bcacf25f01cc392c639a5.zip",
+        hash="N-V-__8AAJOXIgAd1Zaab621PZqvQdoVOpX-XoPrhJUXXRsI"
     )
 }
 zig_dependencies = {}
