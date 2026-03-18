@@ -1,6 +1,7 @@
 """Orchestron Device tests"""
 
 import logging
+import process
 import testing
 import xml
 import yang.adata
@@ -208,7 +209,7 @@ actor _test_netconf_double_commit(t: testing.EnvT):
         # Create DeviceMgr and NetconfAdapter
         dev_types = {}
         schema_registry = orchestron.device.SchemaRegistry()
-        dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf, schema_registry)
+        dev = orchestron.device.DeviceMgr(dev_types, process.ProcessCap(t.env.auth), "test-device", t.log_handler, on_reconf, schema_registry)
 
         # Create a simple device schema
         schema = orchestron.device.DeviceSchema.mock()
@@ -217,7 +218,7 @@ actor _test_netconf_double_commit(t: testing.EnvT):
         test_dmc = create_test_dmc()
 
         # Create the NetconfAdapter - this will trigger connection
-        adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, schema_registry, t.log_handler, t.env.auth)
+        adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, schema_registry, t.log_handler, process.ProcessCap(t.env.auth))
         if adapter is not None:
             adapter.set_dmc(test_dmc)
 
@@ -388,7 +389,7 @@ actor _test_netconf_adapter(t: testing.EnvT):
 
         # Create setup client
         setup_client = netconf.Client(
-            t.env.auth,
+            process.ProcessCap(t.env.auth),
             test_address,
             test_port,
             test_username,
@@ -424,7 +425,7 @@ actor _test_netconf_adapter(t: testing.EnvT):
 
         # Create DeviceMgr and NetconfAdapter
         schema_registry = orchestron.device.SchemaRegistry()
-        dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf, schema_registry)
+        dev = orchestron.device.DeviceMgr(dev_types, process.ProcessCap(t.env.auth), "test-device", t.log_handler, on_reconf, schema_registry)
 
         # Create a simple device schema
         schema = orchestron.device.DeviceSchema.mock()
@@ -433,7 +434,7 @@ actor _test_netconf_adapter(t: testing.EnvT):
         test_dmc = create_test_dmc()
 
         # Create the NetconfAdapter - this will trigger connection
-        local_adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, schema_registry, t.log_handler, t.env.auth)
+        local_adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, schema_registry, t.log_handler, process.ProcessCap(t.env.auth))
         adapter = local_adapter
         if local_adapter is not None:
             local_adapter.set_dmc(test_dmc)
@@ -485,7 +486,7 @@ actor _test_netconf_adapter(t: testing.EnvT):
 
         # Create the verification client
         verification_client = netconf.Client(
-            t.env.auth,
+            process.ProcessCap(t.env.auth),
             test_address,
             test_port,
             test_username,
@@ -559,7 +560,7 @@ actor _test_netconf_adapter_resync(t: testing.EnvT):
 
         # Create DeviceMgr and NetconfAdapter
         schema_registry = orchestron.device.SchemaRegistry()
-        dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf, schema_registry)
+        dev = orchestron.device.DeviceMgr(dev_types, process.ProcessCap(t.env.auth), "test-device", t.log_handler, on_reconf, schema_registry)
 
         # Create a simple device schema
         schema = orchestron.device.DeviceSchema.mock()
@@ -568,7 +569,7 @@ actor _test_netconf_adapter_resync(t: testing.EnvT):
         test_dmc = create_test_dmc()
 
         # Create the NetconfAdapter - this will trigger connection
-        local_adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, schema_registry, t.log_handler, t.env.auth)
+        local_adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, schema_registry, t.log_handler, process.ProcessCap(t.env.auth))
         adapter = local_adapter
         if local_adapter is not None:
             local_adapter.set_dmc(test_dmc)
@@ -595,7 +596,7 @@ actor _test_netconf_adapter_resync(t: testing.EnvT):
 #
 #    # Create a mock DeviceMgr
 #    dev_types = {}
-#    dev_mgr = odev.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler,
+#    dev_mgr = odev.DeviceMgr(dev_types, process.ProcessCap(t.env.auth), "test-device", t.log_handler,
 #                              lambda name: log.info("Reconf callback", {"name": name}))
 #
 #    # Create a simple device schema
@@ -677,7 +678,7 @@ actor _test_netconf_adapter_resync(t: testing.EnvT):
 #            log.info("Sending configuration to device")
 #            adapter.configure(on_configure_done, test_config)
 #
-#    dev_mgr = odev.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler,
+#    dev_mgr = odev.DeviceMgr(dev_types, process.ProcessCap(t.env.auth), "test-device", t.log_handler,
 #                              lambda name: log.info("Reconf callback", {"name": name}))
 #
 #    # Override the on_connect callback

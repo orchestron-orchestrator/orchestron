@@ -1,6 +1,7 @@
 """Orchestron Device tests"""
 
 import logging
+import process
 import testing
 import xml
 import yang.adata
@@ -174,7 +175,7 @@ actor _test_txid(t: testing.EnvT):
 
         # Create setup client
         setup_client = netconf.Client(
-            t.env.auth,
+            process.ProcessCap(t.env.auth),
             test_address,
             test_port,
             test_username,
@@ -230,7 +231,7 @@ actor _test_txid(t: testing.EnvT):
 
         # Create DeviceMgr and NetconfAdapter
         schema_registry = orchestron.device.SchemaRegistry()
-        dev = orchestron.device.DeviceMgr(dev_types, t.env.auth, "test-device", t.log_handler, on_reconf, schema_registry)
+        dev = orchestron.device.DeviceMgr(dev_types, process.ProcessCap(t.env.auth), "test-device", t.log_handler, on_reconf, schema_registry)
 
         # Create a simple device schema
         schema = orchestron.device.DeviceSchema.mock()
@@ -239,7 +240,7 @@ actor _test_txid(t: testing.EnvT):
         test_dmc = create_test_dmc()
 
         # Create the NetconfAdapter - this will trigger connection
-        local_adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, schema_registry, t.log_handler, t.env.auth)
+        local_adapter = orchestron.device.NetconfAdapter(dev, schema, test_dmc, schema_registry, t.log_handler, process.ProcessCap(t.env.auth))
         adapter = local_adapter
         if local_adapter is not None:
             local_adapter.set_dmc(test_dmc)
@@ -292,7 +293,7 @@ actor _test_txid(t: testing.EnvT):
 
         # Create the verification client
         verification_client = netconf.Client(
-            t.env.auth,
+            process.ProcessCap(t.env.auth),
             test_address,
             test_port,
             test_username,
@@ -365,7 +366,7 @@ actor _test_direct_get_config_with_filter(t: testing.EnvT):
 
     # Create the client and connect
     client = netconf.Client(
-        t.env.auth,
+        process.ProcessCap(t.env.auth),
         test_address,
         test_port,
         test_username,

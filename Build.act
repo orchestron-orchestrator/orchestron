@@ -8,8 +8,8 @@ dependencies = {
     ),
     "netconf": (
         repo_url="https://github.com/orchestron-orchestrator/netconf.git",
-        url="https://github.com/orchestron-orchestrator/netconf/archive/00bf463d562c58e3f75567ac7d8acb4473bb51d8.zip",
-        hash="N-V-__8AAJ66AgBmmXM_ZwPYAwetJ0WrtUIfJmLef-09UONa"
+        url="https://github.com/orchestron-orchestrator/netconf/archive/c0c7e600bb033bff8441325abb88acc0c68a664d.zip",
+        hash="N-V-__8AAAu8AgC7DXGStcy0sA7aUGWHXu8WtGqeA6iRwuWe"
     ),
     "yang": (
         repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
