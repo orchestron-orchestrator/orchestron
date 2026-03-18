@@ -1,25 +1,14 @@
 import testing
 
 import yang.gdata as gdata
+import orchestron.app as oapp
 import orchestron.device as odev
+import orchestron.ttt
 
 import mini.layers.y_0 as cfs_layer
 import mini.sysspec
 import orchestron.testing as ts
 
-NS_ORFS = "http://orchestron.org/yang/orchestron-rfs.yang"
-
-def rfs_for_device(dev):
-    def q(n):
-        return gdata.Id(NS_ORFS, n)
-
-    return gdata.Container({
-        q('rfs'): gdata.List([q("name")], [
-            gdata.Container({
-                q("name"): gdata.Leaf(dev)
-            })
-        ])
-    })
 
 actor _test_netinfra1(t: testing.AsyncT):
     # Test input config
@@ -30,8 +19,7 @@ actor _test_netinfra1(t: testing.AsyncT):
     input_config = root.to_gdata()
     dev_registry = odev.DeviceRegistry(mini.sysspec.device_types, None, t.log_handler)
     cfs = mini.sysspec.get_layers(dev_registry, t.log_handler)
-    rfs = cfs.below()
-    dev_registry.on_reconf(lambda dev: rfs.edit_config(rfs_for_device(dev), force=True))
+    oapp.RfsReconf(dev_registry, cfs)
     session = cfs.newsession()
 
     def cont(_r: value):

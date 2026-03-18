@@ -4,6 +4,7 @@ import logging
 import net
 import xml
 
+import orchestron.device as odev
 import orchestron.ttt as ttt
 import yang.gdata
 import yang.schema
@@ -36,6 +37,32 @@ class AppArgs(value):
             exit(1)
 
         return AppArgs()
+
+
+NS_ORFS = "http://orchestron.org/yang/orchestron-rfs.yang"
+def _rfs_for_device(dev):
+    def q(n):
+        return yang.gdata.Id(NS_ORFS, n)
+
+    return yang.gdata.Container({
+        q('rfs'): yang.gdata.List([q("name")], [
+            yang.gdata.Container({
+                q("name"): yang.gdata.Leaf(dev)
+            })
+        ])
+    })
+
+
+actor RfsReconf(dev_registry: odev.DeviceRegistry, cfs: ttt.Layer):
+    _rfs = cfs
+    while True:
+        _next = _rfs.below()
+        # RFS is 2nd to last layer
+        if _next.below() is _next:
+            break
+        _rfs = _next
+
+    dev_registry.on_reconf(lambda dev: _rfs.edit_config(_rfs_for_device(dev), force=True))
 
 
 actor StartupConfigApplier(config_files: list[str], exit_on_done: bool, top_schema: yang.schema.DRoot, cfs: ttt.Layer, exit: action(int) -> None, rfcap: file.ReadFileCap, log_handler: logging.Handler):
@@ -72,5 +99,5 @@ actor StartupConfigApplier(config_files: list[str], exit_on_done: bool, top_sche
         session = cfs.newsession()
         session.edit_config(input_merge, None, _conf_load_done)
 
-    if len(config_files) > 0:    
+    if len(config_files) > 0:
         after 0.5: _apply()
