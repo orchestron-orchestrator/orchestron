@@ -4,7 +4,7 @@ build: src/orchestron/device_meta_config.act
 
 .PHONY: build-ldep
 build-ldep: src/orchestron/device_meta_config.act
-	$(MAKE) build DEP_OVERRIDES="--dep yang=../acton-yang --dep netconf=../netconf"
+	$(MAKE) build DEP_OVERRIDES="--dep yang=../acton-yang --dep netconf=../netconf --dep http_router=../http-router --dep actmf=../actmf"
 
 .PHONY: gen
 gen: src/orchestron/device_meta_config.act
@@ -27,7 +27,7 @@ test:
 
 .PHONY: test-ldep
 test-ldep:
-	$(MAKE) test DEP_OVERRIDES="--dep yang=../acton-yang --dep netconf=../netconf"
+	$(MAKE) test DEP_OVERRIDES="--dep yang=../acton-yang --dep netconf=../netconf --dep http_router=../http-router --dep actmf=../actmf"
 
 .PHONY: pkg-upgrade
 pkg-upgrade:
@@ -46,7 +46,7 @@ test-mini: check-mini-is-up-to-date
 
 .PHONY: test-mini-ldep
 test-mini-ldep: check-mini-is-up-to-date
-	cd minisys && acton test --dep yang=../../acton-yang --dep netconf=../../netconf --dep actmf=../../actmf
+	cd minisys && acton test --dep yang=../../acton-yang --dep netconf=../../netconf --dep http_router=../../http-router --dep actmf=../../actmf
 
 .PHONY: check-mini-is-up-to-date
 check-mini-is-up-to-date:
@@ -59,7 +59,7 @@ build-mini:
 
 .PHONY: build-mini-ldep
 build-mini-ldep:
-	cd minisys && acton build --dep yang=../../acton-yang --dep netconf=../../netconf --dep actmf=../../actmf
+	cd minisys && acton build --dep yang=../../acton-yang --dep netconf=../../netconf --dep http_router=../../http-router --dep actmf=../../actmf
 
 .PHONY: gen-mini
 gen-mini:
@@ -67,4 +67,4 @@ gen-mini:
 
 .PHONY: gen-mini-ldep
 gen-mini-ldep:
-	cd minisys/gen && acton build --dep yang=../../../acton-yang --dep netconf=../../../netconf && out/bin/gen
+	cd minisys/gen && acton build --dep yang=../../../acton-yang --dep netconf=../../../netconf --dep http_router=../../../http-router --dep actmf=../../../actmf && out/bin/gen
