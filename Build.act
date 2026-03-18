@@ -1,6 +1,11 @@
 name = "orchestron"
 fingerprint = 0xe602cd36fdb33ec8
 dependencies = {
+    "actmf": (
+        repo_url="https://github.com/orchestron-orchestrator/actmf",
+        url="https://github.com/orchestron-orchestrator/actmf/archive/514774c150222f112edd2a4485928238812f9f22.zip",
+        hash="N-V-__8AAJ1aBAB2Vbupq8QeKvroPXzKItegC1CwE7sdRQmo"
+    ),
     "lmdb": (
         repo_url="https://github.com/stratoweave/acton-lmdb",
         url="https://github.com/stratoweave/acton-lmdb/archive/14a08d2d5743bcd127fdb4c33660eb5928d8e09b.zip",
