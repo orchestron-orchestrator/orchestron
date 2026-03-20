@@ -11,6 +11,20 @@ import yang.schema
 import yang.xml
 
 
+class SysSpec(value):
+    """Exportable wrapper for generated functions from sysspec.act"""
+    device_types: dict[str, odev.DeviceType]
+    @property
+    get_layers: proc(odev.DeviceRegistry, ?logging.Handler) -> ttt.Layer
+    @property
+    schema_for_layer: proc(int) -> yang.schema.DRoot
+
+    def __init__(self, device_types, get_layers, schema_for_layer):
+        self.device_types = device_types
+        self.get_layers = get_layers
+        self.schema_for_layer = schema_for_layer
+
+
 class AppArgs(value):
     config_files: list[str]
     exit_on_done: bool
