@@ -1,5 +1,8 @@
 import logging
+import xml
+
 import yang.data
+import yang.xml
 import yang.gdata as gdata
 import yang.schema
 import orchestron.app as oapp
@@ -66,9 +69,20 @@ class TestRig(object):
         self.dev_registry = dev_registry
         self.sysspec = sysspec
 
-    proc def edit_config(self, input_config, cont):
+    proc def edit_config(self, input_config: gdata.Node, cont: action(value) -> None):
         session = self.cfs.newsession()
         session.edit_config(input_config, complete=cont)
+
+    def edit_config_xml(self, input_xml: str, cont: action(value) -> None):
+        top_schema = self.sysspec.schema_for_layer(0)
+        input_gdata = yang.xml.from_xml(top_schema, xml.decode(input_xml), loose=False)
+        self.edit_config(input_gdata, cont)
+
+    def layer_config(self, depth: int=0) -> gdata.Node:
+        session = self.cfs.newsession()
+        for _ in range(depth):
+            session = session.below()
+        return session.get()
 
     def device_adata_snapshot(self):
         return device_config_adata_snapshot(self.dev_registry, self.sysspec.device_types)
