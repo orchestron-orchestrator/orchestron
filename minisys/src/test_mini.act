@@ -1,10 +1,5 @@
 import testing
 
-import yang.gdata as gdata
-import orchestron.app as oapp
-import orchestron.device as odev
-import orchestron.ttt
-
 import mini.layers.y_0 as cfs_layer
 import mini.sysspec
 import orchestron.testing as ts
@@ -17,15 +12,13 @@ actor _test_netinfra1(t: testing.AsyncT):
     router.mock = "ietf"
 
     input_config = root.to_gdata()
-    dev_registry = odev.DeviceRegistry(mini.sysspec.device_types, None, t.log_handler)
-    cfs = mini.sysspec.get_layers(dev_registry, t.log_handler)
-    oapp.RfsReconf(dev_registry, cfs)
-    session = cfs.newsession()
+
+    tr = ts.test_main(mini.sysspec.SYSSPEC, t.log_handler)
 
     def cont(_r: value):
-        t.success(ts.device_config_adata_snapshot(dev_registry, mini.sysspec.device_types))
+        t.success(tr.device_adata_snapshot())
 
-    session.edit_config(input_config, None, cont)
+    tr.edit_config(input_config, cont)
 
     def fail():
         t.failure(ValueError())

@@ -1,7 +1,11 @@
+import logging
 import yang.data
 import yang.gdata as gdata
 import yang.schema
+import orchestron.app as oapp
 import orchestron.device as odev
+import orchestron.ttt as ttt
+
 
 def _sanitize_ident(name: str) -> str:
     if name == "":
@@ -54,3 +58,24 @@ def device_config_adata_snapshot(dev_registry: odev.DeviceRegistry, dev_types: ?
         adata = yang.data.pradata(schema, conf, self_name=self_name, loose=True)
         parts.append(f"# device {name}\n{adata}")
     return "\n\n".join(parts)
+
+
+class TestRig(object):
+    def __init__(self, cfs: ttt.Layer, dev_registry: odev.DeviceRegistry, sysspec):
+        self.cfs = cfs
+        self.dev_registry = dev_registry
+        self.sysspec = sysspec
+
+    proc def edit_config(self, input_config, cont):
+        session = self.cfs.newsession()
+        session.edit_config(input_config, complete=cont)
+
+    def device_adata_snapshot(self):
+        return device_config_adata_snapshot(self.dev_registry, self.sysspec.device_types)
+
+
+def test_main(sysspec, log_handler):
+    dev_registry = odev.DeviceRegistry(sysspec.device_types, None, log_handler)
+    cfs = sysspec.get_layers(dev_registry, log_handler)
+    oapp.RfsReconf(dev_registry, cfs)
+    return TestRig(cfs, dev_registry, sysspec)
