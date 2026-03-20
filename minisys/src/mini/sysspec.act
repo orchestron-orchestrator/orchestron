@@ -4,6 +4,7 @@
 
 import logging
 
+import orchestron.app as oapp
 import orchestron.device as odev
 import orchestron.ttt as ttt
 
@@ -45,3 +46,6 @@ def schema_for_layer(layer):
     if layer == 0:
         return mini.layers.y_0.SRC_DNODE
     raise ValueError('Invalid layer: {layer}')
+
+
+SYSSPEC = oapp.SysSpec(device_types, get_layers, schema_for_layer)

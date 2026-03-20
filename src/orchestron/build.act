@@ -62,6 +62,7 @@ class CompiledSysSpec(object):
         syssrc += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
         syssrc += "# WARNING WARNING WARNING WARNING WARNING\n\n"
         syssrc += "import logging\n\n"
+        syssrc += "import orchestron.app as oapp\n"
         syssrc += "import orchestron.device as odev\n"
         syssrc += "import orchestron.ttt as ttt\n"
         syssrc += "\n"
@@ -148,6 +149,7 @@ class CompiledSysSpec(object):
         syssrc += "}}\n"
         syssrc += "\n{syssrc_getlayers}\n"
         syssrc += "\n{syssrc_schema_for_layer}\n"
+        syssrc += "\n\nSYSSPEC = oapp.SysSpec(device_types, get_layers, schema_for_layer)"
         if _maybe_write_file(fc, "{output_dir}/{self.name}/sysspec.act", syssrc):
             print("+ App sysspec.act changed")
         else:
