@@ -1,7 +1,103 @@
+import file
+import logging
+import net
+import process
 
-class UnsupportedDevice(Exception):
-    pass
+import orchestron.app as oapp
+import orchestron.device as odev
+import orchestron.http_server as ohttp
+import orchestron.testing as ots
 
-class Unreachable(Exception):
-    """Exception raised when code is unreachable."""
-    pass
+
+def main(sysspec: oapp.SysSpec, env: Env, http: bool=True):
+    """Start a production Orchestron application.
+
+    This entrypoint wires together the standard runtime components used by an
+    Orchestron application: the device registry, the Transactional Transform
+    Layer (TTT) stack, optional HTTP server, and startup config loader.
+
+    Args:
+        sysspec: Generated system specification for the application
+        env: The main actor Env object, required to access capabilities
+        http (bool): When `True`, start the built-in HTTP server
+
+    Startup behavior:
+        Any config files provided on the command line are merged and applied to
+        the top layer as startup configuration.
+
+    Use it from the main actor:
+
+        import orchestron
+        import awesome_app.sysspec
+
+        actor main(env):
+            orchestron.main(awesome_app.sysspec.SYSSPEC, env)
+    """
+    rfcap = file.ReadFileCap(file.FileCap(env.cap))
+
+    logh = logging.Handler("Otron")
+    logh.add_sink(logging.StdoutSink())
+    logh.set_output_level(logging.TRACE)
+
+    logh_http = logging.Handler("HTTP")
+    logh_http.set_handler(logh)
+    logh_http.set_output_level(logging.DEBUG)
+
+    logh_ttt = logging.Handler("TTT")
+    logh_ttt.set_handler(logh)
+    logh_ttt.set_output_level(logging.INFO)
+
+    logh_dev = logging.Handler("Dev")
+    logh_dev.set_handler(logh)
+
+    log = logging.Logger(logh)
+
+    top_schema = sysspec.schema_for_layer(0)
+
+    dev_registry = odev.DeviceRegistry(sysspec.device_types, process.ProcessCap(env.cap), logh_dev)
+    cfs = sysspec.get_layers(dev_registry, logh_ttt)
+    oapp.RfsReconf(dev_registry, cfs)
+
+    if http:
+        tcpl_cap = net.TCPListenCap(net.TCPCap(net.NetCap(env.cap)))
+        ohttp.HttpServer(tcpl_cap, cfs=cfs, dev_registry=dev_registry, schema_for_layer=sysspec.schema_for_layer, log_handler=logh_http)
+
+    args = oapp.AppArgs.from_args(env.argv, env.exit)
+    oapp.StartupConfigApplier(args.config_files, args.exit_on_done, top_schema, cfs, env.exit, rfcap, logh)
+
+    log.info("Orchestron running..")
+
+def test_main(sysspec: oapp.SysSpec, log_handler: logging.Handler) -> ots.TestRig:
+    """Create a `TestRig` for actor-based Orchestron tests.
+
+    This entrypoint wires the minimal runtime components required for testing.
+
+    Args:
+        sysspec: Generated system specification for the application under test.
+        log_handler: Logging handler used by the created device registry and
+            layers so test output is routed through the test framework.
+
+    Returns:
+        TestRig: Helper object for applying config, inspecting layer state,
+            and capturing device configuration snapshots.
+
+    Use it from a test actor:
+
+        import orchestron
+        import awesome_app.layers.y_0 as cfs_layer
+        import awesome_app.sysspec
+
+        actor _test_netinfra(t):
+            root = cfs_layer.root()
+            root.netinfra.router.create("rtr1")
+            input_config = root.to_gdata()
+
+            tr = orchestron.test_main(awesome_app.sysspec.SYSSPEC, t.log_handler)
+            def cont(_r):
+                t.success(tr.device_adata_snapshot())
+            tr.edit_config(input_config, cont)
+    """
+    dev_registry = odev.DeviceRegistry(sysspec.device_types, None, log_handler)
+    cfs = sysspec.get_layers(dev_registry, log_handler)
+    oapp.RfsReconf(dev_registry, cfs)
+    return ots.TestRig(cfs, dev_registry, sysspec)

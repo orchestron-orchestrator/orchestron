@@ -7,7 +7,7 @@ import xml
 import tmf.tmf633
 import tmf.tmf640
 
-from orchestron import Unreachable
+from orchestron.exception import Unreachable
 import orchestron.device as odev
 import orchestron.ttt as ttt
 import orchestron.device_meta_config    # TODO: remove https://github.com/actonlang/acton/issues/2390
