@@ -43,6 +43,7 @@ SRC_DNODE = DRoot(
     children=[SRC_DNODE_CHILD_0],
     identities=[],
     rpcs=[],
+    module_metadata={'urn:ietf:params:xml:ns:yang:ietf-inet-types':('ietf-inet-types', '2013-07-15'), 'http://example.com/netinfra':('netinfra', '2019-01-01')},
 )
 
 def src_yang():
@@ -573,6 +574,7 @@ def src_yang():
 
 
 NS_netinfra = 'http://example.com/netinfra'
+NS_ietf_inet_types = 'urn:ietf:params:xml:ns:yang:ietf-inet-types'
 
 
 _breaker = 1
@@ -785,7 +787,3 @@ class root(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return root.from_gdata(self.to_gdata())
 
-
-schema_namespaces: set[str] = {
-    'http://example.com/netinfra',
-}

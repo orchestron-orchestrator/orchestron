@@ -215,6 +215,7 @@ SRC_DNODE = DRoot(
     children=[SRC_DNODE_CHILD_0, SRC_DNODE_CHILD_11, SRC_DNODE_CHILD_20],
     identities=[SRC_DNODE_IDENTITY_0, SRC_DNODE_IDENTITY_1, SRC_DNODE_IDENTITY_2, SRC_DNODE_IDENTITY_3, SRC_DNODE_IDENTITY_4, SRC_DNODE_IDENTITY_5],
     rpcs=[SRC_DNODE_RPC_0, SRC_DNODE_RPC_1, SRC_DNODE_RPC_2],
+    module_metadata={'urn:ietf:params:xml:ns:yang:ietf-yang-types':('ietf-yang-types', '2013-07-15'), 'urn:ietf:params:xml:ns:yang:iana-crypt-hash':('iana-crypt-hash', '2014-08-06'), 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm':('ietf-netconf-acm', '2018-02-14'), 'urn:ietf:params:xml:ns:yang:ietf-inet-types':('ietf-inet-types', '2013-07-15'), 'urn:ietf:params:xml:ns:yang:ietf-system':('ietf-system', '2014-08-06')},
 )
 
 def src_yang():
@@ -2543,8 +2544,11 @@ def src_yang():
     return res
 
 
+NS_iana_crypt_hash = 'urn:ietf:params:xml:ns:yang:iana-crypt-hash'
+NS_ietf_inet_types = 'urn:ietf:params:xml:ns:yang:ietf-inet-types'
 NS_ietf_netconf_acm = 'urn:ietf:params:xml:ns:yang:ietf-netconf-acm'
 NS_ietf_system = 'urn:ietf:params:xml:ns:yang:ietf-system'
+NS_ietf_yang_types = 'urn:ietf:params:xml:ns:yang:ietf-yang-types'
 
 
 _breaker = 1
@@ -3858,8 +3862,3 @@ actor rpc_root(tp: yang.gdata.TreeProvider):
         return tp.subscribe(cb_wrap, filt, opts)
 
 
-
-schema_namespaces: set[str] = {
-    'urn:ietf:params:xml:ns:yang:ietf-netconf-acm',
-    'urn:ietf:params:xml:ns:yang:ietf-system',
-}
