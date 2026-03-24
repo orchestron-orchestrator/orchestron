@@ -1,0 +1,7 @@
+
+class UnsupportedDevice(Exception):
+    pass
+
+class Unreachable(Exception):
+    """Exception raised when code is unreachable."""
+    pass

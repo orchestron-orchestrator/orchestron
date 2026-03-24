@@ -1,7 +1,7 @@
-import orchestron.app
+import orchestron
 
 import mini.sysspec
 
 
 actor main(env):
-    orchestron.app.main(mini.sysspec.SYSSPEC, env)
+    orchestron.main(mini.sysspec.SYSSPEC, env)

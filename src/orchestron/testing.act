@@ -86,10 +86,3 @@ class TestRig(object):
 
     def device_adata_snapshot(self):
         return device_config_adata_snapshot(self.dev_registry, self.sysspec.device_types)
-
-
-def test_main(sysspec, log_handler):
-    dev_registry = odev.DeviceRegistry(sysspec.device_types, None, log_handler)
-    cfs = sysspec.get_layers(dev_registry, log_handler)
-    oapp.RfsReconf(dev_registry, cfs)
-    return TestRig(cfs, dev_registry, sysspec)
