@@ -9,7 +9,7 @@ actor _test_netinfra1(t: testing.AsyncT):
     # Test input config
     root = cfs_layer.root()
     router = root.netinfra.router.create("rtr1", 1, "ietf")
-    router.mock = "ietf"
+    router.mock = True
 
     input_config = root.to_gdata()
 

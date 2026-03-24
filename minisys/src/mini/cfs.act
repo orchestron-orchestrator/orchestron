@@ -19,8 +19,7 @@ class Router(base.Router):
         oob_addr.address = i.name
         dev.credentials.username = "admin"
         dev.credentials.password = "admin"
-        if i.mock is not None:
-            dev.mock.module.create("ietf-system", "urn:ietf:params:xml:ns:yang:ietf-system")
+        dev.mock.enabled = i.mock
 
         rfs = o.rfs.create(i.name)
         bc = rfs.base_config

@@ -31,9 +31,8 @@ module netinfra {
         mandatory true;
       }
       leaf mock {
-        type enumeration {
-          enum ietf;
-        }
+        type boolean;
+        default false;
       }
     }
 
