@@ -92,6 +92,7 @@ SRC_DNODE = DRoot(
     children=[SRC_DNODE_CHILD_0, SRC_DNODE_CHILD_11],
     identities=[],
     rpcs=[],
+    module_metadata={'urn:ietf:params:xml:ns:yang:ietf-inet-types':('ietf-inet-types', '2013-07-15'), 'http://orchestron.org/yang/orchestron-rfs.yang':('orchestron-rfs', None)},
 )
 
 def src_yang():
@@ -712,6 +713,7 @@ def src_yang():
 
 
 NS_orchestron_rfs = 'http://orchestron.org/yang/orchestron-rfs.yang'
+NS_ietf_inet_types = 'urn:ietf:params:xml:ns:yang:ietf-inet-types'
 
 
 _breaker = 1
@@ -1334,7 +1336,3 @@ class orchestron_rfs__device(yang.adata.MNode):
 extension orchestron_rfs__device(Iterable[orchestron_rfs__device_entry]):
     def __iter__(self) -> Iterator[orchestron_rfs__device_entry]:
         return self.elements.__iter__()
-
-schema_namespaces: set[str] = {
-    'http://orchestron.org/yang/orchestron-rfs.yang',
-}

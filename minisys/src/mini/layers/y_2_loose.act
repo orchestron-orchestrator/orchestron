@@ -32,6 +32,7 @@ SRC_DNODE = DRoot(
     children=[SRC_DNODE_CHILD_0],
     identities=[],
     rpcs=[],
+    module_metadata={'http://orchestron.org/yang/orchestron-device.yang':('orchestron-device', None)},
 )
 
 def src_yang():
@@ -194,7 +195,3 @@ class root(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return root.from_gdata(self.to_gdata())
 
-
-schema_namespaces: set[str] = {
-    'http://orchestron.org/yang/orchestron-device.yang',
-}

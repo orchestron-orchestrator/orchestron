@@ -20,7 +20,6 @@ import mini.devices.ietf
 device_types: dict[str, odev.DeviceType] = {
     "ietf": odev.DeviceType(name="ietf",
             adapter_type=odev.NetconfAdapter,
-            schema_namespaces=mini.devices.ietf.schema_namespaces,
             src_dnode=mini.devices.ietf.SRC_DNODE,
         ),
 }

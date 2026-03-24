@@ -94,7 +94,6 @@ def new_netconf_mock_device_mgr(t: testing.EnvT, name: str, on_reconf: action(st
         "netconf": orchestron.device.DeviceType(
             name="netconf",
             adapter_type=orchestron.device.NetconfAdapter,
-            schema_namespaces={IETF_SYSTEM_NS},
             src_dnode=schema
         )
     }

@@ -29,19 +29,15 @@ TRANSACTION   = 3
 class DeviceSchema(object):
     name: str
 
-    ## Schema namespaces
-    schema_namespaces: set[str]
-
     src_dnode: yang.schema.DRoot
 
-    def __init__(self, name, schema_namespaces, src_dnode):
+    def __init__(self, name, src_dnode):
         self.name = name
-        self.schema_namespaces = schema_namespaces
         self.src_dnode = src_dnode
 
     @staticmethod
     def mock():
-        return DeviceSchema("mock", set(), yang.schema.DRoot())
+        return DeviceSchema("mock", yang.schema.DRoot())
 
 ## DeviceType represents a type of device, i.e. a specific platform or
 ## implementation of a device. It is used to define the schema and
@@ -57,10 +53,10 @@ class DeviceType(object):
 
     bundled_schema: DeviceSchema
 
-    def __init__(self, name: str, adapter_type, schema_namespaces, src_dnode):
+    def __init__(self, name: str, adapter_type, src_dnode):
         self.name = name
         self.adapter_type = adapter_type
-        self.bundled_schema = DeviceSchema(name, schema_namespaces, src_dnode)
+        self.bundled_schema = DeviceSchema(name, src_dnode)
 
 class MockRoot(yang.adata.MNode):
     """Mock root node for mock devices"""
@@ -1651,7 +1647,8 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
         if use_mock_server:
             state = CONNECTING
             pipes = transport.actor_pipe_pair()
-            mock_server = NetconfMockServer(pipes.server, _con_log_handler, _mock_capabilities_from_dmc(new_dmc), bundled_schema.src_dnode)
+            bundled_caps = ["{ns}?module={meta.module}{"?revision={meta.revision}" if meta.revision is not None else ""}" for ns, meta in bundled_schema.src_dnode.module_metadata.items()]
+            mock_server = NetconfMockServer(pipes.server, _con_log_handler, _mock_capabilities_from_dmc(new_dmc) + bundled_caps, bundled_schema.src_dnode)
             client = netconf.Client(pcap,
                                     "dummy-address",
                                     0,
