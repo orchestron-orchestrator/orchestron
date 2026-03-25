@@ -133,3 +133,48 @@ actor complete(t: testing.AsyncT):
 
 
 ########################
+
+class FailingRFSTransform(ttt.RFSFunction):
+    def transform_wrapper(self, cfg, device_info, memory, dynstate):
+        raise AssertionError("Test RFS transform error")
+
+rfs_fail_cfg = gdata.Container({
+    q("rfs"): gdata.List([q("name")], [
+        gdata.Container({
+            q("name"): gdata.Leaf("k1"),
+            q("base"): gdata.List([q("id")], [
+                gdata.Container({
+                    q("id"): gdata.Leaf("A"),
+                    q("val"): gdata.Leaf("one")
+                })
+            ])
+        })
+    ])
+})
+
+actor rfs_transform_exception(t: testing.AsyncT):
+    dev_registry = odev.DeviceRegistry(log_handler=t.log_handler)
+    stack = ttt.Layer("rfs", ttt.Container({q("rfs"): ttt.List(ttt.Container({q("base"): ttt.List(ttt.RFSTransform(FailingRFSTransform, dev_registry), [q("id")])}), [q("name")])}),
+            ttt.Sink())
+    sess = stack.newsession()
+
+    var started = False
+
+    def reconf_cb(dev):
+        if dev == "k1" and not started:
+            started = True
+
+            def cont(res):
+                testing.assertEqual(isinstance(res, Exception), True)
+                testing.assertEqual(sess.below().get(), gdata.Container())
+                t.success()
+
+            sess.edit_config(rfs_fail_cfg, cont)
+
+    dev_registry.on_reconf(reconf_cb)
+
+    dmc = DeviceMetaConfig("k1", Credentials("admin", "admin"), mock=Mock(preset=["cisco-ios-xr"]))
+    dev_registry.get("k1").set_dmc(dmc)
+
+
+########################

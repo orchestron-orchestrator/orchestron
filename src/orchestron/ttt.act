@@ -788,7 +788,7 @@ class _TransformTransactionBase(_Transaction):
     pending: list[(Transaction, str, ?Session, action(value)->None)]
     me: str
 
-    compute : proc(tid: str, merged: gdata.Node, out: ?Session) -> (gdata.Node, ?gdata.Node)
+    compute : proc(tid: str, merged: gdata.Node, out: ?Session) -> (?(gdata.Node, ?gdata.Node), ?Exception)
     clear : proc(tid: str, out: ?Session) -> None
     finalize : proc(tid: str) -> None
 
@@ -833,7 +833,11 @@ class _TransformTransactionBase(_Transaction):
                 #print('   #', tid, '(Transform)', _format_path(self.path), 'FAILURE', e, err=True)
                 return e
             else:
-                newout, newmem = self.compute(tid, merged, out)
+                outmem_opt, err = self.compute(tid, merged, out)
+                if err is not None:
+                    return err
+                outmem = expect(outmem_opt, "_TransformTransactionBase.configure: missing compute result")
+                newout, newmem = outmem
                 self.essays[tid] = (newout, newmem)
                 #print('   #', tid, '(Transform)', _format_path(self.path), 'OUTPUT\n       ', newout.prsrc(indent=4), err=True)
                 return 'Ok'
@@ -952,12 +956,16 @@ class _TransformTransaction(_TransformTransactionBase):
         self.lower = lower
 
     def compute(self, tid, merged, out):
-        newoutmem = self.function.transform_wrapper(merged, self.memory, self.dynstate)
-        newout = newoutmem.0
-        res = difference(self.output, newout)
-        if out is not None and res is not None:
-            out.configure(tid, {self.me: res})
-        return newoutmem
+        try:
+            newoutmem = self.function.transform_wrapper(merged, self.memory, self.dynstate)
+        except Exception as e:
+            return None, e
+        else:
+            newout = newoutmem.0
+            res = difference(self.output, newout)
+            if out is not None and res is not None:
+                out.configure(tid, {self.me: res})
+            return newoutmem, None
 
     def clear(self, tid, out):
         output = self.output
@@ -1072,13 +1080,18 @@ class _RFSTransaction(_TransformTransactionBase):
         modset, modset_id = self.dev.get_modules()
         if modset_id is not None:
             dev_content[gdata.Id(NS_orchestron_device, "modset_id")] = gdata.Leaf(modset_id)
+        newoutmem = (gdata.Container({}), None)
         if len(modset) > 0:
             #print('####', tid, '(RFSTransform)', _format_path(self.path), 'compute', self.devname, err=True)
-            newoutmem = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset), self.memory, self.dynstate)
-            newout = newoutmem.0
-            res = difference(self.output, newout)
-            if isinstance(res, gdata.Container):
-                dev_content[gdata.Id(NS_orchestron_device, "config")] = res
+            try:
+                newoutmem = self.function.transform_wrapper(merged, DeviceInfo(self.devname, modset), self.memory, self.dynstate)
+            except Exception as e:
+                return None, e
+            else:
+                newout = newoutmem.0
+                res = difference(self.output, newout)
+                if isinstance(res, gdata.Container):
+                    dev_content[gdata.Id(NS_orchestron_device, "config")] = res
         else:
             #print('####', tid, '(RFSTransform)', _format_path(self.path), 'compute', ": No device capabilities, skipping RFS transform for", self.devname, err=True)
             newoutmem = (gdata.Container({}), None)
@@ -1086,7 +1099,7 @@ class _RFSTransaction(_TransformTransactionBase):
         if out is not None:
             embedded_res = self.embed(dev_content)
             out.configure(tid, {self.me: embedded_res})
-        return newoutmem # TODO: dynstate for RFS?
+        return newoutmem, None # TODO: dynstate for RFS?
 
     def clear(self, tid, out):
         output = self.output
@@ -1192,7 +1205,7 @@ class _DeviceTransaction(_TransformTransactionBase):
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
-        return merged, None
+        return (merged, None), None
 
     def clear(self, tid, out):
         pass
@@ -1232,7 +1245,7 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
-        return merged, None
+        return (merged, None), None
 
     def clear(self, tid, out):
         pass
