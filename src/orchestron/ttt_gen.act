@@ -1,4 +1,5 @@
 
+import re
 import yang
 import yang.schema as schema
 
@@ -6,6 +7,35 @@ import yang.schema as schema
 def _fq_list_keys(l: schema.DList) -> str:
     return """[{", ".join(['yang.gdata.Id("{l.namespace}", "{k}")' for k in l.key])}]"""
 
+# These are reserved keywords in the acton language, so we must avoid generating
+# identifiers with these names.
+_reserved_keywords = {
+    "False","None","NotImplemented","Self","True","action","actor","after","and","as",
+    "assert","async","await","break","class","continue","def","del","elif","else",
+    "except","extension","finally","for","from","if","import","in","is","isinstance",
+    "lambda","mut","not","or","pass","proc","protocol","pure","raise","return","try",
+    "var","while","with","yield","_"
+    }
+
+def _parse_transform_ref(ext: schema.Ext) -> (fqname: str, module: str, name: str):
+    extarg_opt = ext.arg
+    if extarg_opt is not None:
+        extarg: str = extarg_opt
+        parts = extarg.split(".")
+        if len(parts) < 2:
+            raise ValueError("Invalid argument to orchestron:{ext.name}: '{extarg}'. Expected a fully qualified transform reference like app.cfs.Transform.")
+
+        for part in parts:
+            if part == "":
+                raise ValueError("Invalid argument to orchestron:{ext.name}: '{extarg}'. Expected a fully qualified transform reference like app.cfs.Transform.")
+            if part in _reserved_keywords:
+                raise ValueError("Invalid argument to orchestron:{ext.name}: '{extarg}'. '{part}' is a reserved Acton keyword.")
+            if re.match("^[A-Za-z][A-Za-z0-9_]+$", part) is None:
+                raise ValueError("Invalid argument to orchestron:{ext.name}: '{extarg}'. '{part}' is not a valid Acton name.")
+
+        return extarg, ".".join(parts[:-1]), parts[-1]
+
+    raise ValueError("Missing argument to orchestron:{ext.name}. Add a fully qualified transform reference, for example app.cfs.Transform.")
 
 class TTTSrc(object):
     def __init__(self, src: str, input_classes: list[str], state_classes: list[str], imports: list[str], defs: list[str], base_defs: list[str], act_defs: list[str]):
@@ -54,74 +84,68 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
 
     def transform_ext_to_tttsrc(sn: schema.DNodeInner, ext: schema.Ext) -> TTTSrc:
         is_list = isinstance(sn, schema.DList)
-        extarg = ext.arg
-        if extarg is not None:
-            transform = extarg
-            # TODO: somewhere we should check that the transform
-            # reference is valid, i.e. an instance of ttt.Transform
-            transform_module = ".".join(transform.split(".")[:-1])
-            transform_name = transform.split(".")[-1]
-            imports.append("import {transform_module}")
-            input_class = schema.get_path_name(spath)
-            if is_list:
-                input_class += "_entry"
-            input_classes.append(input_class)
-            memory_class = None
-            dynstate_class = None
-            for child in sn.children:
-                if isinstance(child, schema.DContainer):
-                    for subext in child.exts:
-                        subextprefix = subext.prefix
-                        if subextprefix is not None and subextprefix == "orchestron":
-                            subextname = subext.name
-                            if subextname == "memory":
-                                _memory_class: str = schema.get_path_name(spath + [child])
-                                state_classes.append(_memory_class)
-                                input_classes.append(_memory_class)
-                                memory_class = _memory_class
-                            elif subextname == "dynstate":
-                                _dynstate_class: str = schema.get_path_name(spath + [child])
-                                state_classes.append(input_class)
-                                state_classes.append(_dynstate_class)
-                                input_classes.append(_dynstate_class)
-                                dynstate_class = _dynstate_class
-            wrapper_extra_params = ", device_info" if ext.name == "rfs-transform" else ""
-            wrapper_extra_models = "\n"
-            transform_extra_typed_params = ""
-            if memory_class is not None:
-                wrapper_extra_params += ", modeled_memory"
-                wrapper_extra_models += "        modeled_memory = {memory_class}.from_gdata(memory) if memory is not None else None\n"
-                transform_extra_typed_params += ", memory: ?{memory_class}"
-                transform_output = "(yang.adata.MNode, ?yang.adata.MNode)"
-            else:
-                transform_output = "yang.adata.MNode"
-            if dynstate_class is not None:
-                wrapper_extra_params += ", modeled_dynstate"
-                wrapper_extra_models += "        modeled_dynstate = {dynstate_class}.from_gdata(dynstate) if dynstate is not None else None\n"
-                transform_extra_typed_params += ", dynstate: ?{dynstate_class}"
-                transform_actor_fq = transform + "Transform"
-                transform_actor_ctor = transform_name + "TransformCtor"
-                transform_actor_extra_params = ", ttt.expect(params.dev, \"Missing expected DeviceMgr param to {transform_actor_fq}.\")" if ext.name == "rfs-transform" else ""
-                memory_conv = ", {memory_class}.from_gdata(m) if m is not None else None" if memory_class is not None else ""
-                act_defs.append("""def {transform_actor_ctor}(params: ttt.TransformActorParams) -> ?proc(yang.gdata.Node, ?yang.gdata.Node) -> None:
+        transform = _parse_transform_ref(ext)
+        imports.append("import {transform.module}")
+        input_class = schema.get_path_name(spath)
+        if is_list:
+            input_class += "_entry"
+        input_classes.append(input_class)
+        memory_class = None
+        dynstate_class = None
+        for child in sn.children:
+            if isinstance(child, schema.DContainer):
+                for subext in child.exts:
+                    subextprefix = subext.prefix
+                    if subextprefix is not None and subextprefix == "orchestron":
+                        subextname = subext.name
+                        if subextname == "memory":
+                            _memory_class: str = schema.get_path_name(spath + [child])
+                            state_classes.append(_memory_class)
+                            input_classes.append(_memory_class)
+                            memory_class = _memory_class
+                        elif subextname == "dynstate":
+                            _dynstate_class: str = schema.get_path_name(spath + [child])
+                            state_classes.append(input_class)
+                            state_classes.append(_dynstate_class)
+                            input_classes.append(_dynstate_class)
+                            dynstate_class = _dynstate_class
+        wrapper_extra_params = ", device_info" if ext.name == "rfs-transform" else ""
+        wrapper_extra_models = "\n"
+        transform_extra_typed_params = ""
+        if memory_class is not None:
+            wrapper_extra_params += ", modeled_memory"
+            wrapper_extra_models += "        modeled_memory = {memory_class}.from_gdata(memory) if memory is not None else None\n"
+            transform_extra_typed_params += ", memory: ?{memory_class}"
+            transform_output = "(yang.adata.MNode, ?yang.adata.MNode)"
+        else:
+            transform_output = "yang.adata.MNode"
+        if dynstate_class is not None:
+            wrapper_extra_params += ", modeled_dynstate"
+            wrapper_extra_models += "        modeled_dynstate = {dynstate_class}.from_gdata(dynstate) if dynstate is not None else None\n"
+            transform_extra_typed_params += ", dynstate: ?{dynstate_class}"
+            transform_actor_fq = transform.fqname + "Transform"
+            transform_actor_ctor = transform.name + "TransformCtor"
+            transform_actor_extra_params = ", ttt.expect(params.dev, \"Missing expected DeviceMgr param to {transform_actor_fq}.\")" if ext.name == "rfs-transform" else ""
+            memory_conv = ", {memory_class}.from_gdata(m) if m is not None else None" if memory_class is not None else ""
+            act_defs.append("""def {transform_actor_ctor}(params: ttt.TransformActorParams) -> ?proc(yang.gdata.Node, ?yang.gdata.Node) -> None:
     def update_dynstate_type_wrapper(dynstate: ?{dynstate_class}):
         params.update_dynstate(dynstate.to_gdata() if dynstate is not None else None)
     act = {transform_actor_fq}(update_dynstate_type_wrapper{transform_actor_extra_params})
     return proc lambda c, m: act.on_conf({input_class}.from_gdata(c){memory_conv})
 """)
-            else:
-                transform_actor_ctor = "None"
-            if memory_class is not None:
-                wrapper_return = "output, new_memory = self.transform(modeled_input{wrapper_extra_params})\n" + \
-                    "        return output.to_gdata(), new_memory.to_gdata() if new_memory is not None else None"
-            else:
-                wrapper_return = "return self.transform(modeled_input{wrapper_extra_params}).to_gdata(), None"
+        else:
+            transform_actor_ctor = "None"
+        if memory_class is not None:
+            wrapper_return = "output, new_memory = self.transform(modeled_input{wrapper_extra_params})\n" + \
+                "        return output.to_gdata(), new_memory.to_gdata() if new_memory is not None else None"
+        else:
+            wrapper_return = "return self.transform(modeled_input{wrapper_extra_params}).to_gdata(), None"
 
-            root_path = ["{'{node.module}:' if prev.module != node.module else ''}{node.name}" if node is not None else None for prev, node in zip(spath, spath[1:] + [None])]
-            deserializer = root_path[:-1]
+        root_path = ["{'{node.module}:' if prev.module != node.module else ''}{node.name}" if node is not None else None for prev, node in zip(spath, spath[1:] + [None])]
+        deserializer = root_path[:-1]
 
-            if ext.name == "transform":
-                base_defs.append("""class {transform_name}(ttt.TransformFunction):
+        if ext.name == "transform":
+            base_defs.append("""class {transform.name}(ttt.TransformFunction):
     transform: mut({input_class}{transform_extra_typed_params}) -> {transform_output}
 
     @staticmethod
@@ -144,14 +168,14 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
-                if isinstance(sn, schema.DList):
-                    src = "ttt.List(ttt.Transform({transform}, {transform_actor_ctor}, lower, log_handler), {_fq_list_keys(sn)}{nsq(sn)})"
-                else:
-                    src = "ttt.Transform({transform}, {transform_actor_ctor}, lower, log_handler)"
-                return TTTSrc(src=src, input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+            if isinstance(sn, schema.DList):
+                src = "ttt.List(ttt.Transform({transform.fqname}, {transform_actor_ctor}, lower, log_handler), {_fq_list_keys(sn)}{nsq(sn)})"
+            else:
+                src = "ttt.Transform({transform.fqname}, {transform_actor_ctor}, lower, log_handler)"
+            return TTTSrc(src=src, input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
-            elif ext.name == "rfs-transform":
-                base_defs.append("""class {transform_name}(ttt.RFSFunction):
+        elif ext.name == "rfs-transform":
+            base_defs.append("""class {transform.name}(ttt.RFSFunction):
     transform: mut({input_class}, ttt.DeviceInfo{transform_extra_typed_params}) -> {transform_output}
 
     @staticmethod
@@ -174,14 +198,12 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         modeled_input = {input_class}.from_gdata(gdata_input){wrapper_extra_models}
         {wrapper_return}
 """)
-                if isinstance(sn, schema.DList):
-                    src = "ttt.List(ttt.RFSTransform({transform}, dev_registry, {transform_actor_ctor}, lower, log_handler), {_fq_list_keys(sn)}{nsq(sn)})"
-                else:
-                    src = "ttt.RFSTransform({transform}, dev_registry, {transform_actor_ctor}, lower, log_handler)"
-                return TTTSrc(src=src, input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
-            raise ValueError("Unknown extension name: {ext.name}")
-        else:
-            raise ValueError("Missing argument to orchestron:transform. Add path to transform as arg.")
+            if isinstance(sn, schema.DList):
+                src = "ttt.List(ttt.RFSTransform({transform.fqname}, dev_registry, {transform_actor_ctor}, lower, log_handler), {_fq_list_keys(sn)}{nsq(sn)})"
+            else:
+                src = "ttt.RFSTransform({transform.fqname}, dev_registry, {transform_actor_ctor}, lower, log_handler)"
+            return TTTSrc(src=src, input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
+        raise ValueError("Unknown extension name: {ext.name}")
 
     if isinstance(sn, schema.DList):
         for ext in sn.exts:
