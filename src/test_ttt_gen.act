@@ -73,6 +73,58 @@ ys_rfs = r"""module foo {
 }
 """
 
+ys_bad_transform_name = r"""module foo {
+  yang-version "1.1";
+  namespace "http://example.com/foo";
+  prefix "foo";
+  container c1 {
+    list foo {
+      key name;
+
+      leaf name {
+        type string;
+      }
+
+      list bar {
+        key name;
+
+        orchestron:transform Foobar;
+
+        leaf name {
+          type string;
+        }
+      }
+    }
+  }
+}
+"""
+
+ys_bad_transform_module_name = r"""module foo {
+  yang-version "1.1";
+  namespace "http://example.com/foo";
+  prefix "foo";
+  container c1 {
+    list foo {
+      key name;
+
+      leaf name {
+        type string;
+      }
+
+      list bar {
+        key name;
+
+        orchestron:transform foo-bar.crap;
+
+        leaf name {
+          type string;
+        }
+      }
+    }
+  }
+}
+"""
+
 def _test_ttt_gen_rfs_base():
     y = yang.compile([oyang.rfs, oyang.ietf_inet_types, ys_rfs])
     r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_1', '')
@@ -87,3 +139,19 @@ def _test_odev() -> str:
     y = yang.compile([oyang.device])
     r = ttt_gen.ttt_prsrc(y, '', '')
     return r.ttt
+
+def _test_ttt_gen_invalid_transform_name():
+    y = yang.compile([ys_bad_transform_name])
+    try:
+        ttt_gen.ttt_prsrc(y, 'respnet.layers.y_0', 'respnet.layers.y_1_loose')
+    except ValueError as e:
+        if "Expected a fully qualified transform reference" not in e.error_message:
+            raise e
+
+def _test_ttt_gen_invalid_transform_module_name():
+    y = yang.compile([ys_bad_transform_module_name])
+    try:
+        ttt_gen.ttt_prsrc(y, 'respnet.layers.y_0', 'respnet.layers.y_1_loose')
+    except ValueError as e:
+        if "not a valid Acton name" not in e.error_message:
+            raise e
