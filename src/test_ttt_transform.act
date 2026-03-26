@@ -1,7 +1,6 @@
 import testing
 import logging
 
-import orchestron.device as odev
 import orchestron.ttt as ttt
 import yang.gdata as gdata
 import yang.adata as adata
@@ -619,6 +618,23 @@ actor transform_memory(t: testing.AsyncT):
         s2.edit_config(gdata.Leaf(0), None, cont2)
 
     s1.edit_config(gdata.Leaf(42), None, cont1)
+
+########################
+
+class FailingTransform(ttt.TransformFunction):
+    def transform_wrapper(self, cfg: gdata.Node, memory: ?gdata.Node, dynstate: ?gdata.Node):
+        raise AssertionError("Test transform error")
+
+actor transform_exception(t: testing.AsyncT):
+    router = ttt.Transform(FailingTransform) ([], None)
+    sess = ttt.Session("s1", router, None)
+
+    def cont(res):
+        testing.assertEqual(isinstance(res, Exception), True)
+        testing.assertEqual(sess.get(), gdata.Container())
+        t.success()
+
+    sess.edit_config(gdata.Leaf(1), cont)
 
 ########################
 
