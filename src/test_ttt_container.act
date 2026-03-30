@@ -107,11 +107,11 @@ actor all_delete(t: testing.AsyncT):
             })
         })
 
-    tlist = ttt.Container({
+    tcont = ttt.Container({
                 q("left"): ttt.Transform(ttt.PassThrough),
                 q("right"): ttt.Transform(ttt.PassThrough)
             }) ([], None)
-    t1 = tlist.newtrans()
+    t1 = tcont.newtrans()
     t1.configure("1", {"srcA": in1})
 
     def cont1(r):
@@ -121,8 +121,8 @@ actor all_delete(t: testing.AsyncT):
         t1.configure("1", {"srcA": gdata.Absent()})
 
         def cont2(r):
-            if isinstance(r, str):
-                testing.assertEqual(r, "Empty")
+            if isinstance(r, ttt.CfgOk):
+                testing.assertEqual(r.empty, True)
             t1.commit("1", True)
             out2 = t1.get()
             exp2 = gdata.Container({
@@ -159,11 +159,11 @@ actor nested_delete(t: testing.AsyncT):
         ])
     })
 
-    tlist = ttt.Container({
+    tcont = ttt.Container({
                 q("left"): ttt.List(ttt.Transform(ttt.PassThrough), [q("name")]),
                 q("right"): ttt.List(ttt.Transform(ttt.PassThrough), [q("name")])
             }) ([], None)
-    t1 = tlist.newtrans()
+    t1 = tcont.newtrans()
     t1.configure("1", {"srcA": in1})
 
     def cont1(r):
@@ -173,8 +173,8 @@ actor nested_delete(t: testing.AsyncT):
         t1.configure("1", {"srcA": gdata.Absent()})
 
         def cont2(r):
-            if isinstance(r, str):
-                testing.assertEqual(r, "Empty")
+            if isinstance(r, ttt.CfgOk):
+                testing.assertEqual(r.empty, True)
             t1.commit("1", True)
             out2 = t1.get()
             exp2 = gdata.Container({

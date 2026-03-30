@@ -114,25 +114,19 @@ class CfgResult():
     pass
 
 class CfgOk(CfgResult):
-    def __init__(self):
-        pass
+    empty: bool
+    linkdiff: list[(str, gdata.FNode, Node, bool)]
+    def __init__(self, empty=False, linkdiff=[]):
+        self.empty = empty
+        self.linkdiff = linkdiff
     def __str__(self):
-        return 'CfgOk'
-
-class CfgEmpty(CfgResult):
-    def __init__(self):
-        pass
-    def __str__(self):
-        return 'CfgEmpty'
+        return 'CfgOk(empty=True)' if self.empty else 'CfgOk()'
 
 class CfgError(CfgResult):
     def __init__(self, exception: Exception):
         self.exception = exception
     def __str__(self):
         return 'CfgError(' + str(self.exception) + ')'
-
-Ok = CfgOk()
-Empty = CfgEmpty()
 
 class YieldState[T(Hashable)](object):
     it: Iterator[T]
@@ -171,6 +165,12 @@ actor Transaction(impl: _Transaction):
     def configure(tid, diff, out, force=False):
         return impl.configure(tid, diff, out, force)
 
+    def linked_cfg(tid, tag, cfg, out):
+        return impl.linked_cfg(tid, tag, cfg, out)
+
+    def linkage(tid, linkdiff, out):
+        return impl.linkage(tid, linkdiff, out)
+
     # yield action
     def lock(tid, out, done):
         impl.lock(self, tid, out, done)
@@ -199,13 +199,21 @@ actor Transaction(impl: _Transaction):
 class _Transaction(object):
     path: list[value]
     configure:  proc(tid: str, diff: dict[str,gdata.Node], out: ?Session, force: ?bool) -> CfgResult
+    linked_cfg: proc(tid: str, tag: str, cfg: gdata.Node, out: ?Session) -> CfgResult
+    linkage: proc(tid: str, linkdiff: list[(str,gdata.FNode,Node,bool)], out: ?Session) -> CfgResult
     # yield action
     lock : proc(actself: Transaction, tid: str, out: ?Session, done: action(CfgResult) -> None) -> None
     lock_cont : proc(actself: Transaction, res: CfgResult) -> None
     commit: proc(tid: str, ok: bool) -> None
     wait_complete: proc(actself: Transaction, tid: str, done: action(value) -> None) -> None
-    wait_complete_cont : proc(actself: Transaction, res: value) -> None
+    wait_complete_cont: proc(actself: Transaction, res: value) -> None
     get: proc() -> gdata.Node
+
+    proc def linked_cfg(self, tid, tag, cfg, out):
+        return CfgOk()
+
+    proc def linkage(self, tid, linkdiff, out):
+        return CfgOk()
 
     proc def init_dynstate(self, node: Node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?gdata.Node)->None):
         pass
@@ -284,9 +292,8 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
         res = root.configure(tid, diff, lower, force)
         if not isinstance(res, CfgError) and lower is not None:
             res = lower.apply(tid, force=False)
-        rr = CfgOk() if isinstance(res, CfgEmpty) else res
-        #print('   #', tid, '(Layer)', name, 'APPLY RESULT', rr, err=True)
-        return rr
+        #print('   #', tid, '(Layer)', name, 'APPLY RESULT', res, err=True)
+        return res
 
     # yield action
     def lock(tid, done:?action(CfgResult)->None=None):
@@ -314,9 +321,8 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
     def lock_cont2(res):
         #print('####', tid_state, '(Layer)', name, 'lock_cont2', err=True)
         if lock_cont is not None:
-            rr = CfgOk() if isinstance(res, CfgEmpty) else res
-            #print('   #', tid_state, '(Layer)', name, 'LOCK RESULT', rr, err=True)
-            lock_cont(rr)
+            #print('   #', tid_state, '(Layer)', name, 'LOCK RESULT', res, err=True)
+            lock_cont(res)
         lock_cont = None
 
     def commit(tid, ok):
@@ -403,7 +409,7 @@ class _ContainerTransaction(_Transaction):
         self.module = module
 
     def configure(self, tid, diff, out, force=False):
-        #print('####', tid, '(Container)', _format_path(self.path), 'configure force:', force, actorid(), err=True)
+        #print('####', tid, '(Container)', _format_path(self.path), 'configure force:', force, 'diff:', diff, actorid(), err=True)
         diff_by_child = transpose_container(diff)
         # Extra nodes present in diff_by_child represent configuration that is
         # not any of our embedded transforms. These may be key leaf values, or
@@ -436,19 +442,20 @@ class _ContainerTransaction(_Transaction):
 
     def _analyze(self, results):
         self.accum.update(results.items())
-        res = CfgEmpty()
+        empty = True
         for r in results.values():
             if isinstance(r, CfgError):
                 #print('   # ...... (Container)', _format_path(self.path), 'ANALYZE ERROR:', r, err=True)
                 return r
             if isinstance(r, CfgOk):
-                res = r
-        #print('   # ...... (Container)', _format_path(self.path), 'ANALYZE RESULT: Ok', err=True)
-        return res
+                empty = empty and r.empty
+        r = CfgOk(empty)
+        #print('   # ...... (Container)', _format_path(self.path), 'ANALYZE RESULT:', r, err=True)
+        return r
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
-        #print('####', tid, '(Container)', _format_path(self.path), 'lock', sorted(self.accum.keys()), err=True)
+        #print('####', tid, '(Container)', _format_path(self.path), 'lock', gdata.hack_sorted(self.accum.keys()), err=True)
         it = iter(gdata.hack_sorted(self.accum.keys()))
         try:
             key = next(it)
@@ -686,15 +693,15 @@ class _ListTransaction(_Transaction):
 
     def _analyze(self, results: dict[str,CfgResult]):
         self.accum.update(results.items())
-        res = CfgEmpty()
+        empty = True
         for r in results.values():
             if isinstance(r, CfgError):
                 #print('   # ...... (List)', _format_path(self.path), 'ANALYZE ERROR:', r, err=True)
                 return r
             if isinstance(r, CfgOk):
-                res = r
+                empty = empty and r.empty
         #print('   # ...... (List)', _format_path(self.path), 'ANALYZE RESULT:', res, err=True)
-        return res
+        return CfgOk(empty)
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):
@@ -736,7 +743,7 @@ class _ListTransaction(_Transaction):
             tr.commit(tid, ok)
         deletes = set()
         for key,res in self.accum.items():
-            if isinstance(res, CfgEmpty):
+            if isinstance(res, CfgOk) and res.empty:
                 #print('   #', tid, '(List)', _format_path(self.path), 'DELETE ELEMENT', key, err=True)
                 deletes.add(key)
         self.liststate.release(tid, ok, deletes)
@@ -812,6 +819,14 @@ class _TransformTransactionBase(_Transaction):
     output: ?gdata.Node
     locker: ?str
     pending: list[(Transaction, str, ?Session, action(CfgResult)->None)]
+
+    linked: dict[str, gdata.Node]                               # Active linked cfg tree per link tag
+    candidate_linked: dict[str, dict[str, gdata.Node]]          # As above, per ongoing transaction
+    subscriptions: dict[str, gdata.FNode]                       # Active linked data source per link tag
+    candidate_subscriptions: dict[str, dict[str, gdata.FNode]]  # As above, per ongoing transaction
+    subscribers: dict[str, Node]                                # Active linked data receiver per link tag
+    candidate_subscribers: dict[str, dict[str, Node]]           # As above, per ongoing transaction
+
     me: str
 
     compute : proc(tid: str, merged: gdata.Node, out: ?Session) -> (?(gdata.Node, ?gdata.Node), ?Exception)
@@ -827,6 +842,14 @@ class _TransformTransactionBase(_Transaction):
         self.output = None
         self.locker = None
         self.pending = []
+
+        self.linked = {}
+        self.candidate_linked = {}
+        self.subscriptions = {}
+        self.candidate_subscriptions = {}
+        self.subscribers = {}
+        self.candidate_subscribers = {}
+
         self.me = ''  # Initialize first before any self reference
         self.me = '(src_' + str(self)[-10:-1] + ')'  # Now safe to use str(self)
 
@@ -849,7 +872,7 @@ class _TransformTransactionBase(_Transaction):
             self.essays[tid] = (None, None) # TODO: do we want to keep memory?
             #print('   #', tid, '(Transform)', _format_path(self.path), 'EMPTY CONFIG', err=True)
             self.clear(tid, out)
-            return CfgEmpty()
+            return CfgOk(empty=True)
         else:
             try:
                 merged = assert_complete(merge(newconf))
@@ -859,7 +882,8 @@ class _TransformTransactionBase(_Transaction):
                 #print('   #', tid, '(Transform)', _format_path(self.path), 'FAILURE', e, err=True)
                 return CfgError(e)
             else:
-                outmem_opt, err = self.compute(tid, merged, out)
+                linked = self.candidate_linked.get_def(tid, self.linked)
+                outmem_opt, err = self.compute(tid, merged, out)    # Insert linked as third argument
                 if err is not None:
                     return CfgError(err)
                 outmem = expect(outmem_opt, "_TransformTransactionBase.configure: missing compute result")
@@ -868,6 +892,12 @@ class _TransformTransactionBase(_Transaction):
                 #print('   #', tid, '(Transform)', _format_path(self.path), 'OUTPUT\n       ', newout.prsrc(indent=4), err=True)
                 return CfgOk()
         return CfgOk()
+
+    def linked_cfg(self, tid, tag, cfg, out):
+        if tid not in self.candidate_linked:
+            self.candidate_linked[tid] = {}
+        self.candidate_linked[tid][tag] = cfg
+        return self.configure(tid, {}, out)
 
     # yield action
     def lock(self, actself, tid, out: ?Session, done):                          # yield await
@@ -888,7 +918,7 @@ class _TransformTransactionBase(_Transaction):
             done(res)
         else:
             #print('   #', tid, '(Transform)', _format_path(self.path), 'LOCKED', err=True)
-            done(CfgOk() if self.candidates[tid] else CfgEmpty())
+            done(CfgOk(empty = not self.candidates[tid]))
 
     def lock_cont (self, actself, res):
         pass
