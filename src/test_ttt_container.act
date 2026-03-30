@@ -385,7 +385,7 @@ actor config_failure(t: testing.AsyncT):
             t2.commit("2", True)
             r = t2.get()
             if r != a0b1:
-                testing.assertEqual(r.prsrc(), a0b1.prsrc())
+                testing.assertEqual(r, a0b1)
             t.success()
 
         t2.lock("2", None, cont2)
