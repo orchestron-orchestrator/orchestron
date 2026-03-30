@@ -236,7 +236,7 @@ actor multi_layer(t: testing.AsyncT):
 
     def cont(_r: value):
         r1 = sess.below().get()
-        testing.assertEqual(r1.prsrc(), cfg3.prsrc())
+        testing.assertEqual(r1, cfg3)
         r2 = sess.below().below().get()
         testing.assertEqual(r2, out3)
         t.success()
