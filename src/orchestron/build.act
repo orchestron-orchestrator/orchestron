@@ -48,7 +48,7 @@ class CompiledSysSpec(object):
     layers: list[CompiledLayer]
     def __init__(self, name: str, layers: list[CompiledLayer], device_types: list[CompiledDeviceType]):
         self.name = name
-        self.layers = layers + [CompiledLayer(yang.compile([oyang.device]), [oyang.device])]
+        self.layers = layers + [CompiledLayer(yang.compile([oyang.stratoweave, oyang.device]), [oyang.stratoweave, oyang.device])]
         self.dev_types = {dev_type.name: dev_type for dev_type in device_types}
 
     def gen_app(self, fc: file.FileCap, output_dir: str):

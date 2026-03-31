@@ -6,7 +6,7 @@ import yang
 actor main(env):
     wfc = file.WriteFileCap(file.FileCap(env.cap))
 
-    schema_yang = [oyang.rfs, oyang.ietf_inet_types]
+    schema_yang = [oyang.rfs, oyang.stratoweave, oyang.ietf_inet_types]
     y = yang.compile(schema_yang)
     src = y.prdaclass(schema_yang=schema_yang, root_path=["orchestron-rfs:device"]).encode()
 

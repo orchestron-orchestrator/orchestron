@@ -21,7 +21,7 @@ _identities: list[DIdentity] = []
 
 SRC_DNODE_CHILD_0 = DContainer(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='devices', config=True, presence=False, children=[
     DList(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='device', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
-            Ext('orchestron', 'device-config')
+            DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='device-config', arg=None, exts=[])
         ], children=[
         DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
         DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='modset_id', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
@@ -32,15 +32,66 @@ SRC_DNODE = DRoot(
     children=[SRC_DNODE_CHILD_0],
     identities=[],
     rpcs=[],
-    module_metadata={'http://orchestron.org/yang/orchestron-device.yang':('orchestron-device', None)},
+    module_metadata={'http://stratoweave.net/yang/stratoweave.yang':('stratoweave', '2026-04-01'), 'http://orchestron.org/yang/orchestron-device.yang':('orchestron-device', None)},
 )
 
 def src_yang():
     res = []
+    res.append(r"""module stratoweave {
+  yang-version "1.1";
+  namespace "http://stratoweave.net/yang/stratoweave.yang";
+  prefix "sw";
+
+  description
+    "This module defines Stratoweave YANG extensions.";
+
+  revision 2026-04-01;
+
+  extension device {
+    description
+      "Used internally in the list defining the device manager model.";
+  }
+  extension device-config {
+    description
+      "Used internally in the list defining the device configuration store.";
+  }
+  extension transform {
+    description
+      "Used in a list or container defining a transform model. Takes as an
+      argument the fully qualified name of the type implementing the transform
+      function in user code. Makes the code generator create the base type in
+      app.layers.base_X.";
+    argument "function";
+  }
+  extension rfs-transform {
+    description
+      "Used in a list or container defining an RFS transform model. Takes as an
+      argument the fully qualified name of the type implementing the RFS
+      transform function in user code. Makes the code generator create the base
+      type in app.layers.base_X.";
+    argument "function";
+  }
+  extension dynstate {
+    description
+      "Used in the dynstate container of a transform model. Enriches the
+      transform function inputs with an additional read-only structure. This
+      subtree is accessible for writes to the transform actor for async
+      (environmental) updates.";
+  }
+  extension memory {
+    description
+      "Used in the memory container of a transform model. Enriches the transform
+      function inputs with an additional read-only structure. The transform
+      function may update this subtree by returning new data.";
+  }
+}""")
     res.append(r"""module orchestron-device {
   yang-version "1.1";
   namespace "http://orchestron.org/yang/orchestron-device.yang";
   prefix "odev";
+  import stratoweave {
+    prefix sw;
+  }
 
   description "Device config";
 
@@ -48,7 +99,7 @@ def src_yang():
     list device {
       key name;
 
-      orchestron:device-config;
+      sw:device-config;
 
       leaf name {
         type string;
@@ -69,6 +120,7 @@ def src_yang():
 
 
 NS_orchestron_device = 'http://orchestron.org/yang/orchestron-device.yang'
+NS_stratoweave = 'http://stratoweave.net/yang/stratoweave.yang'
 
 
 _breaker = 1

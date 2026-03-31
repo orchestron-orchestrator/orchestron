@@ -1,9 +1,61 @@
+stratoweave = r"""module stratoweave {
+  yang-version "1.1";
+  namespace "http://stratoweave.net/yang/stratoweave.yang";
+  prefix "sw";
+
+  description
+    "This module defines Stratoweave YANG extensions.";
+
+  revision 2026-04-01;
+
+  extension device {
+    description
+      "Used internally in the list defining the device manager model.";
+  }
+  extension device-config {
+    description
+      "Used internally in the list defining the device configuration store.";
+  }
+  extension transform {
+    description
+      "Used in a list or container defining a transform model. Takes as an
+      argument the fully qualified name of the type implementing the transform
+      function in user code. Makes the code generator create the base type in
+      app.layers.base_X.";
+    argument "function";
+  }
+  extension rfs-transform {
+    description
+      "Used in a list or container defining an RFS transform model. Takes as an
+      argument the fully qualified name of the type implementing the RFS
+      transform function in user code. Makes the code generator create the base
+      type in app.layers.base_X.";
+    argument "function";
+  }
+  extension dynstate {
+    description
+      "Used in the dynstate container of a transform model. Enriches the
+      transform function inputs with an additional read-only structure. This
+      subtree is accessible for writes to the transform actor for async
+      (environmental) updates.";
+  }
+  extension memory {
+    description
+      "Used in the memory container of a transform model. Enriches the transform
+      function inputs with an additional read-only structure. The transform
+      function may update this subtree by returning new data.";
+  }
+}"""
+
 
 rfs = r"""module orchestron-rfs {
   yang-version "1.1";
   namespace "http://orchestron.org/yang/orchestron-rfs.yang";
   prefix "orfs";
 
+  import stratoweave {
+    prefix sw;
+  }
   import ietf-inet-types {
     prefix inet;
   }
@@ -13,7 +65,7 @@ rfs = r"""module orchestron-rfs {
   list device {
     key name;
 
-    orchestron:device;
+    sw:device;
 
     leaf name {
       type string;
@@ -157,6 +209,9 @@ device = r"""module orchestron-device {
   yang-version "1.1";
   namespace "http://orchestron.org/yang/orchestron-device.yang";
   prefix "odev";
+  import stratoweave {
+    prefix sw;
+  }
 
   description "Device config";
 
@@ -164,7 +219,7 @@ device = r"""module orchestron-device {
     list device {
       key name;
 
-      orchestron:device-config;
+      sw:device-config;
 
       leaf name {
         type string;
