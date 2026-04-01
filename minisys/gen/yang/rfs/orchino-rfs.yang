@@ -3,6 +3,9 @@ module mini-rfs {
     namespace "http://example.com/mini-rfs";
     prefix "mini-rfs";
 
+    import stratoweave {
+        prefix sw;
+    }
     import orchestron-rfs {
         prefix orfs;
     }
@@ -12,7 +15,7 @@ module mini-rfs {
 
     augment "/orfs:rfs" {
         container base-config {
-            orchestron:rfs-transform mini.rfs.BaseConfig;
+            sw:rfs-transform mini.rfs.BaseConfig;
 
             leaf name {
                 type string;
@@ -28,14 +31,14 @@ module mini-rfs {
         list bar {
             key name;
 
-            orchestron:rfs-transform mini.rfs.Bar;
+            sw:rfs-transform mini.rfs.Bar;
 
             leaf name {
                 type string;
             }
 
             container dynstate {
-                orchestron:dynstate;
+                sw:dynstate;
                 leaf current-datetime {
                     type string;
                 }

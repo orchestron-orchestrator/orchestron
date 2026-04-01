@@ -81,23 +81,23 @@ SRC_DNODE_CHILD_10 = DContainer(module='orchestron-rfs', namespace='http://orche
 ])
 
 SRC_DNODE_CHILD_0 = DList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='device', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
-        Ext('orchestron', 'device')
+        DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='device', arg=None, exts=[])
     ], children=[SRC_DNODE_CHILD_1, SRC_DNODE_CHILD_2, SRC_DNODE_CHILD_3, SRC_DNODE_CHILD_4, SRC_DNODE_CHILD_5, SRC_DNODE_CHILD_6, SRC_DNODE_CHILD_7, SRC_DNODE_CHILD_8, SRC_DNODE_CHILD_9, SRC_DNODE_CHILD_10])
 
 SRC_DNODE_CHILD_11 = DList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='rfs', key=['name'], config=True, min_elements=0, ordered_by='system', children=[
     DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='name', config=True, description='Device name', mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
     DContainer(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='base-config', config=True, presence=False, exts=[
-            Ext('orchestron', 'rfs-transform', arg='mini.rfs.BaseConfig')
+            DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='rfs-transform', arg='mini.rfs.BaseConfig', exts=[])
         ], children=[
         DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='name', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
         DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='ipv4-address', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
     ]),
     DList(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='bar', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
-            Ext('orchestron', 'rfs-transform', arg='mini.rfs.Bar')
+            DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='rfs-transform', arg='mini.rfs.Bar', exts=[])
         ], children=[
         DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
         DContainer(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='dynstate', config=True, presence=False, exts=[
-                Ext('orchestron', 'dynstate')
+                DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='dynstate', arg=None, exts=[])
             ], children=[
             DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='current-datetime', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
         ])
@@ -108,7 +108,7 @@ SRC_DNODE = DRoot(
     children=[SRC_DNODE_CHILD_0, SRC_DNODE_CHILD_11],
     identities=[],
     rpcs=[],
-    module_metadata={'urn:ietf:params:xml:ns:yang:ietf-inet-types':('ietf-inet-types', '2013-07-15'), 'http://orchestron.org/yang/orchestron-rfs.yang':('orchestron-rfs', None), 'http://example.com/mini-rfs':('mini-rfs', None)},
+    module_metadata={'urn:ietf:params:xml:ns:yang:ietf-inet-types':('ietf-inet-types', '2013-07-15'), 'http://stratoweave.net/yang/stratoweave.yang':('stratoweave', '2026-04-01'), 'http://orchestron.org/yang/orchestron-rfs.yang':('orchestron-rfs', None), 'http://example.com/mini-rfs':('mini-rfs', None)},
 )
 
 def src_yang():
@@ -118,6 +118,9 @@ def src_yang():
     namespace "http://example.com/mini-rfs";
     prefix "mini-rfs";
 
+    import stratoweave {
+        prefix sw;
+    }
     import orchestron-rfs {
         prefix orfs;
     }
@@ -127,7 +130,7 @@ def src_yang():
 
     augment "/orfs:rfs" {
         container base-config {
-            orchestron:rfs-transform mini.rfs.BaseConfig;
+            sw:rfs-transform mini.rfs.BaseConfig;
 
             leaf name {
                 type string;
@@ -143,14 +146,14 @@ def src_yang():
         list bar {
             key name;
 
-            orchestron:rfs-transform mini.rfs.Bar;
+            sw:rfs-transform mini.rfs.Bar;
 
             leaf name {
                 type string;
             }
 
             container dynstate {
-                orchestron:dynstate;
+                sw:dynstate;
                 leaf current-datetime {
                     type string;
                 }
@@ -159,11 +162,62 @@ def src_yang():
     }
 }
 """)
+    res.append(r"""module stratoweave {
+  yang-version "1.1";
+  namespace "http://stratoweave.net/yang/stratoweave.yang";
+  prefix "sw";
+
+  description
+    "This module defines Stratoweave YANG extensions.";
+
+  revision 2026-04-01;
+
+  extension device {
+    description
+      "Used internally in the list defining the device manager model.";
+  }
+  extension device-config {
+    description
+      "Used internally in the list defining the device configuration store.";
+  }
+  extension transform {
+    description
+      "Used in a list or container defining a transform model. Takes as an
+      argument the fully qualified name of the type implementing the transform
+      function in user code. Makes the code generator create the base type in
+      app.layers.base_X.";
+    argument "function";
+  }
+  extension rfs-transform {
+    description
+      "Used in a list or container defining an RFS transform model. Takes as an
+      argument the fully qualified name of the type implementing the RFS
+      transform function in user code. Makes the code generator create the base
+      type in app.layers.base_X.";
+    argument "function";
+  }
+  extension dynstate {
+    description
+      "Used in the dynstate container of a transform model. Enriches the
+      transform function inputs with an additional read-only structure. This
+      subtree is accessible for writes to the transform actor for async
+      (environmental) updates.";
+  }
+  extension memory {
+    description
+      "Used in the memory container of a transform model. Enriches the transform
+      function inputs with an additional read-only structure. The transform
+      function may update this subtree by returning new data.";
+  }
+}""")
     res.append(r"""module orchestron-rfs {
   yang-version "1.1";
   namespace "http://orchestron.org/yang/orchestron-rfs.yang";
   prefix "orfs";
 
+  import stratoweave {
+    prefix sw;
+  }
   import ietf-inet-types {
     prefix inet;
   }
@@ -173,7 +227,7 @@ def src_yang():
   list device {
     key name;
 
-    orchestron:device;
+    sw:device;
 
     leaf name {
       type string;
@@ -776,6 +830,7 @@ def src_yang():
 
 NS_mini_rfs = 'http://example.com/mini-rfs'
 NS_orchestron_rfs = 'http://orchestron.org/yang/orchestron-rfs.yang'
+NS_stratoweave = 'http://stratoweave.net/yang/stratoweave.yang'
 NS_ietf_inet_types = 'urn:ietf:params:xml:ns:yang:ietf-inet-types'
 
 

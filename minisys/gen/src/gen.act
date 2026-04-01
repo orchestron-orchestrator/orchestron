@@ -9,9 +9,9 @@ actor main(env):
     pc = process.ProcessCap(env.cap)
 
     cfs_layer = orchestron.build.Layer.from_dir(fc, "yang/cfs")
-    cfs_layer.models.append(oyang.ietf_inet_types)
+    cfs_layer.models.extend([oyang.stratoweave, oyang.ietf_inet_types])
     rfs_layer = orchestron.build.Layer.from_dir(fc, "yang/rfs")
-    rfs_layer.models.extend([oyang.rfs, oyang.ietf_inet_types])
+    rfs_layer.models.extend([oyang.stratoweave, oyang.rfs, oyang.ietf_inet_types])
 
     spec = orchestron.build.SysSpec("mini", [
         cfs_layer,

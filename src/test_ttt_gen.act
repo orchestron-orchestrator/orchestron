@@ -8,6 +8,9 @@ ys_cfs = r"""module foo {
   yang-version "1.1";
   namespace "http://example.com/foo";
   prefix "foo";
+  import stratoweave {
+    prefix sw;
+  }
   container c1 {
     list foo {
       key name;
@@ -19,7 +22,7 @@ ys_cfs = r"""module foo {
       list bar {
         key name;
 
-        orchestron:transform respnet.cfs.Foobar;
+        sw:transform respnet.cfs.Foobar;
 
         leaf name {
           type string;
@@ -31,12 +34,12 @@ ys_cfs = r"""module foo {
 """
 
 def _test_ttt_gen_cfs_base():
-    y = yang.compile([ys_cfs])
+    y = yang.compile([ys_cfs, oyang.stratoweave])
     r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_0', 'respnet.layers.y_1_loose')
     return r.base
 
 def _test_ttt_gen_cfs_ttt():
-    y = yang.compile([ys_cfs])
+    y = yang.compile([ys_cfs, oyang.stratoweave])
     r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_0', 'respnet.layers.y_1_loose')
     return r.ttt
 
@@ -44,6 +47,9 @@ ys_rfs = r"""module foo {
   yang-version "1.1";
   namespace "http://example.com/foo";
   prefix "foo";
+  import stratoweave {
+    prefix sw;
+  }
   import orchestron-rfs {
     prefix orfs;
   }
@@ -51,19 +57,19 @@ ys_rfs = r"""module foo {
     list backbone-interface {
       key name;
 
-      orchestron:rfs-transform respnet.rfs.BBInterface;
+      sw:rfs-transform respnet.rfs.BBInterface;
 
       leaf name {
         type string;
       }
       container dynstate {
-        orchestron:dynstate;
+        sw:dynstate;
         leaf enable-polling {
           type boolean;
         }
       }
       container memory {
-        orchestron:memory;
+        sw:memory;
         leaf allocated-id {
           type uint64;
         }
@@ -77,6 +83,9 @@ ys_bad_transform_name = r"""module foo {
   yang-version "1.1";
   namespace "http://example.com/foo";
   prefix "foo";
+  import stratoweave {
+    prefix sw;
+  }
   container c1 {
     list foo {
       key name;
@@ -88,7 +97,7 @@ ys_bad_transform_name = r"""module foo {
       list bar {
         key name;
 
-        orchestron:transform Foobar;
+        sw:transform Foobar;
 
         leaf name {
           type string;
@@ -103,6 +112,9 @@ ys_bad_transform_module_name = r"""module foo {
   yang-version "1.1";
   namespace "http://example.com/foo";
   prefix "foo";
+  import stratoweave {
+    prefix sw;
+  }
   container c1 {
     list foo {
       key name;
@@ -114,7 +126,7 @@ ys_bad_transform_module_name = r"""module foo {
       list bar {
         key name;
 
-        orchestron:transform foo-bar.crap;
+        sw:transform foo-bar.crap;
 
         leaf name {
           type string;
@@ -126,22 +138,22 @@ ys_bad_transform_module_name = r"""module foo {
 """
 
 def _test_ttt_gen_rfs_base():
-    y = yang.compile([oyang.rfs, oyang.ietf_inet_types, ys_rfs])
+    y = yang.compile([oyang.stratoweave, oyang.rfs, oyang.ietf_inet_types, ys_rfs])
     r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_1', '')
     return r.base
 
 def _test_ttt_gen_rfs_ttt():
-    y = yang.compile([oyang.rfs, oyang.ietf_inet_types, ys_rfs])
+    y = yang.compile([oyang.stratoweave, oyang.rfs, oyang.ietf_inet_types, ys_rfs])
     r = ttt_gen.ttt_prsrc(y, 'respnet.layers.y_1', '')
     return r.ttt
 
 def _test_odev() -> str:
-    y = yang.compile([oyang.device])
+    y = yang.compile([oyang.stratoweave, oyang.device])
     r = ttt_gen.ttt_prsrc(y, '', '')
     return r.ttt
 
 def _test_ttt_gen_invalid_transform_name():
-    y = yang.compile([ys_bad_transform_name])
+    y = yang.compile([oyang.stratoweave, ys_bad_transform_name])
     try:
         ttt_gen.ttt_prsrc(y, 'respnet.layers.y_0', 'respnet.layers.y_1_loose')
     except ValueError as e:
@@ -149,7 +161,7 @@ def _test_ttt_gen_invalid_transform_name():
             raise e
 
 def _test_ttt_gen_invalid_transform_module_name():
-    y = yang.compile([ys_bad_transform_module_name])
+    y = yang.compile([oyang.stratoweave, ys_bad_transform_module_name])
     try:
         ttt_gen.ttt_prsrc(y, 'respnet.layers.y_0', 'respnet.layers.y_1_loose')
     except ValueError as e:

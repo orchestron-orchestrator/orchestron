@@ -17,25 +17,25 @@ _reserved_keywords = {
     "var","while","with","yield","_"
     }
 
-def _parse_transform_ref(ext: schema.Ext) -> (fqname: str, module: str, name: str):
+def _parse_transform_ref(ext: schema.DExt) -> (fqname: str, module: str, name: str):
     extarg_opt = ext.arg
     if extarg_opt is not None:
         extarg: str = extarg_opt
         parts = extarg.split(".")
         if len(parts) < 2:
-            raise ValueError("Invalid argument to orchestron:{ext.name}: '{extarg}'. Expected a fully qualified transform reference like app.cfs.Transform.")
+            raise ValueError("Invalid argument to {ext.prefix}:{ext.name}: '{extarg}'. Expected a fully qualified transform reference like app.cfs.Transform.")
 
         for part in parts:
             if part == "":
-                raise ValueError("Invalid argument to orchestron:{ext.name}: '{extarg}'. Expected a fully qualified transform reference like app.cfs.Transform.")
+                raise ValueError("Invalid argument to {ext.prefix}:{ext.name}: '{extarg}'. Expected a fully qualified transform reference like app.cfs.Transform.")
             if part in _reserved_keywords:
-                raise ValueError("Invalid argument to orchestron:{ext.name}: '{extarg}'. '{part}' is a reserved Acton keyword.")
+                raise ValueError("Invalid argument to {ext.prefix}:{ext.name}: '{extarg}'. '{part}' is a reserved Acton keyword.")
             if re.match("^[A-Za-z][A-Za-z0-9_]+$", part) is None:
-                raise ValueError("Invalid argument to orchestron:{ext.name}: '{extarg}'. '{part}' is not a valid Acton name.")
+                raise ValueError("Invalid argument to {ext.prefix}:{ext.name}: '{extarg}'. '{part}' is not a valid Acton name.")
 
         return extarg, ".".join(parts[:-1]), parts[-1]
 
-    raise ValueError("Missing argument to orchestron:{ext.name}. Add a fully qualified transform reference, for example app.cfs.Transform.")
+    raise ValueError("Missing argument to {ext.prefix}:{ext.name}. Add a fully qualified transform reference, for example app.cfs.Transform.")
 
 class TTTSrc(object):
     def __init__(self, src: str, input_classes: list[str], state_classes: list[str], imports: list[str], defs: list[str], base_defs: list[str], act_defs: list[str]):
@@ -82,7 +82,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
             return ", ns='{node.namespace}', module='{node.module}'"
         return ""
 
-    def transform_ext_to_tttsrc(sn: schema.DNodeInner, ext: schema.Ext) -> TTTSrc:
+    def transform_ext_to_tttsrc(sn: schema.DNodeInner, ext: schema.DExt) -> TTTSrc:
         is_list = isinstance(sn, schema.DList)
         transform = _parse_transform_ref(ext)
         imports.append("import {transform.module}")
@@ -95,15 +95,13 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         for child in sn.children:
             if isinstance(child, schema.DContainer):
                 for subext in child.exts:
-                    subextprefix = subext.prefix
-                    if subextprefix is not None and subextprefix == "orchestron":
-                        subextname = subext.name
-                        if subextname == "memory":
+                    if subext.namespace == "http://stratoweave.net/yang/stratoweave.yang":
+                        if subext.name == "memory":
                             _memory_class: str = schema.get_path_name(spath + [child])
                             state_classes.append(_memory_class)
                             input_classes.append(_memory_class)
                             memory_class = _memory_class
-                        elif subextname == "dynstate":
+                        elif subext.name == "dynstate":
                             _dynstate_class: str = schema.get_path_name(spath + [child])
                             state_classes.append(input_class)
                             state_classes.append(_dynstate_class)
@@ -207,18 +205,17 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
 
     if isinstance(sn, schema.DList):
         for ext in sn.exts:
-            extprefix = ext.prefix
-            if extprefix is not None and extprefix == "orchestron":
+            if ext.namespace == "http://stratoweave.net/yang/stratoweave.yang":
                 extarg = ext.arg
                 if ext.name == "transform" or ext.name == "rfs-transform":
                     return transform_ext_to_tttsrc(sn, ext)
                 elif ext.name == "device":
                     if extarg is not None:
-                        raise ValueError("Extraneous argument to orchestron:device. Remove argument.")
+                        raise ValueError("Extraneous argument to {ext.prefix}:device. Remove argument.")
                     return TTTSrc(src="ttt.List(ttt.Device(dev_registry, log_handler), {_fq_list_keys(sn)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
                 elif ext.name == "device-config":
                     if extarg is not None:
-                        raise ValueError("Extraneous argument to orchestron:device-config. Remove argument.")
+                        raise ValueError("Extraneous argument to {ext.prefix}:device-config. Remove argument.")
                     return TTTSrc(src="ttt.List(ttt.DeviceConfig(dev_registry, log_handler), {_fq_list_keys(sn)}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
         # List without an extension
@@ -233,8 +230,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
 
     elif isinstance(sn, schema.DNodeInner):
         for ext in sn.exts:
-            extprefix = ext.prefix
-            if extprefix is not None and extprefix == "orchestron":
+            if ext.namespace == "http://stratoweave.net/yang/stratoweave.yang":
                 if ext.name == "transform" or ext.name == "rfs-transform":
                     return transform_ext_to_tttsrc(sn, ext)
         sn_children = sn.children
@@ -247,7 +243,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         act_defs.extend(children_res.act_defs)
         return TTTSrc(src="ttt.Container({{{children_res.src}}}{nsq(sn)})", input_classes=input_classes, state_classes=state_classes, imports=imports, defs=defs, base_defs=base_defs, act_defs=act_defs)
 
-    raise NotImplementedError("Unhandled schema type: {type(sn)}")
+    raise NotImplementedError("Unhandled schema type: {type(sn)}: {schema.get_path_name(spath)}")
 
 def ttt_prsrc(sn: schema.DNode, input_yang_module: str, output_yang_module: ?str) -> (base: str, ttt: str):
     ts = dschema_to_tttsrc(sn, [sn])

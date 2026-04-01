@@ -10,13 +10,16 @@ module netinfra {
   import ietf-inet-types {
     prefix inet;
   }
+  import stratoweave {
+    prefix sw;
+  }
 
   container netinfra {
     description "Network infrastructure";
     list router {
       key name;
 
-      orchestron:transform mini.cfs.Router;
+      sw:transform mini.cfs.Router;
 
       leaf name {
         type string;
@@ -47,7 +50,7 @@ module netinfra {
       // same device config.
       key "router name";
 
-      orchestron:transform mini.cfs.Foo;
+      sw:transform mini.cfs.Foo;
 
       leaf router {
         type string;
