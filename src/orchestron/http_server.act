@@ -70,8 +70,8 @@ actor HttpServer(tcpl_cap: net.TCPListenCap, listen_address: str="::", listen_po
         tmf_id = ""  # FIXME: We cannot None check $Box type vars, workaround for acton#2494
 
         def config_done(result):
-            if isinstance(result, Exception):
-                respond(400, {}, json.encode({"status": "error", "message": str(result)}))
+            if isinstance(result, ttt.CfgError):
+                respond(400, {}, json.encode({"status": "error", "message": str(result.exception)}))
             else:
                 tmf_id_str = str(tmf_id)
                 if tmf_id_str != "":

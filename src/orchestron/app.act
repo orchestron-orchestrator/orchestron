@@ -82,14 +82,14 @@ actor StartupConfigApplier(config_files: list[str], exit_on_done: bool, top_sche
     var log = logging.Logger(log_handler)
 
     def _conf_load_done(result):
-        if isinstance(result, str):
+        if isinstance(result, ttt.CfgError):
+            log.error("Error applying config file(s)", {"error": result.exception})
+            exit(1)
+        else:
             log.info("All config files applied")
             if exit_on_done:
                 log.info("No more config files to apply, exiting..")
                 exit(0)
-        else:
-            log.error("Error applying config file(s)", {"result": result})
-            exit(1)
 
     def _apply():
         # Read and apply config files; merge multiple snippets (files) into a single intent
