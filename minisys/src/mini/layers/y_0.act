@@ -20,8 +20,14 @@ _identities: list[DIdentity] = []
 
 
 SRC_DNODE_CHILD_0 = DContainer(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='netinfra', config=True, description='Network infrastructure', presence=False, children=[
+    DContainer(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='global-settings', config=True, presence=False, exts=[
+            DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='transform', arg='mini.cfs.GlobalSettings', exts=[])
+        ], children=[
+        DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='asn', config=True, mandatory=False, type_=DTypeIntegerUnsigned(name='uint32', description=None, reference=None, exts=[], builtin_type='uint32', default=None, ranges=Ranges([(0, 4294967295)])))
+    ]),
     DList(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
-            DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='transform', arg='mini.cfs.Router', exts=[])
+            DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='transform', arg='mini.cfs.Router', exts=[]),
+            DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='link', arg='global', exts=[DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='path', arg='/netinfra/global-settings', exts=[])])
         ], children=[
         DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
         DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='id', config=True, description='router id', mandatory=True, type_=DTypeIntegerUnsigned(name='uint32', description=None, reference=None, exts=[], builtin_type='uint32', default=None, ranges=Ranges([(0, 4294967295)]))),
@@ -34,7 +40,9 @@ SRC_DNODE_CHILD_0 = DContainer(module='netinfra', namespace='http://example.com/
         ], config=True, min_elements=0, ordered_by='system', exts=[
             DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='transform', arg='mini.cfs.Foo', exts=[])
         ], children=[
-        DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='router', config=True, mandatory=False, type_=DTypeLeafref(name='leafref', description=None, reference=None, exts=[], builtin_type='leafref', default=None, path=yang.xpath.AbsoluteLocationPath([yang.xpath.NodeTestStep(None, 'netinfra', []), yang.xpath.NodeTestStep(None, 'router', []), yang.xpath.NodeTestStep(None, 'name', [])]), require_instance=False, target_type=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])), exts=[
+                DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='link', arg='router', exts=[])
+            ]),
         DLeaf(module='netinfra', namespace='http://example.com/netinfra', prefix='netinfra', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
     ])
 ])
@@ -66,10 +74,19 @@ def src_yang():
 
   container netinfra {
     description "Network infrastructure";
+    container global-settings {
+      sw:transform mini.cfs.GlobalSettings;
+      leaf asn {
+        type uint32;
+      }
+    }
     list router {
       key name;
 
       sw:transform mini.cfs.Router;
+      sw:link global {
+        sw:path /netinfra/global-settings;
+      }
 
       leaf name {
         type string;
@@ -103,7 +120,10 @@ def src_yang():
       sw:transform mini.cfs.Foo;
 
       leaf router {
-        type string;
+        sw:link router;
+        type leafref {
+          path /netinfra/router/name;
+        }
       }
 
       leaf name {
@@ -159,6 +179,20 @@ def src_yang():
       "Used in the memory container of a transform model. Enriches the transform
       function inputs with an additional read-only structure. The transform
       function may update this subtree by returning new data.";
+  }
+  extension link {
+    description
+      "Declares a link demand from this transform towards another (linked)
+      transform. The argument is a tag that identifies the link. On a leafref
+      leaf, the link target is derived from the leafref path. On other nodes,
+      a nested sw:path substatement provides the target path.";
+    argument "tag";
+  }
+  extension path {
+    description
+      "Substatement of sw:link that provides an explicit absolute schema path
+      to the linked transform target.";
+    argument "path";
   }
 }""")
     res.append(r"""module ietf-inet-types {
@@ -629,6 +663,33 @@ NS_ietf_inet_types = 'urn:ietf:params:xml:ns:yang:ietf-inet-types'
 
 
 _breaker = 1
+class netinfra__netinfra__global_settings(yang.adata.MNode):
+    asn: ?u64
+
+    mut def __init__(self, asn: ?u64):
+        self._ns = 'http://example.com/netinfra'
+        self.asn = asn
+
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'asn':
+            return self.asn
+        raise ValueError('Attribute {name} not found in netinfra__netinfra__global_settings')
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['netinfra:netinfra', 'global-settings'])
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.Node) -> netinfra__netinfra__global_settings:
+        if n is not None:
+            return netinfra__netinfra__global_settings(asn=n.get_opt_u64(yang.gdata.Id(NS_netinfra, 'asn')))
+        return netinfra__netinfra__global_settings()
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return netinfra__netinfra__global_settings.from_gdata(self.to_gdata())
+
+
+_breaker = 1
 class netinfra__netinfra__router_entry(yang.adata.MNode):
     name: str
     id: u64
@@ -783,15 +844,19 @@ extension netinfra__netinfra__foo(Iterable[netinfra__netinfra__foo_entry]):
 
 _breaker = 1
 class netinfra__netinfra(yang.adata.MNode):
+    global_settings: netinfra__netinfra__global_settings
     router: netinfra__netinfra__router
     foo: netinfra__netinfra__foo
 
-    mut def __init__(self, router: list[netinfra__netinfra__router_entry]=[], foo: list[netinfra__netinfra__foo_entry]=[]):
+    mut def __init__(self, global_settings: ?netinfra__netinfra__global_settings=None, router: list[netinfra__netinfra__router_entry]=[], foo: list[netinfra__netinfra__foo_entry]=[]):
         self._ns = 'http://example.com/netinfra'
+        self.global_settings = global_settings if global_settings is not None else netinfra__netinfra__global_settings()
         self.router = netinfra__netinfra__router(elements=router)
         self.foo = netinfra__netinfra__foo(elements=foo)
 
     def _get_attr(self, name: str) -> ?value:
+        if name == 'global_settings':
+            return self.global_settings
         if name == 'router':
             return iter(self.router)
         if name == 'foo':
@@ -804,7 +869,7 @@ class netinfra__netinfra(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> netinfra__netinfra:
         if n is not None:
-            return netinfra__netinfra(router=netinfra__netinfra__router.from_gdata(n.get_opt_list(yang.gdata.Id(NS_netinfra, 'router'))), foo=netinfra__netinfra__foo.from_gdata(n.get_opt_list(yang.gdata.Id(NS_netinfra, 'foo'))))
+            return netinfra__netinfra(global_settings=netinfra__netinfra__global_settings.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_netinfra, 'global-settings'))), router=netinfra__netinfra__router.from_gdata(n.get_opt_list(yang.gdata.Id(NS_netinfra, 'router'))), foo=netinfra__netinfra__foo.from_gdata(n.get_opt_list(yang.gdata.Id(NS_netinfra, 'foo'))))
         return netinfra__netinfra()
 
     def copy(self):

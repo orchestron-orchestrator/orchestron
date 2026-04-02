@@ -12,5 +12,17 @@ import mini.cfs
 
 
 def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value],?ttt.Layer)->ttt.Node:
-    r = ttt.Container({yang.gdata.Id("http://example.com/netinfra", "netinfra"): ttt.Container({yang.gdata.Id("http://example.com/netinfra", "router"): ttt.List(ttt.Transform(mini.cfs.Router, None, lower, log_handler), [yang.gdata.Id("http://example.com/netinfra", "name")]), yang.gdata.Id("http://example.com/netinfra", "foo"): ttt.List(ttt.Transform(mini.cfs.Foo, None, lower, log_handler), [yang.gdata.Id("http://example.com/netinfra", "router"), yang.gdata.Id("http://example.com/netinfra", "name")])}, ns='http://example.com/netinfra', module='netinfra')})
+    r = ttt.Container({yang.gdata.Id("http://example.com/netinfra", "netinfra"): ttt.Container({yang.gdata.Id("http://example.com/netinfra", "global-settings"): ttt.Transform(mini.cfs.GlobalSettings, None, lower, log_handler), yang.gdata.Id("http://example.com/netinfra", "router"): ttt.List(ttt.Transform(mini.cfs.Router, None, lower, log_handler), [yang.gdata.Id("http://example.com/netinfra", "name")]), yang.gdata.Id("http://example.com/netinfra", "foo"): ttt.List(ttt.Transform(mini.cfs.Foo, None, lower, log_handler), [yang.gdata.Id("http://example.com/netinfra", "router"), yang.gdata.Id("http://example.com/netinfra", "name")])}, ns='http://example.com/netinfra', module='netinfra')})
     return r
+
+def _build_target_links_netinfra__netinfra__router_entry(conf: yang.gdata.Node) -> list[(str, yang.gdata.FNode)]:
+    res = []
+    res.append(("global", yang.gdata.FNode(yang.gdata.Id("http://example.com/netinfra", "netinfra"), children=[yang.gdata.FNode(yang.gdata.Id("http://example.com/netinfra", "global-settings"))])))
+    return res
+
+def _build_target_links_netinfra__netinfra__foo_entry(conf: yang.gdata.Node) -> list[(str, yang.gdata.FNode)]:
+    res = []
+    _v0 = conf.get_opt_value(yang.gdata.Id("http://example.com/netinfra", "router"))
+    if _v0 is not None:
+        res.append(("router", yang.gdata.FNode(yang.gdata.Id("http://example.com/netinfra", "netinfra"), children=[yang.gdata.FNode(yang.gdata.Id("http://example.com/netinfra", "router"), children=[yang.gdata.FNode(yang.gdata.Id("http://example.com/netinfra", "name"), value_match=_v0)])])))
+    return res
