@@ -14,9 +14,9 @@ import yang.gdata
 import yang.xml
 
 from orchestron.device_meta_config import \
-    orchestron_rfs__device_entry as DeviceMetaConfig, \
-    orchestron_rfs__device__credentials as Credentials, \
-    orchestron_rfs__device__mock as Mock
+    stratoweave_rfs__device_entry as DeviceMetaConfig, \
+    stratoweave_rfs__device__credentials as Credentials, \
+    stratoweave_rfs__device__mock as Mock
 
 import netconf
 import transport

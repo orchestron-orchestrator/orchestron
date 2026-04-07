@@ -50,10 +50,10 @@ ys_rfs = r"""module foo {
   import stratoweave {
     prefix sw;
   }
-  import orchestron-rfs {
-    prefix orfs;
+  import stratoweave-rfs {
+    prefix sw-rfs;
   }
-  augment /orfs:rfs {
+  augment /sw-rfs:rfs {
     list backbone-interface {
       key name;
 

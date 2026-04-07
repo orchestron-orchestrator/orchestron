@@ -19,85 +19,85 @@ from yang.type import Decimal, Ranges
 _identities: list[DIdentity] = []
 
 
-SRC_DNODE_CHILD_1 = DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+SRC_DNODE_CHILD_1 = DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
 
-SRC_DNODE_CHILD_2 = DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='description', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+SRC_DNODE_CHILD_2 = DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='description', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
 
-SRC_DNODE_CHILD_3 = DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='type', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+SRC_DNODE_CHILD_3 = DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='type', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
 
-SRC_DNODE_CHILD_4 = DList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='address', key=['name'], config=True, min_elements=0, ordered_by='system', children=[
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='name', config=True, description="Name of address, e.g. 'loopback' or 'OOB'", mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='address', config=True, mandatory=True, type_=DTypeUnion(name='inet:host', description='The host type represents either an IP address or a DNS\ndomain name.', reference=None, exts=[], builtin_type='union', default=None, types=[DTypeString(name='inet:ipv4-address', description='The ipv4-address type represents an IPv4 address in\ndotted-quad notation.  The IPv4 address may include a zone\nindex, separated by a % sign.\n\nThe zone index is used to disambiguate identical address\nvalues.  For link-local addresses, the zone index will\ntypically be the interface index number or the name of an\ninterface.  If the zone index is not present, the default\nzone of the device will be used.\n\nThe canonical format for the zone index is the numerical\nformat', reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[YangPattern(yang_regex='(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){{3}}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{{N}}\\p{{L}}]+)?', pcre='^((([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){{3}}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{{N}}\\p{{L}}]+)?)$', invert=False)]), DTypeString(name='inet:ipv6-address', description='The ipv6-address type represents an IPv6 address in full,\nmixed, shortened, and shortened-mixed notation.  The IPv6\naddress may include a zone index, separated by a % sign.\n\nThe zone index is used to disambiguate identical address\nvalues.  For link-local addresses, the zone index will\ntypically be the interface index number or the name of an\ninterface.  If the zone index is not present, the default\nzone of the device will be used.\n\nThe canonical format of IPv6 addresses uses the textual\nrepresentation defined in Section 4 of RFC 5952.  The\ncanonical format for the zone index is the numerical\nformat as described in Section 11.2 of RFC 4007.', reference='RFC 4291: IP Version 6 Addressing Architecture\nRFC 4007: IPv6 Scoped Address Architecture\nRFC 5952: A Recommendation for IPv6 Address Text\n          Representation', exts=[], builtin_type='string', default=None, length=None, patterns=[YangPattern(yang_regex='((:|[0-9a-fA-F]{{0,4}}):)([0-9a-fA-F]{{0,4}}:){{0,5}}((([0-9a-fA-F]{{0,4}}:)?(:|[0-9a-fA-F]{{0,4}}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){{3}}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{{N}}\\p{{L}}]+)?', pcre='^(((:|[0-9a-fA-F]{{0,4}}):)([0-9a-fA-F]{{0,4}}:){{0,5}}((([0-9a-fA-F]{{0,4}}:)?(:|[0-9a-fA-F]{{0,4}}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){{3}}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{{N}}\\p{{L}}]+)?)$', invert=False), YangPattern(yang_regex='(([^:]+:){{6}}(([^:]+:[^:]+)|(.*\\..*)))|((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)(%.+)?', pcre='^((([^\\:]+:){{6}}(([^\\:]+:[^\\:]+)|(.*\\..*)))|((([^\\:]+:)*[^\\:]+)?::(([^\\:]+:)*[^\\:]+)?)(%.+)?)$', invert=False)]), DTypeString(name='inet:domain-name', description='The domain-name type represents a DNS domain name.  The\nname SHOULD be fully qualified whenever possible.\n\nInternet domain names are only loosely specified.  Section\n3.5 of RFC 1034 recommends a syntax (modified in Section\n2.1 of RFC 1123).  The pattern above is intended to allow\nfor current practice in domain name use, and some possible\nfuture expansion.  It is designed to hold various types of\ndomain names, including names used for A or AAAA records\n(host names) and other records, such as SRV records.  Note\nthat Internet host names have a stricter syntax (described\nin RFC 952) than the DNS recommendations in RFCs 1034 and\n1123, and that systems that want to store host names in\nschema nodes using the domain-name type are recommended to\nadhere to this stricter standard to ensure interoperability.\n\nThe encoding of DNS names in the DNS protocol is limited\nto 255 characters.  Since the encoding consists of labels\nprefixed by a length bytes and there is a trailing NULL\nbyte, only 253 characters can appear in the textual dotted\nnotation.\n\nThe description clause of schema nodes using the domain-name\ntype MUST describe when and how these names are resolved to\nIP addresses.  Note that the resolution of a domain-name value\nmay require to query multiple DNS records (e.g., A for IPv4\nand AAAA for IPv6).  The order of the resolution process and\nwhich DNS record takes precedence can either be defined\nexplicitly or may depend on the configuration of the\nresolver.\n\nDomain-name values use the US-ASCII encoding.  Their canonical\nformat uses lowercase US-ASCII characters.  Internationalized\ndomain names MUST be A-labels as per RFC 5890.', reference='RFC  952: DoD Internet Host Table Specification\nRFC 1034: Domain Names - Concepts and Facilities\nRFC 1123: Requirements for Internet Hosts -- Application\n          and Support\nRFC 2782: A DNS RR for specifying the location of services\n          (DNS SRV)\nRFC 5890: Internationalized Domain Names in Applications\n          (IDNA): Definitions and Document Framework', exts=[], builtin_type='string', default=None, length=Ranges([(1, 253)]), patterns=[YangPattern(yang_regex='((([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){{0,61}})?[a-zA-Z0-9]\\.)*([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){{0,61}})?[a-zA-Z0-9]\\.?)|\\.', pcre='^(((([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){{0,61}})?[a-zA-Z0-9]\\.)*([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){{0,61}})?[a-zA-Z0-9]\\.?)|\\.)$', invert=False)])])),
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='port', config=True, mandatory=False, type_=DTypeIntegerUnsigned(name='uint16', description=None, reference=None, exts=[], builtin_type='uint16', default=None, ranges=Ranges([(0, 65535)]))),
-    DList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='initial-credentials', key=[
+SRC_DNODE_CHILD_4 = DList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='address', key=['name'], config=True, min_elements=0, ordered_by='system', children=[
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='name', config=True, description="Name of address, e.g. 'loopback' or 'OOB'", mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='address', config=True, mandatory=True, type_=DTypeUnion(name='inet:host', description='The host type represents either an IP address or a DNS\ndomain name.', reference=None, exts=[], builtin_type='union', default=None, types=[DTypeString(name='inet:ipv4-address', description='The ipv4-address type represents an IPv4 address in\ndotted-quad notation.  The IPv4 address may include a zone\nindex, separated by a % sign.\n\nThe zone index is used to disambiguate identical address\nvalues.  For link-local addresses, the zone index will\ntypically be the interface index number or the name of an\ninterface.  If the zone index is not present, the default\nzone of the device will be used.\n\nThe canonical format for the zone index is the numerical\nformat', reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[YangPattern(yang_regex='(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){{3}}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{{N}}\\p{{L}}]+)?', pcre='^((([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){{3}}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{{N}}\\p{{L}}]+)?)$', invert=False)]), DTypeString(name='inet:ipv6-address', description='The ipv6-address type represents an IPv6 address in full,\nmixed, shortened, and shortened-mixed notation.  The IPv6\naddress may include a zone index, separated by a % sign.\n\nThe zone index is used to disambiguate identical address\nvalues.  For link-local addresses, the zone index will\ntypically be the interface index number or the name of an\ninterface.  If the zone index is not present, the default\nzone of the device will be used.\n\nThe canonical format of IPv6 addresses uses the textual\nrepresentation defined in Section 4 of RFC 5952.  The\ncanonical format for the zone index is the numerical\nformat as described in Section 11.2 of RFC 4007.', reference='RFC 4291: IP Version 6 Addressing Architecture\nRFC 4007: IPv6 Scoped Address Architecture\nRFC 5952: A Recommendation for IPv6 Address Text\n          Representation', exts=[], builtin_type='string', default=None, length=None, patterns=[YangPattern(yang_regex='((:|[0-9a-fA-F]{{0,4}}):)([0-9a-fA-F]{{0,4}}:){{0,5}}((([0-9a-fA-F]{{0,4}}:)?(:|[0-9a-fA-F]{{0,4}}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){{3}}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{{N}}\\p{{L}}]+)?', pcre='^(((:|[0-9a-fA-F]{{0,4}}):)([0-9a-fA-F]{{0,4}}:){{0,5}}((([0-9a-fA-F]{{0,4}}:)?(:|[0-9a-fA-F]{{0,4}}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){{3}}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{{N}}\\p{{L}}]+)?)$', invert=False), YangPattern(yang_regex='(([^:]+:){{6}}(([^:]+:[^:]+)|(.*\\..*)))|((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)(%.+)?', pcre='^((([^\\:]+:){{6}}(([^\\:]+:[^\\:]+)|(.*\\..*)))|((([^\\:]+:)*[^\\:]+)?::(([^\\:]+:)*[^\\:]+)?)(%.+)?)$', invert=False)]), DTypeString(name='inet:domain-name', description='The domain-name type represents a DNS domain name.  The\nname SHOULD be fully qualified whenever possible.\n\nInternet domain names are only loosely specified.  Section\n3.5 of RFC 1034 recommends a syntax (modified in Section\n2.1 of RFC 1123).  The pattern above is intended to allow\nfor current practice in domain name use, and some possible\nfuture expansion.  It is designed to hold various types of\ndomain names, including names used for A or AAAA records\n(host names) and other records, such as SRV records.  Note\nthat Internet host names have a stricter syntax (described\nin RFC 952) than the DNS recommendations in RFCs 1034 and\n1123, and that systems that want to store host names in\nschema nodes using the domain-name type are recommended to\nadhere to this stricter standard to ensure interoperability.\n\nThe encoding of DNS names in the DNS protocol is limited\nto 255 characters.  Since the encoding consists of labels\nprefixed by a length bytes and there is a trailing NULL\nbyte, only 253 characters can appear in the textual dotted\nnotation.\n\nThe description clause of schema nodes using the domain-name\ntype MUST describe when and how these names are resolved to\nIP addresses.  Note that the resolution of a domain-name value\nmay require to query multiple DNS records (e.g., A for IPv4\nand AAAA for IPv6).  The order of the resolution process and\nwhich DNS record takes precedence can either be defined\nexplicitly or may depend on the configuration of the\nresolver.\n\nDomain-name values use the US-ASCII encoding.  Their canonical\nformat uses lowercase US-ASCII characters.  Internationalized\ndomain names MUST be A-labels as per RFC 5890.', reference='RFC  952: DoD Internet Host Table Specification\nRFC 1034: Domain Names - Concepts and Facilities\nRFC 1123: Requirements for Internet Hosts -- Application\n          and Support\nRFC 2782: A DNS RR for specifying the location of services\n          (DNS SRV)\nRFC 5890: Internationalized Domain Names in Applications\n          (IDNA): Definitions and Document Framework', exts=[], builtin_type='string', default=None, length=Ranges([(1, 253)]), patterns=[YangPattern(yang_regex='((([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){{0,61}})?[a-zA-Z0-9]\\.)*([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){{0,61}})?[a-zA-Z0-9]\\.?)|\\.', pcre='^(((([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){{0,61}})?[a-zA-Z0-9]\\.)*([a-zA-Z0-9_]([a-zA-Z0-9\\-_]){{0,61}})?[a-zA-Z0-9]\\.?)|\\.)$', invert=False)])])),
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='port', config=True, mandatory=False, type_=DTypeIntegerUnsigned(name='uint16', description=None, reference=None, exts=[], builtin_type='uint16', default=None, ranges=Ranges([(0, 65535)]))),
+    DList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='initial-credentials', key=[
 'username',
 'password',
 'key'
         ], config=True, min_elements=0, ordered_by='system', children=[
-        DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='username', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-        DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='password', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-        DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='key', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+        DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='username', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='password', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='key', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
     ])
 ])
 
-SRC_DNODE_CHILD_5 = DContainer(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='credentials', config=True, presence=False, children=[
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='username', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='password', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-    DList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='key', key=['key'], config=True, min_elements=0, ordered_by='system', children=[
-        DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='key', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-        DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='private-key', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+SRC_DNODE_CHILD_5 = DContainer(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='credentials', config=True, presence=False, children=[
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='username', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='password', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+    DList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='key', key=['key'], config=True, min_elements=0, ordered_by='system', children=[
+        DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='key', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='private-key', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
     ])
 ])
 
-SRC_DNODE_CHILD_6 = DList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='initial-credentials', key=[
+SRC_DNODE_CHILD_6 = DList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='initial-credentials', key=[
 'username',
 'password',
 'key'
     ], config=True, min_elements=0, ordered_by='system', children=[
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='username', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='password', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='key', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='username', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='password', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='key', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
 ])
 
-SRC_DNODE_CHILD_7 = DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='approval-required', config=True, description='Require approval of each individual configuration change to this device', default='false', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None))
+SRC_DNODE_CHILD_7 = DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='approval-required', config=True, description='Require approval of each individual configuration change to this device', default='false', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None))
 
-SRC_DNODE_CHILD_8 = DContainer(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='mock', config=True, presence=False, children=[
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='enabled', config=True, default='false', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None)),
-    DLeafList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='preset', config=True, min_elements=0, ordered_by='system', type_=DTypeEnum(name='enumeration', description=None, reference=None, exts=[], builtin_type='enumeration', default=None, name_to_val={'cisco-ios-xr':0, 'juniper-junos':1})),
-    DList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='module', key=['name'], config=True, min_elements=0, ordered_by='system', children=[
-        DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-        DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='namespace', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-        DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='revision', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-        DLeafList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='feature', config=True, min_elements=0, ordered_by='system', type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+SRC_DNODE_CHILD_8 = DContainer(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='mock', config=True, presence=False, children=[
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='enabled', config=True, default='false', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None)),
+    DLeafList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='preset', config=True, min_elements=0, ordered_by='system', type_=DTypeEnum(name='enumeration', description=None, reference=None, exts=[], builtin_type='enumeration', default=None, name_to_val={'cisco-ios-xr':0, 'juniper-junos':1})),
+    DList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='module', key=['name'], config=True, min_elements=0, ordered_by='system', children=[
+        DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='namespace', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='revision', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeafList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='feature', config=True, min_elements=0, ordered_by='system', type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
     ])
 ])
 
-SRC_DNODE_CHILD_9 = DContainer(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='debug', config=True, presence=False, children=[
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='connection', config=True, default='false', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None))
+SRC_DNODE_CHILD_9 = DContainer(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='debug', config=True, presence=False, children=[
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='connection', config=True, default='false', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None))
 ])
 
-SRC_DNODE_CHILD_10 = DContainer(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='feature-flags', config=True, presence=False, children=[
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='runtime-schema-fetch', config=True, default='false', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None))
+SRC_DNODE_CHILD_10 = DContainer(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='feature-flags', config=True, presence=False, children=[
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='runtime-schema-fetch', config=True, default='false', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None))
 ])
 
-SRC_DNODE_CHILD_0 = DList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='device', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
-        DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='device', arg=None, exts=[])
+SRC_DNODE_CHILD_0 = DList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='device', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
+        DExt(module='stratoweave', namespace='http://stratoweave.org/yang/stratoweave.yang', prefix='sw', name='device', arg=None, exts=[])
     ], children=[SRC_DNODE_CHILD_1, SRC_DNODE_CHILD_2, SRC_DNODE_CHILD_3, SRC_DNODE_CHILD_4, SRC_DNODE_CHILD_5, SRC_DNODE_CHILD_6, SRC_DNODE_CHILD_7, SRC_DNODE_CHILD_8, SRC_DNODE_CHILD_9, SRC_DNODE_CHILD_10])
 
-SRC_DNODE_CHILD_11 = DList(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='rfs', key=['name'], config=True, min_elements=0, ordered_by='system', children=[
-    DLeaf(module='orchestron-rfs', namespace='http://orchestron.org/yang/orchestron-rfs.yang', prefix='orfs', name='name', config=True, description='Device name', mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+SRC_DNODE_CHILD_11 = DList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='rfs', key=['name'], config=True, min_elements=0, ordered_by='system', children=[
+    DLeaf(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='name', config=True, description='Device name', mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
     DContainer(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='base-config', config=True, presence=False, exts=[
-            DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='rfs-transform', arg='mini.rfs.BaseConfig', exts=[])
+            DExt(module='stratoweave', namespace='http://stratoweave.org/yang/stratoweave.yang', prefix='sw', name='rfs-transform', arg='mini.rfs.BaseConfig', exts=[])
         ], children=[
         DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='name', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
         DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='ipv4-address', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
     ]),
     DList(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='bar', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
-            DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='rfs-transform', arg='mini.rfs.Bar', exts=[])
+            DExt(module='stratoweave', namespace='http://stratoweave.org/yang/stratoweave.yang', prefix='sw', name='rfs-transform', arg='mini.rfs.Bar', exts=[])
         ], children=[
         DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
         DContainer(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='dynstate', config=True, presence=False, exts=[
-                DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='dynstate', arg=None, exts=[])
+                DExt(module='stratoweave', namespace='http://stratoweave.org/yang/stratoweave.yang', prefix='sw', name='dynstate', arg=None, exts=[])
             ], children=[
             DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='current-datetime', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
         ])
@@ -108,7 +108,7 @@ SRC_DNODE = DRoot(
     children=[SRC_DNODE_CHILD_0, SRC_DNODE_CHILD_11],
     identities=[],
     rpcs=[],
-    module_metadata={'urn:ietf:params:xml:ns:yang:ietf-inet-types':('ietf-inet-types', '2013-07-15'), 'http://stratoweave.net/yang/stratoweave.yang':('stratoweave', '2026-04-01'), 'http://orchestron.org/yang/orchestron-rfs.yang':('orchestron-rfs', None), 'http://example.com/mini-rfs':('mini-rfs', None)},
+    module_metadata={'urn:ietf:params:xml:ns:yang:ietf-inet-types':('ietf-inet-types', '2013-07-15'), 'http://stratoweave.org/yang/stratoweave.yang':('stratoweave', '2026-04-01'), 'http://stratoweave.org/yang/stratoweave-rfs.yang':('stratoweave-rfs', None), 'http://example.com/mini-rfs':('mini-rfs', None)},
 )
 
 def src_yang():
@@ -121,14 +121,14 @@ def src_yang():
     import stratoweave {
         prefix sw;
     }
-    import orchestron-rfs {
-        prefix orfs;
+    import stratoweave-rfs {
+        prefix sw-rfs;
     }
     import ietf-inet-types {
       prefix inet;
     }
 
-    augment "/orfs:rfs" {
+    augment "/sw-rfs:rfs" {
         container base-config {
             sw:rfs-transform mini.rfs.BaseConfig;
 
@@ -164,7 +164,7 @@ def src_yang():
 """)
     res.append(r"""module stratoweave {
   yang-version "1.1";
-  namespace "http://stratoweave.net/yang/stratoweave.yang";
+  namespace "http://stratoweave.org/yang/stratoweave.yang";
   prefix "sw";
 
   description
@@ -210,10 +210,10 @@ def src_yang():
       function may update this subtree by returning new data.";
   }
 }""")
-    res.append(r"""module orchestron-rfs {
+    res.append(r"""module stratoweave-rfs {
   yang-version "1.1";
-  namespace "http://orchestron.org/yang/orchestron-rfs.yang";
-  prefix "orfs";
+  namespace "http://stratoweave.org/yang/stratoweave-rfs.yang";
+  prefix "sw-rfs";
 
   import stratoweave {
     prefix sw;
@@ -829,19 +829,19 @@ def src_yang():
 
 
 NS_mini_rfs = 'http://example.com/mini-rfs'
-NS_orchestron_rfs = 'http://orchestron.org/yang/orchestron-rfs.yang'
-NS_stratoweave = 'http://stratoweave.net/yang/stratoweave.yang'
+NS_stratoweave_rfs = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
+NS_stratoweave = 'http://stratoweave.org/yang/stratoweave.yang'
 NS_ietf_inet_types = 'urn:ietf:params:xml:ns:yang:ietf-inet-types'
 
 
 _breaker = 1
-class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNode):
+class stratoweave_rfs__device__address__initial_credentials_entry(yang.adata.MNode):
     username: str
     password: str
     key: str
 
     mut def __init__(self, username: str, password: str, key: str):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.username = username
         self.password = password
         self.key = key
@@ -853,24 +853,24 @@ class orchestron_rfs__device__address__initial_credentials_entry(yang.adata.MNod
             return self.password
         if name == 'key':
             return self.key
-        raise ValueError('Attribute {name} not found in orchestron_rfs__device__address__initial_credentials')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__address__initial_credentials')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:device', 'address', 'initial-credentials'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:device', 'address', 'initial-credentials'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address__initial_credentials_entry:
-        return orchestron_rfs__device__address__initial_credentials_entry(username=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'username')), password=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'password')), key=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'key')))
+    mut def from_gdata(n: yang.gdata.Node) -> stratoweave_rfs__device__address__initial_credentials_entry:
+        return stratoweave_rfs__device__address__initial_credentials_entry(username=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'username')), password=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'password')), key=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'key')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__device__address__initial_credentials_entry.from_gdata(self.to_gdata())
+        return stratoweave_rfs__device__address__initial_credentials_entry.from_gdata(self.to_gdata())
 
 _breaker = 1
-class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
-    elements: list[orchestron_rfs__device__address__initial_credentials_entry]
+class stratoweave_rfs__device__address__initial_credentials(yang.adata.MNode):
+    elements: list[stratoweave_rfs__device__address__initial_credentials_entry]
     mut def __init__(self, elements=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self._name = 'initial-credentials'
         self.elements = elements
 
@@ -889,14 +889,14 @@ class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
             if match:
                 return e
 
-        res = orchestron_rfs__device__address__initial_credentials_entry(username=username, password=password, key=key)
+        res = stratoweave_rfs__device__address__initial_credentials_entry(username=username, password=password, key=key)
         self.elements.append(res)
         return res
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device__address__initial_credentials_entry]:
+    mut def from_gdata(n: ?yang.gdata.List) -> list[stratoweave_rfs__device__address__initial_credentials_entry]:
         if n is not None:
-            return [orchestron_rfs__device__address__initial_credentials_entry.from_gdata(e) for e in n.elements]
+            return [stratoweave_rfs__device__address__initial_credentials_entry.from_gdata(e) for e in n.elements]
         return []
 
     def copy(self):
@@ -907,25 +907,25 @@ class orchestron_rfs__device__address__initial_credentials(yang.adata.MNode):
             ce = e.copy()
             if ce is not None:
                 copied_elements.append(ce)
-        return orchestron_rfs__device__address__initial_credentials(elements=copied_elements)
+        return stratoweave_rfs__device__address__initial_credentials(elements=copied_elements)
 
-extension orchestron_rfs__device__address__initial_credentials(Iterable[orchestron_rfs__device__address__initial_credentials_entry]):
-    def __iter__(self) -> Iterator[orchestron_rfs__device__address__initial_credentials_entry]:
+extension stratoweave_rfs__device__address__initial_credentials(Iterable[stratoweave_rfs__device__address__initial_credentials_entry]):
+    def __iter__(self) -> Iterator[stratoweave_rfs__device__address__initial_credentials_entry]:
         return self.elements.__iter__()
 
 _breaker = 1
-class orchestron_rfs__device__address_entry(yang.adata.MNode):
+class stratoweave_rfs__device__address_entry(yang.adata.MNode):
     name: str
     address: ?str
     port: ?u64
-    initial_credentials: orchestron_rfs__device__address__initial_credentials
+    initial_credentials: stratoweave_rfs__device__address__initial_credentials
 
-    mut def __init__(self, name: str, address: ?str, port: ?u64, initial_credentials: list[orchestron_rfs__device__address__initial_credentials_entry]=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+    mut def __init__(self, name: str, address: ?str, port: ?u64, initial_credentials: list[stratoweave_rfs__device__address__initial_credentials_entry]=[]):
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.name = name
         self.address = address
         self.port = port
-        self.initial_credentials = orchestron_rfs__device__address__initial_credentials(elements=initial_credentials)
+        self.initial_credentials = stratoweave_rfs__device__address__initial_credentials(elements=initial_credentials)
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'name':
@@ -936,24 +936,24 @@ class orchestron_rfs__device__address_entry(yang.adata.MNode):
             return self.port
         if name == 'initial_credentials':
             return iter(self.initial_credentials)
-        raise ValueError('Attribute {name} not found in orchestron_rfs__device__address')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__address')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:device', 'address'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:device', 'address'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__address_entry:
-        return orchestron_rfs__device__address_entry(name=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'name')), address=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'address')), port=n.get_opt_u64(yang.gdata.Id(NS_orchestron_rfs, 'port')), initial_credentials=orchestron_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'initial-credentials'))))
+    mut def from_gdata(n: yang.gdata.Node) -> stratoweave_rfs__device__address_entry:
+        return stratoweave_rfs__device__address_entry(name=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'name')), address=n.get_opt_str(yang.gdata.Id(NS_stratoweave_rfs, 'address')), port=n.get_opt_u64(yang.gdata.Id(NS_stratoweave_rfs, 'port')), initial_credentials=stratoweave_rfs__device__address__initial_credentials.from_gdata(n.get_opt_list(yang.gdata.Id(NS_stratoweave_rfs, 'initial-credentials'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__device__address_entry.from_gdata(self.to_gdata())
+        return stratoweave_rfs__device__address_entry.from_gdata(self.to_gdata())
 
 _breaker = 1
-class orchestron_rfs__device__address(yang.adata.MNode):
-    elements: list[orchestron_rfs__device__address_entry]
+class stratoweave_rfs__device__address(yang.adata.MNode):
+    elements: list[stratoweave_rfs__device__address_entry]
     mut def __init__(self, elements=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self._name = 'address'
         self.elements = elements
 
@@ -970,14 +970,14 @@ class orchestron_rfs__device__address(yang.adata.MNode):
                     e.port = port
                 return e
 
-        res = orchestron_rfs__device__address_entry(name=name, address=address, port=port)
+        res = stratoweave_rfs__device__address_entry(name=name, address=address, port=port)
         self.elements.append(res)
         return res
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device__address_entry]:
+    mut def from_gdata(n: ?yang.gdata.List) -> list[stratoweave_rfs__device__address_entry]:
         if n is not None:
-            return [orchestron_rfs__device__address_entry.from_gdata(e) for e in n.elements]
+            return [stratoweave_rfs__device__address_entry.from_gdata(e) for e in n.elements]
         return []
 
     def copy(self):
@@ -988,19 +988,19 @@ class orchestron_rfs__device__address(yang.adata.MNode):
             ce = e.copy()
             if ce is not None:
                 copied_elements.append(ce)
-        return orchestron_rfs__device__address(elements=copied_elements)
+        return stratoweave_rfs__device__address(elements=copied_elements)
 
-extension orchestron_rfs__device__address(Iterable[orchestron_rfs__device__address_entry]):
-    def __iter__(self) -> Iterator[orchestron_rfs__device__address_entry]:
+extension stratoweave_rfs__device__address(Iterable[stratoweave_rfs__device__address_entry]):
+    def __iter__(self) -> Iterator[stratoweave_rfs__device__address_entry]:
         return self.elements.__iter__()
 
 _breaker = 1
-class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
+class stratoweave_rfs__device__credentials__key_entry(yang.adata.MNode):
     key: str
     private_key: ?str
 
     mut def __init__(self, key: str, private_key: ?str):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.key = key
         self.private_key = private_key
 
@@ -1009,24 +1009,24 @@ class orchestron_rfs__device__credentials__key_entry(yang.adata.MNode):
             return self.key
         if name == 'private_key':
             return self.private_key
-        raise ValueError('Attribute {name} not found in orchestron_rfs__device__credentials__key')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__credentials__key')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:device', 'credentials', 'key'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:device', 'credentials', 'key'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__credentials__key_entry:
-        return orchestron_rfs__device__credentials__key_entry(key=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'key')), private_key=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'private-key')))
+    mut def from_gdata(n: yang.gdata.Node) -> stratoweave_rfs__device__credentials__key_entry:
+        return stratoweave_rfs__device__credentials__key_entry(key=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'key')), private_key=n.get_opt_str(yang.gdata.Id(NS_stratoweave_rfs, 'private-key')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__device__credentials__key_entry.from_gdata(self.to_gdata())
+        return stratoweave_rfs__device__credentials__key_entry.from_gdata(self.to_gdata())
 
 _breaker = 1
-class orchestron_rfs__device__credentials__key(yang.adata.MNode):
-    elements: list[orchestron_rfs__device__credentials__key_entry]
+class stratoweave_rfs__device__credentials__key(yang.adata.MNode):
+    elements: list[stratoweave_rfs__device__credentials__key_entry]
     mut def __init__(self, elements=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self._name = 'key'
         self.elements = elements
 
@@ -1041,14 +1041,14 @@ class orchestron_rfs__device__credentials__key(yang.adata.MNode):
                     e.private_key = private_key
                 return e
 
-        res = orchestron_rfs__device__credentials__key_entry(key=key, private_key=private_key)
+        res = stratoweave_rfs__device__credentials__key_entry(key=key, private_key=private_key)
         self.elements.append(res)
         return res
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device__credentials__key_entry]:
+    mut def from_gdata(n: ?yang.gdata.List) -> list[stratoweave_rfs__device__credentials__key_entry]:
         if n is not None:
-            return [orchestron_rfs__device__credentials__key_entry.from_gdata(e) for e in n.elements]
+            return [stratoweave_rfs__device__credentials__key_entry.from_gdata(e) for e in n.elements]
         return []
 
     def copy(self):
@@ -1059,23 +1059,23 @@ class orchestron_rfs__device__credentials__key(yang.adata.MNode):
             ce = e.copy()
             if ce is not None:
                 copied_elements.append(ce)
-        return orchestron_rfs__device__credentials__key(elements=copied_elements)
+        return stratoweave_rfs__device__credentials__key(elements=copied_elements)
 
-extension orchestron_rfs__device__credentials__key(Iterable[orchestron_rfs__device__credentials__key_entry]):
-    def __iter__(self) -> Iterator[orchestron_rfs__device__credentials__key_entry]:
+extension stratoweave_rfs__device__credentials__key(Iterable[stratoweave_rfs__device__credentials__key_entry]):
+    def __iter__(self) -> Iterator[stratoweave_rfs__device__credentials__key_entry]:
         return self.elements.__iter__()
 
 _breaker = 1
-class orchestron_rfs__device__credentials(yang.adata.MNode):
+class stratoweave_rfs__device__credentials(yang.adata.MNode):
     username: ?str
     password: ?str
-    key: orchestron_rfs__device__credentials__key
+    key: stratoweave_rfs__device__credentials__key
 
-    mut def __init__(self, username: ?str, password: ?str, key: list[orchestron_rfs__device__credentials__key_entry]=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+    mut def __init__(self, username: ?str, password: ?str, key: list[stratoweave_rfs__device__credentials__key_entry]=[]):
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.username = username
         self.password = password
-        self.key = orchestron_rfs__device__credentials__key(elements=key)
+        self.key = stratoweave_rfs__device__credentials__key(elements=key)
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'username':
@@ -1084,30 +1084,30 @@ class orchestron_rfs__device__credentials(yang.adata.MNode):
             return self.password
         if name == 'key':
             return iter(self.key)
-        raise ValueError('Attribute {name} not found in orchestron_rfs__device__credentials')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__credentials')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:device', 'credentials'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:device', 'credentials'])
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__credentials:
+    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__device__credentials:
         if n is not None:
-            return orchestron_rfs__device__credentials(username=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'username')), password=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'password')), key=orchestron_rfs__device__credentials__key.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'key'))))
-        return orchestron_rfs__device__credentials()
+            return stratoweave_rfs__device__credentials(username=n.get_opt_str(yang.gdata.Id(NS_stratoweave_rfs, 'username')), password=n.get_opt_str(yang.gdata.Id(NS_stratoweave_rfs, 'password')), key=stratoweave_rfs__device__credentials__key.from_gdata(n.get_opt_list(yang.gdata.Id(NS_stratoweave_rfs, 'key'))))
+        return stratoweave_rfs__device__credentials()
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__device__credentials.from_gdata(self.to_gdata())
+        return stratoweave_rfs__device__credentials.from_gdata(self.to_gdata())
 
 
 _breaker = 1
-class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
+class stratoweave_rfs__device__initial_credentials_entry(yang.adata.MNode):
     username: str
     password: str
     key: str
 
     mut def __init__(self, username: str, password: str, key: str):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.username = username
         self.password = password
         self.key = key
@@ -1119,24 +1119,24 @@ class orchestron_rfs__device__initial_credentials_entry(yang.adata.MNode):
             return self.password
         if name == 'key':
             return self.key
-        raise ValueError('Attribute {name} not found in orchestron_rfs__device__initial_credentials')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__initial_credentials')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:device', 'initial-credentials'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:device', 'initial-credentials'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__initial_credentials_entry:
-        return orchestron_rfs__device__initial_credentials_entry(username=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'username')), password=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'password')), key=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'key')))
+    mut def from_gdata(n: yang.gdata.Node) -> stratoweave_rfs__device__initial_credentials_entry:
+        return stratoweave_rfs__device__initial_credentials_entry(username=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'username')), password=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'password')), key=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'key')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__device__initial_credentials_entry.from_gdata(self.to_gdata())
+        return stratoweave_rfs__device__initial_credentials_entry.from_gdata(self.to_gdata())
 
 _breaker = 1
-class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
-    elements: list[orchestron_rfs__device__initial_credentials_entry]
+class stratoweave_rfs__device__initial_credentials(yang.adata.MNode):
+    elements: list[stratoweave_rfs__device__initial_credentials_entry]
     mut def __init__(self, elements=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self._name = 'initial-credentials'
         self.elements = elements
 
@@ -1155,14 +1155,14 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
             if match:
                 return e
 
-        res = orchestron_rfs__device__initial_credentials_entry(username=username, password=password, key=key)
+        res = stratoweave_rfs__device__initial_credentials_entry(username=username, password=password, key=key)
         self.elements.append(res)
         return res
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device__initial_credentials_entry]:
+    mut def from_gdata(n: ?yang.gdata.List) -> list[stratoweave_rfs__device__initial_credentials_entry]:
         if n is not None:
-            return [orchestron_rfs__device__initial_credentials_entry.from_gdata(e) for e in n.elements]
+            return [stratoweave_rfs__device__initial_credentials_entry.from_gdata(e) for e in n.elements]
         return []
 
     def copy(self):
@@ -1173,21 +1173,21 @@ class orchestron_rfs__device__initial_credentials(yang.adata.MNode):
             ce = e.copy()
             if ce is not None:
                 copied_elements.append(ce)
-        return orchestron_rfs__device__initial_credentials(elements=copied_elements)
+        return stratoweave_rfs__device__initial_credentials(elements=copied_elements)
 
-extension orchestron_rfs__device__initial_credentials(Iterable[orchestron_rfs__device__initial_credentials_entry]):
-    def __iter__(self) -> Iterator[orchestron_rfs__device__initial_credentials_entry]:
+extension stratoweave_rfs__device__initial_credentials(Iterable[stratoweave_rfs__device__initial_credentials_entry]):
+    def __iter__(self) -> Iterator[stratoweave_rfs__device__initial_credentials_entry]:
         return self.elements.__iter__()
 
 _breaker = 1
-class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
+class stratoweave_rfs__device__mock__module_entry(yang.adata.MNode):
     name: str
     namespace: ?str
     revision: ?str
     feature: list[str]
 
     mut def __init__(self, name: str, namespace: ?str, revision: ?str, feature: ?list[str]=None):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.name = name
         self.namespace = namespace
         self.revision = revision
@@ -1202,24 +1202,24 @@ class orchestron_rfs__device__mock__module_entry(yang.adata.MNode):
             return self.revision
         if name == 'feature':
             return self.feature
-        raise ValueError('Attribute {name} not found in orchestron_rfs__device__mock__module')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__mock__module')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:device', 'mock', 'module'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:device', 'mock', 'module'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device__mock__module_entry:
-        return orchestron_rfs__device__mock__module_entry(name=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'name')), namespace=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'namespace')), revision=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'revision')), feature=n.get_opt_strs(yang.gdata.Id(NS_orchestron_rfs, 'feature')))
+    mut def from_gdata(n: yang.gdata.Node) -> stratoweave_rfs__device__mock__module_entry:
+        return stratoweave_rfs__device__mock__module_entry(name=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'name')), namespace=n.get_opt_str(yang.gdata.Id(NS_stratoweave_rfs, 'namespace')), revision=n.get_opt_str(yang.gdata.Id(NS_stratoweave_rfs, 'revision')), feature=n.get_opt_strs(yang.gdata.Id(NS_stratoweave_rfs, 'feature')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__device__mock__module_entry.from_gdata(self.to_gdata())
+        return stratoweave_rfs__device__mock__module_entry.from_gdata(self.to_gdata())
 
 _breaker = 1
-class orchestron_rfs__device__mock__module(yang.adata.MNode):
-    elements: list[orchestron_rfs__device__mock__module_entry]
+class stratoweave_rfs__device__mock__module(yang.adata.MNode):
+    elements: list[stratoweave_rfs__device__mock__module_entry]
     mut def __init__(self, elements=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self._name = 'module'
         self.elements = elements
 
@@ -1236,14 +1236,14 @@ class orchestron_rfs__device__mock__module(yang.adata.MNode):
                     e.revision = revision
                 return e
 
-        res = orchestron_rfs__device__mock__module_entry(name=name, namespace=namespace, revision=revision)
+        res = stratoweave_rfs__device__mock__module_entry(name=name, namespace=namespace, revision=revision)
         self.elements.append(res)
         return res
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device__mock__module_entry]:
+    mut def from_gdata(n: ?yang.gdata.List) -> list[stratoweave_rfs__device__mock__module_entry]:
         if n is not None:
-            return [orchestron_rfs__device__mock__module_entry.from_gdata(e) for e in n.elements]
+            return [stratoweave_rfs__device__mock__module_entry.from_gdata(e) for e in n.elements]
         return []
 
     def copy(self):
@@ -1254,23 +1254,23 @@ class orchestron_rfs__device__mock__module(yang.adata.MNode):
             ce = e.copy()
             if ce is not None:
                 copied_elements.append(ce)
-        return orchestron_rfs__device__mock__module(elements=copied_elements)
+        return stratoweave_rfs__device__mock__module(elements=copied_elements)
 
-extension orchestron_rfs__device__mock__module(Iterable[orchestron_rfs__device__mock__module_entry]):
-    def __iter__(self) -> Iterator[orchestron_rfs__device__mock__module_entry]:
+extension stratoweave_rfs__device__mock__module(Iterable[stratoweave_rfs__device__mock__module_entry]):
+    def __iter__(self) -> Iterator[stratoweave_rfs__device__mock__module_entry]:
         return self.elements.__iter__()
 
 _breaker = 1
-class orchestron_rfs__device__mock(yang.adata.MNode):
+class stratoweave_rfs__device__mock(yang.adata.MNode):
     enabled: ?bool
     preset: list[str]
-    module: orchestron_rfs__device__mock__module
+    module: stratoweave_rfs__device__mock__module
 
-    mut def __init__(self, enabled: ?bool, preset: ?list[str]=None, module: list[orchestron_rfs__device__mock__module_entry]=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+    mut def __init__(self, enabled: ?bool, preset: ?list[str]=None, module: list[stratoweave_rfs__device__mock__module_entry]=[]):
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.enabled = enabled
         self.preset = preset if preset is not None else []
-        self.module = orchestron_rfs__device__mock__module(elements=module)
+        self.module = stratoweave_rfs__device__mock__module(elements=module)
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'enabled':
@@ -1279,101 +1279,101 @@ class orchestron_rfs__device__mock(yang.adata.MNode):
             return self.preset
         if name == 'module':
             return iter(self.module)
-        raise ValueError('Attribute {name} not found in orchestron_rfs__device__mock')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__mock')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:device', 'mock'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:device', 'mock'])
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__mock:
+    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__device__mock:
         if n is not None:
-            return orchestron_rfs__device__mock(enabled=n.get_opt_bool(yang.gdata.Id(NS_orchestron_rfs, 'enabled')), preset=n.get_opt_strs(yang.gdata.Id(NS_orchestron_rfs, 'preset')), module=orchestron_rfs__device__mock__module.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'module'))))
-        return orchestron_rfs__device__mock()
+            return stratoweave_rfs__device__mock(enabled=n.get_opt_bool(yang.gdata.Id(NS_stratoweave_rfs, 'enabled')), preset=n.get_opt_strs(yang.gdata.Id(NS_stratoweave_rfs, 'preset')), module=stratoweave_rfs__device__mock__module.from_gdata(n.get_opt_list(yang.gdata.Id(NS_stratoweave_rfs, 'module'))))
+        return stratoweave_rfs__device__mock()
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__device__mock.from_gdata(self.to_gdata())
+        return stratoweave_rfs__device__mock.from_gdata(self.to_gdata())
 
 
 _breaker = 1
-class orchestron_rfs__device__debug(yang.adata.MNode):
+class stratoweave_rfs__device__debug(yang.adata.MNode):
     connection: ?bool
 
     mut def __init__(self, connection: ?bool):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.connection = connection
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'connection':
             return self.connection
-        raise ValueError('Attribute {name} not found in orchestron_rfs__device__debug')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__debug')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:device', 'debug'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:device', 'debug'])
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__debug:
+    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__device__debug:
         if n is not None:
-            return orchestron_rfs__device__debug(connection=n.get_opt_bool(yang.gdata.Id(NS_orchestron_rfs, 'connection')))
-        return orchestron_rfs__device__debug()
+            return stratoweave_rfs__device__debug(connection=n.get_opt_bool(yang.gdata.Id(NS_stratoweave_rfs, 'connection')))
+        return stratoweave_rfs__device__debug()
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__device__debug.from_gdata(self.to_gdata())
+        return stratoweave_rfs__device__debug.from_gdata(self.to_gdata())
 
 
 _breaker = 1
-class orchestron_rfs__device__feature_flags(yang.adata.MNode):
+class stratoweave_rfs__device__feature_flags(yang.adata.MNode):
     runtime_schema_fetch: ?bool
 
     mut def __init__(self, runtime_schema_fetch: ?bool):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.runtime_schema_fetch = runtime_schema_fetch
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'runtime_schema_fetch':
             return self.runtime_schema_fetch
-        raise ValueError('Attribute {name} not found in orchestron_rfs__device__feature_flags')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__feature_flags')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:device', 'feature-flags'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:device', 'feature-flags'])
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__device__feature_flags:
+    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__device__feature_flags:
         if n is not None:
-            return orchestron_rfs__device__feature_flags(runtime_schema_fetch=n.get_opt_bool(yang.gdata.Id(NS_orchestron_rfs, 'runtime-schema-fetch')))
-        return orchestron_rfs__device__feature_flags()
+            return stratoweave_rfs__device__feature_flags(runtime_schema_fetch=n.get_opt_bool(yang.gdata.Id(NS_stratoweave_rfs, 'runtime-schema-fetch')))
+        return stratoweave_rfs__device__feature_flags()
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__device__feature_flags.from_gdata(self.to_gdata())
+        return stratoweave_rfs__device__feature_flags.from_gdata(self.to_gdata())
 
 
 _breaker = 1
-class orchestron_rfs__device_entry(yang.adata.MNode):
+class stratoweave_rfs__device_entry(yang.adata.MNode):
     name: str
     description: ?str
     type: ?str
-    address: orchestron_rfs__device__address
-    credentials: orchestron_rfs__device__credentials
-    initial_credentials: orchestron_rfs__device__initial_credentials
+    address: stratoweave_rfs__device__address
+    credentials: stratoweave_rfs__device__credentials
+    initial_credentials: stratoweave_rfs__device__initial_credentials
     approval_required: ?bool
-    mock: orchestron_rfs__device__mock
-    debug: orchestron_rfs__device__debug
-    feature_flags: orchestron_rfs__device__feature_flags
+    mock: stratoweave_rfs__device__mock
+    debug: stratoweave_rfs__device__debug
+    feature_flags: stratoweave_rfs__device__feature_flags
 
-    mut def __init__(self, name: str, description: ?str, type: ?str, address: list[orchestron_rfs__device__address_entry]=[], credentials: ?orchestron_rfs__device__credentials=None, initial_credentials: list[orchestron_rfs__device__initial_credentials_entry]=[], approval_required: ?bool, mock: ?orchestron_rfs__device__mock=None, debug: ?orchestron_rfs__device__debug=None, feature_flags: ?orchestron_rfs__device__feature_flags=None):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+    mut def __init__(self, name: str, description: ?str, type: ?str, address: list[stratoweave_rfs__device__address_entry]=[], credentials: ?stratoweave_rfs__device__credentials=None, initial_credentials: list[stratoweave_rfs__device__initial_credentials_entry]=[], approval_required: ?bool, mock: ?stratoweave_rfs__device__mock=None, debug: ?stratoweave_rfs__device__debug=None, feature_flags: ?stratoweave_rfs__device__feature_flags=None):
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.name = name
         self.description = description
         self.type = type
-        self.address = orchestron_rfs__device__address(elements=address)
-        self.credentials = credentials if credentials is not None else orchestron_rfs__device__credentials()
-        self.initial_credentials = orchestron_rfs__device__initial_credentials(elements=initial_credentials)
+        self.address = stratoweave_rfs__device__address(elements=address)
+        self.credentials = credentials if credentials is not None else stratoweave_rfs__device__credentials()
+        self.initial_credentials = stratoweave_rfs__device__initial_credentials(elements=initial_credentials)
         self.approval_required = approval_required
-        self.mock = mock if mock is not None else orchestron_rfs__device__mock()
-        self.debug = debug if debug is not None else orchestron_rfs__device__debug()
-        self.feature_flags = feature_flags if feature_flags is not None else orchestron_rfs__device__feature_flags()
+        self.mock = mock if mock is not None else stratoweave_rfs__device__mock()
+        self.debug = debug if debug is not None else stratoweave_rfs__device__debug()
+        self.feature_flags = feature_flags if feature_flags is not None else stratoweave_rfs__device__feature_flags()
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'name':
@@ -1396,24 +1396,24 @@ class orchestron_rfs__device_entry(yang.adata.MNode):
             return self.debug
         if name == 'feature_flags':
             return self.feature_flags
-        raise ValueError('Attribute {name} not found in orchestron_rfs__device')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__device')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:device'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:device'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__device_entry:
-        return orchestron_rfs__device_entry(name=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'name')), description=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'description')), type=n.get_opt_str(yang.gdata.Id(NS_orchestron_rfs, 'type')), address=orchestron_rfs__device__address.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'address'))), credentials=orchestron_rfs__device__credentials.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_orchestron_rfs, 'credentials'))), initial_credentials=orchestron_rfs__device__initial_credentials.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'initial-credentials'))), approval_required=n.get_opt_bool(yang.gdata.Id(NS_orchestron_rfs, 'approval-required')), mock=orchestron_rfs__device__mock.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_orchestron_rfs, 'mock'))), debug=orchestron_rfs__device__debug.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_orchestron_rfs, 'debug'))), feature_flags=orchestron_rfs__device__feature_flags.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_orchestron_rfs, 'feature-flags'))))
+    mut def from_gdata(n: yang.gdata.Node) -> stratoweave_rfs__device_entry:
+        return stratoweave_rfs__device_entry(name=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'name')), description=n.get_opt_str(yang.gdata.Id(NS_stratoweave_rfs, 'description')), type=n.get_opt_str(yang.gdata.Id(NS_stratoweave_rfs, 'type')), address=stratoweave_rfs__device__address.from_gdata(n.get_opt_list(yang.gdata.Id(NS_stratoweave_rfs, 'address'))), credentials=stratoweave_rfs__device__credentials.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_stratoweave_rfs, 'credentials'))), initial_credentials=stratoweave_rfs__device__initial_credentials.from_gdata(n.get_opt_list(yang.gdata.Id(NS_stratoweave_rfs, 'initial-credentials'))), approval_required=n.get_opt_bool(yang.gdata.Id(NS_stratoweave_rfs, 'approval-required')), mock=stratoweave_rfs__device__mock.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_stratoweave_rfs, 'mock'))), debug=stratoweave_rfs__device__debug.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_stratoweave_rfs, 'debug'))), feature_flags=stratoweave_rfs__device__feature_flags.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_stratoweave_rfs, 'feature-flags'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__device_entry.from_gdata(self.to_gdata())
+        return stratoweave_rfs__device_entry.from_gdata(self.to_gdata())
 
 _breaker = 1
-class orchestron_rfs__device(yang.adata.MNode):
-    elements: list[orchestron_rfs__device_entry]
+class stratoweave_rfs__device(yang.adata.MNode):
+    elements: list[stratoweave_rfs__device_entry]
     mut def __init__(self, elements=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self._name = 'device'
         self.elements = elements
 
@@ -1432,14 +1432,14 @@ class orchestron_rfs__device(yang.adata.MNode):
                     e.approval_required = approval_required
                 return e
 
-        res = orchestron_rfs__device_entry(name=name, description=description, type=type, approval_required=approval_required)
+        res = stratoweave_rfs__device_entry(name=name, description=description, type=type, approval_required=approval_required)
         self.elements.append(res)
         return res
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__device_entry]:
+    mut def from_gdata(n: ?yang.gdata.List) -> list[stratoweave_rfs__device_entry]:
         if n is not None:
-            return [orchestron_rfs__device_entry.from_gdata(e) for e in n.elements]
+            return [stratoweave_rfs__device_entry.from_gdata(e) for e in n.elements]
         return []
 
     def copy(self):
@@ -1450,14 +1450,14 @@ class orchestron_rfs__device(yang.adata.MNode):
             ce = e.copy()
             if ce is not None:
                 copied_elements.append(ce)
-        return orchestron_rfs__device(elements=copied_elements)
+        return stratoweave_rfs__device(elements=copied_elements)
 
-extension orchestron_rfs__device(Iterable[orchestron_rfs__device_entry]):
-    def __iter__(self) -> Iterator[orchestron_rfs__device_entry]:
+extension stratoweave_rfs__device(Iterable[stratoweave_rfs__device_entry]):
+    def __iter__(self) -> Iterator[stratoweave_rfs__device_entry]:
         return self.elements.__iter__()
 
 _breaker = 1
-class orchestron_rfs__rfs__base_config(yang.adata.MNode):
+class stratoweave_rfs__rfs__base_config(yang.adata.MNode):
     name: ?str
     ipv4_address: ?str
 
@@ -1471,24 +1471,24 @@ class orchestron_rfs__rfs__base_config(yang.adata.MNode):
             return self.name
         if name == 'ipv4_address':
             return self.ipv4_address
-        raise ValueError('Attribute {name} not found in orchestron_rfs__rfs__base_config')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__base_config')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:rfs', 'mini-rfs:base-config'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:rfs', 'mini-rfs:base-config'])
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__rfs__base_config:
+    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__rfs__base_config:
         if n is not None:
-            return orchestron_rfs__rfs__base_config(name=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'name')), ipv4_address=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'ipv4-address')))
-        return orchestron_rfs__rfs__base_config()
+            return stratoweave_rfs__rfs__base_config(name=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'name')), ipv4_address=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'ipv4-address')))
+        return stratoweave_rfs__rfs__base_config()
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__rfs__base_config.from_gdata(self.to_gdata())
+        return stratoweave_rfs__rfs__base_config.from_gdata(self.to_gdata())
 
 
 _breaker = 1
-class orchestron_rfs__rfs__bar__dynstate(yang.adata.MNode):
+class stratoweave_rfs__rfs__bar__dynstate(yang.adata.MNode):
     current_datetime: ?str
 
     mut def __init__(self, current_datetime: ?str):
@@ -1498,53 +1498,53 @@ class orchestron_rfs__rfs__bar__dynstate(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'current_datetime':
             return self.current_datetime
-        raise ValueError('Attribute {name} not found in orchestron_rfs__rfs__bar__dynstate')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__bar__dynstate')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:rfs', 'mini-rfs:bar', 'dynstate'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:rfs', 'mini-rfs:bar', 'dynstate'])
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_rfs__rfs__bar__dynstate:
+    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__rfs__bar__dynstate:
         if n is not None:
-            return orchestron_rfs__rfs__bar__dynstate(current_datetime=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'current-datetime')))
-        return orchestron_rfs__rfs__bar__dynstate()
+            return stratoweave_rfs__rfs__bar__dynstate(current_datetime=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'current-datetime')))
+        return stratoweave_rfs__rfs__bar__dynstate()
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__rfs__bar__dynstate.from_gdata(self.to_gdata())
+        return stratoweave_rfs__rfs__bar__dynstate.from_gdata(self.to_gdata())
 
 
 _breaker = 1
-class orchestron_rfs__rfs__bar_entry(yang.adata.MNode):
+class stratoweave_rfs__rfs__bar_entry(yang.adata.MNode):
     name: str
-    dynstate: orchestron_rfs__rfs__bar__dynstate
+    dynstate: stratoweave_rfs__rfs__bar__dynstate
 
-    mut def __init__(self, name: str, dynstate: ?orchestron_rfs__rfs__bar__dynstate=None):
+    mut def __init__(self, name: str, dynstate: ?stratoweave_rfs__rfs__bar__dynstate=None):
         self._ns = 'http://example.com/mini-rfs'
         self.name = name
-        self.dynstate = dynstate if dynstate is not None else orchestron_rfs__rfs__bar__dynstate()
+        self.dynstate = dynstate if dynstate is not None else stratoweave_rfs__rfs__bar__dynstate()
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'name':
             return self.name
         if name == 'dynstate':
             return self.dynstate
-        raise ValueError('Attribute {name} not found in orchestron_rfs__rfs__bar')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__bar')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:rfs', 'mini-rfs:bar'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:rfs', 'mini-rfs:bar'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs__bar_entry:
-        return orchestron_rfs__rfs__bar_entry(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')), dynstate=orchestron_rfs__rfs__bar__dynstate.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_mini_rfs, 'dynstate'))))
+    mut def from_gdata(n: yang.gdata.Node) -> stratoweave_rfs__rfs__bar_entry:
+        return stratoweave_rfs__rfs__bar_entry(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')), dynstate=stratoweave_rfs__rfs__bar__dynstate.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_mini_rfs, 'dynstate'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__rfs__bar_entry.from_gdata(self.to_gdata())
+        return stratoweave_rfs__rfs__bar_entry.from_gdata(self.to_gdata())
 
 _breaker = 1
-class orchestron_rfs__rfs__bar(yang.adata.MNode):
-    elements: list[orchestron_rfs__rfs__bar_entry]
+class stratoweave_rfs__rfs__bar(yang.adata.MNode):
+    elements: list[stratoweave_rfs__rfs__bar_entry]
     mut def __init__(self, elements=[]):
         self._ns = 'http://example.com/mini-rfs'
         self._name = 'bar'
@@ -1559,14 +1559,14 @@ class orchestron_rfs__rfs__bar(yang.adata.MNode):
             if match:
                 return e
 
-        res = orchestron_rfs__rfs__bar_entry(name=name)
+        res = stratoweave_rfs__rfs__bar_entry(name=name)
         self.elements.append(res)
         return res
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__rfs__bar_entry]:
+    mut def from_gdata(n: ?yang.gdata.List) -> list[stratoweave_rfs__rfs__bar_entry]:
         if n is not None:
-            return [orchestron_rfs__rfs__bar_entry.from_gdata(e) for e in n.elements]
+            return [stratoweave_rfs__rfs__bar_entry.from_gdata(e) for e in n.elements]
         return []
 
     def copy(self):
@@ -1577,23 +1577,23 @@ class orchestron_rfs__rfs__bar(yang.adata.MNode):
             ce = e.copy()
             if ce is not None:
                 copied_elements.append(ce)
-        return orchestron_rfs__rfs__bar(elements=copied_elements)
+        return stratoweave_rfs__rfs__bar(elements=copied_elements)
 
-extension orchestron_rfs__rfs__bar(Iterable[orchestron_rfs__rfs__bar_entry]):
-    def __iter__(self) -> Iterator[orchestron_rfs__rfs__bar_entry]:
+extension stratoweave_rfs__rfs__bar(Iterable[stratoweave_rfs__rfs__bar_entry]):
+    def __iter__(self) -> Iterator[stratoweave_rfs__rfs__bar_entry]:
         return self.elements.__iter__()
 
 _breaker = 1
-class orchestron_rfs__rfs_entry(yang.adata.MNode):
+class stratoweave_rfs__rfs_entry(yang.adata.MNode):
     name: str
-    base_config: orchestron_rfs__rfs__base_config
-    bar: orchestron_rfs__rfs__bar
+    base_config: stratoweave_rfs__rfs__base_config
+    bar: stratoweave_rfs__rfs__bar
 
-    mut def __init__(self, name: str, base_config: ?orchestron_rfs__rfs__base_config=None, bar: list[orchestron_rfs__rfs__bar_entry]=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+    mut def __init__(self, name: str, base_config: ?stratoweave_rfs__rfs__base_config=None, bar: list[stratoweave_rfs__rfs__bar_entry]=[]):
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.name = name
-        self.base_config = base_config if base_config is not None else orchestron_rfs__rfs__base_config()
-        self.bar = orchestron_rfs__rfs__bar(elements=bar)
+        self.base_config = base_config if base_config is not None else stratoweave_rfs__rfs__base_config()
+        self.bar = stratoweave_rfs__rfs__bar(elements=bar)
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'name':
@@ -1602,24 +1602,24 @@ class orchestron_rfs__rfs_entry(yang.adata.MNode):
             return self.base_config
         if name == 'bar':
             return iter(self.bar)
-        raise ValueError('Attribute {name} not found in orchestron_rfs__rfs')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['orchestron-rfs:rfs'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-rfs:rfs'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_rfs__rfs_entry:
-        return orchestron_rfs__rfs_entry(name=n.get_str(yang.gdata.Id(NS_orchestron_rfs, 'name')), base_config=orchestron_rfs__rfs__base_config.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_mini_rfs, 'base-config'))), bar=orchestron_rfs__rfs__bar.from_gdata(n.get_opt_list(yang.gdata.Id(NS_mini_rfs, 'bar'))))
+    mut def from_gdata(n: yang.gdata.Node) -> stratoweave_rfs__rfs_entry:
+        return stratoweave_rfs__rfs_entry(name=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'name')), base_config=stratoweave_rfs__rfs__base_config.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_mini_rfs, 'base-config'))), bar=stratoweave_rfs__rfs__bar.from_gdata(n.get_opt_list(yang.gdata.Id(NS_mini_rfs, 'bar'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_rfs__rfs_entry.from_gdata(self.to_gdata())
+        return stratoweave_rfs__rfs_entry.from_gdata(self.to_gdata())
 
 _breaker = 1
-class orchestron_rfs__rfs(yang.adata.MNode):
-    elements: list[orchestron_rfs__rfs_entry]
+class stratoweave_rfs__rfs(yang.adata.MNode):
+    elements: list[stratoweave_rfs__rfs_entry]
     mut def __init__(self, elements=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-rfs.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self._name = 'rfs'
         self.elements = elements
 
@@ -1632,14 +1632,14 @@ class orchestron_rfs__rfs(yang.adata.MNode):
             if match:
                 return e
 
-        res = orchestron_rfs__rfs_entry(name=name)
+        res = stratoweave_rfs__rfs_entry(name=name)
         self.elements.append(res)
         return res
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_rfs__rfs_entry]:
+    mut def from_gdata(n: ?yang.gdata.List) -> list[stratoweave_rfs__rfs_entry]:
         if n is not None:
-            return [orchestron_rfs__rfs_entry.from_gdata(e) for e in n.elements]
+            return [stratoweave_rfs__rfs_entry.from_gdata(e) for e in n.elements]
         return []
 
     def copy(self):
@@ -1650,21 +1650,21 @@ class orchestron_rfs__rfs(yang.adata.MNode):
             ce = e.copy()
             if ce is not None:
                 copied_elements.append(ce)
-        return orchestron_rfs__rfs(elements=copied_elements)
+        return stratoweave_rfs__rfs(elements=copied_elements)
 
-extension orchestron_rfs__rfs(Iterable[orchestron_rfs__rfs_entry]):
-    def __iter__(self) -> Iterator[orchestron_rfs__rfs_entry]:
+extension stratoweave_rfs__rfs(Iterable[stratoweave_rfs__rfs_entry]):
+    def __iter__(self) -> Iterator[stratoweave_rfs__rfs_entry]:
         return self.elements.__iter__()
 
 _breaker = 1
 class root(yang.adata.MNode):
-    device: orchestron_rfs__device
-    rfs: orchestron_rfs__rfs
+    device: stratoweave_rfs__device
+    rfs: stratoweave_rfs__rfs
 
-    mut def __init__(self, device: list[orchestron_rfs__device_entry]=[], rfs: list[orchestron_rfs__rfs_entry]=[]):
+    mut def __init__(self, device: list[stratoweave_rfs__device_entry]=[], rfs: list[stratoweave_rfs__rfs_entry]=[]):
         self._ns = ''
-        self.device = orchestron_rfs__device(elements=device)
-        self.rfs = orchestron_rfs__rfs(elements=rfs)
+        self.device = stratoweave_rfs__device(elements=device)
+        self.rfs = stratoweave_rfs__rfs(elements=rfs)
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'device':
@@ -1679,7 +1679,7 @@ class root(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
         if n is not None:
-            return root(device=orchestron_rfs__device.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'device'))), rfs=orchestron_rfs__rfs.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_rfs, 'rfs'))))
+            return root(device=stratoweave_rfs__device.from_gdata(n.get_opt_list(yang.gdata.Id(NS_stratoweave_rfs, 'device'))), rfs=stratoweave_rfs__rfs.from_gdata(n.get_opt_list(yang.gdata.Id(NS_stratoweave_rfs, 'rfs'))))
         return root()
 
     def copy(self):

@@ -1,6 +1,6 @@
 stratoweave = r"""module stratoweave {
   yang-version "1.1";
-  namespace "http://stratoweave.net/yang/stratoweave.yang";
+  namespace "http://stratoweave.org/yang/stratoweave.yang";
   prefix "sw";
 
   description
@@ -48,10 +48,10 @@ stratoweave = r"""module stratoweave {
 }"""
 
 
-rfs = r"""module orchestron-rfs {
+rfs = r"""module stratoweave-rfs {
   yang-version "1.1";
-  namespace "http://orchestron.org/yang/orchestron-rfs.yang";
-  prefix "orfs";
+  namespace "http://stratoweave.org/yang/stratoweave-rfs.yang";
+  prefix "sw-rfs";
 
   import stratoweave {
     prefix sw;
@@ -205,10 +205,10 @@ rfs = r"""module orchestron-rfs {
 }
 """
 
-device = r"""module orchestron-device {
+device = r"""module stratoweave-device {
   yang-version "1.1";
-  namespace "http://orchestron.org/yang/orchestron-device.yang";
-  prefix "odev";
+  namespace "http://stratoweave.org/yang/stratoweave-device.yang";
+  prefix "sw-dev";
   import stratoweave {
     prefix sw;
   }

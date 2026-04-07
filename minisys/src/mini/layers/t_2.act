@@ -12,5 +12,5 @@ import yang.gdata
 
 
 def get_ttt(lower: ?ttt.Layer, dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value],?ttt.Layer)->ttt.Node:
-    r = ttt.Container({yang.gdata.Id("http://orchestron.org/yang/orchestron-device.yang", "devices"): ttt.Container({yang.gdata.Id("http://orchestron.org/yang/orchestron-device.yang", "device"): ttt.List(ttt.DeviceConfig(dev_registry, log_handler), [yang.gdata.Id("http://orchestron.org/yang/orchestron-device.yang", "name")])}, ns='http://orchestron.org/yang/orchestron-device.yang', module='orchestron-device')})
+    r = ttt.Container({yang.gdata.Id("http://stratoweave.org/yang/stratoweave-device.yang", "devices"): ttt.Container({yang.gdata.Id("http://stratoweave.org/yang/stratoweave-device.yang", "device"): ttt.List(ttt.DeviceConfig(dev_registry, log_handler), [yang.gdata.Id("http://stratoweave.org/yang/stratoweave-device.yang", "name")])}, ns='http://stratoweave.org/yang/stratoweave-device.yang', module='stratoweave-device')})
     return r
