@@ -3,8 +3,8 @@ fingerprint = 0xe602cd36fdb33ec8
 dependencies = {
     "actmf": (
         repo_url="https://github.com/orchestron-orchestrator/actmf",
-        url="https://github.com/orchestron-orchestrator/actmf/archive/0cf5a5874b52dcd29b8ee48e34b1c273cfa53b91.zip",
-        hash="N-V-__8AAM_LBAA6hJparKbb9Et6wkP16kkXRMGIcAnsCBkT"
+        url="https://github.com/orchestron-orchestrator/actmf/archive/5f82b58ff96a7c68d70914e7c8f57e4147d27d36.zip",
+        hash="N-V-__8AAN3dBADQ_4cR1IqUhR0stD8mu7llpLLbkmJBS5pm"
     ),
     "lmdb": (
         repo_url="https://github.com/stratoweave/acton-lmdb",
@@ -18,8 +18,8 @@ dependencies = {
     ),
     "yang": (
         repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
-        url="https://github.com/orchestron-orchestrator/acton-yang/archive/8d92bcf16c39a8d132de3b2bd626e636ac3c3c14.zip",
-        hash="N-V-__8AAODlIgBcVZz3RvZBsir0e4KOAKg5nIXnB5ZUYIC0"
+        url="https://github.com/orchestron-orchestrator/acton-yang/archive/b35e6d5e8ffa7fc760e6475b83cf748e6556819a.zip",
+        hash="N-V-__8AAIbmIgDtkat1Hb3kZdUlaIAYFjaNrJNke2G15K6s"
     )
 }
 zig_dependencies = {}

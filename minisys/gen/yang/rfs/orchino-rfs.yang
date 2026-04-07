@@ -6,14 +6,14 @@ module mini-rfs {
     import stratoweave {
         prefix sw;
     }
-    import orchestron-rfs {
-        prefix orfs;
+    import stratoweave-rfs {
+        prefix sw-rfs;
     }
     import ietf-inet-types {
       prefix inet;
     }
 
-    augment "/orfs:rfs" {
+    augment "/sw-rfs:rfs" {
         container base-config {
             sw:rfs-transform mini.rfs.BaseConfig;
 

@@ -19,12 +19,12 @@ from yang.type import Decimal, Ranges
 _identities: list[DIdentity] = []
 
 
-SRC_DNODE_CHILD_0 = DContainer(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='devices', config=True, presence=False, children=[
-    DList(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='device', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
-            DExt(module='stratoweave', namespace='http://stratoweave.net/yang/stratoweave.yang', prefix='sw', name='device-config', arg=None, exts=[])
+SRC_DNODE_CHILD_0 = DContainer(module='stratoweave-device', namespace='http://stratoweave.org/yang/stratoweave-device.yang', prefix='sw-dev', name='devices', config=True, presence=False, children=[
+    DList(module='stratoweave-device', namespace='http://stratoweave.org/yang/stratoweave-device.yang', prefix='sw-dev', name='device', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
+            DExt(module='stratoweave', namespace='http://stratoweave.org/yang/stratoweave.yang', prefix='sw', name='device-config', arg=None, exts=[])
         ], children=[
-        DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-        DLeaf(module='orchestron-device', namespace='http://orchestron.org/yang/orchestron-device.yang', prefix='odev', name='modset_id', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+        DLeaf(module='stratoweave-device', namespace='http://stratoweave.org/yang/stratoweave-device.yang', prefix='sw-dev', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='stratoweave-device', namespace='http://stratoweave.org/yang/stratoweave-device.yang', prefix='sw-dev', name='modset_id', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
     ])
 ])
 
@@ -32,14 +32,14 @@ SRC_DNODE = DRoot(
     children=[SRC_DNODE_CHILD_0],
     identities=[],
     rpcs=[],
-    module_metadata={'http://stratoweave.net/yang/stratoweave.yang':('stratoweave', '2026-04-01'), 'http://orchestron.org/yang/orchestron-device.yang':('orchestron-device', None)},
+    module_metadata={'http://stratoweave.org/yang/stratoweave.yang':('stratoweave', '2026-04-01'), 'http://stratoweave.org/yang/stratoweave-device.yang':('stratoweave-device', None)},
 )
 
 def src_yang():
     res = []
     res.append(r"""module stratoweave {
   yang-version "1.1";
-  namespace "http://stratoweave.net/yang/stratoweave.yang";
+  namespace "http://stratoweave.org/yang/stratoweave.yang";
   prefix "sw";
 
   description
@@ -85,10 +85,10 @@ def src_yang():
       function may update this subtree by returning new data.";
   }
 }""")
-    res.append(r"""module orchestron-device {
+    res.append(r"""module stratoweave-device {
   yang-version "1.1";
-  namespace "http://orchestron.org/yang/orchestron-device.yang";
-  prefix "odev";
+  namespace "http://stratoweave.org/yang/stratoweave-device.yang";
+  prefix "sw-dev";
   import stratoweave {
     prefix sw;
   }
@@ -119,17 +119,17 @@ def src_yang():
     return res
 
 
-NS_orchestron_device = 'http://orchestron.org/yang/orchestron-device.yang'
-NS_stratoweave = 'http://stratoweave.net/yang/stratoweave.yang'
+NS_stratoweave_device = 'http://stratoweave.org/yang/stratoweave-device.yang'
+NS_stratoweave = 'http://stratoweave.org/yang/stratoweave.yang'
 
 
 _breaker = 1
-class orchestron_device__devices__device_entry(yang.adata.MNode):
+class stratoweave_device__devices__device_entry(yang.adata.MNode):
     name: str
     modset_id: ?str
 
     mut def __init__(self, name: str, modset_id: ?str):
-        self._ns = 'http://orchestron.org/yang/orchestron-device.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-device.yang'
         self.name = name
         self.modset_id = modset_id
 
@@ -138,24 +138,24 @@ class orchestron_device__devices__device_entry(yang.adata.MNode):
             return self.name
         if name == 'modset_id':
             return self.modset_id
-        raise ValueError('Attribute {name} not found in orchestron_device__devices__device')
+        raise ValueError('Attribute {name} not found in stratoweave_device__devices__device')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-device:devices', 'device'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-device:devices', 'device'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> orchestron_device__devices__device_entry:
-        return orchestron_device__devices__device_entry(name=n.get_str(yang.gdata.Id(NS_orchestron_device, 'name')), modset_id=n.get_opt_str(yang.gdata.Id(NS_orchestron_device, 'modset_id')))
+    mut def from_gdata(n: yang.gdata.Node) -> stratoweave_device__devices__device_entry:
+        return stratoweave_device__devices__device_entry(name=n.get_str(yang.gdata.Id(NS_stratoweave_device, 'name')), modset_id=n.get_opt_str(yang.gdata.Id(NS_stratoweave_device, 'modset_id')))
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_device__devices__device_entry.from_gdata(self.to_gdata())
+        return stratoweave_device__devices__device_entry.from_gdata(self.to_gdata())
 
 _breaker = 1
-class orchestron_device__devices__device(yang.adata.MNode):
-    elements: list[orchestron_device__devices__device_entry]
+class stratoweave_device__devices__device(yang.adata.MNode):
+    elements: list[stratoweave_device__devices__device_entry]
     mut def __init__(self, elements=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-device.yang'
+        self._ns = 'http://stratoweave.org/yang/stratoweave-device.yang'
         self._name = 'device'
         self.elements = elements
 
@@ -170,14 +170,14 @@ class orchestron_device__devices__device(yang.adata.MNode):
                     e.modset_id = modset_id
                 return e
 
-        res = orchestron_device__devices__device_entry(name=name, modset_id=modset_id)
+        res = stratoweave_device__devices__device_entry(name=name, modset_id=modset_id)
         self.elements.append(res)
         return res
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[orchestron_device__devices__device_entry]:
+    mut def from_gdata(n: ?yang.gdata.List) -> list[stratoweave_device__devices__device_entry]:
         if n is not None:
-            return [orchestron_device__devices__device_entry.from_gdata(e) for e in n.elements]
+            return [stratoweave_device__devices__device_entry.from_gdata(e) for e in n.elements]
         return []
 
     def copy(self):
@@ -188,46 +188,46 @@ class orchestron_device__devices__device(yang.adata.MNode):
             ce = e.copy()
             if ce is not None:
                 copied_elements.append(ce)
-        return orchestron_device__devices__device(elements=copied_elements)
+        return stratoweave_device__devices__device(elements=copied_elements)
 
-extension orchestron_device__devices__device(Iterable[orchestron_device__devices__device_entry]):
-    def __iter__(self) -> Iterator[orchestron_device__devices__device_entry]:
+extension stratoweave_device__devices__device(Iterable[stratoweave_device__devices__device_entry]):
+    def __iter__(self) -> Iterator[stratoweave_device__devices__device_entry]:
         return self.elements.__iter__()
 
 _breaker = 1
-class orchestron_device__devices(yang.adata.MNode):
-    device: orchestron_device__devices__device
+class stratoweave_device__devices(yang.adata.MNode):
+    device: stratoweave_device__devices__device
 
-    mut def __init__(self, device: list[orchestron_device__devices__device_entry]=[]):
-        self._ns = 'http://orchestron.org/yang/orchestron-device.yang'
-        self.device = orchestron_device__devices__device(elements=device)
+    mut def __init__(self, device: list[stratoweave_device__devices__device_entry]=[]):
+        self._ns = 'http://stratoweave.org/yang/stratoweave-device.yang'
+        self.device = stratoweave_device__devices__device(elements=device)
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'device':
             return iter(self.device)
-        raise ValueError('Attribute {name} not found in orchestron_device__devices')
+        raise ValueError('Attribute {name} not found in stratoweave_device__devices')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['orchestron-device:devices'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-device:devices'])
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.Node) -> orchestron_device__devices:
+    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_device__devices:
         if n is not None:
-            return orchestron_device__devices(device=orchestron_device__devices__device.from_gdata(n.get_opt_list(yang.gdata.Id(NS_orchestron_device, 'device'))))
-        return orchestron_device__devices()
+            return stratoweave_device__devices(device=stratoweave_device__devices__device.from_gdata(n.get_opt_list(yang.gdata.Id(NS_stratoweave_device, 'device'))))
+        return stratoweave_device__devices()
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return orchestron_device__devices.from_gdata(self.to_gdata())
+        return stratoweave_device__devices.from_gdata(self.to_gdata())
 
 
 _breaker = 1
 class root(yang.adata.MNode):
-    devices: orchestron_device__devices
+    devices: stratoweave_device__devices
 
-    mut def __init__(self, devices: ?orchestron_device__devices=None):
+    mut def __init__(self, devices: ?stratoweave_device__devices=None):
         self._ns = ''
-        self.devices = devices if devices is not None else orchestron_device__devices()
+        self.devices = devices if devices is not None else stratoweave_device__devices()
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'devices':
@@ -240,7 +240,7 @@ class root(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
         if n is not None:
-            return root(devices=orchestron_device__devices.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_orchestron_device, 'devices'))))
+            return root(devices=stratoweave_device__devices.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_stratoweave_device, 'devices'))))
         return root()
 
     def copy(self):

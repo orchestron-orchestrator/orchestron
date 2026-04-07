@@ -7,7 +7,7 @@ import orchestron.ttt
 from orchestron.exception import UnsupportedDevice
 
 import mini.layers.base_1 as base
-from mini.layers.y_1 import orchestron_rfs__rfs__bar__dynstate as BarDynstate
+from mini.layers.y_1 import stratoweave_rfs__rfs__bar__dynstate as BarDynstate
 import mini.layers.y_1 as y1
 
 import mini.devices.ietf as ietf_dev
@@ -65,7 +65,7 @@ actor BarTransform(update_dynstate: proc(?BarDynstate)->None, dev: odev.DeviceMg
                 if clock is not None:
                     update_dynstate(BarDynstate(clock.current_datetime))
 
-    def on_conf(conf: y1.orchestron_rfs__rfs__bar_entry):
+    def on_conf(conf: y1.stratoweave_rfs__rfs__bar_entry):
         if handle is not None:
             return
         opts = yang.gdata.SubscriptionOpts(yang.gdata.SUB_PERIODIC, period=_ms_to_ns(u64(10)))

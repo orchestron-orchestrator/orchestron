@@ -52,10 +52,10 @@ class AppArgs(value):
         return AppArgs()
 
 
-NS_ORFS = "http://orchestron.org/yang/orchestron-rfs.yang"
+NS_SW_RFS = "http://stratoweave.org/yang/stratoweave-rfs.yang"
 def _rfs_for_device(dev):
     def q(n):
-        return yang.gdata.Id(NS_ORFS, n)
+        return yang.gdata.Id(NS_SW_RFS, n)
 
     return yang.gdata.Container({
         q('rfs'): yang.gdata.List([q("name")], [
