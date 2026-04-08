@@ -862,7 +862,7 @@ class _TransformTransactionBase(_Transaction):
         self.me = '(src_' + str(self)[-10:-1] + ')'  # Now safe to use str(self)
 
     def configure(self, tid, diff, out: ?Session, force=False):
-        #print('####', tid, '(Transform)', _format_path(self.path), 'configure', actorid(), self.me, err=True)
+        print('####', tid, '(Transform)', _format_path(self.path), 'configure', actorid(), self.me, err=True)
 
         if tid not in self.diffs:
             self.diffs[tid] = {}
@@ -871,10 +871,10 @@ class _TransformTransactionBase(_Transaction):
         newconf = patch(self.running, accdiff)
         self.candidates[tid] = newconf
 
-        #print('   #', tid, '(Transform)', _format_path(self.path), 'NEW DIFF\n' + per_src(diff), err=True)
-        #print('   #', tid, '(Transform)', _format_path(self.path), 'ACCUMULATED DIFF\n' + per_src(accdiff), err=True)
-        #print('   #', tid, '(Transform)', _format_path(self.path), 'RUNNING CONFIG\n' + per_src(self.running), err=True)
-        #print('   #', tid, '(Transform)', _format_path(self.path), 'NEWCONF\n' + per_src(newconf), err=True)
+        print('   #', tid, '(Transform)', _format_path(self.path), 'NEW DIFF\n' + per_src(diff), err=True)
+        print('   #', tid, '(Transform)', _format_path(self.path), 'ACCUMULATED DIFF\n' + per_src(accdiff), err=True)
+        print('   #', tid, '(Transform)', _format_path(self.path), 'RUNNING CONFIG\n' + per_src(self.running), err=True)
+        print('   #', tid, '(Transform)', _format_path(self.path), 'NEWCONF\n' + per_src(newconf), err=True)
 
         if newconf == {}:
             self.essays[tid] = (None, None) # TODO: do we want to keep memory?
@@ -884,10 +884,10 @@ class _TransformTransactionBase(_Transaction):
         else:
             try:
                 merged = assert_complete(merge(newconf))
-                #print('   #', tid, '(Transform)', _format_path(self.path), 'MERGED\n       ', merged.prsrc(indent=4), err=True)
+                print('   #', tid, '(Transform)', _format_path(self.path), 'MERGED\n       ', merged.prsrc(indent=4), err=True)
 #                assert self.validate(merged)
             except Exception as e:
-                #print('   #', tid, '(Transform)', _format_path(self.path), 'FAILURE', e, err=True)
+                print('   #', tid, '(Transform)', _format_path(self.path), 'FAILURE', e, err=True)
                 return CfgError(e)
             else:
                 linked = self.candidate_linked.get_def(tid, self.linked)
@@ -941,9 +941,9 @@ class _TransformTransactionBase(_Transaction):
                 self.running = candidate
                 self.output = essay.0 if essay is not None else None
                 self.update_memory(essay.1 if essay is not None else None)
-                #print('   #', tid, '(Transform)', _format_path(self.path), 'COMMITTING\n' + per_src(candidate), err=True)
+                print('   #', tid, '(Transform)', _format_path(self.path), 'COMMITTING\n' + per_src(candidate), err=True)
                 if self.candidates:
-                    #print('   #', tid, '(Transform)', _format_path(self.path), 'INVALIDATING', set(self.candidates.keys()), err=True)
+                    print('   #', tid, '(Transform)', _format_path(self.path), 'INVALIDATING', set(self.candidates.keys()), err=True)
                     self.candidates = {}
                 self.finalize(tid)
             else:
