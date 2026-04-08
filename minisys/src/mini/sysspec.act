@@ -3,6 +3,7 @@
 # WARNING WARNING WARNING WARNING WARNING
 
 import logging
+import lmdb
 
 import orchestron.app as oapp
 import orchestron.device as odev
@@ -24,10 +25,10 @@ device_types: dict[str, odev.DeviceType] = {
         ),
 }
 
-def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None):
-    layer2 = ttt.Layer('2', mini.layers.t_2.get_ttt(None, dev_registry, log_handler), None)
-    layer1 = ttt.Layer('1', mini.layers.t_1.get_ttt(layer2, dev_registry, log_handler), layer2)
-    layer0 = ttt.Layer('0', mini.layers.t_0.get_ttt(layer1, dev_registry, log_handler), layer1)
+def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None, db: ?lmdb.Db=None):
+    layer2 = ttt.Layer('2', mini.layers.t_2.get_ttt(None, dev_registry, log_handler), None, db)
+    layer1 = ttt.Layer('1', mini.layers.t_1.get_ttt(layer2, dev_registry, log_handler), layer2, db)
+    layer0 = ttt.Layer('0', mini.layers.t_0.get_ttt(layer1, dev_registry, log_handler), layer1, db)
     return layer0
 
 

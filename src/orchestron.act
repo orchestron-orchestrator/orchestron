@@ -57,7 +57,7 @@ def main(sysspec: oapp.SysSpec, env: Env, http: bool=True):
     top_schema = sysspec.schema_for_layer(0)
 
     dev_registry = odev.DeviceRegistry(sysspec.device_types, process.ProcessCap(env.cap), logh_dev)
-    cfs = sysspec.get_layers(dev_registry, logh_ttt)
+    cfs = sysspec.get_layers(dev_registry, logh_ttt, None)
     oapp.RfsReconf(dev_registry, cfs)
 
     if http:
@@ -101,6 +101,6 @@ def test_main(sysspec: oapp.SysSpec, log_handler: logging.Handler) -> ots.TestRi
             tr.edit_config(input_config, cont)
     """
     dev_registry = odev.DeviceRegistry(sysspec.device_types, None, log_handler)
-    cfs = sysspec.get_layers(dev_registry, log_handler)
+    cfs = sysspec.get_layers(dev_registry, log_handler, None)
     oapp.RfsReconf(dev_registry, cfs)
     return ots.TestRig(cfs, dev_registry, sysspec)

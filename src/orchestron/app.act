@@ -1,6 +1,7 @@
 import argparse
 import file
 import logging
+import lmdb
 import xml
 
 import orchestron.device as odev
@@ -14,7 +15,7 @@ class SysSpec(value):
     """Exportable wrapper for generated functions from sysspec.act"""
     device_types: dict[str, odev.DeviceType]
     @property
-    get_layers: proc(odev.DeviceRegistry, ?logging.Handler) -> ttt.Layer
+    get_layers: proc(odev.DeviceRegistry, ?logging.Handler, ?lmdb.Db) -> ttt.Layer
     @property
     schema_for_layer: proc(int) -> yang.schema.DRoot
 

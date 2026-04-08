@@ -61,12 +61,13 @@ class CompiledSysSpec(object):
         syssrc = "# WARNING WARNING WARNING WARNING WARNING\n"
         syssrc += "# DO NOT MODIFY THIS FILE!! This file is generated!\n"
         syssrc += "# WARNING WARNING WARNING WARNING WARNING\n\n"
-        syssrc += "import logging\n\n"
+        syssrc += "import logging\n"
+        syssrc += "import lmdb\n\n"
         syssrc += "import orchestron.app as oapp\n"
         syssrc += "import orchestron.device as odev\n"
         syssrc += "import orchestron.ttt as ttt\n"
         syssrc += "\n"
-        syssrc_getlayers = "def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None):\n"
+        syssrc_getlayers = "def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None, db: ?lmdb.Db=None):\n"
         syssrc_schema_for_layer = "def schema_for_layer(layer):\n"
         for (idx, layer) in reversed(list(enumerate(self.layers))):
             print("Generating layer {idx}")
@@ -104,7 +105,7 @@ class CompiledSysSpec(object):
                 print("+ Layer {idx} TTT(?) unchanged")
 
             lowerlayer = "layer{idx+1}" if idx < len(self.layers) - 1 else "None"
-            syssrc_getlayers += "    layer{idx} = ttt.Layer('{lname}', {self.name}.layers.t_{idx}.get_ttt({lowerlayer}, dev_registry, log_handler), {lowerlayer})\n"
+            syssrc_getlayers += "    layer{idx} = ttt.Layer('{lname}', {self.name}.layers.t_{idx}.get_ttt({lowerlayer}, dev_registry, log_handler), {lowerlayer}, db)\n"
             syssrc_schema_for_layer += "    if layer == {idx}:\n"
             if idx == len(self.layers) - 1:
                 syssrc_schema_for_layer += """        # Layer {idx} is a bit special, in that there is more than one schema:
