@@ -28,11 +28,13 @@ class SysSpec(value):
 class AppArgs(value):
     config_files: list[str]
     db_path: ?str
+    http_port: int
     exit_on_done: bool
 
-    def __init__(self, config_files: list[str]=[], db_path: ?str=None, exit_on_done: bool=False):
+    def __init__(self, config_files: list[str]=[], db_path: ?str=None, http_port: int=80, exit_on_done: bool=False):
         self.config_files = config_files
         self.db_path = db_path
+        self.http_port = http_port
         self.exit_on_done = exit_on_done
 
 
@@ -41,12 +43,13 @@ class AppArgs(value):
         p = argparse.Parser()
         p.add_arg("file", "Config XML file(s)", False, "+")
         p.add_option("db", "str", default="", help="LMDB directory for TTT persistence")
+        p.add_option("http-port", "int", default=80, help="HTTP listen port")
         p.add_bool("exit-on-done", "Exit after startup config has been applied")
 
         try:
             args = p.parse(argv)
             db_path = args.get_str("db")
-            return AppArgs(args.get_strlist("file"), db_path if db_path != "" else None, args.get_bool("exit-on-done"))
+            return AppArgs(args.get_strlist("file"), db_path if db_path != "" else None, args.get_int("http-port"), args.get_bool("exit-on-done"))
         except argparse.PrintUsage as exc:
             print(exc.error_message)
             exit(0)

@@ -72,7 +72,7 @@ def main(sysspec: oapp.SysSpec, env: Env, http: bool=True):
         if http:
             tcpl_cap = net.TCPListenCap(net.TCPCap(net.NetCap(env.cap)))
             enable_tmf = len(tmf.cfs.services_from_schema(top_schema)) > 0
-            ohttp.HttpServer(tcpl_cap, top_schema=top_schema, cfs=cfs, dev_registry=dev_registry, schema_for_layer=sysspec.schema_for_layer, enable_tmf_api=enable_tmf, log_handler=logh_http)
+            ohttp.HttpServer(tcpl_cap, top_schema=top_schema, cfs=cfs, dev_registry=dev_registry, schema_for_layer=sysspec.schema_for_layer, enable_tmf_api=enable_tmf, log_handler=logh_http, port=args.http_port)
 
         oapp.StartupConfigApplier(args.config_files, args.exit_on_done, top_schema, cfs, env.exit, rfcap, logh)
         log.info("Orchestron running..")
