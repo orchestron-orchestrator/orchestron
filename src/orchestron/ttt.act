@@ -146,10 +146,11 @@ class PathKey(Path):
         self.parent = parent
         self.keyvals = keyvals
 
-def _format_path(path: ?Path, ns=""):
+def _format_path(path: ?Path):
     if path is not None:
-        r = _format_path(path.parent, path.ns)
-        r.append(path.name if path.ns == ns else "{path.name}#{path.ns}")
+        par = path.parent
+        r = _format_path(par)
+        r.append("{path.name}#{path.ns}" if path.ns and par is not None and path.ns != par.ns else path.name)
         return r
     else:
         return []
@@ -253,7 +254,7 @@ class _Transaction(object):
 ####################### Layer ########################
 
 actor Layer(name: str, rootgen: proc(Path, ?Layer)->Node, lower: ?Layer):
-    root = rootgen(Path(name), lower)
+    root = rootgen(Path(name+":"), lower)
 
     def newsession():
         return Session(name, root, lower)
@@ -904,7 +905,7 @@ class _TransformTransactionBase(_Transaction):
         else:
             try:
                 merged = assert_complete(merge(newconf))
-                print('   #', tid, '(Transform)', _format_path(self.path), 'MERGED\n       ', merged.prsrc(indent=4), err=True)
+                #print('   #', tid, '(Transform)', _format_path(self.path), 'MERGED\n       ', merged.prsrc(indent=4), err=True)
 #                assert self.validate(merged)
             except Exception as e:
                 #print('   #', tid, '(Transform)', _format_path(self.path), 'FAILURE', e, err=True)
@@ -1149,15 +1150,14 @@ class _RFSTransaction(_TransformTransactionBase):
         self.memory = None
         self.dynstate = None
         self.node = None
-        self.devname = ""  # Initialize before parent init
+        self.devname = devname_from_rfs_path(path)
         _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
-        self.dev_name = devname_from_rfs_path(path)
-        self.dev = dev_registry.get(self.dev_name)
+        self.dev = dev_registry.get(self.devname)
         self.lower = lower
 
     def compute(self, tid, merged, out):
-        print('####', tid, '(RFSTransform)', _format_path(self.path), 'compute', actorid(), err=True)
+        #print('####', tid, '(RFSTransform)', _format_path(self.path), 'compute', actorid(), err=True)
         dev_content = {
             gdata.Id(NS_stratoweave_device, "name"): gdata.Leaf(self.devname),
         }
