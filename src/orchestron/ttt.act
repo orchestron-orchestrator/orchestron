@@ -609,19 +609,14 @@ actor ListState(path, template: proc(list[value], ?Layer) -> Node, ns: ?str, mod
     var key_leaves = {}
     var staged_key_leaves = {}
 
-    def acquire(tid: str, keys_with_leaves: ?dict[str, dict[gdata.Id, gdata.Leaf]]):
-        if keys_with_leaves is not None:
-            keys1 = set(keys_with_leaves.keys())
+    def acquire(tid: str, keys: ?dict[str, dict[gdata.Id, gdata.Leaf]]):
+        if keys is not None:
+            keys1 = set(keys.keys())
             new = keys1 - set(elems.keys())
             for k in new:
                 elems[k] = template(path+[k], lower)
             provisional |= new
             #print('====', tid, path, 'acquire keys:', keys, 'new:', new, 'provisional:', provisional, actorid(), err=True)
-        else:
-            keys1 = set(elems.keys())
-            #print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
-        active[tid] = keys1
-        if keys_with_leaves is not None:
             for k in keys1:
                 node = elems[k]
                 # Peek at the first node implementation type (they are all the same).
@@ -630,8 +625,12 @@ actor ListState(path, template: proc(list[value], ?Layer) -> Node, ns: ?str, mod
                 # - or _Container if this is a structural list where a transform is nested deeper in a descendant
                 # We only keep track of key leaves for the latter case.
                 if isinstance(node.pub_impl, _Container):
-                    staged_key_leaves[tid] = keys_with_leaves
+                    staged_key_leaves[tid] = keys
                 break
+        else:
+            keys1 = set(elems.keys())
+            #print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
+        active[tid] = keys1
 
         return {k: elems[k] for k in keys1}
 
