@@ -1,5 +1,6 @@
 import file
 import logging
+import lmdb
 import net
 import process
 
@@ -35,7 +36,8 @@ def main(sysspec: oapp.SysSpec, env: Env, http: bool=True):
         actor main(env):
             orchestron.main(awesome_app.sysspec.SYSSPEC, env)
     """
-    rfcap = file.ReadFileCap(file.FileCap(env.cap))
+    fcap = file.FileCap(env.cap)
+    rfcap = file.ReadFileCap(fcap)
 
     logh = logging.Handler("Otron")
     logh.add_sink(logging.StdoutSink())
@@ -54,21 +56,28 @@ def main(sysspec: oapp.SysSpec, env: Env, http: bool=True):
 
     log = logging.Logger(logh)
 
+    args = oapp.AppArgs.from_args(env.argv, env.exit)
     top_schema = sysspec.schema_for_layer(0)
+    db_path = args.db_path
+    if db_path is not None:
+        db = lmdb.Db(file.WriteFileCap(fcap), db_path)
+    else:
+        db = None
 
     dev_registry = odev.DeviceRegistry(sysspec.device_types, process.ProcessCap(env.cap), logh_dev)
-    cfs = sysspec.get_layers(dev_registry, logh_ttt, None)
+    cfs = sysspec.get_layers(dev_registry, logh_ttt, db)
     oapp.RfsReconf(dev_registry, cfs)
 
-    if http:
-        tcpl_cap = net.TCPListenCap(net.TCPCap(net.NetCap(env.cap)))
-        enable_tmf = len(tmf.cfs.services_from_schema(top_schema)) > 0
-        ohttp.HttpServer(tcpl_cap, top_schema=top_schema, cfs=cfs, dev_registry=dev_registry, schema_for_layer=sysspec.schema_for_layer, enable_tmf_api=enable_tmf, log_handler=logh_http)
+    def start_runtime():
+        if http:
+            tcpl_cap = net.TCPListenCap(net.TCPCap(net.NetCap(env.cap)))
+            enable_tmf = len(tmf.cfs.services_from_schema(top_schema)) > 0
+            ohttp.HttpServer(tcpl_cap, top_schema=top_schema, cfs=cfs, dev_registry=dev_registry, schema_for_layer=sysspec.schema_for_layer, enable_tmf_api=enable_tmf, log_handler=logh_http)
 
-    args = oapp.AppArgs.from_args(env.argv, env.exit)
-    oapp.StartupConfigApplier(args.config_files, args.exit_on_done, top_schema, cfs, env.exit, rfcap, logh)
+        oapp.StartupConfigApplier(args.config_files, args.exit_on_done, top_schema, cfs, env.exit, rfcap, logh)
+        log.info("Orchestron running..")
 
-    log.info("Orchestron running..")
+    oapp.StartupBootstrap(cfs, db is not None, start_runtime, env.exit, logh)
 
 def test_main(sysspec: oapp.SysSpec, log_handler: logging.Handler) -> ots.TestRig:
     """Create a `TestRig` for actor-based Orchestron tests.
