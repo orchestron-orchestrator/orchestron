@@ -414,8 +414,11 @@ class _Container(_Node):
         return ContainerTransaction(self.path, self.elems, self.ns, self.module)
 
     def get(self):
-        #print('####', '(Container)', _format_path(self.path), actorid(),'NODE GET', err=True)
+        #print('####', '(Container)', _format_path(self.path), actorid(), 'NODE GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
+        path = self.path
+        if isinstance(path, PathKey):
+            res.update(path.keyvals.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
 
