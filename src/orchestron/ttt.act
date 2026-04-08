@@ -140,7 +140,7 @@ class PathElem(Path):
         self.parent = parent
 
 class PathKey(Path):
-    def __init__(self, keystr: str, keyvals: dict[gdata.Id, gdata.Leaf], parent: ?Path):
+    def __init__(self, keystr: str, keyvals: dict[gdata.Id, gdata.Node], parent: ?Path):
         self.name = keystr
         self.ns = parent.ns if parent is not None else ""
         self.parent = parent
@@ -560,6 +560,9 @@ class _ContainerTransaction(_Transaction):
     def get(self):
         #print('####', '(Container)', _format_path(self.path), actorid(), 'GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
+        path = self.path
+        if isinstance(path, PathKey):
+            res.update(path.keyvals.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
 
@@ -586,14 +589,8 @@ class _List(_Node):
     def get(self):
         #print('####', '(List)', _format_path(self.path), 'NODE GET', err=True)
         res = []
-        for key, (node, key_leaves) in self.liststate.all().items():
+        for key, node in self.liststate.all().items():
             r = node.get()
-            # TODO: if this (_List.get) function is removed, consider
-            # refactoring key leaf restore entirely in _ListTransaction. The
-            # only reason key leaf values are passed to ListState is to support
-            # this function.
-            if isinstance(r, gdata.Container) and key_leaves is not None:
-                r.children.update(key_leaves.items())
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
@@ -602,8 +599,6 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
     var elems = {}
     var active = {}
     var provisional = set()
-    var key_leaves = {}
-    var staged_key_leaves = {}
 
     def acquire(tid: str, keys: ?dict[str, dict[gdata.Id, gdata.Leaf]]):
         if keys is not None:
@@ -613,16 +608,6 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
                 elems[k] = template(PathKey(k,keys[k],path), lower)
             provisional |= new
             #print('====', tid, path, 'acquire keys:', keys, 'new:', new, 'provisional:', provisional, actorid(), err=True)
-            for k in keys1:
-                node = elems[k]
-                # Peek at the first node implementation type (they are all the same).
-                # The list element is either:
-                # - _TransformBase if this list contains an embedded transform,
-                # - or _Container if this is a structural list where a transform is nested deeper in a descendant
-                # We only keep track of key leaves for the latter case.
-                if isinstance(node.pub_impl, _Container):
-                    staged_key_leaves[tid] = keys
-                break
         else:
             keys1 = set(elems.keys())
             #print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
@@ -635,26 +620,19 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
         if ok:
             provisional -= active[tid]
             provisional |= deletes
-            if tid in staged_key_leaves:
-                for k, leaves in staged_key_leaves[tid].items():
-                    key_leaves[k] = leaves
-            for k in deletes:
-                del key_leaves[k]
         del active[tid]
-        del staged_key_leaves[tid]
         if not active:
             #print('====', tid, path, 'deleting:', provisional, err=True)
             for k in provisional:
                 del elems[k]
-                del key_leaves[k]
             provisional = set()
 
     def all():
         #print('====', 'all:', elems.keys(), 'provosional:', provisional, "active:", active)
         if provisional:
-            return {k: (elems[k], key_leaves.get(k)) for k in elems if k not in provisional}
+            return {k: elems[k] for k in elems if k not in provisional}
         else:
-            return {k: (node, key_leaves.get(k)) for k, node in elems.items()}
+            return {k: node for k, node in elems.items()}
 
 
 class _ListTransaction(_Transaction):
@@ -814,13 +792,11 @@ class _ListTransaction(_Transaction):
     def get(self):
         #print('####', '(List)', _format_path(self.path), 'GET', err=True)
         res = []
-        for key, (node, key_leaves) in self.liststate.all().items():
+        for key, node in self.liststate.all().items():
             if key in self.elems:
                 r = self.elems[key].get()
             else:
                 r = node.get()
-            if isinstance(r, gdata.Container) and key_leaves is not None:
-                r.children.update(key_leaves.items())
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
