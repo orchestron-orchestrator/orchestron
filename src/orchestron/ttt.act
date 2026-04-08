@@ -89,7 +89,7 @@ def expect[T](t: ?T, errmsg: str) -> T:
     raise ValueError(errmsg)
 
 
-def _format_path(path: list[value]) -> list[str]: # list[str|gdata.Id]
+def _format_path_old(path: list[value]) -> list[str]: # list[str|gdata.Id]
     if len(path) == 0:
         return []
     r = []
@@ -107,8 +107,6 @@ def _format_path(path: list[value]) -> list[str]: # list[str|gdata.Id]
         else:
             raise ValueError("Unsupported path component in _format_path: {type(p1)}")
     return r
-
-##################### Node & Transactions #####################
 
 class CfgResult():
     pass
@@ -128,6 +126,35 @@ class CfgError(CfgResult):
     def __str__(self):
         return 'CfgError(' + str(self.exception) + ')'
 
+
+class Path():
+    def __init__(self, name: str, ns="", parent:?Path=None):
+        self.name = name
+        self.ns = ""
+        self.parent = None
+
+class PathElem(Path):
+    def __init__(self, i: gdata.Id, parent: ?Path):
+        self.name = i.name
+        self.ns = i.q
+        self.parent = parent
+
+class PathKey(Path):
+    def __init__(self, keystr: str, keyvals: dict[gdata.Id, gdata.Node], parent: ?Path):
+        self.name = keystr
+        self.ns = parent.ns if parent is not None else ""
+        self.parent = parent
+        self.keyvals = keyvals
+
+def _format_path(path: ?Path):
+    if path is not None:
+        par = path.parent
+        r = _format_path(par)
+        r.append("{path.name}#{path.ns}" if path.ns and par is not None and path.ns != par.ns else path.name)
+        return r
+    else:
+        return []
+
 class YieldState[T(Hashable)](object):
     it: Iterator[T]
     key: T
@@ -145,6 +172,9 @@ class YieldState[T(Hashable)](object):
         self.results = {}
         self.done = done
 
+
+##################### Node & Transactions #####################
+
 actor Node(impl: _Node):
     # Make the impl actor argument available as a public constant, for runtime
     # inspection of the transaction implementation
@@ -156,7 +186,7 @@ actor Node(impl: _Node):
         return impl.get()
 
 class _Node(object):
-    path: list[value]
+    path: ?Path
     newtrans: proc() -> Transaction
     get: proc() -> gdata.Node
 
@@ -197,7 +227,7 @@ actor Transaction(impl: _Transaction):
         impl.update_dynstate(dynstate)
 
 class _Transaction(object):
-    path: list[value]
+    path: ?Path
     configure:  proc(tid: str, diff: dict[str,gdata.Node], out: ?Session, force: ?bool) -> CfgResult
     linked_cfg: proc(tid: str, tag: str, cfg: gdata.Node, out: ?Session) -> CfgResult
     linkage: proc(tid: str, linkdiff: list[(str,gdata.FNode,Node,bool)], out: ?Session) -> CfgResult
@@ -223,8 +253,8 @@ class _Transaction(object):
 
 ####################### Layer ########################
 
-actor Layer(name: str, rootgen: proc(list[value], ?Layer)->Node, lower: ?Layer):
-    root = rootgen([f"({name})"], lower)
+actor Layer(name: str, rootgen: proc(Path, ?Layer)->Node, lower: ?Layer):
+    root = rootgen(Path(name+":"), lower)
 
     def newsession():
         return Session(name, root, lower)
@@ -366,7 +396,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
 
 ############## Containers ##################
 
-def Container(template={}, ns:?str=None, module:?str=None) -> proc(list[value], ?Layer)->Node:
+def Container(template={}, ns:?str=None, module:?str=None) -> proc(?Path, ?Layer)->Node:
     return lambda path, lower: Node(_Container(path, template, ns, module, lower))
 
 class _Container(_Node):
@@ -374,9 +404,9 @@ class _Container(_Node):
     ns: ?str
     module: ?str
 
-    def __init__(self, path, template: dict[gdata.Id, proc(list[value], ?Layer)->Node], ns, module, lower: ?Layer):
+    def __init__(self, path, template: dict[gdata.Id, proc(?Path, ?Layer)->Node], ns, module, lower: ?Layer):
         self.path = path
-        self.elems = {key: templ(path + [key], lower) for key, templ in template.items()}
+        self.elems = {key: templ(PathElem(key,path), lower) for key, templ in template.items()}
         self.ns = ns
         self.module = module
 
@@ -384,8 +414,11 @@ class _Container(_Node):
         return ContainerTransaction(self.path, self.elems, self.ns, self.module)
 
     def get(self):
-        #print('####', '(Container)', _format_path(self.path), actorid(),'NODE GET', err=True)
+        #print('####', '(Container)', _format_path(self.path), actorid(), 'NODE GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
+        path = self.path
+        if isinstance(path, PathKey):
+            res.update(path.keyvals.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
 
@@ -530,12 +563,15 @@ class _ContainerTransaction(_Transaction):
     def get(self):
         #print('####', '(Container)', _format_path(self.path), actorid(), 'GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
+        path = self.path
+        if isinstance(path, PathKey):
+            res.update(path.keyvals.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
 
 ################# Lists ####################
 
-def List(template, key_names: list[gdata.Id], ns:?str=None, module:?str=None) -> proc(list[value], ?Layer)->Node:
+def List(template, key_names: list[gdata.Id], ns:?str=None, module:?str=None) -> proc(?Path, ?Layer)->Node:
     return lambda path, lower: Node(_List(path, template, key_names, ns, module, lower))
 
 class _List(_Node):
@@ -556,48 +592,29 @@ class _List(_Node):
     def get(self):
         #print('####', '(List)', _format_path(self.path), 'NODE GET', err=True)
         res = []
-        for key, (node, key_leaves) in self.liststate.all().items():
+        for key, node in self.liststate.all().items():
             r = node.get()
-            # TODO: if this (_List.get) function is removed, consider
-            # refactoring key leaf restore entirely in _ListTransaction. The
-            # only reason key leaf values are passed to ListState is to support
-            # this function.
-            if isinstance(r, gdata.Container) and key_leaves is not None:
-                r.children.update(key_leaves.items())
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
 
-actor ListState(path, template: proc(list[value], ?Layer) -> Node, ns: ?str, module: ?str, lower: ?Layer):
+actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?str, lower: ?Layer):
     var elems = {}
     var active = {}
     var provisional = set()
-    var key_leaves = {}
-    var staged_key_leaves = {}
 
-    def acquire(tid: str, keys: ?set[str], key_leaves_by_key: ?dict[str, dict[gdata.Id, gdata.Leaf]]):
+    def acquire(tid: str, keys: ?dict[str, dict[gdata.Id, gdata.Leaf]]):
         if keys is not None:
-            keys1 = keys
-            new = keys - set(elems.keys())
+            keys1 = set(keys.keys())
+            new = keys1 - set(elems.keys())
             for k in new:
-                elems[k] = template(path+[k], lower)
+                elems[k] = template(PathKey(k,keys[k],path), lower)
             provisional |= new
             #print('====', tid, path, 'acquire keys:', keys, 'new:', new, 'provisional:', provisional, actorid(), err=True)
         else:
             keys1 = set(elems.keys())
             #print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
         active[tid] = keys1
-        if key_leaves_by_key is not None:
-            for k in keys1:
-                node = elems[k]
-                # Peek at the first node implementation type (they are all the same).
-                # The list element is either:
-                # - _TransformBase if this list contains an embedded transform,
-                # - or _Container if this is a structural list where a transform is nested deeper in a descendant
-                # We only keep track of key leaves for the latter case.
-                if isinstance(node.pub_impl, _Container):
-                    staged_key_leaves[tid] = key_leaves_by_key
-                break
 
         return {k: elems[k] for k in keys1}
 
@@ -606,26 +623,19 @@ actor ListState(path, template: proc(list[value], ?Layer) -> Node, ns: ?str, mod
         if ok:
             provisional -= active[tid]
             provisional |= deletes
-            if tid in staged_key_leaves:
-                for k, leaves in staged_key_leaves[tid].items():
-                    key_leaves[k] = leaves
-            for k in deletes:
-                del key_leaves[k]
         del active[tid]
-        del staged_key_leaves[tid]
         if not active:
             #print('====', tid, path, 'deleting:', provisional, err=True)
             for k in provisional:
                 del elems[k]
-                del key_leaves[k]
             provisional = set()
 
     def all():
         #print('====', 'all:', elems.keys(), 'provosional:', provisional, "active:", active)
         if provisional:
-            return {k: (elems[k], key_leaves.get(k)) for k in elems if k not in provisional}
+            return {k: elems[k] for k in elems if k not in provisional}
         else:
-            return {k: (node, key_leaves.get(k)) for k, node in elems.items()}
+            return {k: node for k, node in elems.items()}
 
 
 class _ListTransaction(_Transaction):
@@ -657,12 +667,12 @@ class _ListTransaction(_Transaction):
             self.reset = False
         diff_by_key = transpose_list(diff)
         if len(diff_by_key) == 0 and force:
-            for key,node in self.liststate.acquire(tid, None, None).items():
+            for key,node in self.liststate.acquire(tid, None).items():
                 diff_by_key[key] = {}
                 self.elems[key] = node.newtrans()
         elif WILDKEY in diff_by_key:
             wildconf = diff_by_key[WILDKEY]
-            for key,node in self.liststate.acquire(tid, None, None).items():
+            for key,node in self.liststate.acquire(tid, None).items():
                 if key in diff_by_key:
                     diff_by_key[key].update(wildconf.items())
                 else:
@@ -675,7 +685,7 @@ class _ListTransaction(_Transaction):
                 for node in subdiff.values():
                     kc = node.key_children(self.key_names)
                     key_leaves_by_key[key] = kc
-            for key,node in self.liststate.acquire(tid, set(diff_by_key.keys()), key_leaves_by_key).items():
+            for key,node in self.liststate.acquire(tid, key_leaves_by_key).items():
                 self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():
@@ -785,13 +795,11 @@ class _ListTransaction(_Transaction):
     def get(self):
         #print('####', '(List)', _format_path(self.path), 'GET', err=True)
         res = []
-        for key, (node, key_leaves) in self.liststate.all().items():
+        for key, node in self.liststate.all().items():
             if key in self.elems:
                 r = self.elems[key].get()
             else:
                 r = node.get()
-            if isinstance(r, gdata.Container) and key_leaves is not None:
-                r.children.update(key_leaves.items())
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
@@ -976,7 +984,7 @@ class TransformActorParams:
         self.dev = dev
 
 
-def Transform(function, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
+def Transform(function, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(?Path, ?Layer)->Node:
     proc def _create_transform_node(path, lower):
         transform = _Transform(path, function, lower, log_handler)
         node = Node(transform)
@@ -1076,7 +1084,7 @@ class TransformFunction(object):
 
 ################# RFSTransform ###################
 
-def RFSTransform(function, dev_registry: odev.DeviceRegistry, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
+def RFSTransform(function, dev_registry: odev.DeviceRegistry, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(?Path, ?Layer)->Node:
     proc def _create_rfs_transform_node(path, lower):
         rfs_transform = _RFSTransform(path, function, dev_registry, lower, log_handler)
         node = Node(rfs_transform)
@@ -1097,6 +1105,17 @@ class _RFSTransform(_TransformBase):
 def RFSTransaction(path, function, dev_registry, lower, log_handler):
     return Transaction(_RFSTransaction(path, function, dev_registry, lower, log_handler))
 
+def devname_from_rfs_path(path: ?Path):
+    def loop(p):
+        if p is not None:
+            par = p.parent
+            if isinstance(p, PathKey) and isinstance(par, PathElem) and par.name == "rfs":
+                return p.name
+            return loop(par)
+        else:
+            raise ValueError("_RFSTransaction: unable to determine device name from path: {path}")
+    return loop(path)
+
 class _RFSTransaction(_TransformTransactionBase):
     function: RFSFunction
     devname: str
@@ -1110,22 +1129,10 @@ class _RFSTransaction(_TransformTransactionBase):
         self.memory = None
         self.dynstate = None
         self.node = None
-        self.devname = ""  # Initialize before parent init
+        self.devname = devname_from_rfs_path(path)
         _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
-        if len(path) < 3:
-            raise ValueError(f"RFSTransform {path}: path length < 3")
-        dev_name = None
-        for i in range(len(path) - 1):
-            p = path[i]
-            if isinstance(p, gdata.Id) and p.name == "rfs":
-                cand = path[i + 1]
-                if isinstance(cand, str):
-                    dev_name = cand
-                    break
-        dev_name_str: str = expect(dev_name, "_RFSTransaction: unable to determine device name from path: {path}")
-        self.devname = dev_name_str
-        self.dev = dev_registry.get(dev_name_str)
+        self.dev = dev_registry.get(self.devname)
         self.lower = lower
 
     def compute(self, tid, merged, out):
@@ -1236,7 +1243,7 @@ class RFSFunction(object):
 
 ################# Device #####################
 
-def Device(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
+def Device(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(?Path, ?Layer)->Node:
     return lambda path, _lower: Node(_Device(path, dev_registry, log_handler))
 
 class _Device(_TransformBase):
@@ -1247,17 +1254,18 @@ class _Device(_TransformBase):
 def DeviceTransaction(path, dev_registry, log_handler):
     return Transaction(_DeviceTransaction(path, dev_registry, log_handler))
 
+def devname_from_device_path(path: ?Path):
+    if isinstance(path, PathKey):
+        return path.name
+    raise ValueError("DeviceTransaction: path component is not a key: {path} ({type(path)})")
+
 class _DeviceTransaction(_TransformTransactionBase):
     dev: odev.DeviceMgr
     logger: logging.Logger
 
     def __init__(self, path, dev_registry: odev.DeviceRegistry, log_handler):
         _TransformTransactionBase.__init__(self, path)
-        dev_name = path[-1]
-        if isinstance(dev_name, str):
-            self.dev = dev_registry.get(dev_name)
-        else:
-            raise ValueError("DeviceTransaction: path component is not a string: {dev_name} ({type(dev_name)})")
+        self.dev = dev_registry.get(devname_from_device_path(path))
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
@@ -1276,7 +1284,7 @@ class _DeviceTransaction(_TransformTransactionBase):
 
 ################# DeviceConfig #####################
 
-def DeviceConfig(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
+def DeviceConfig(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(?Path, ?Layer)->Node:
     return lambda path, _lower: Node(_DeviceConfig(path, dev_registry, log_handler))
 
 class _DeviceConfig(_TransformBase):
@@ -1287,17 +1295,18 @@ class _DeviceConfig(_TransformBase):
 def DeviceConfigTransaction(path, dev_registry, log_handler):
     return Transaction(_DeviceConfigTransaction(path, dev_registry, log_handler))
 
+def devname_from_deviceconfig_path(path: ?Path):
+    if isinstance(path, PathKey):
+        return path.name
+    raise ValueError("DeviceConfigTransaction: path component is not a key: {path} ({type(path)})")
+
 class _DeviceConfigTransaction(_TransformTransactionBase):
     dev: odev.DeviceMgr
     logger: logging.Logger
 
     def __init__(self, path, dev_registry: odev.DeviceRegistry, log_handler):
         _TransformTransactionBase.__init__(self, path)
-        dev_name = path[-1]
-        if isinstance(dev_name, str):
-            self.dev = dev_registry.get(dev_name)
-        else:
-            raise ValueError("DeviceConfigTransaction: path component is not a string: {dev_name} ({type(dev_name)})")
+        self.dev = dev_registry.get(devname_from_deviceconfig_path(path))
         self.logger = logging.Logger(log_handler)
         self.cont = None
 
