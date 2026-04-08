@@ -108,8 +108,6 @@ def _format_path_old(path: list[value]) -> list[str]: # list[str|gdata.Id]
             raise ValueError("Unsupported path component in _format_path: {type(p1)}")
     return r
 
-##################### Node & Transactions #####################
-
 class CfgResult():
     pass
 
@@ -132,8 +130,8 @@ class Path():
     pass
 
 class PathRoot(Path):
-    def __init__(self):
-        pass
+    def __init__(self, name: str):
+        self.name = name
 
 class PathChild(Path):
     def __init__(self, id: gdata.Id, parent: Path):
@@ -179,6 +177,9 @@ class YieldState[T(Hashable)](object):
         self.results = {}
         self.done = done
 
+
+##################### Node & Transactions #####################
+
 actor Node(impl: _Node):
     # Make the impl actor argument available as a public constant, for runtime
     # inspection of the transaction implementation
@@ -190,7 +191,7 @@ actor Node(impl: _Node):
         return impl.get()
 
 class _Node(object):
-    path: list[value]
+    path: Path
     newtrans: proc() -> Transaction
     get: proc() -> gdata.Node
 
@@ -231,7 +232,7 @@ actor Transaction(impl: _Transaction):
         impl.update_dynstate(dynstate)
 
 class _Transaction(object):
-    path: list[value]
+    path: Path
     configure:  proc(tid: str, diff: dict[str,gdata.Node], out: ?Session, force: ?bool) -> CfgResult
     linked_cfg: proc(tid: str, tag: str, cfg: gdata.Node, out: ?Session) -> CfgResult
     linkage: proc(tid: str, linkdiff: list[(str,gdata.FNode,Node,bool)], out: ?Session) -> CfgResult
@@ -257,8 +258,8 @@ class _Transaction(object):
 
 ####################### Layer ########################
 
-actor Layer(name: str, rootgen: proc(list[value], ?Layer)->Node, lower: ?Layer):
-    root = rootgen([f"({name})"], lower)
+actor Layer(name: str, rootgen: proc(Path, ?Layer)->Node, lower: ?Layer):
+    root = rootgen(PathRoot(name), lower)
 
     def newsession():
         return Session(name, root, lower)
@@ -400,7 +401,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
 
 ############## Containers ##################
 
-def Container(template={}, ns:?str=None, module:?str=None) -> proc(list[value], ?Layer)->Node:
+def Container(template={}, ns:?str=None, module:?str=None) -> proc(Path, ?Layer)->Node:
     return lambda path, lower: Node(_Container(path, template, ns, module, lower))
 
 class _Container(_Node):
@@ -408,9 +409,9 @@ class _Container(_Node):
     ns: ?str
     module: ?str
 
-    def __init__(self, path, template: dict[gdata.Id, proc(list[value], ?Layer)->Node], ns, module, lower: ?Layer):
+    def __init__(self, path, template: dict[gdata.Id, proc(Path, ?Layer)->Node], ns, module, lower: ?Layer):
         self.path = path
-        self.elems = {key: templ(path + [key], lower) for key, templ in template.items()}
+        self.elems = {key: templ(PathChild(key,path), lower) for key, templ in template.items()}
         self.ns = ns
         self.module = module
 
@@ -569,7 +570,7 @@ class _ContainerTransaction(_Transaction):
 
 ################# Lists ####################
 
-def List(template, key_names: list[gdata.Id], ns:?str=None, module:?str=None) -> proc(list[value], ?Layer)->Node:
+def List(template, key_names: list[gdata.Id], ns:?str=None, module:?str=None) -> proc(Path, ?Layer)->Node:
     return lambda path, lower: Node(_List(path, template, key_names, ns, module, lower))
 
 class _List(_Node):
@@ -602,7 +603,7 @@ class _List(_Node):
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
 
-actor ListState(path, template: proc(list[value], ?Layer) -> Node, ns: ?str, module: ?str, lower: ?Layer):
+actor ListState(path, template: proc(Path, ?Layer) -> Node, ns: ?str, module: ?str, lower: ?Layer):
     var elems = {}
     var active = {}
     var provisional = set()
@@ -614,7 +615,7 @@ actor ListState(path, template: proc(list[value], ?Layer) -> Node, ns: ?str, mod
             keys1 = set(keys.keys())
             new = keys1 - set(elems.keys())
             for k in new:
-                elems[k] = template(path+[k], lower)
+                elems[k] = template(PathKey(k,keys[k],path), lower)
             provisional |= new
             #print('====', tid, path, 'acquire keys:', keys, 'new:', new, 'provisional:', provisional, actorid(), err=True)
             for k in keys1:
@@ -1009,7 +1010,7 @@ class TransformActorParams:
         self.dev = dev
 
 
-def Transform(function, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
+def Transform(function, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(Path, ?Layer)->Node:
     proc def _create_transform_node(path, lower):
         transform = _Transform(path, function, lower, log_handler)
         node = Node(transform)
@@ -1109,7 +1110,7 @@ class TransformFunction(object):
 
 ################# RFSTransform ###################
 
-def RFSTransform(function, dev_registry: odev.DeviceRegistry, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
+def RFSTransform(function, dev_registry: odev.DeviceRegistry, act: ?(proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None)=None, lower: ?Layer=None, log_handler: ?logging.Handler=None) -> proc(Path, ?Layer)->Node:
     proc def _create_rfs_transform_node(path, lower):
         rfs_transform = _RFSTransform(path, function, dev_registry, lower, log_handler)
         node = Node(rfs_transform)
@@ -1146,16 +1147,11 @@ class _RFSTransaction(_TransformTransactionBase):
         self.devname = ""  # Initialize before parent init
         _TransformTransactionBase.__init__(self, path)
         self.function = function(log_handler)
-        if len(path) < 3:
-            raise ValueError(f"RFSTransform {path}: path length < 3")
         dev_name = None
-        for i in range(len(path) - 1):
-            p = path[i]
-            if isinstance(p, gdata.Id) and p.name == "rfs":
-                cand = path[i + 1]
-                if isinstance(cand, str):
-                    dev_name = cand
-                    break
+        if isinstance(path, PathKey):
+            p = path.parent
+            if isinstance(p, PathChild) and p.id.name == "rfs":
+                dev_name = path.keystr
         dev_name_str: str = expect(dev_name, "_RFSTransaction: unable to determine device name from path: {path}")
         self.devname = dev_name_str
         self.dev = dev_registry.get(dev_name_str)
@@ -1269,7 +1265,7 @@ class RFSFunction(object):
 
 ################# Device #####################
 
-def Device(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
+def Device(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(Path, ?Layer)->Node:
     return lambda path, _lower: Node(_Device(path, dev_registry, log_handler))
 
 class _Device(_TransformBase):
@@ -1286,11 +1282,10 @@ class _DeviceTransaction(_TransformTransactionBase):
 
     def __init__(self, path, dev_registry: odev.DeviceRegistry, log_handler):
         _TransformTransactionBase.__init__(self, path)
-        dev_name = path[-1]
-        if isinstance(dev_name, str):
-            self.dev = dev_registry.get(dev_name)
+        if isinstance(path, PathKey):
+            self.dev = dev_registry.get(path.keystr)
         else:
-            raise ValueError("DeviceTransaction: path component is not a string: {dev_name} ({type(dev_name)})")
+            raise ValueError("DeviceTransaction: path component is not a string: {path} ({type(path)})")
         self.logger = logging.Logger(log_handler)
 
     def compute(self, tid, merged, out):
@@ -1309,7 +1304,7 @@ class _DeviceTransaction(_TransformTransactionBase):
 
 ################# DeviceConfig #####################
 
-def DeviceConfig(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(list[value], ?Layer)->Node:
+def DeviceConfig(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=None) -> proc(Path, ?Layer)->Node:
     return lambda path, _lower: Node(_DeviceConfig(path, dev_registry, log_handler))
 
 class _DeviceConfig(_TransformBase):
@@ -1326,11 +1321,10 @@ class _DeviceConfigTransaction(_TransformTransactionBase):
 
     def __init__(self, path, dev_registry: odev.DeviceRegistry, log_handler):
         _TransformTransactionBase.__init__(self, path)
-        dev_name = path[-1]
-        if isinstance(dev_name, str):
-            self.dev = dev_registry.get(dev_name)
+        if isinstance(path, PathKey):
+            self.dev = dev_registry.get(path.keystr)
         else:
-            raise ValueError("DeviceConfigTransaction: path component is not a string: {dev_name} ({type(dev_name)})")
+            raise ValueError("DeviceConfigTransaction: path component is not a string: {path} ({type(path)})")
         self.logger = logging.Logger(log_handler)
         self.cont = None
 
