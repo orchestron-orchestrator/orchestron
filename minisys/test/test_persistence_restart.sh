@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ACTON_BIN="${ACTON:-acton}"
+ACTON_BUILD_ARGS="${ACTON_BUILD_ARGS:-}"
 CURL_BIN="${CURL:-curl}"
 PORT="${PORT:-$((18080 + RANDOM % 1000))}"
 DB_PATH="$ROOT_DIR/minisys/test/persistence-restart.db"
@@ -72,7 +73,7 @@ trap cleanup EXIT
 cd "$ROOT_DIR"
 rm -rf "$DB_PATH"
 if command -v "$ACTON_BIN" >/dev/null 2>&1; then
-    "$ACTON_BIN" build minisys/src/mini.act
+    "$ACTON_BIN" build $ACTON_BUILD_ARGS minisys/src/mini.act
 elif [[ ! -x "$BIN_FILE" ]]; then
     fail "acton not found on PATH and ${BIN_FILE} is missing; set ACTON=/path/to/acton"
 fi
