@@ -89,7 +89,7 @@ def expect[T](t: ?T, errmsg: str) -> T:
     raise ValueError(errmsg)
 
 
-def _format_path(path: list[value]) -> list[str]: # list[str|gdata.Id]
+def _format_path_old(path: list[value]) -> list[str]: # list[str|gdata.Id]
     if len(path) == 0:
         return []
     r = []
@@ -127,6 +127,40 @@ class CfgError(CfgResult):
         self.exception = exception
     def __str__(self):
         return 'CfgError(' + str(self.exception) + ')'
+
+class Path():
+    pass
+
+class PathRoot(Path):
+    def __init__(self):
+        pass
+
+class PathChild(Path):
+    def __init__(self, id: gdata.Id, parent: Path):
+        self.id = id
+        self.parent = parent
+
+class PathKey(Path):
+    def __init__(self, keystr: str, keyvals: dict[gdata.Id, gdata.Leaf], parent: Path):
+        self.keystr = keystr
+        self.keyvals = keyvals
+        self.parent = parent
+
+def _format_path(path: Path, ns=""):
+    if isinstance(path, PathChild):
+        i = path.id
+        r = _format_path(path.parent, i.q)
+        if i.q == ns:
+            r.append(i.name)
+        else:
+            r.append("{i.name}#{i.q}")
+        return r
+    elif isinstance(path, PathKey):
+        r = _format_path(path.parent, ns)
+        r.append(path.keystr)
+        return r
+    else:
+        return []
 
 class YieldState[T(Hashable)](object):
     it: Iterator[T]
@@ -575,10 +609,10 @@ actor ListState(path, template: proc(list[value], ?Layer) -> Node, ns: ?str, mod
     var key_leaves = {}
     var staged_key_leaves = {}
 
-    def acquire(tid: str, keys: ?set[str], key_leaves_by_key: ?dict[str, dict[gdata.Id, gdata.Leaf]]):
-        if keys is not None:
-            keys1 = keys
-            new = keys - set(elems.keys())
+    def acquire(tid: str, keys_with_leaves: ?dict[str, dict[gdata.Id, gdata.Leaf]]):
+        if keys_with_leaves is not None:
+            keys1 = set(keys_with_leaves.keys())
+            new = keys1 - set(elems.keys())
             for k in new:
                 elems[k] = template(path+[k], lower)
             provisional |= new
@@ -587,7 +621,7 @@ actor ListState(path, template: proc(list[value], ?Layer) -> Node, ns: ?str, mod
             keys1 = set(elems.keys())
             #print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
         active[tid] = keys1
-        if key_leaves_by_key is not None:
+        if keys_with_leaves is not None:
             for k in keys1:
                 node = elems[k]
                 # Peek at the first node implementation type (they are all the same).
@@ -596,7 +630,7 @@ actor ListState(path, template: proc(list[value], ?Layer) -> Node, ns: ?str, mod
                 # - or _Container if this is a structural list where a transform is nested deeper in a descendant
                 # We only keep track of key leaves for the latter case.
                 if isinstance(node.pub_impl, _Container):
-                    staged_key_leaves[tid] = key_leaves_by_key
+                    staged_key_leaves[tid] = keys_with_leaves
                 break
 
         return {k: elems[k] for k in keys1}
@@ -657,12 +691,12 @@ class _ListTransaction(_Transaction):
             self.reset = False
         diff_by_key = transpose_list(diff)
         if len(diff_by_key) == 0 and force:
-            for key,node in self.liststate.acquire(tid, None, None).items():
+            for key,node in self.liststate.acquire(tid, None).items():
                 diff_by_key[key] = {}
                 self.elems[key] = node.newtrans()
         elif WILDKEY in diff_by_key:
             wildconf = diff_by_key[WILDKEY]
-            for key,node in self.liststate.acquire(tid, None, None).items():
+            for key,node in self.liststate.acquire(tid, None).items():
                 if key in diff_by_key:
                     diff_by_key[key].update(wildconf.items())
                 else:
@@ -675,7 +709,7 @@ class _ListTransaction(_Transaction):
                 for node in subdiff.values():
                     kc = node.key_children(self.key_names)
                     key_leaves_by_key[key] = kc
-            for key,node in self.liststate.acquire(tid, set(diff_by_key.keys()), key_leaves_by_key).items():
+            for key,node in self.liststate.acquire(tid, key_leaves_by_key).items():
                 self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():
