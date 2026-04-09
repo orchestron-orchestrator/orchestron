@@ -1,2 +1,3 @@
 clab-*/
 *.clab.yml.bak
+persistence-restart.db/

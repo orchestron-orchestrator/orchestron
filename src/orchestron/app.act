@@ -1,6 +1,7 @@
 import argparse
 import file
 import logging
+import lmdb
 import xml
 
 import orchestron.device as odev
@@ -14,7 +15,7 @@ class SysSpec(value):
     """Exportable wrapper for generated functions from sysspec.act"""
     device_types: dict[str, odev.DeviceType]
     @property
-    get_layers: proc(odev.DeviceRegistry, ?logging.Handler) -> ttt.Layer
+    get_layers: proc(odev.DeviceRegistry, ?logging.Handler, ?lmdb.Db) -> ttt.Layer
     @property
     schema_for_layer: proc(int) -> yang.schema.DRoot
 
@@ -26,10 +27,14 @@ class SysSpec(value):
 
 class AppArgs(value):
     config_files: list[str]
+    db_path: ?str
+    http_port: int
     exit_on_done: bool
 
-    def __init__(self, config_files: list[str]=[], exit_on_done: bool=False):
+    def __init__(self, config_files: list[str]=[], db_path: ?str=None, http_port: int=80, exit_on_done: bool=False):
         self.config_files = config_files
+        self.db_path = db_path
+        self.http_port = http_port
         self.exit_on_done = exit_on_done
 
 
@@ -37,11 +42,14 @@ class AppArgs(value):
     def from_args(argv: list[str], exit: action(int) -> None) -> AppArgs:
         p = argparse.Parser()
         p.add_arg("file", "Config XML file(s)", False, "+")
+        p.add_option("db", "str", default="", help="LMDB directory for TTT persistence")
+        p.add_option("http-port", "int", default=80, help="HTTP listen port")
         p.add_bool("exit-on-done", "Exit after startup config has been applied")
 
         try:
             args = p.parse(argv)
-            return AppArgs(args.get_strlist("file"), args.get_bool("exit-on-done"))
+            db_path = args.get_str("db")
+            return AppArgs(args.get_strlist("file"), db_path if db_path != "" else None, args.get_int("http-port"), args.get_bool("exit-on-done"))
         except argparse.PrintUsage as exc:
             print(exc.error_message)
             exit(0)
@@ -114,3 +122,33 @@ actor StartupConfigApplier(config_files: list[str], exit_on_done: bool, top_sche
 
     if len(config_files) > 0:
         after 0.5: _apply()
+
+
+actor StartupBootstrap(cfs: ttt.Layer, restore_from_db: bool, start_runtime: proc() -> None, exit: action(int) -> None, log_handler: logging.Handler):
+    var log = logging.Logger(log_handler)
+
+    def _recompute_done(result):
+        if isinstance(result, Exception):
+            log.error("Error recomputing restored TTT state", {"error": result})
+            exit(1)
+            return
+        log.info("Restored TTT state reconciled")
+        start_runtime()
+
+    def _run():
+        if not restore_from_db:
+            start_runtime()
+            return
+
+        log.info("Loading persisted TTT state")
+        try:
+            await async cfs.load_from_db()
+        except Exception as e:
+            log.error("Error loading persisted TTT state", {"error": e})
+            exit(1)
+            return
+
+        log.info("Recomputing restored TTT state")
+        cfs.newsession().recompute(_recompute_done, force=True)
+
+    after 0: _run()

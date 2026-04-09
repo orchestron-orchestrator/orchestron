@@ -1,8 +1,14 @@
 import yang.adata
 import yang.gdata as gdata
+import orchestron.db as swdb
 import orchestron.device as odev
 from orchestron.device_meta_config import stratoweave_rfs__device_entry as DeviceMetaConfig
-import xml, logging
+import xml, logging, lmdb
+
+def expect[T](t: ?T, errmsg: str) -> T:
+    if t is not None:
+        return t
+    raise ValueError(errmsg)
 
 
 NS_stratoweave_device = "http://stratoweave.org/yang/stratoweave-device.yang"
@@ -82,32 +88,6 @@ def merge(cfg_per_src: dict[str,gdata.Node]):
     else:
         raise ValueError("Nothing to merge")
 
-
-def expect[T](t: ?T, errmsg: str) -> T:
-    if t is not None:
-        return t
-    raise ValueError(errmsg)
-
-
-def _format_path_old(path: list[value]) -> list[str]: # list[str|gdata.Id]
-    if len(path) == 0:
-        return []
-    r = []
-    # Start with "empty" qualifier to ensure the first path component always includes a qualifier
-    p0 = WILDID
-    for p1 in path:
-        if isinstance(p1, gdata.Id):
-            if p0.q == p1.q:
-                r.append(p1.name)
-            else:
-                r.append("{p1.name}#{p1.q}")
-            p0 = p1
-        elif isinstance(p1, str):
-            r.append(p1)
-        else:
-            raise ValueError("Unsupported path component in _format_path: {type(p1)}")
-    return r
-
 class CfgResult():
     pass
 
@@ -155,20 +135,35 @@ def _format_path(path: ?Path):
     else:
         return []
 
+def _db_path(path: ?Path) -> list[value]:
+    if path is None:
+        return []
+    path1 = expect(path, "Missing expected path in _db_path")
+    par = _db_path(path1.parent)
+    if isinstance(path1, PathElem):
+        par.append(gdata.Id(path1.ns, path1.name))
+    elif path1.parent is None and path1.name.endswith(":"):
+        par.append(path1.name[:-1])
+    else:
+        par.append(path1.name)
+    return par
+
 class YieldState[T(Hashable)](object):
     it: Iterator[T]
     key: T
     tid: str
     out: ?Session
     results: dict[T, CfgResult]
+    dbuf: ?swdb.Buffer
     @property
     done: action(CfgResult) -> None
 
-    def __init__(self, it: Iterator[T], key: T, tid, out, done):
+    def __init__(self, it: Iterator[T], key: T, tid, out, done, dbuf: ?swdb.Buffer=None):
         self.it = it
         self.key = key
         self.tid = tid
         self.out = out
+        self.dbuf = dbuf
         self.results = {}
         self.done = done
 
@@ -185,15 +180,35 @@ actor Node(impl: _Node):
     def get():
         return impl.get()
 
+    def bind_db(db: ?lmdb.Db):
+        """Attach DB handle to this node (and its children)
+
+        The DB used for persistence is not bound in at construction time which
+        makes it possible to swap out at runtime.
+        """
+        impl.bind_db(db)
+
+    def restore(path_segments: list[str], attr: str, qualifier: ?str, raw: bytes):
+        """Restore one DB record at this node or route it to the named child path."""
+        impl.restore(path_segments, attr, qualifier, raw)
+
+    def is_empty():
+        return impl.is_empty()
+
 class _Node(object):
     path: ?Path
     newtrans: proc() -> Transaction
     get: proc() -> gdata.Node
+    def bind_db(self, db: ?lmdb.Db) -> None:
+        pass
+    restore: proc(list[str], str, ?str, bytes) -> None
+    def is_empty(self) -> bool:
+        return True
 
 
 actor Transaction(impl: _Transaction):
-    def configure(tid, diff, out, force=False):
-        return impl.configure(tid, diff, out, force)
+    def configure(tid, diff, out, force=False, dbuf: ?swdb.Buffer=None):
+        return impl.configure(tid, diff, out, force, dbuf)
 
     def linked_cfg(tid, tag, cfg, out):
         return impl.linked_cfg(tid, tag, cfg, out)
@@ -202,8 +217,8 @@ actor Transaction(impl: _Transaction):
         return impl.linkage(tid, linkdiff, out)
 
     # yield action
-    def lock(tid, out, done):
-        impl.lock(self, tid, out, done)
+    def lock(tid, out, done, dbuf: ?swdb.Buffer=None):
+        impl.lock(self, tid, out, done, dbuf)
 
     def lock_cont(res):
         impl.lock_cont(self, res)
@@ -220,6 +235,15 @@ actor Transaction(impl: _Transaction):
     def get():
         return impl.get()
 
+    def bind_db(db: ?lmdb.Db):
+        impl.bind_db(db)
+
+    def restore(attr: str, qualifier: ?str, raw: bytes):
+        impl.restore(attr, qualifier, raw)
+
+    def is_empty():
+        return impl.is_empty()
+
     def init_dynstate(node: Node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None):
         impl.init_dynstate(node, act, update_dynstate)
 
@@ -228,11 +252,11 @@ actor Transaction(impl: _Transaction):
 
 class _Transaction(object):
     path: ?Path
-    configure:  proc(tid: str, diff: dict[str,gdata.Node], out: ?Session, force: ?bool) -> CfgResult
+    configure:  proc(tid: str, diff: dict[str,gdata.Node], out: ?Session, force: ?bool, dbuf: ?swdb.Buffer) -> CfgResult
     linked_cfg: proc(tid: str, tag: str, cfg: gdata.Node, out: ?Session) -> CfgResult
     linkage: proc(tid: str, linkdiff: list[(str,gdata.FNode,Node,bool)], out: ?Session) -> CfgResult
     # yield action
-    lock : proc(actself: Transaction, tid: str, out: ?Session, done: action(CfgResult) -> None) -> None
+    lock : proc(actself: Transaction, tid: str, out: ?Session, done: action(CfgResult) -> None, dbuf: ?swdb.Buffer) -> None
     lock_cont : proc(actself: Transaction, res: CfgResult) -> None
     commit: proc(tid: str, ok: bool) -> None
     wait_complete: proc(actself: Transaction, tid: str, done: action(value) -> None) -> None
@@ -245,6 +269,15 @@ class _Transaction(object):
     proc def linkage(self, tid, linkdiff, out):
         return CfgOk()
 
+    def bind_db(self, db: ?lmdb.Db) -> None:
+        pass
+
+    def restore(self, attr: str, qualifier: ?str, raw: bytes) -> None:
+        pass
+
+    def is_empty(self) -> bool:
+        return True
+
     proc def init_dynstate(self, node: Node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?gdata.Node)->None):
         pass
 
@@ -253,11 +286,47 @@ class _Transaction(object):
 
 ####################### Layer ########################
 
-actor Layer(name: str, rootgen: proc(Path, ?Layer)->Node, lower: ?Layer):
+actor Layer(name: str, rootgen: proc(?Path, ?Layer)->Node, lower: ?Layer, db_arg: ?lmdb.Db=None):
     root = rootgen(Path(name+":"), lower)
+    root.bind_db(db_arg)
 
-    def newsession():
-        return Session(name, root, lower)
+    def load_from_db(top_only=False):
+        db = expect(db_arg, "Missing db for TTT persistence restore in layer {name}")
+        read_txn = db.begin_read()
+        try:
+            codec = swdb.read_key_codec(read_txn)
+            load_from_read_txn(read_txn, codec, top_only)
+            await async read_txn.commit()
+        except Exception as e:
+            await async read_txn.abort()
+            raise e
+
+    def load_from_read_txn(read_txn: lmdb.ReadTransaction, codec: swdb.KeyCodec, top_only=False):
+        if not root.is_empty():
+            raise ValueError("TTT restore requires an empty tree in layer {name}")
+        prefix = swdb.to_key([name], codec)
+        cursor = read_txn.cursor()
+        kv = cursor.seek_prefix(prefix)
+        while kv is not None:
+            entry = expect(kv, "Missing expected LMDB cursor entry during restore")
+            if not entry.key.startswith(prefix):
+                break
+            boundary = entry.key[len(prefix)] if len(entry.key) > len(prefix) else None
+            if boundary != swdb.PATH_SEPARATOR[0] and boundary != swdb.ATTRIBUTE_SEPARATOR[0]:
+                break
+            path, attr, qualifier = swdb.parse_attr_key(entry.key, codec)
+            if len(path) == 0 or path[0] != name:
+                raise ValueError("Unexpected persistence path for layer {name}: {path}")
+            # TODO: we should branch out the load of different nodes. Just pass
+            # a new cursor to this child node, then skip forward etc so we can
+            # do concurrent load using many cursors across the whole tree
+            await async root.restore(path[1:], attr, qualifier, entry.value)
+            kv = cursor.next()
+        if not top_only and lower is not None:
+            await async lower.load_from_read_txn(read_txn, codec, False)
+
+    def newsession(dbuf: ?swdb.Buffer=None):
+        return Session(name, root, lower, db_arg, dbuf)
 
     def below():
         return lower if lower is not None else self
@@ -269,15 +338,71 @@ actor Layer(name: str, rootgen: proc(Path, ?Layer)->Node, lower: ?Layer):
         return root.get()
 
 
-actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
+actor Session(name: str, rootnode: Node, lowerlayer: ?Layer, db: ?lmdb.Db, dbuf_arg: ?swdb.Buffer=None):
+    dbuf: ?swdb.Buffer = dbuf_arg if dbuf_arg is not None else swdb.Buffer() if db is not None else None
     root: Transaction = rootnode.newtrans()
-    lower: ?Session = lowerlayer.newsession() if lowerlayer is not None else None
+    lower: ?Session = lowerlayer.newsession(dbuf) if lowerlayer is not None else None
 
     var buf: dict[str,gdata.Node] = {}
     var lock_cont: ?action(CfgResult)->None = None
     var done_cont: ?action(value)->None = None
     var comp_cont: ?action(value)->None = None
-    var tid_state = None
+    var tid_state: ?str = None
+
+    def _flush_dbuffer_then_commit():
+        # TODO: acton-lmdb should expose more finely granular exception types for
+        # writer contention so this path can use isinstance checks instead of
+        # matching the LMDBError message text.
+        def _is_write_txn_busy(e: Exception) -> bool:
+            return "Write transaction already active" in str(e)
+
+        proc def _begin_write(tid: str, db: lmdb.Db) -> ?swdb.WriteTransaction:
+            try:
+                return swdb.WriteTransaction(db.begin_write())
+            except Exception as e:
+                # TODO: rather than retries, lmdb should offer an interface to
+                # get the write transaction with a callback when we get it
+                if _is_write_txn_busy(e):
+                    after swdb.WRITE_RETRY_DELAY: _flush_dbuffer_then_commit()
+                    return None
+                commit(tid, False)
+                edit_config_finish(e, False)
+                return None
+
+        proc def _flush_write_txn(tid: str, dbuf: swdb.Buffer, dbtr: swdb.WriteTransaction):
+            try:
+                await async dbuf.flush_to_db(dbtr)
+                swdb.write_metadata(dbtr)
+                await async dbtr.txn.commit()
+            except Exception as e:
+                try:
+                    await async dbtr.txn.abort()
+                except Exception:
+                    pass
+                commit(tid, False)
+                edit_config_finish(e, False)
+                return
+
+        if tid_state is not None:
+            tid = tid_state
+        else:
+            return
+        if db is not None:
+            if dbuf is not None:
+                dbtr = _begin_write(tid, db)
+                if dbtr is not None:
+                    _flush_write_txn(tid, dbuf, dbtr)
+                else:
+                    return
+            else:
+                raise ValueError("Missing DB buffer for staged DB flush")
+        else:
+            commit(tid, True)
+            edit_config_finish("Ok", True)
+            return
+
+        commit(tid, True)
+        edit_config_finish("Ok", True)
 
     # yield action
     def edit_config(diff, done: ?action(value)->None=None, complete: ?action(value)->None=None, force=False):
@@ -300,14 +425,23 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
     def edit_config_cont(res):
         #print('####', tid_state, '(Layer)', name, 'edit_config_cont', err=True)
         if tid_state is not None:
-            commit(tid_state, isinstance(res, CfgOk))
+            if isinstance(res, CfgOk):
+                _flush_dbuffer_then_commit()
+            else:
+                commit(tid_state, False)
+                edit_config_finish(res.exception if isinstance(res, CfgError) else 'Ok', False)
+
+    def edit_config_finish(result: value, ok: bool):
+        if tid_state is not None:
             if done_cont is not None:
-                #print('   #', tid_state, '(Layer)', name, 'EDIT_CONFIG DONE', res, err=True)
-                result = res.exception if isinstance(res, CfgError) else 'Ok'
                 done_cont(result)
             if comp_cont is not None:
-                wait_complete(comp_cont)
+                if ok:
+                    wait_complete(comp_cont)
+                else:
+                    comp_cont(result)
         done_cont = None
+        comp_cont = None
         tid_state = None
 
     def configure(tid, diff_per_source):
@@ -319,7 +453,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
         diff = buf
         buf = {}
         #print('   #', tid, '(Layer)', name, 'APPLY\n' + per_src(diff), err=True)
-        res = root.configure(tid, diff, lower, force)
+        res = root.configure(tid, diff, lower, force, dbuf)
         if not isinstance(res, CfgError) and lower is not None:
             res = lower.apply(tid, force=False)
         #print('   #', tid, '(Layer)', name, 'APPLY RESULT', res, err=True)
@@ -337,7 +471,7 @@ actor Session(name: str, rootnode: Node, lowerlayer: ?Layer):
                 return
         tid_state = tid
         lock_cont = done
-        root.lock(tid, lower, lock_cont1)                                   # yield await
+        root.lock(tid, lower, lock_cont1, dbuf)                             # yield await
 
     def lock_cont1(res):
         #print('####', tid_state, '(Layer)', name, 'lock_cont1', err=True)
@@ -421,6 +555,30 @@ class _Container(_Node):
             res.update(path.keyvals.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
+    def bind_db(self, db: ?lmdb.Db) -> None:
+        for node in self.elems.values():
+            node.bind_db(db)
+
+    def restore(self, path_segments: list[str], attr: str, qualifier: ?str, raw: bytes) -> None:
+        if len(path_segments) == 0:
+            raise ValueError("Unexpected persisted container attribute {attr} at {_format_path(self.path)}")
+
+        child_name = path_segments[0]
+        for key, node in self.elems.items():
+            if key.name == child_name or swdb.qualified_name(key) == child_name:
+                node.restore(path_segments[1:], attr, qualifier, raw)
+                return
+
+        raise ValueError("Unable to route persisted child {child_name} at {_format_path(self.path)}")
+
+    def is_empty(self) -> bool:
+        for node in self.elems.values():
+            impl = node.pub_impl
+            if isinstance(impl, _Container) or isinstance(impl, _List):
+                if not node.is_empty():
+                    return False
+        return True
+
 
 def ContainerTransaction(path, contents, ns:?str=None, module:?str=None):
     return Transaction(_ContainerTransaction(path, contents, ns, module))
@@ -441,8 +599,8 @@ class _ContainerTransaction(_Transaction):
         self.elems = {key: node.newtrans() for key, node in contents.items()}
         self.module = module
 
-    def configure(self, tid, diff, out, force=False):
-        #print('####', tid, '(Container)', _format_path(self.path), 'configure force:', force, 'diff:', diff, actorid(), err=True)
+    def configure(self, tid, diff, out, force=False, dbuf: ?swdb.Buffer=None):
+        #print('####', tid, '(Container)', _format_path(self.path), 'configure force:', force, actorid(), err=True)
         diff_by_child = transpose_container(diff)
         # Extra nodes present in diff_by_child represent configuration that is
         # not any of our embedded transforms. These may be key leaf values, or
@@ -466,7 +624,7 @@ class _ContainerTransaction(_Transaction):
         for child,subdiff in diff_by_child.items():
             if child in self.elems:
                 #print('   #', tid, '(Container)', _format_path(self.path), 'CONFIGURE CHILD', child, err=True)
-                msgs[child] = async self.elems[child].configure(tid, subdiff, out, force)
+                msgs[child] = async self.elems[child].configure(tid, subdiff, out, force, dbuf)
         results = {}
         for child,msg in msgs.items():
             results[child] = await msg
@@ -487,15 +645,15 @@ class _ContainerTransaction(_Transaction):
         return r
 
     # yield action
-    def lock(self, actself, tid, out: ?Session, done):
-        #print('####', tid, '(Container)', _format_path(self.path), 'lock', gdata.hack_sorted(self.accum.keys()), err=True)
+    def lock(self, actself, tid, out: ?Session, done, dbuf: ?swdb.Buffer=None):
+        #print('####', tid, '(Container)', _format_path(self.path), 'lock', sorted(self.accum.keys()), err=True)
         it = iter(gdata.hack_sorted(self.accum.keys()))
         try:
             key = next(it)
-            self.state = YieldState(it, key, tid, out, done)
+            self.state = YieldState(it, key, tid, out, done, dbuf)
             tr = self.elems[key]
             #print('   #', tid, '(Container)', _format_path(self.path), 'LOCK CHILD', key, err=True)
-            tr.lock(tid, out, actself.lock_cont)                    # yield await
+            tr.lock(tid, out, actself.lock_cont, dbuf)              # yield await
         except StopIteration:
             #print('   #', tid, '(Container)', _format_path(self.path), 'LOCK IMMEDIATELY DONE', err=True)
             done(CfgOk())
@@ -510,7 +668,7 @@ class _ContainerTransaction(_Transaction):
                 state.key = key
                 tr = self.elems[key]
                 #print('   #', state.tid, '(Container)', _format_path(self.path), 'LOCK CHILD', key, err=True)
-                tr.lock(state.tid, state.out, actself.lock_cont)
+                tr.lock(state.tid, state.out, actself.lock_cont, state.dbuf)
             except StopIteration:
                 self.state = None
                 #print('   #', state.tid, '(Container)', _format_path(self.path), 'LOCK DONE', err=True)
@@ -592,50 +750,128 @@ class _List(_Node):
     def get(self):
         #print('####', '(List)', _format_path(self.path), 'NODE GET', err=True)
         res = []
-        for key, node in self.liststate.all().items():
+        for key, (node, key_leaves1) in self.liststate.all().items():
             r = node.get()
+            if key_leaves1 is not None and isinstance(r, gdata.Container):
+                r.children.update(key_leaves1.items())
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
+
+    def bind_db(self, db: ?lmdb.Db) -> None:
+        self.liststate.bind_db(db)
+
+    def restore(self, path_segments: list[str], attr: str, qualifier: ?str, raw: bytes) -> None:
+        if len(path_segments) == 0:
+            raise ValueError("Unexpected persisted list attribute {attr} at {_format_path(self.path)}")
+
+        key_str = path_segments[0]
+        if len(path_segments) == 1 and attr == swdb.ATTR_KEYS:
+            decoded = swdb.decode_node_bytes(raw)
+            if isinstance(decoded, gdata.Container):
+                self.liststate.restore_key_leaves(key_str, decoded)
+                return
+            raise ValueError("Persisted list key leaves must decode to Container at {_format_path(self.path)}[{key_str}]")
+
+        elem = self.liststate.restore_element(key_str)
+        elem.restore(path_segments[1:], attr, qualifier, raw)
+
+    def is_empty(self) -> bool:
+        return self.liststate.is_empty()
 
 
 actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?str, lower: ?Layer):
     var elems = {}
     var active = {}
     var provisional = set()
+    var key_leaves = {}
+    var staged_key_leaves = {}
+    var db = None
 
-    def acquire(tid: str, keys: ?dict[str, dict[gdata.Id, gdata.Leaf]]):
+    def bind_db(db1: ?lmdb.Db) -> None:
+        db = db1
+        for node in elems.values():
+            node.bind_db(db1)
+
+    def acquire(tid: str, keys: ?set[str], key_leaves_by_key: ?dict[str, dict[gdata.Id, gdata.Leaf]]) -> dict[str, Node]:
         if keys is not None:
-            keys1 = set(keys.keys())
+            keys1 = keys
             new = keys1 - set(elems.keys())
             for k in new:
-                elems[k] = template(PathKey(k,keys[k],path), lower)
+                keyvals = key_leaves_by_key.get_def(k, {}) if key_leaves_by_key is not None else {}
+                elems[k] = template(PathKey(k, keyvals, path), lower)
+                elems[k].bind_db(db)
             provisional |= new
             #print('====', tid, path, 'acquire keys:', keys, 'new:', new, 'provisional:', provisional, actorid(), err=True)
         else:
             keys1 = set(elems.keys())
             #print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
         active[tid] = keys1
+        if key_leaves_by_key is not None:
+            for k in keys1:
+                node = elems[k]
+                if isinstance(node.pub_impl, _Container):
+                    staged_key_leaves[tid] = key_leaves_by_key
+                break
 
         return {k: elems[k] for k in keys1}
 
-    def release(tid: str, ok: bool, deletes: set[str]):
+    def release(tid: str, ok: bool, deletes: set[str]) -> None:
         #print('====', tid, path, 'release', ok, 'deletes:', deletes, 'provisional:', provisional, err=True)
         if ok:
             provisional -= active[tid]
             provisional |= deletes
+            if tid in staged_key_leaves:
+                for k, leaves in staged_key_leaves[tid].items():
+                    key_leaves[k] = leaves
+            for k in deletes:
+                if k in key_leaves:
+                    del key_leaves[k]
         del active[tid]
+        if tid in staged_key_leaves:
+            del staged_key_leaves[tid]
         if not active:
             #print('====', tid, path, 'deleting:', provisional, err=True)
             for k in provisional:
                 del elems[k]
+                if k in key_leaves:
+                    del key_leaves[k]
             provisional = set()
 
     def all():
         #print('====', 'all:', elems.keys(), 'provosional:', provisional, "active:", active)
         if provisional:
-            return {k: elems[k] for k in elems if k not in provisional}
+            return {k: (elems[k], key_leaves.get(k)) for k in elems if k not in provisional}
         else:
-            return {k: node for k, node in elems.items()}
+            return {k: (node, key_leaves.get(k)) for k, node in elems.items()}
+
+    def projected(tid: str, deletes: set[str]):
+        committed_keys = {k for k in elems if k not in provisional}
+        active_keys = active.get_def(tid, set())
+        projected_keys = (committed_keys | active_keys) - deletes
+
+        projected_key_leaves = {}
+        for key, leaves in key_leaves.items():
+            if key not in deletes:
+                projected_key_leaves[key] = leaves
+        if tid in staged_key_leaves:
+            for key, leaves in staged_key_leaves[tid].items():
+                if key not in deletes:
+                    projected_key_leaves[key] = leaves
+
+        return {k: (elems[k], projected_key_leaves.get(k)) for k in projected_keys}
+
+    def is_empty() -> bool:
+        return len(elems) == 0 and len(active) == 0 and len(provisional) == 0 and len(key_leaves) == 0 and len(staged_key_leaves) == 0
+
+    def restore_element(key: str) -> Node:
+        if key not in elems:
+            elems[key] = template(PathKey(key, key_leaves.get_def(key, {}), path), lower)
+            elems[key].bind_db(db)
+        return elems[key]
+
+    def restore_key_leaves(key: str, leaves: gdata.Container) -> None:
+        restore_element(key)
+        key_leaves[key] = leaves.children
 
 
 class _ListTransaction(_Transaction):
@@ -659,7 +895,7 @@ class _ListTransaction(_Transaction):
         self.state = None
         self.reset = False
 
-    def configure(self, tid, diff, out: ?Session, force=False):
+    def configure(self, tid, diff, out: ?Session, force=False, dbuf: ?swdb.Buffer=None):
         #print('####', tid, '(List)', _format_path(self.path), 'configure', actorid(), err=True)
         if self.reset:
             self.elems = {}
@@ -667,12 +903,12 @@ class _ListTransaction(_Transaction):
             self.reset = False
         diff_by_key = transpose_list(diff)
         if len(diff_by_key) == 0 and force:
-            for key,node in self.liststate.acquire(tid, None).items():
+            for key,node in self.liststate.acquire(tid, None, None).items():
                 diff_by_key[key] = {}
                 self.elems[key] = node.newtrans()
         elif WILDKEY in diff_by_key:
             wildconf = diff_by_key[WILDKEY]
-            for key,node in self.liststate.acquire(tid, None).items():
+            for key,node in self.liststate.acquire(tid, None, None).items():
                 if key in diff_by_key:
                     diff_by_key[key].update(wildconf.items())
                 else:
@@ -685,21 +921,41 @@ class _ListTransaction(_Transaction):
                 for node in subdiff.values():
                     kc = node.key_children(self.key_names)
                     key_leaves_by_key[key] = kc
-            for key,node in self.liststate.acquire(tid, key_leaves_by_key).items():
+            for key,node in self.liststate.acquire(tid, set(diff_by_key.keys()), key_leaves_by_key).items():
                 self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():
             #print('   #', tid, '(List)', _format_path(self.path), 'CONFIGURE ELEMENT', key, err=True)
-            msgs[key] = async self.elems[key].configure(tid, subdiff, out, force)
+            msgs[key] = async self.elems[key].configure(tid, subdiff, out, force, dbuf)
         for key in self.accum.keys():
             if key not in diff_by_key:
-                msgs[key] = async self.elems[key].configure(tid, {}, out, force)
+                msgs[key] = async self.elems[key].configure(tid, {}, out, force, dbuf)
         results = {}
         for key,msg in msgs.items():
             results[key] = await msg
             v = results[key]
             #print('   #', tid, '(List)', _format_path(self.path), 'RESULT ELEMENT', key, ':', v, err=True)
-        return self._analyze(results)
+        res = self._analyze(results)
+        if dbuf is not None:
+            dbuf.replace(swdb.slot_key(_db_path(self.path), "list"), self.db_ops(tid))
+        return res
+
+    def db_ops(self, tid: str) -> list[swdb.BufferOp]:
+        deletes = set()
+        for key, res in self.accum.items():
+            if isinstance(res, CfgOk) and res.empty:
+                deletes.add(key)
+        # TODO: switch list DB staging to deltas instead of rebuilding the
+        # full projected key set for each transaction.
+        return [
+            swdb.put_op(_db_path(self.path) + [key], swdb.ATTR_KEYS, gdata.Container(key_leaves))
+            if key_leaves is not None else
+            swdb.del_op(_db_path(self.path) + [key], swdb.ATTR_KEYS)
+            for key, (_node, key_leaves) in self.liststate.projected(tid, deletes).items()
+        ] + [
+            swdb.del_op(_db_path(self.path) + [key], swdb.ATTR_KEYS)
+            for key in deletes
+        ]
 
     def _analyze(self, results: dict[str,CfgResult]):
         self.accum.update(results.items())
@@ -714,15 +970,15 @@ class _ListTransaction(_Transaction):
         return CfgOk(empty)
 
     # yield action
-    def lock(self, actself, tid, out: ?Session, done):
+    def lock(self, actself, tid, out: ?Session, done, dbuf: ?swdb.Buffer=None):
         #print('####', tid, '(List)', _format_path(self.path), 'lock', sorted(self.accum.keys()), err=True)
         it = iter(sorted(self.accum.keys()))
         try:
             key = next(it)
-            self.state = YieldState(it, key, tid, out, done)
+            self.state = YieldState(it, key, tid, out, done, dbuf)
             tr = self.elems[key]
             #print('   #', tid, '(List)', _format_path(self.path), 'LOCK ELEMENT', key, err=True)
-            tr.lock(tid, out, actself.lock_cont)                        # yield await
+            tr.lock(tid, out, actself.lock_cont, dbuf)                  # yield await
         except StopIteration:
             #print('   #', tid, '(List)', _format_path(self.path), 'LOCK IMMEDIATELY DONE', err=True)
             done(CfgOk())
@@ -737,7 +993,7 @@ class _ListTransaction(_Transaction):
                 state.key = key
                 tr = self.elems[key]
                 #print('   #', state.tid, '(List)', _format_path(self.path), 'LOCK ELEMENT', key, err=True)
-                tr.lock(state.tid, state.out, actself.lock_cont)
+                tr.lock(state.tid, state.out, actself.lock_cont, state.dbuf)
             except StopIteration:
                 self.state = None
                 #print('   #', state.tid, '(List)', _format_path(self.path), 'LOCK DONE', err=True)
@@ -795,11 +1051,13 @@ class _ListTransaction(_Transaction):
     def get(self):
         #print('####', '(List)', _format_path(self.path), 'GET', err=True)
         res = []
-        for key, node in self.liststate.all().items():
+        for key, (node, key_leaves1) in self.liststate.all().items():
             if key in self.elems:
                 r = self.elems[key].get()
             else:
                 r = node.get()
+            if key_leaves1 is not None and isinstance(r, gdata.Container):
+                r.children.update(key_leaves1.items())
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
@@ -818,6 +1076,17 @@ class _TransformBase(_Node):
     def get(self):
         return self.transaction.get()
 
+    def bind_db(self, db: ?lmdb.Db) -> None:
+        self.transaction.bind_db(db)
+
+    def restore(self, path_segments: list[str], attr: str, qualifier: ?str, raw: bytes) -> None:
+        if len(path_segments) != 0:
+            raise ValueError("Unexpected persisted descendant under transform {_format_path(self.path)}: {path_segments}")
+        self.transaction.restore(attr, qualifier, raw)
+
+    def is_empty(self) -> bool:
+        return self.transaction.is_empty()
+
 
 class _TransformTransactionBase(_Transaction):
     diffs: dict[str, dict[str, gdata.Node]]
@@ -826,7 +1095,7 @@ class _TransformTransactionBase(_Transaction):
     running: dict[str, gdata.Node]
     output: ?gdata.Node
     locker: ?str
-    pending: list[(Transaction, str, ?Session, action(CfgResult)->None)]
+    pending: list[(Transaction, str, ?Session, action(CfgResult)->None, ?swdb.Buffer)]
 
     linked: dict[str, gdata.Node]                               # Active linked cfg tree per link tag
     candidate_linked: dict[str, dict[str, gdata.Node]]          # As above, per ongoing transaction
@@ -834,8 +1103,8 @@ class _TransformTransactionBase(_Transaction):
     candidate_subscriptions: dict[str, dict[str, gdata.FNode]]  # As above, per ongoing transaction
     subscribers: dict[str, Node]                                # Active linked data receiver per link tag
     candidate_subscribers: dict[str, dict[str, Node]]           # As above, per ongoing transaction
-
     me: str
+    db: ?lmdb.Db
 
     compute : proc(tid: str, merged: gdata.Node, out: ?Session) -> (?(gdata.Node, ?gdata.Node), ?Exception)
     clear : proc(tid: str, out: ?Session) -> None
@@ -850,18 +1119,17 @@ class _TransformTransactionBase(_Transaction):
         self.output = None
         self.locker = None
         self.pending = []
-
         self.linked = {}
         self.candidate_linked = {}
         self.subscriptions = {}
         self.candidate_subscriptions = {}
         self.subscribers = {}
         self.candidate_subscribers = {}
-
+        self.db = None
         self.me = ''  # Initialize first before any self reference
         self.me = '(src_' + str(self)[-10:-1] + ')'  # Now safe to use str(self)
 
-    def configure(self, tid, diff, out: ?Session, force=False):
+    def configure(self, tid, diff, out: ?Session, force=False, dbuf: ?swdb.Buffer=None):
         #print('####', tid, '(Transform)', _format_path(self.path), 'configure', actorid(), self.me, err=True)
 
         if tid not in self.diffs:
@@ -880,6 +1148,7 @@ class _TransformTransactionBase(_Transaction):
             self.essays[tid] = (None, None) # TODO: do we want to keep memory?
             #print('   #', tid, '(Transform)', _format_path(self.path), 'EMPTY CONFIG', err=True)
             self.clear(tid, out)
+            self.stage_db_state(tid, dbuf)
             return CfgOk(empty=True)
         else:
             try:
@@ -888,6 +1157,7 @@ class _TransformTransactionBase(_Transaction):
 #                assert self.validate(merged)
             except Exception as e:
                 #print('   #', tid, '(Transform)', _format_path(self.path), 'FAILURE', e, err=True)
+                self.stage_db_state(tid, dbuf, clear=True)
                 return CfgError(e)
             else:
                 linked = self.candidate_linked.get_def(tid, self.linked)
@@ -898,6 +1168,7 @@ class _TransformTransactionBase(_Transaction):
                 newout, newmem = outmem
                 self.essays[tid] = (newout, newmem)
                 #print('   #', tid, '(Transform)', _format_path(self.path), 'OUTPUT\n       ', newout.prsrc(indent=4), err=True)
+                self.stage_db_state(tid, dbuf)
                 return CfgOk()
         return CfgOk()
 
@@ -908,7 +1179,7 @@ class _TransformTransactionBase(_Transaction):
         return self.configure(tid, {}, out)
 
     # yield action
-    def lock(self, actself, tid, out: ?Session, done):                          # yield await
+    def lock(self, actself, tid, out: ?Session, done, dbuf: ?swdb.Buffer=None):          # yield await
         #print('####', tid, '(Transform)', _format_path(self.path), 'lock', err=True)
         locker = self.locker
         if locker is not None:
@@ -917,12 +1188,12 @@ class _TransformTransactionBase(_Transaction):
                 done(CfgOk())
             else:
                 #print('   #', tid, '(Transform)', _format_path(self.path), 'LOCK SUSPENDING', err=True)
-                self.pending.append((actself, tid, out, done))                  # suspend
+                self.pending.append((actself, tid, out, done, dbuf))            # suspend
             return
         self.locker = tid
         if tid not in self.candidates:
             #print('   #', tid, '(Transform)', _format_path(self.path), 'LOCK - RE-CONFIGURING', err=True)
-            res = self.configure(tid, {}, out)
+            res = self.configure(tid, {}, out, False, dbuf)
             done(res)
         else:
             #print('   #', tid, '(Transform)', _format_path(self.path), 'LOCKED', err=True)
@@ -930,6 +1201,32 @@ class _TransformTransactionBase(_Transaction):
 
     def lock_cont (self, actself, res):
         pass
+
+    def stage_db_state(self, tid: str, dbuf: ?swdb.Buffer, clear=False) -> None:
+        if dbuf is not None:
+            slot = swdb.slot_key(_db_path(self.path), "transform")
+            if clear:
+                dbuf.replace(slot, [])
+                return
+            essay = self.essays.get(tid)
+            if essay is not None:
+                ops = self.db_ops(tid, essay)
+                dbuf.replace(slot, ops)
+            else:
+                dbuf.replace(slot, [])
+            return
+        return
+
+    mut def db_ops(self, tid: str, essay) -> list[swdb.BufferOp]:
+        candidate = self.candidates.get_def(tid, {})
+        old_sources = set(self.running.keys())
+        return [
+            swdb.put_op(_db_path(self.path), swdb.ATTR_RUNNING, candidate[src], src)
+            for src in sorted(candidate.keys())
+        ] + [
+            swdb.del_op(_db_path(self.path), swdb.ATTR_RUNNING, src)
+            for src in old_sources - set(candidate.keys())
+        ] + swdb.opt_ops(_db_path(self.path), swdb.ATTR_OUTPUT, essay.0)
 
     def commit(self, tid, ok):
         #print('####', tid, '(Transform)', _format_path(self.path), 'commit', ok, err=True)
@@ -951,15 +1248,31 @@ class _TransformTransactionBase(_Transaction):
                 pass
             self.locker = None
             if self.pending:
-                (actself, tid2, out, done) = self.pending.pop(0)
+                (actself, tid2, out, done, dbuf) = self.pending.pop(0)
                 #print('   #', tid2, '(Transform)', _format_path(self.path), 'RESUMING', err=True)
-                self.lock(actself, tid2, out, done)                             # resume
+                self.lock(actself, tid2, out, done, dbuf)                       # resume
         else:
             #print('   #', tid, '(Transform)', _format_path(self.path), 'IGNORING', err=True)
             pass
 
     mut def update_memory(self, newmem: ?gdata.Node):
         pass
+
+    def bind_db(self, db: ?lmdb.Db) -> None:
+        self.db = db
+
+    def restore(self, attr: str, qualifier: ?str, raw: bytes) -> None:
+        if attr == swdb.ATTR_RUNNING:
+            src = expect(qualifier, "Missing persistence qualifier for transform running source at {_format_path(self.path)}")
+            self.running[src] = swdb.decode_node_bytes(raw)
+            return
+        if attr == swdb.ATTR_OUTPUT:
+            self.output = swdb.decode_node_bytes(raw)
+            return
+        raise ValueError("Unexpected persisted transform attribute {attr} at {_format_path(self.path)}")
+
+    def is_empty(self) -> bool:
+        return self.running == {} and self.output is None
 
     def finalize(self, tid):
         pass
@@ -976,7 +1289,6 @@ class _TransformTransactionBase(_Transaction):
             return merge(self.running)
         else:
             return gdata.Container()
-
 
 class TransformActorParams:
     def __init__(self, update_dynstate: proc(?gdata.Node) -> None, dev: ?odev.DeviceMgr):
@@ -1042,6 +1354,22 @@ class _TransformTransaction(_TransformTransactionBase):
     def update_memory(self, newmem):
         self.memory = newmem
 
+    mut def db_ops(self, tid: str, essay) -> list[swdb.BufferOp]:
+        return _TransformTransactionBase.db_ops(self, tid, essay) + swdb.opt_ops(_db_path(self.path), swdb.ATTR_MEMORY, essay.1) + swdb.opt_ops(_db_path(self.path), swdb.ATTR_DYNSTATE, self.dynstate)
+
+    def restore(self, attr: str, qualifier: ?str, raw: bytes) -> None:
+        if attr == swdb.ATTR_MEMORY:
+            if qualifier is not None:
+                raise ValueError("Unexpected persistence qualifier for transform memory at {_format_path(self.path)}")
+            self.memory = swdb.decode_node_bytes(raw)
+            return
+        if attr == swdb.ATTR_DYNSTATE:
+            if qualifier is not None:
+                raise ValueError("Unexpected persistence qualifier for transform dynstate at {_format_path(self.path)}")
+            self.dynstate = swdb.decode_node_bytes(raw)
+            return
+        _TransformTransactionBase.restore(self, attr, qualifier, raw)
+
     proc def init_dynstate(self, node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate):
         self.node = node
         self.function.init_dynstate(act, update_dynstate)
@@ -1050,7 +1378,7 @@ class _TransformTransaction(_TransformTransactionBase):
         self.dynstate = dynstate
         _node = self.node
         if _node is not None:
-            Session(self.me, _node, self.lower).recompute() # TODO: Verify that this always succeeds (due to no input diff)?
+            Session(self.me, _node, self.lower, self.db).recompute() # TODO: Verify that this always succeeds (due to no input diff)?
 
     def finalize(self, tid):
         #print('####', tid, '(_TransformTransaction)', _format_path(self.path), 'finalize', actorid(), err=True)
@@ -1189,6 +1517,22 @@ class _RFSTransaction(_TransformTransactionBase):
     def update_memory(self, newmem):
         self.memory = newmem
 
+    mut def db_ops(self, tid: str, essay) -> list[swdb.BufferOp]:
+        return _TransformTransactionBase.db_ops(self, tid, essay) + swdb.opt_ops(_db_path(self.path), swdb.ATTR_MEMORY, essay.1) + swdb.opt_ops(_db_path(self.path), swdb.ATTR_DYNSTATE, self.dynstate)
+
+    def restore(self, attr: str, qualifier: ?str, raw: bytes) -> None:
+        if attr == swdb.ATTR_MEMORY:
+            if qualifier is not None:
+                raise ValueError("Unexpected persistence qualifier for RFS transform memory at {_format_path(self.path)}")
+            self.memory = swdb.decode_node_bytes(raw)
+            return
+        if attr == swdb.ATTR_DYNSTATE:
+            if qualifier is not None:
+                raise ValueError("Unexpected persistence qualifier for RFS transform dynstate at {_format_path(self.path)}")
+            self.dynstate = swdb.decode_node_bytes(raw)
+            return
+        _TransformTransactionBase.restore(self, attr, qualifier, raw)
+
     proc def init_dynstate(self, node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate):
         self.node = node
         self.function.init_dynstate(act, update_dynstate, self.dev)
@@ -1197,7 +1541,7 @@ class _RFSTransaction(_TransformTransactionBase):
         self.dynstate = dynstate
         _node = self.node
         if _node is not None:
-            Session(self.me, _node, self.lower).recompute() # TODO: Verify that this always succeeds (due to no input diff)?
+            Session(self.me, _node, self.lower, self.db).recompute() # TODO: Verify that this always succeeds (due to no input diff)?
 
     def finalize(self, tid):
         #print('####', tid, '(_TransformTransaction)', _format_path(self.path), 'finalize', actorid(), err=True)
@@ -1348,4 +1692,4 @@ class PassThrough(TransformFunction):
         return (cfg, memory)
 
 def Sink():
-    return Layer('sink', Transform(PassThrough), None)
+    return Layer('sink', Transform(PassThrough), None, None)

@@ -74,9 +74,6 @@ merge_1_2 = gdata.Container({
     })
 })
 
-
-########################
-
 actor basic_commit(t: testing.AsyncT):
     container = ttt.Container({
         q('left'): ttt.Transform(ttt.PassThrough),
