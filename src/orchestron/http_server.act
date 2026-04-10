@@ -41,6 +41,58 @@ def _split_restconf_path(text: str) -> list[str]:
     return result
 
 
+def _path_elements_to_fnode(path_elements: list[yang.data.PathElement]) -> yang.gdata.FNode:
+    """Convert resolved path elements to an FNode filter tree.
+
+    Builds inside-out: starts from the deepest path element and wraps outward.
+    For list nodes with keys, adds FNode children with value_match to select
+    the matching entry.
+    """
+    inner: ?yang.gdata.FNode = None
+    for i in range(len(path_elements) - 1, -1, -1):
+        elem = path_elements[i]
+        node = elem.node
+        if isinstance(node, yang.schema.DRoot):
+            node_id = None
+        else:
+            node_id = yang.gdata.Id(node.namespace, node.name)
+
+        if isinstance(node, yang.schema.DList):
+            children = []
+            keys = elem.keys
+            if keys is not None:
+                for key_name, key_val in keys.items():
+                    children.append(yang.gdata.FNode(yang.gdata.Id(node.namespace, key_name), value_match=key_val))
+            if inner is not None:
+                children.append(inner)
+            inner = yang.gdata.FNode(node_id, children=children)
+        else:
+            if inner is not None:
+                inner = yang.gdata.FNode(node_id, children=[inner])
+            else:
+                inner = yang.gdata.FNode(node_id)
+
+    return inner if inner is not None else yang.gdata.FNode()
+
+
+def _node_with_module_if_missing(node: yang.gdata.Node, module: str) -> yang.gdata.Node:
+    # `gdata.Node` is a `value`, so we cannot mutate `node.module` in place.
+    # RESTCONF JSON serialization still needs the module on the selected
+    # top-level node for RFC 7951 name qualification, so rebuild just the node
+    # shapes this GET path can return.
+    if node.module is not None:
+        return node
+    if isinstance(node, yang.gdata.Container):
+        return yang.gdata.Container(node.children, presence=node.presence, ns=node.ns, module=module, txid=node.txid)
+    if isinstance(node, yang.gdata.List):
+        return yang.gdata.List(node.keys, node.elements, user_order=node.user_order, ns=node.ns, module=module, txid=node.txid)
+    if isinstance(node, yang.gdata.Leaf):
+        return yang.gdata.Leaf(node.val, ns=node.ns, module=module, txid=node.txid)
+    if isinstance(node, yang.gdata.LeafList):
+        return yang.gdata.LeafList(node.entries, user_order=node.user_order, ns=node.ns, module=module, txid=node.txid)
+    raise ValueError("Unexpected gdata node type for RESTCONF GET serialization: {type(node)}")
+
+
 class _DeviceMgrWrapper(object):
     # Temporary workaround: actor refs stored through Context.set/get come back
     # as `value`, and Acton does not let us narrow them with isinstance(..., ActorType).
@@ -405,9 +457,56 @@ actor HttpServer(
             content = yang.data.pradata(src_dnode, layer_config, loose=loose)
         respond(200, {}, content)
 
+    def _router_handle_restconf_get(ctx: http_router.Context, respond: proc(int, dict[str, str], str) -> None):
+        path_segments = _split_restconf_path(ctx.param("rest_path"))
+
+        try:
+            path_elements = yang.json.resolve_json_path(top_schema, path_segments)
+        except ValueError as e:
+            respond(404, {}, str(e))
+            return
+        else:
+            session = cfs.newsession()
+            cfs_config = session.get()
+
+            if len(path_elements) <= 1:
+                respond(200, {"Content-Type": "application/yang-data+json"}, cfs_config.to_yang_jsonstr())
+                return
+
+            # Build FNode filter from resolved path and apply it
+            fnode = _path_elements_to_fnode(path_elements)
+            node = yang.gdata.filter(cfs_config, fnode)
+            if node is not None:
+                # Walk down the filtered tree to the target node because we only return the subtree
+                for i in range(1, len(path_elements)):
+                    elem = path_elements[i]
+                    maybe_list = node  # avoids widening a narrowed loop var (node)
+                    if isinstance(maybe_list, yang.gdata.List):
+                        # We already filtered the list to the matching entry;
+                        # descend into that entry before looking for the next child.
+                        if len(maybe_list.elements) == 0:
+                            respond(404, {}, "No data at path")
+                            return
+                        node = maybe_list.elements[0]
+                    child_id = yang.gdata.Id(elem.node.namespace, elem.node.name)
+                    child = node.children.get(child_id)
+                    if child is not None:
+                        node = child
+                    else:
+                        respond(404, {}, "No data at path")
+                        return
+
+                # Ensure top-level node in the target subtree has namespace qualifiers, required for RFC 7951 serialization
+                target_snode = path_elements[-1].node
+                target_id = yang.gdata.Id(target_snode.namespace, target_snode.name)
+                qualified_target = _node_with_module_if_missing(node, target_snode.module)
+                result = yang.gdata.Container({target_id: qualified_target})
+                respond(200, {"Content-Type": "application/yang-data+json"}, result.to_yang_jsonstr())
+            else:
+                respond(404, {}, "No data at path")
+
     def _router_handle_restconf_delete(ctx: http_router.Context, respond: proc(int, dict[str, str], str) -> None):
-        p = _split_restconf_path(ctx.path)
-        input_config = yang.json.from_json_path(top_schema, {}, p[1:], "remove", loose=True)
+        input_config = yang.json.from_json_path(top_schema, {}, _split_restconf_path(ctx.param("rest_path")), "remove", loose=True)
         session: ttt.Session = cfs.newsession()
         session.edit_config(input_config, _router_make_config_done(respond))
 
@@ -418,8 +517,7 @@ actor HttpServer(
         if content_type == "application/yang-data+json":
             try:
                 json_in = json.decode(ctx.request.body.decode())
-                p = _split_restconf_path(ctx.path)[1:]
-                input_config = yang.json.from_json_path(top_schema, json_in, p, loose=True)
+                input_config = yang.json.from_json_path(top_schema, json_in, _split_restconf_path(ctx.param("rest_path")), loose=True)
             except Exception as e:
                 respond(400, {}, "Error parsing JSON: {e}")
                 return
@@ -457,6 +555,7 @@ actor HttpServer(
         g.post("/q/{{id}}/set_approval", _router_handle_device_queue_set_approval)
 
     def _router_build_restconf_routes(g: http_router.RouteGroup):
+        g.get("/*rest_path", _router_handle_restconf_get)
         g.post("/*rest_path", _router_handle_restconf_write)
         g.put("/*rest_path", _router_handle_restconf_write)
         g.delete("/*rest_path", _router_handle_restconf_delete)
