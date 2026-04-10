@@ -441,8 +441,8 @@ actor HttpServer(
                 return
             layer_ref = next_layer
 
-        session: ttt.Session = layer_ref.newsession()
-        layer_config: yang.gdata.Node = session.get()
+        session = layer_ref.newsession()
+        layer_config = session.get()
         accept = ctx.request.headers.get("accept")
         content = ""
         format_type = ctx.query_param("format", "json")
@@ -507,7 +507,7 @@ actor HttpServer(
 
     def _router_handle_restconf_delete(ctx: http_router.Context, respond: proc(int, dict[str, str], str) -> None):
         input_config = yang.json.from_json_path(top_schema, {}, _split_restconf_path(ctx.param("rest_path")), "remove", loose=True)
-        session: ttt.Session = cfs.newsession()
+        session = cfs.newsession()
         session.edit_config(input_config, _router_make_config_done(respond))
 
     def _router_handle_restconf_write(ctx: http_router.Context, respond: proc(int, dict[str, str], str) -> None):
@@ -533,7 +533,7 @@ actor HttpServer(
             return
 
         if input_config is not None:
-            session: ttt.Session = cfs.newsession()
+            session = cfs.newsession()
             if ctx.request.headers.get("async") == "true":
                 http_log.info("Client requests async behavior")
                 session.edit_config(input_config, _router_make_config_done(respond))
