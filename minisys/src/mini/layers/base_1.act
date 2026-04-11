@@ -27,6 +27,11 @@ class BaseConfig(ttt.RFSFunction):
         """Return the modeled input type for this transform"""
         return stratoweave_rfs__rfs__base_config
 
+    @staticmethod
+    def dynstate_type():
+        """Return the modeled dynstate type for this transform"""
+        return stratoweave_rfs__rfs__base_config__dynstate
+
     mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttt.DeviceInfo, memory: ?yang.gdata.Node, dynstate: ?yang.gdata.Node) -> (yang.gdata.Node, ?yang.gdata.Node):
         """Wrap the user provided transform method to convert from gdata to
         modeled input and back to gdata

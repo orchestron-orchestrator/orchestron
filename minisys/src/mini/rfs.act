@@ -43,13 +43,14 @@ class BaseConfig(base.BaseConfig):
 
 actor BaseConfigTransform(update_dynstate: proc(?BaseConfigDynstate)->None, dev: odev.DeviceMgr):
     var handle: ?yang.gdata.SubscriptionHandle = None
+    var dynstate = base.BaseConfig.dynstate_type()()
 
     def on_update(t: ?ietf_root, err: ?Exception):
         if err is not None:
             print("BaseConfigTransform subscription error: {err}", err=True)
             return
-        current_datetime = t?.system_state?.clock?.current_datetime
-        update_dynstate(BaseConfigDynstate(current_datetime))
+        dynstate.current_datetime = t?.system_state?.clock?.current_datetime
+        update_dynstate(dynstate)
 
     def on_conf(conf: y1.stratoweave_rfs__rfs__base_config):
         if handle is not None:
