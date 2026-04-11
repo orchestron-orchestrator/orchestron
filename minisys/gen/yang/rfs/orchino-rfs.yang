@@ -44,5 +44,75 @@ module mini-rfs {
                 }
             }
         }
+
+        list l3vpn-endpoint {
+            key "interface-name";
+
+            sw:rfs-transform mini.rfs.L3vpnEndpoint;
+
+            leaf vpn-name {
+                type string;
+                mandatory true;
+            }
+
+            leaf customer-name {
+                type string;
+                mandatory true;
+            }
+
+            leaf route-distinguisher {
+                type string;
+                mandatory true;
+            }
+
+            leaf import-rt {
+                type string;
+                mandatory true;
+            }
+
+            leaf export-rt {
+                type string;
+                mandatory true;
+            }
+
+            leaf interface-name {
+                type string;
+                mandatory true;
+            }
+
+            leaf ipv4-address {
+                type inet:ipv4-address-no-zone;
+                mandatory true;
+            }
+
+            leaf prefix-length {
+                type uint8 {
+                    range "0..32";
+                }
+                mandatory true;
+            }
+
+            leaf mtu {
+                type uint16;
+                mandatory true;
+            }
+
+            leaf vlan-id {
+                type uint16;
+            }
+
+            leaf enabled {
+                type boolean;
+                mandatory true;
+            }
+
+            leaf site-code {
+                type string;
+            }
+
+            leaf description {
+                type string;
+            }
+        }
     }
 }

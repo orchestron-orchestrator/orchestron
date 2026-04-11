@@ -7,9 +7,6 @@ module netinfra {
     description "test revision";
     reference "ref1";
   }
-  import ietf-inet-types {
-    prefix inet;
-  }
   import stratoweave {
     prefix sw;
   }

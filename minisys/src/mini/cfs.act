@@ -28,6 +28,42 @@ class Router(base.Router):
 
         return o
 
+
+class L3vpn(base.L3vpn):
+    def transform(self, i):
+        o = base.o_root()
+        print("CFS l3vpn transform running", i.name)
+        rd = "65000:{i.vpn_id}"
+        rt = "target:65000:{i.vpn_id}"
+
+        for endpoint in i.endpoint:
+            rfs_dev = o.rfs.create(endpoint.device)
+            description = endpoint.description
+            if description is None:
+                description = i.description
+            mtu = endpoint.mtu
+            if mtu is None:
+                mtu = i.service_mtu
+
+            rfs_endpoint = rfs_dev.l3vpn_endpoint.create(
+                vpn_name            = i.name,
+                customer_name       = i.customer_name,
+                route_distinguisher = rd,
+                import_rt           = rt,
+                export_rt           = rt,
+                interface_name      = endpoint.interface_name,
+                ipv4_address        = endpoint.ipv4_address,
+                prefix_length       = endpoint.prefix_length,
+                mtu                 = mtu,
+                enabled             = i.enabled and endpoint.enabled,
+            )
+            rfs_endpoint.vlan_id     = endpoint.vlan_id
+            rfs_endpoint.site_code   = endpoint.site_code
+            rfs_endpoint.description = description
+
+        return o
+
+
 class Foo(base.Foo):
     def transform(self, i):
         o = base.o_root()

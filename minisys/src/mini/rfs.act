@@ -21,6 +21,10 @@ def _q_sys(name: str) -> gdata.Id:
 def _ms_to_ns(ms: u64) -> u64:
     return ms * 1000 * 1000
 
+def unwrap[T](t: ?T) -> T:
+    if t is not None:
+        return t
+    raise ValueError("unwrap called on None")
 
 
 class BaseConfig(base.BaseConfig):
@@ -45,6 +49,41 @@ class Bar(base.Bar):
             d = dev.system.dns_resolver.server.create(i.name)
             if dynstate is not None:
                 dev.system.contact = dynstate.current_datetime
+
+            return dev
+
+        raise UnsupportedDevice()
+
+
+class L3vpnEndpoint(base.L3vpnEndpoint):
+    def transform(self, i: y1.stratoweave_rfs__rfs__l3vpn_endpoint_entry, di):
+        print("RFS l3vpn-endpoint transform running", di.name, i.vpn_name, i.interface_name, err=True)
+
+        if "ietf-interfaces" in di.modules and "ietf-ip" in di.modules:
+            dev = ietf_dev.root()
+            interface_type = ietf_dev.iana_if_type_ethernetCsmacd
+            if i.interface_name.startswith("lo"):
+                interface_type = ietf_dev.iana_if_type_softwareLoopback
+            elif i.vlan_id is not None or "." in i.interface_name:
+                interface_type = ietf_dev.iana_if_type_l3ipvlan
+
+            description = unwrap(i.description) if i.description is not None else "{i.customer_name} vpn {i.vpn_name}"
+            if i.description is None:
+                if i.site_code is not None:
+                    description += " site {i.site_code}"
+                else:
+                    description += " interface {i.interface_name}"
+                if i.vlan_id is not None:
+                    description += " vlan {i.vlan_id}"
+
+            iface = dev.interfaces.interface.create(
+                i.interface_name,
+                description=description,
+                type=interface_type,
+                enabled=i.enabled,
+            )
+            ipv4 = iface.create_ipv4(enabled=i.enabled, forwarding=True, mtu=i.mtu)
+            ipv4.address.create(i.ipv4_address, prefix_length=i.prefix_length)
 
             return dev
 

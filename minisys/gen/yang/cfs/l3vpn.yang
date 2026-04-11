@@ -1,0 +1,97 @@
+module l3vpn {
+  yang-version "1.1";
+  namespace "http://example.com/l3vpn";
+  prefix "l3vpn";
+  description "Layer 3 VPN services";
+  revision 2019-01-01 {
+    description "test revision";
+    reference "ref1";
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import stratoweave {
+    prefix sw;
+  }
+
+  list l3vpn {
+    key name;
+
+    sw:transform mini.cfs.L3vpn;
+
+    leaf name {
+      type string;
+    }
+
+    leaf customer-name {
+      type string;
+      mandatory true;
+    }
+
+    leaf vpn-id {
+      type uint32;
+      mandatory true;
+    }
+
+    leaf service-mtu {
+      type uint16;
+      default 1500;
+    }
+
+    leaf enabled {
+      type boolean;
+      default true;
+    }
+
+    leaf description {
+      type string;
+    }
+
+    list endpoint {
+      key "device interface-name";
+
+      leaf device {
+        type string;
+        mandatory true;
+      }
+
+      leaf interface-name {
+        type string;
+        mandatory true;
+      }
+
+      leaf ipv4-address {
+        type inet:ipv4-address-no-zone;
+        mandatory true;
+      }
+
+      leaf prefix-length {
+        type uint8 {
+          range "0..32";
+        }
+        mandatory true;
+      }
+
+      leaf mtu {
+        type uint16;
+      }
+
+      leaf vlan-id {
+        type uint16;
+      }
+
+      leaf enabled {
+        type boolean;
+        default true;
+      }
+
+      leaf site-code {
+        type string;
+      }
+
+      leaf description {
+        type string;
+      }
+    }
+  }
+}

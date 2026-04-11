@@ -39,15 +39,138 @@ SRC_DNODE_CHILD_0 = DContainer(module='netinfra', namespace='http://example.com/
     ])
 ])
 
+SRC_DNODE_CHILD_1 = DList(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='l3vpn', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
+        DExt(module='stratoweave', namespace='http://stratoweave.org/yang/stratoweave.yang', prefix='sw', name='transform', arg='mini.cfs.L3vpn', exts=[])
+    ], children=[
+    DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+    DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='customer-name', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+    DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='vpn-id', config=True, mandatory=True, type_=DTypeIntegerUnsigned(name='uint32', description=None, reference=None, exts=[], builtin_type='uint32', default=None, ranges=Ranges([(0, 4294967295)]))),
+    DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='service-mtu', config=True, default='1500', mandatory=False, type_=DTypeIntegerUnsigned(name='uint16', description=None, reference=None, exts=[], builtin_type='uint16', default=None, ranges=Ranges([(0, 65535)]))),
+    DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='enabled', config=True, default='true', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None)),
+    DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='description', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+    DList(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='endpoint', key=[
+'device',
+'interface-name'
+        ], config=True, min_elements=0, ordered_by='system', children=[
+        DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='device', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='interface-name', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='ipv4-address', config=True, mandatory=True, type_=DTypeString(name='inet:ipv4-address-no-zone', description='An IPv4 address without a zone index.  This type, derived from\nipv4-address, may be used in situations where the zone is\nknown from the context and hence no zone index is needed.', reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[YangPattern(yang_regex='(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){{3}}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{{N}}\\p{{L}}]+)?', pcre='^((([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){{3}}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{{N}}\\p{{L}}]+)?)$', invert=False), YangPattern(yang_regex='[0-9\\.]*', pcre='^([0-9\\.]*)$', invert=False)])),
+        DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='prefix-length', config=True, mandatory=True, type_=DTypeIntegerUnsigned(name='uint8', description=None, reference=None, exts=[], builtin_type='uint8', default=None, ranges=Ranges([(0, 32)]))),
+        DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='mtu', config=True, mandatory=False, type_=DTypeIntegerUnsigned(name='uint16', description=None, reference=None, exts=[], builtin_type='uint16', default=None, ranges=Ranges([(0, 65535)]))),
+        DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='vlan-id', config=True, mandatory=False, type_=DTypeIntegerUnsigned(name='uint16', description=None, reference=None, exts=[], builtin_type='uint16', default=None, ranges=Ranges([(0, 65535)]))),
+        DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='enabled', config=True, default='true', mandatory=False, type_=DTypeBoolean(name='boolean', description=None, reference=None, exts=[], builtin_type='boolean', default=None)),
+        DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='site-code', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+        DLeaf(module='l3vpn', namespace='http://example.com/l3vpn', prefix='l3vpn', name='description', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
+    ])
+])
+
 SRC_DNODE = DRoot(
-    children=[SRC_DNODE_CHILD_0],
+    children=[SRC_DNODE_CHILD_0, SRC_DNODE_CHILD_1],
     identities=[],
     rpcs=[],
-    module_metadata={'urn:ietf:params:xml:ns:yang:ietf-inet-types':('ietf-inet-types', '2013-07-15'), 'http://stratoweave.org/yang/stratoweave.yang':('stratoweave', '2026-04-01'), 'http://example.com/netinfra':('netinfra', '2019-01-01')},
+    module_metadata={'urn:ietf:params:xml:ns:yang:ietf-inet-types':('ietf-inet-types', '2013-07-15'), 'http://stratoweave.org/yang/stratoweave.yang':('stratoweave', '2026-04-01'), 'http://example.com/netinfra':('netinfra', '2019-01-01'), 'http://example.com/l3vpn':('l3vpn', '2019-01-01')},
 )
 
 def src_yang():
     res = []
+    res.append(r"""module l3vpn {
+  yang-version "1.1";
+  namespace "http://example.com/l3vpn";
+  prefix "l3vpn";
+  description "Layer 3 VPN services";
+  revision 2019-01-01 {
+    description "test revision";
+    reference "ref1";
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import stratoweave {
+    prefix sw;
+  }
+
+  list l3vpn {
+    key name;
+
+    sw:transform mini.cfs.L3vpn;
+
+    leaf name {
+      type string;
+    }
+
+    leaf customer-name {
+      type string;
+      mandatory true;
+    }
+
+    leaf vpn-id {
+      type uint32;
+      mandatory true;
+    }
+
+    leaf service-mtu {
+      type uint16;
+      default 1500;
+    }
+
+    leaf enabled {
+      type boolean;
+      default true;
+    }
+
+    leaf description {
+      type string;
+    }
+
+    list endpoint {
+      key "device interface-name";
+
+      leaf device {
+        type string;
+        mandatory true;
+      }
+
+      leaf interface-name {
+        type string;
+        mandatory true;
+      }
+
+      leaf ipv4-address {
+        type inet:ipv4-address-no-zone;
+        mandatory true;
+      }
+
+      leaf prefix-length {
+        type uint8 {
+          range "0..32";
+        }
+        mandatory true;
+      }
+
+      leaf mtu {
+        type uint16;
+      }
+
+      leaf vlan-id {
+        type uint16;
+      }
+
+      leaf enabled {
+        type boolean;
+        default true;
+      }
+
+      leaf site-code {
+        type string;
+      }
+
+      leaf description {
+        type string;
+      }
+    }
+  }
+}
+""")
     res.append(r"""module netinfra {
   yang-version "1.1";
   namespace "http://example.com/netinfra";
@@ -56,9 +179,6 @@ def src_yang():
   revision 2019-01-01 {
     description "test revision";
     reference "ref1";
-  }
-  import ietf-inet-types {
-    prefix inet;
   }
   import stratoweave {
     prefix sw;
@@ -623,6 +743,7 @@ def src_yang():
     return res
 
 
+NS_l3vpn = 'http://example.com/l3vpn'
 NS_netinfra = 'http://example.com/netinfra'
 NS_stratoweave = 'http://stratoweave.org/yang/stratoweave.yang'
 NS_ietf_inet_types = 'urn:ietf:params:xml:ns:yang:ietf-inet-types'
@@ -813,16 +934,229 @@ class netinfra__netinfra(yang.adata.MNode):
 
 
 _breaker = 1
+class l3vpn__l3vpn__endpoint_entry(yang.adata.MNode):
+    device: str
+    interface_name: str
+    ipv4_address: str
+    prefix_length: u64
+    mtu: ?u64
+    vlan_id: ?u64
+    enabled: bool
+    site_code: ?str
+    description: ?str
+
+    mut def __init__(self, device: str, interface_name: str, ipv4_address: str, prefix_length: u64, mtu: ?u64, vlan_id: ?u64, enabled: ?bool=None, site_code: ?str, description: ?str):
+        self._ns = 'http://example.com/l3vpn'
+        self.device = device
+        self.interface_name = interface_name
+        self.ipv4_address = ipv4_address
+        self.prefix_length = prefix_length
+        self.mtu = mtu
+        self.vlan_id = vlan_id
+        self.enabled = enabled if enabled is not None else True
+        self.site_code = site_code
+        self.description = description
+
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'device':
+            return self.device
+        if name == 'interface_name':
+            return self.interface_name
+        if name == 'ipv4_address':
+            return self.ipv4_address
+        if name == 'prefix_length':
+            return self.prefix_length
+        if name == 'mtu':
+            return self.mtu
+        if name == 'vlan_id':
+            return self.vlan_id
+        if name == 'enabled':
+            return self.enabled
+        if name == 'site_code':
+            return self.site_code
+        if name == 'description':
+            return self.description
+        raise ValueError('Attribute {name} not found in l3vpn__l3vpn__endpoint')
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['l3vpn:l3vpn', 'endpoint'])
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> l3vpn__l3vpn__endpoint_entry:
+        return l3vpn__l3vpn__endpoint_entry(device=n.get_str(yang.gdata.Id(NS_l3vpn, 'device')), interface_name=n.get_str(yang.gdata.Id(NS_l3vpn, 'interface-name')), ipv4_address=n.get_str(yang.gdata.Id(NS_l3vpn, 'ipv4-address')), prefix_length=n.get_u64(yang.gdata.Id(NS_l3vpn, 'prefix-length')), mtu=n.get_opt_u64(yang.gdata.Id(NS_l3vpn, 'mtu')), vlan_id=n.get_opt_u64(yang.gdata.Id(NS_l3vpn, 'vlan-id')), enabled=n.get_opt_bool(yang.gdata.Id(NS_l3vpn, 'enabled')), site_code=n.get_opt_str(yang.gdata.Id(NS_l3vpn, 'site-code')), description=n.get_opt_str(yang.gdata.Id(NS_l3vpn, 'description')))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return l3vpn__l3vpn__endpoint_entry.from_gdata(self.to_gdata())
+
+_breaker = 1
+class l3vpn__l3vpn__endpoint(yang.adata.MNode):
+    elements: list[l3vpn__l3vpn__endpoint_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://example.com/l3vpn'
+        self._name = 'endpoint'
+        self.elements = elements
+
+    mut def create(self, device, interface_name, ipv4_address, prefix_length, mtu=None, vlan_id=None, enabled=None, site_code=None, description=None):
+        for e in self:
+            match = True
+            if e.device != device:
+                match = False
+                continue
+            if e.interface_name != interface_name:
+                match = False
+                continue
+            if match:
+                e.ipv4_address = ipv4_address
+                e.prefix_length = prefix_length
+                if mtu is not None:
+                    e.mtu = mtu
+                if vlan_id is not None:
+                    e.vlan_id = vlan_id
+                if enabled is not None:
+                    e.enabled = enabled
+                if site_code is not None:
+                    e.site_code = site_code
+                if description is not None:
+                    e.description = description
+                return e
+
+        res = l3vpn__l3vpn__endpoint_entry(device=device, interface_name=interface_name, ipv4_address=ipv4_address, prefix_length=prefix_length, mtu=mtu, vlan_id=vlan_id, enabled=enabled, site_code=site_code, description=description)
+        self.elements.append(res)
+        return res
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[l3vpn__l3vpn__endpoint_entry]:
+        if n is not None:
+            return [l3vpn__l3vpn__endpoint_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return l3vpn__l3vpn__endpoint(elements=copied_elements)
+
+extension l3vpn__l3vpn__endpoint(Iterable[l3vpn__l3vpn__endpoint_entry]):
+    def __iter__(self) -> Iterator[l3vpn__l3vpn__endpoint_entry]:
+        return self.elements.__iter__()
+
+_breaker = 1
+class l3vpn__l3vpn_entry(yang.adata.MNode):
+    name: str
+    customer_name: str
+    vpn_id: u64
+    service_mtu: u64
+    enabled: bool
+    description: ?str
+    endpoint: l3vpn__l3vpn__endpoint
+
+    mut def __init__(self, name: str, customer_name: str, vpn_id: u64, service_mtu: ?u64=None, enabled: ?bool=None, description: ?str, endpoint: list[l3vpn__l3vpn__endpoint_entry]=[]):
+        self._ns = 'http://example.com/l3vpn'
+        self.name = name
+        self.customer_name = customer_name
+        self.vpn_id = vpn_id
+        self.service_mtu = service_mtu if service_mtu is not None else u64(1500)
+        self.enabled = enabled if enabled is not None else True
+        self.description = description
+        self.endpoint = l3vpn__l3vpn__endpoint(elements=endpoint)
+
+    def _get_attr(self, name: str) -> ?value:
+        if name == 'name':
+            return self.name
+        if name == 'customer_name':
+            return self.customer_name
+        if name == 'vpn_id':
+            return self.vpn_id
+        if name == 'service_mtu':
+            return self.service_mtu
+        if name == 'enabled':
+            return self.enabled
+        if name == 'description':
+            return self.description
+        if name == 'endpoint':
+            return iter(self.endpoint)
+        raise ValueError('Attribute {name} not found in l3vpn__l3vpn')
+
+    mut def to_gdata(self) -> yang.gdata.Node:
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['l3vpn:l3vpn'])
+
+    @staticmethod
+    mut def from_gdata(n: yang.gdata.Node) -> l3vpn__l3vpn_entry:
+        return l3vpn__l3vpn_entry(name=n.get_str(yang.gdata.Id(NS_l3vpn, 'name')), customer_name=n.get_str(yang.gdata.Id(NS_l3vpn, 'customer-name')), vpn_id=n.get_u64(yang.gdata.Id(NS_l3vpn, 'vpn-id')), service_mtu=n.get_opt_u64(yang.gdata.Id(NS_l3vpn, 'service-mtu')), enabled=n.get_opt_bool(yang.gdata.Id(NS_l3vpn, 'enabled')), description=n.get_opt_str(yang.gdata.Id(NS_l3vpn, 'description')), endpoint=l3vpn__l3vpn__endpoint.from_gdata(n.get_opt_list(yang.gdata.Id(NS_l3vpn, 'endpoint'))))
+
+    def copy(self):
+        """Create a deep copy of this adata object"""
+        return l3vpn__l3vpn_entry.from_gdata(self.to_gdata())
+
+_breaker = 1
+class l3vpn__l3vpn(yang.adata.MNode):
+    elements: list[l3vpn__l3vpn_entry]
+    mut def __init__(self, elements=[]):
+        self._ns = 'http://example.com/l3vpn'
+        self._name = 'l3vpn'
+        self.elements = elements
+
+    mut def create(self, name, customer_name, vpn_id, service_mtu=None, enabled=None, description=None):
+        for e in self:
+            match = True
+            if e.name != name:
+                match = False
+                continue
+            if match:
+                e.customer_name = customer_name
+                e.vpn_id = vpn_id
+                if service_mtu is not None:
+                    e.service_mtu = service_mtu
+                if enabled is not None:
+                    e.enabled = enabled
+                if description is not None:
+                    e.description = description
+                return e
+
+        res = l3vpn__l3vpn_entry(name=name, customer_name=customer_name, vpn_id=vpn_id, service_mtu=service_mtu, enabled=enabled, description=description)
+        self.elements.append(res)
+        return res
+
+    @staticmethod
+    mut def from_gdata(n: ?yang.gdata.List) -> list[l3vpn__l3vpn_entry]:
+        if n is not None:
+            return [l3vpn__l3vpn_entry.from_gdata(e) for e in n.elements]
+        return []
+
+    def copy(self):
+        """Create a deep copy of this list object"""
+        # Copy each element in the list
+        copied_elements = []
+        for e in self:
+            ce = e.copy()
+            if ce is not None:
+                copied_elements.append(ce)
+        return l3vpn__l3vpn(elements=copied_elements)
+
+extension l3vpn__l3vpn(Iterable[l3vpn__l3vpn_entry]):
+    def __iter__(self) -> Iterator[l3vpn__l3vpn_entry]:
+        return self.elements.__iter__()
+
+_breaker = 1
 class root(yang.adata.MNode):
     netinfra: netinfra__netinfra
+    l3vpn: l3vpn__l3vpn
 
-    mut def __init__(self, netinfra: ?netinfra__netinfra=None):
+    mut def __init__(self, netinfra: ?netinfra__netinfra=None, l3vpn: list[l3vpn__l3vpn_entry]=[]):
         self._ns = ''
         self.netinfra = netinfra if netinfra is not None else netinfra__netinfra()
+        self.l3vpn = l3vpn__l3vpn(elements=l3vpn)
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'netinfra':
             return self.netinfra
+        if name == 'l3vpn':
+            return iter(self.l3vpn)
         raise ValueError('Attribute {name} not found in root')
 
     mut def to_gdata(self) -> yang.gdata.Node:
@@ -831,7 +1165,7 @@ class root(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> root:
         if n is not None:
-            return root(netinfra=netinfra__netinfra.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_netinfra, 'netinfra'))))
+            return root(netinfra=netinfra__netinfra.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_netinfra, 'netinfra'))), l3vpn=l3vpn__l3vpn.from_gdata(n.get_opt_list(yang.gdata.Id(NS_l3vpn, 'l3vpn'))))
         return root()
 
     def copy(self):
