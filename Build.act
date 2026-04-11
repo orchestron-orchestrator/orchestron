@@ -3,8 +3,8 @@ fingerprint = 0xe602cd36fdb33ec8
 dependencies = {
     "actmf": (
         repo_url="https://github.com/orchestron-orchestrator/actmf",
-        url="https://github.com/orchestron-orchestrator/actmf/archive/7d766813a79bcf0e14f1fb14e32321db5a4437d7.zip",
-        hash="N-V-__8AAN3dBABAaINZXnErGmNb69uRdJKxXGBcn_aiH_ct"
+        url="https://github.com/orchestron-orchestrator/actmf/archive/3acd385e70463680dda1193f53a9226256ab1a10.zip",
+        hash="N-V-__8AAILmBAAkJozY3tgd8H2mtwnDX5utPg2PeEd1DLz5"
     ),
     "http_router": (
         repo_url="https://github.com/orchestron-orchestrator/http-router.git",
@@ -13,8 +13,8 @@ dependencies = {
     ),
     "lmdb": (
         repo_url="https://github.com/stratoweave/acton-lmdb",
-        url="https://github.com/stratoweave/acton-lmdb/archive/14a08d2d5743bcd127fdb4c33660eb5928d8e09b.zip",
-        hash="N-V-__8AANS6AACPiaMUFwpl8zfcg0W2h-Dt8KwCNAx9vasJ"
+        url="https://github.com/stratoweave/acton-lmdb/archive/bbc1d3af860b95b609b00dfa14458c2205f19547.zip",
+        hash="N-V-__8AAD_KAAAydUe3cxl7tGRnJW61GFWuemkPi0s3NsxI"
     ),
     "netconf": (
         repo_url="https://github.com/orchestron-orchestrator/netconf.git",
