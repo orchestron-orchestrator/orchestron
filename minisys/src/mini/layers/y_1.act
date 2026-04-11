@@ -90,13 +90,7 @@ SRC_DNODE_CHILD_13 = DContainer(module='mini-rfs', namespace='http://example.com
         DExt(module='stratoweave', namespace='http://stratoweave.org/yang/stratoweave.yang', prefix='sw', name='rfs-transform', arg='mini.rfs.BaseConfig', exts=[])
     ], children=[
     DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='name', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
-    DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='ipv4-address', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
-])
-
-SRC_DNODE_CHILD_14 = DList(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='bar', key=['name'], config=True, min_elements=0, ordered_by='system', exts=[
-        DExt(module='stratoweave', namespace='http://stratoweave.org/yang/stratoweave.yang', prefix='sw', name='rfs-transform', arg='mini.rfs.Bar', exts=[])
-    ], children=[
-    DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='name', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
+    DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='ipv4-address', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
     DContainer(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='dynstate', config=True, presence=False, exts=[
             DExt(module='stratoweave', namespace='http://stratoweave.org/yang/stratoweave.yang', prefix='sw', name='dynstate', arg=None, exts=[])
         ], children=[
@@ -104,7 +98,7 @@ SRC_DNODE_CHILD_14 = DList(module='mini-rfs', namespace='http://example.com/mini
     ])
 ])
 
-SRC_DNODE_CHILD_15 = DList(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='l3vpn-endpoint', key=['interface-name'], config=True, min_elements=0, ordered_by='system', exts=[
+SRC_DNODE_CHILD_14 = DList(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='l3vpn-endpoint', key=['interface-name'], config=True, min_elements=0, ordered_by='system', exts=[
         DExt(module='stratoweave', namespace='http://stratoweave.org/yang/stratoweave.yang', prefix='sw', name='rfs-transform', arg='mini.rfs.L3vpnEndpoint', exts=[])
     ], children=[
     DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='interface-name', config=True, mandatory=True, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[])),
@@ -122,7 +116,7 @@ SRC_DNODE_CHILD_15 = DList(module='mini-rfs', namespace='http://example.com/mini
     DLeaf(module='mini-rfs', namespace='http://example.com/mini-rfs', prefix='mini-rfs', name='description', config=True, mandatory=False, type_=DTypeString(name='string', description=None, reference=None, exts=[], builtin_type='string', default=None, length=None, patterns=[]))
 ])
 
-SRC_DNODE_CHILD_11 = DList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='rfs', key=['name'], config=True, min_elements=0, ordered_by='system', children=[SRC_DNODE_CHILD_12, SRC_DNODE_CHILD_13, SRC_DNODE_CHILD_14, SRC_DNODE_CHILD_15])
+SRC_DNODE_CHILD_11 = DList(module='stratoweave-rfs', namespace='http://stratoweave.org/yang/stratoweave-rfs.yang', prefix='sw-rfs', name='rfs', key=['name'], config=True, min_elements=0, ordered_by='system', children=[SRC_DNODE_CHILD_12, SRC_DNODE_CHILD_13, SRC_DNODE_CHILD_14])
 
 SRC_DNODE = DRoot(
     children=[SRC_DNODE_CHILD_0, SRC_DNODE_CHILD_11],
@@ -160,16 +154,6 @@ def src_yang():
             leaf ipv4-address {
                 type string;
                 mandatory true;
-            }
-        }
-
-        list bar {
-            key name;
-
-            sw:rfs-transform mini.rfs.Bar;
-
-            leaf name {
-                type string;
             }
 
             container dynstate {
@@ -1546,38 +1530,7 @@ extension stratoweave_rfs__device(Iterable[stratoweave_rfs__device_entry]):
         return self.elements.__iter__()
 
 _breaker = 1
-class stratoweave_rfs__rfs__base_config(yang.adata.MNode):
-    name: str
-    ipv4_address: str
-
-    mut def __init__(self, name: str, ipv4_address: str):
-        self._ns = 'http://example.com/mini-rfs'
-        self.name = name
-        self.ipv4_address = ipv4_address
-
-    def _get_attr(self, name: str) -> ?value:
-        if name == 'name':
-            return self.name
-        if name == 'ipv4_address':
-            return self.ipv4_address
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__base_config')
-
-    mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:rfs', 'mini-rfs:base-config'])
-
-    @staticmethod
-    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__rfs__base_config:
-        if n is not None:
-            return stratoweave_rfs__rfs__base_config(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')), ipv4_address=n.get_str(yang.gdata.Id(NS_mini_rfs, 'ipv4-address')))
-        raise ValueError('Missing required subtree stratoweave_rfs__rfs__base_config')
-
-    def copy(self):
-        """Create a deep copy of this adata object"""
-        return stratoweave_rfs__rfs__base_config.from_gdata(self.to_gdata())
-
-
-_breaker = 1
-class stratoweave_rfs__rfs__bar__dynstate(yang.adata.MNode):
+class stratoweave_rfs__rfs__base_config__dynstate(yang.adata.MNode):
     current_datetime: ?str
 
     mut def __init__(self, current_datetime: ?str):
@@ -1587,90 +1540,56 @@ class stratoweave_rfs__rfs__bar__dynstate(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'current_datetime':
             return self.current_datetime
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__bar__dynstate')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__base_config__dynstate')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:rfs', 'mini-rfs:bar', 'dynstate'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:rfs', 'mini-rfs:base-config', 'dynstate'])
 
     @staticmethod
-    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__rfs__bar__dynstate:
+    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__rfs__base_config__dynstate:
         if n is not None:
-            return stratoweave_rfs__rfs__bar__dynstate(current_datetime=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'current-datetime')))
-        return stratoweave_rfs__rfs__bar__dynstate()
+            return stratoweave_rfs__rfs__base_config__dynstate(current_datetime=n.get_opt_str(yang.gdata.Id(NS_mini_rfs, 'current-datetime')))
+        return stratoweave_rfs__rfs__base_config__dynstate()
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return stratoweave_rfs__rfs__bar__dynstate.from_gdata(self.to_gdata())
+        return stratoweave_rfs__rfs__base_config__dynstate.from_gdata(self.to_gdata())
 
 
 _breaker = 1
-class stratoweave_rfs__rfs__bar_entry(yang.adata.MNode):
+class stratoweave_rfs__rfs__base_config(yang.adata.MNode):
     name: str
-    dynstate: stratoweave_rfs__rfs__bar__dynstate
+    ipv4_address: str
+    dynstate: stratoweave_rfs__rfs__base_config__dynstate
 
-    mut def __init__(self, name: str, dynstate: ?stratoweave_rfs__rfs__bar__dynstate=None):
+    mut def __init__(self, name: str, ipv4_address: str, dynstate: ?stratoweave_rfs__rfs__base_config__dynstate=None):
         self._ns = 'http://example.com/mini-rfs'
         self.name = name
-        self.dynstate = dynstate if dynstate is not None else stratoweave_rfs__rfs__bar__dynstate()
+        self.ipv4_address = ipv4_address
+        self.dynstate = dynstate if dynstate is not None else stratoweave_rfs__rfs__base_config__dynstate()
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'name':
             return self.name
+        if name == 'ipv4_address':
+            return self.ipv4_address
         if name == 'dynstate':
             return self.dynstate
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__bar')
+        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__base_config')
 
     mut def to_gdata(self) -> yang.gdata.Node:
-        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:rfs', 'mini-rfs:bar'])
+        return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:rfs', 'mini-rfs:base-config'])
 
     @staticmethod
-    mut def from_gdata(n: yang.gdata.Node) -> stratoweave_rfs__rfs__bar_entry:
-        return stratoweave_rfs__rfs__bar_entry(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')), dynstate=stratoweave_rfs__rfs__bar__dynstate.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_mini_rfs, 'dynstate'))))
+    mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__rfs__base_config:
+        if n is not None:
+            return stratoweave_rfs__rfs__base_config(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')), ipv4_address=n.get_str(yang.gdata.Id(NS_mini_rfs, 'ipv4-address')), dynstate=stratoweave_rfs__rfs__base_config__dynstate.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_mini_rfs, 'dynstate'))))
+        raise ValueError('Missing required subtree stratoweave_rfs__rfs__base_config')
 
     def copy(self):
         """Create a deep copy of this adata object"""
-        return stratoweave_rfs__rfs__bar_entry.from_gdata(self.to_gdata())
+        return stratoweave_rfs__rfs__base_config.from_gdata(self.to_gdata())
 
-_breaker = 1
-class stratoweave_rfs__rfs__bar(yang.adata.MNode):
-    elements: list[stratoweave_rfs__rfs__bar_entry]
-    mut def __init__(self, elements=[]):
-        self._ns = 'http://example.com/mini-rfs'
-        self._name = 'bar'
-        self.elements = elements
-
-    mut def create(self, name):
-        for e in self:
-            match = True
-            if e.name != name:
-                match = False
-                continue
-            if match:
-                return e
-
-        res = stratoweave_rfs__rfs__bar_entry(name=name)
-        self.elements.append(res)
-        return res
-
-    @staticmethod
-    mut def from_gdata(n: ?yang.gdata.List) -> list[stratoweave_rfs__rfs__bar_entry]:
-        if n is not None:
-            return [stratoweave_rfs__rfs__bar_entry.from_gdata(e) for e in n.elements]
-        return []
-
-    def copy(self):
-        """Create a deep copy of this list object"""
-        # Copy each element in the list
-        copied_elements = []
-        for e in self:
-            ce = e.copy()
-            if ce is not None:
-                copied_elements.append(ce)
-        return stratoweave_rfs__rfs__bar(elements=copied_elements)
-
-extension stratoweave_rfs__rfs__bar(Iterable[stratoweave_rfs__rfs__bar_entry]):
-    def __iter__(self) -> Iterator[stratoweave_rfs__rfs__bar_entry]:
-        return self.elements.__iter__()
 
 _breaker = 1
 class stratoweave_rfs__rfs__l3vpn_endpoint_entry(yang.adata.MNode):
@@ -1804,14 +1723,12 @@ _breaker = 1
 class stratoweave_rfs__rfs_entry(yang.adata.MNode):
     name: str
     base_config: stratoweave_rfs__rfs__base_config
-    bar: stratoweave_rfs__rfs__bar
     l3vpn_endpoint: stratoweave_rfs__rfs__l3vpn_endpoint
 
-    mut def __init__(self, name: str, base_config: stratoweave_rfs__rfs__base_config, bar: list[stratoweave_rfs__rfs__bar_entry]=[], l3vpn_endpoint: list[stratoweave_rfs__rfs__l3vpn_endpoint_entry]=[]):
+    mut def __init__(self, name: str, base_config: stratoweave_rfs__rfs__base_config, l3vpn_endpoint: list[stratoweave_rfs__rfs__l3vpn_endpoint_entry]=[]):
         self._ns = 'http://stratoweave.org/yang/stratoweave-rfs.yang'
         self.name = name
         self.base_config = base_config
-        self.bar = stratoweave_rfs__rfs__bar(elements=bar)
         self.l3vpn_endpoint = stratoweave_rfs__rfs__l3vpn_endpoint(elements=l3vpn_endpoint)
 
     def _get_attr(self, name: str) -> ?value:
@@ -1819,8 +1736,6 @@ class stratoweave_rfs__rfs_entry(yang.adata.MNode):
             return self.name
         if name == 'base_config':
             return self.base_config
-        if name == 'bar':
-            return iter(self.bar)
         if name == 'l3vpn_endpoint':
             return iter(self.l3vpn_endpoint)
         raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs')
@@ -1830,7 +1745,7 @@ class stratoweave_rfs__rfs_entry(yang.adata.MNode):
 
     @staticmethod
     mut def from_gdata(n: yang.gdata.Node) -> stratoweave_rfs__rfs_entry:
-        return stratoweave_rfs__rfs_entry(name=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'name')), base_config=stratoweave_rfs__rfs__base_config.from_gdata(n.get_cnt(yang.gdata.Id(NS_mini_rfs, 'base-config'))), bar=stratoweave_rfs__rfs__bar.from_gdata(n.get_opt_list(yang.gdata.Id(NS_mini_rfs, 'bar'))), l3vpn_endpoint=stratoweave_rfs__rfs__l3vpn_endpoint.from_gdata(n.get_opt_list(yang.gdata.Id(NS_mini_rfs, 'l3vpn-endpoint'))))
+        return stratoweave_rfs__rfs_entry(name=n.get_str(yang.gdata.Id(NS_stratoweave_rfs, 'name')), base_config=stratoweave_rfs__rfs__base_config.from_gdata(n.get_cnt(yang.gdata.Id(NS_mini_rfs, 'base-config'))), l3vpn_endpoint=stratoweave_rfs__rfs__l3vpn_endpoint.from_gdata(n.get_opt_list(yang.gdata.Id(NS_mini_rfs, 'l3vpn-endpoint'))))
 
     def copy(self):
         """Create a deep copy of this adata object"""

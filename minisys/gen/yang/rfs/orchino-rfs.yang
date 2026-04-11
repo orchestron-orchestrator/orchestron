@@ -26,16 +26,6 @@ module mini-rfs {
                 type string;
                 mandatory true;
             }
-        }
-
-        list bar {
-            key name;
-
-            sw:rfs-transform mini.rfs.Bar;
-
-            leaf name {
-                type string;
-            }
 
             container dynstate {
                 sw:dynstate;

@@ -62,11 +62,3 @@ class L3vpn(base.L3vpn):
             rfs_endpoint.description = description
 
         return o
-
-
-class Foo(base.Foo):
-    def transform(self, i):
-        o = base.o_root()
-        rfs = o.rfs.create(i.router)
-        b = rfs.bar.create(i.name)
-        return o
