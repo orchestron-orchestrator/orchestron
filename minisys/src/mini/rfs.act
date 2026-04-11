@@ -48,12 +48,8 @@ actor BaseConfigTransform(update_dynstate: proc(?BaseConfigDynstate)->None, dev:
         if err is not None:
             print("BaseConfigTransform subscription error: {err}", err=True)
             return
-        if t is not None:
-            tss = t.system_state
-            if tss is not None:
-                clock = tss.clock
-                if clock is not None:
-                    update_dynstate(BaseConfigDynstate(clock.current_datetime))
+        current_datetime = t?.system_state?.clock?.current_datetime
+        update_dynstate(BaseConfigDynstate(current_datetime))
 
     def on_conf(conf: y1.stratoweave_rfs__rfs__base_config):
         if handle is not None:
