@@ -117,10 +117,22 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
             transform_output = "(yang.adata.MNode, ?yang.adata.MNode)"
         else:
             transform_output = "yang.adata.MNode"
+        type_helpers = """
+    @staticmethod
+    def input_type():
+        \"\"\"Return the modeled input type for this transform\"\"\"
+        return {input_class}
+"""
         if dynstate_class is not None:
             wrapper_extra_params += ", modeled_dynstate"
             wrapper_extra_models += "        modeled_dynstate = {dynstate_class}.from_gdata(dynstate) if dynstate is not None else None\n"
             transform_extra_typed_params += ", dynstate: ?{dynstate_class}"
+            type_helpers += """
+    @staticmethod
+    def dynstate_type():
+        \"\"\"Return the modeled dynstate type for this transform\"\"\"
+        return {dynstate_class}
+"""
             transform_actor_fq = transform.fqname + "Transform"
             transform_actor_ctor = transform.name + "TransformCtor"
             transform_actor_extra_params = ", ttt.expect(params.dev, \"Missing expected DeviceMgr param to {transform_actor_fq}.\")" if ext.name == "rfs-transform" else ""
@@ -145,12 +157,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         if ext.name == "transform":
             base_defs.append("""class {transform.name}(ttt.TransformFunction):
     transform: mut({input_class}{transform_extra_typed_params}) -> {transform_output}
-
-    @staticmethod
-    def input_type():
-        \"\"\"Return the modeled input type for this transform\"\"\"
-        return {input_class}
-
+{type_helpers}
     mut def transform_wrapper(self, i: yang.gdata.Node, memory: ?yang.gdata.Node, dynstate: ?yang.gdata.Node) -> (yang.gdata.Node, ?yang.gdata.Node):
         \"\"\"Wrap the user provided transform method to convert from gdata to
         modeled input and back to gdata
@@ -175,12 +182,7 @@ def dschema_to_tttsrc(sn: schema.DNode, spath: list[schema.DNode], indent=0, set
         elif ext.name == "rfs-transform":
             base_defs.append("""class {transform.name}(ttt.RFSFunction):
     transform: mut({input_class}, ttt.DeviceInfo{transform_extra_typed_params}) -> {transform_output}
-
-    @staticmethod
-    def input_type():
-        \"\"\"Return the modeled input type for this transform\"\"\"
-        return {input_class}
-
+{type_helpers}
     mut def transform_wrapper(self, i: yang.gdata.Node, device_info: ttt.DeviceInfo, memory: ?yang.gdata.Node, dynstate: ?yang.gdata.Node) -> (yang.gdata.Node, ?yang.gdata.Node):
         \"\"\"Wrap the user provided transform method to convert from gdata to
         modeled input and back to gdata
