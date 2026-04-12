@@ -380,18 +380,32 @@ class LogItem():
         self.event = event
         self.conf_diff = conf_diff
 
-class Subscription(object):
-    @property
-    cb: action(?yang.gdata.Node, ?Exception) -> None
-    filt: ?yang.gdata.FNode
-    opts: yang.gdata.SubscriptionOpts
+class SharedSubscription(object):
+    """One physical device subscription shared by one or more owners."""
+    spec: yang.gdata.SubscriptionSpec
+    latest: ?yang.gdata.Node
+    owners: set[str]
     active: bool
 
-    def __init__(self, cb, filt, opts):
-        self.cb = cb
-        self.filt = filt
-        self.opts = opts
+    def __init__(self, spec: yang.gdata.SubscriptionSpec):
+        self.spec = yang.gdata.SubscriptionSpec(spec.filt, period=spec.period)
+        self.latest = None
+        self.owners = set()
         self.active = True
+
+
+class SubscriptionOwner(object):
+    """One declarative subscriber with its desired specs and merged state."""
+    @property
+    cb: action(?yang.gdata.Node, ?Exception) -> None
+    want: set[yang.gdata.SubscriptionSpec]
+    last_merged: ?yang.gdata.Node
+
+    def __init__(self, cb: action(?yang.gdata.Node, ?Exception) -> None, want: set[yang.gdata.SubscriptionSpec], last_merged: ?yang.gdata.Node=None):
+        self.cb = cb
+        self.want = set(want)
+        self.last_merged = last_merged
+
 
 class DeviceTreeProvider(yang.gdata.TreeProvider):
     dev: DeviceMgr
@@ -407,8 +421,11 @@ class DeviceTreeProvider(yang.gdata.TreeProvider):
         pass
         # self.dev.rpc(cb, rpc_input)
 
-    proc def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
-        return self.dev.subscribe(cb, filt, opts)
+    proc def declare_subscriptions(self, owner_id: str, cb: action(?yang.gdata.Node, ?Exception) -> None, want: set[yang.gdata.SubscriptionSpec]):
+        self.dev.declare_subscriptions(owner_id, cb, want)
+
+    proc def remove_subscriptions(self, owner_id: str):
+        self.dev.remove_subscriptions(owner_id)
 
 
 
@@ -968,8 +985,11 @@ actor DeviceMgr(dev_types: dict[str, DeviceType]={}, pcap: ?process.ProcessCap=N
     def rpc_xml(cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node):
         adapter.rpc_xml(cb, xml_rpc)
 
-    def subscribe(cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
-        return adapter.subscribe(cb, filt, opts)
+    def declare_subscriptions(owner_id: str, cb: action(?yang.gdata.Node, ?Exception) -> None, want: set[yang.gdata.SubscriptionSpec]):
+        adapter.declare_subscriptions(owner_id, cb, want)
+
+    def remove_subscriptions(owner_id: str):
+        adapter.remove_subscriptions(owner_id)
 
     def tree_provider() -> yang.gdata.TreeProvider:
         return DeviceTreeProvider(self)
@@ -1081,7 +1101,8 @@ class DeviceAdapter(object):
 
     rpc_xml: proc(cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None
 
-    subscribe: proc(action(?yang.gdata.Node, ?Exception) -> None, ?yang.gdata.FNode, yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle
+    declare_subscriptions: proc(str, action(?yang.gdata.Node, ?Exception) -> None, set[yang.gdata.SubscriptionSpec]) -> None
+    remove_subscriptions: proc(str) -> None
 
 
 class NoAdapter(DeviceAdapter):
@@ -1115,9 +1136,11 @@ class NoAdapter(DeviceAdapter):
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         pass
 
-    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
+    def declare_subscriptions(self, owner_id: str, cb: action(?yang.gdata.Node, ?Exception) -> None, want: set[yang.gdata.SubscriptionSpec]):
         cb(None, NotConnectedError())
-        return yang.gdata.SubscriptionHandle(0, lambda: None)
+
+    def remove_subscriptions(self, owner_id: str):
+        pass
 
 class MockAdapter(DeviceAdapter):
     """Mock device adapter
@@ -1154,10 +1177,12 @@ class MockAdapter(DeviceAdapter):
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         return self._driver.rpc_xml(cb, xml_rpc)
 
-    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
-        # TODO: can / should subscribe do something on a MockAdapter ?
+    def declare_subscriptions(self, owner_id: str, cb: action(?yang.gdata.Node, ?Exception) -> None, want: set[yang.gdata.SubscriptionSpec]):
+        # TODO: can / should subscriptions do something on a MockAdapter ?
         cb(None, NotConnectedError())
-        return yang.gdata.SubscriptionHandle(0, lambda: None)
+
+    def remove_subscriptions(self, owner_id: str):
+        pass
 
 actor MockDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, log_handler: logging.Handler, pcap: ?process.ProcessCap):
     _log = logging.Logger(log_handler)
@@ -1502,8 +1527,8 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
     var modset: dict[str, ModCap] = {}
     var schema_hash = None
 
-    var sub_id_seq = 0
-    var subs: dict[int, Subscription] = {}
+    var subs: dict[yang.gdata.SubscriptionSpec, SharedSubscription] = {}
+    var sub_owners: dict[str, SubscriptionOwner] = {}
 
     NS_NC_1_0 = "urn:ietf:params:xml:ns:netconf:base:1.0"
 
@@ -2192,10 +2217,10 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
         if client is not None:
             client.rpc(xml_rpc, rpc_reply)
 
-    def _sub_delay(opts: yang.gdata.SubscriptionOpts) -> float:
+    def _sub_delay(spec: yang.gdata.SubscriptionSpec) -> float:
         def ns_to_s(ns: u64) -> float:
             return float(ns) / 1000000000.0
-        pn = opts.period
+        pn = spec.period
         if pn is not None:
             return ns_to_s(pn)
         return float(1)
@@ -2216,67 +2241,138 @@ actor NetconfDriver(dev: DeviceMgr, bundled_schema: DeviceSchema, init_dmc: Devi
             return yang.xml.from_xml(bundled_schema.src_dnode, data_tag, loose=True)
         return None
 
-    def _sub_cancel(sid: int):
-        if sid in subs:
-            subs[sid].active = False
-            del subs[sid]
+    def _owner_publish(owner_id: str, err: ?Exception=None):
+        def _merge_subscription_tree(want: set[yang.gdata.SubscriptionSpec], active: dict[yang.gdata.SubscriptionSpec, SharedSubscription]) -> ?yang.gdata.Node:
+            merged = None
+            for spec in yang.gdata.hack_sorted(iter(want)):
+                if spec in active:
+                    sub = active[spec]
+                    if sub.latest is not None:
+                        base = merged if merged is not None else yang.gdata.Container({})
+                        merged = yang.gdata.patch(base, sub.latest)
+            return merged
 
-    def _sub_schedule_next(sid: int):
-        if sid not in subs:
+        def _snapshot_subscription_tree(tree: ?yang.gdata.Node) -> ?yang.gdata.Node:
+            # TODO: Remove this snapshot once gdata.Node is truly immutable. Today
+            # patch/merge can reuse mutable internals, so retaining last_merged by
+            # reference is not a safe previous-state cache.
+            if tree is not None:
+                return yang.gdata.Node.from_json(tree.to_json())
+            return None
+
+        if owner_id not in sub_owners:
             return
-        st = subs[sid]
+        owner = sub_owners[owner_id]
+        merged = _merge_subscription_tree(owner.want, subs)
+        if err is not None or merged != owner.last_merged:
+            owner.last_merged = _snapshot_subscription_tree(merged)
+            sub_owners[owner_id] = owner
+            owner.cb(merged, err)
+
+    def _sub_cancel(spec: yang.gdata.SubscriptionSpec):
+        if spec in subs:
+            subs[spec].active = False
+            del subs[spec]
+
+    def _sub_schedule_next(spec: yang.gdata.SubscriptionSpec):
+        if spec not in subs:
+            return
+        st = subs[spec]
         if not st.active:
             return
-        delay = _sub_delay(st.opts)
-        after delay: _sub_tick(sid)
+        delay = _sub_delay(st.spec)
+        after delay: _sub_tick(spec)
 
-    def _sub_tick(sid: int):
-        if sid not in subs:
+    def _sub_tick(spec: yang.gdata.SubscriptionSpec):
+        if spec not in subs:
             return
-        st = subs[sid]
+        st = subs[spec]
         if not st.active:
             return
-        if st.opts.mode != yang.gdata.SUB_PERIODIC:
-            cb = st.cb
-            if cb is not None:
-                cb(None, ValueError("NetconfDriver only supports periodic subscriptions"))
-            _sub_cancel(sid)
+        if st.spec.period is None:
+            err = ValueError("NetconfDriver only supports periodic subscriptions")
+            for owner_id in st.owners:
+                _owner_publish(owner_id, err)
+            _sub_cancel(spec)
             return
 
         def on_get(c: netconf.Client, r: ?xml.Node, error: ?netconf.NetconfError):
-            if sid not in subs:
+            if spec not in subs:
                 return
-            st2 = subs[sid]
+            st2 = subs[spec]
             if not st2.active:
                 return
-            cb = st2.cb
             if error is not None:
-                if cb is not None:
-                    cb(None, error)
+                for owner_id in st2.owners:
+                    _owner_publish(owner_id, error)
             else:
                 parsed = _parse_get_reply(r)
                 if parsed is None:
-                    if cb is not None:
-                        cb(None, ValueError("Unexpected rpc-reply for periodic get"))
+                    err = ValueError("Unexpected rpc-reply for periodic get")
+                    for owner_id in st2.owners:
+                        _owner_publish(owner_id, err)
                 else:
-                    if cb is not None:
-                        cb(parsed, None)
-            _sub_schedule_next(sid)
+                    st2.latest = parsed
+                    subs[spec] = st2
+                    for owner_id in st2.owners:
+                        _owner_publish(owner_id)
+            _sub_schedule_next(spec)
 
         filt_xml = None
-        if st.filt is not None:
-            filt_xml = _build_subtree_filter(yang.gdata.expect(st.filt, "subscription filter"))
+        if st.spec.filt is not None:
+            filt_xml = _build_subtree_filter(yang.gdata.expect(st.spec.filt, "subscription filter"))
         if client is not None:
             client.get(on_get, filt_xml)
         else:
-            _sub_schedule_next(sid)
+            _sub_schedule_next(spec)
 
-    def subscribe(cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
-        sub_id_seq += 1
-        sid = sub_id_seq
-        subs[sid] = Subscription(cb, filt, opts)
-        _sub_tick(sid)
-        return yang.gdata.SubscriptionHandle(sid, lambda: _sub_cancel(sid))
+    def _add_owner_spec(owner_id: str, spec: yang.gdata.SubscriptionSpec):
+        if spec in subs:
+            st = subs[spec]
+        else:
+            st = SharedSubscription(spec)
+        st.owners.add(owner_id)
+        subs[spec] = st
+        if st.latest is None and len(st.owners) == 1:
+            _sub_tick(spec)
+
+    def _remove_owner_spec(owner_id: str, spec: yang.gdata.SubscriptionSpec):
+        if spec not in subs:
+            return
+        st = subs[spec]
+        st.owners.discard(owner_id)
+        if len(st.owners) == 0:
+            _sub_cancel(spec)
+        else:
+            subs[spec] = st
+
+    def declare_subscriptions(owner_id: str, cb: action(?yang.gdata.Node, ?Exception) -> None, want: set[yang.gdata.SubscriptionSpec]):
+        old_want = set()
+        last_merged = None
+        if owner_id in sub_owners:
+            owner = sub_owners[owner_id]
+            old_want = owner.want
+            last_merged = owner.last_merged
+
+        for spec in old_want:
+            if spec not in want:
+                _remove_owner_spec(owner_id, spec)
+
+        sub_owners[owner_id] = SubscriptionOwner(cb, want, last_merged)
+
+        for spec in want:
+            if spec not in old_want:
+                _add_owner_spec(owner_id, spec)
+
+        _owner_publish(owner_id)
+
+    def remove_subscriptions(owner_id: str):
+        if owner_id not in sub_owners:
+            return
+        old_want = sub_owners[owner_id].want
+        del sub_owners[owner_id]
+        for spec in old_want:
+            _remove_owner_spec(owner_id, spec)
 
     _connect(dmc)
 
@@ -2320,8 +2416,11 @@ class NetconfAdapter(DeviceAdapter):
     def rpc_xml(self, cb: action(?xml.Node, ?Exception) -> None, xml_rpc: xml.Node) -> None:
         return self._driver.rpc_xml(cb, xml_rpc)
 
-    def subscribe(self, cb: action(?yang.gdata.Node, ?Exception) -> None, filt: ?yang.gdata.FNode, opts: yang.gdata.SubscriptionOpts) -> yang.gdata.SubscriptionHandle:
-        return self._driver.subscribe(cb, filt, opts)
+    def declare_subscriptions(self, owner_id: str, cb: action(?yang.gdata.Node, ?Exception) -> None, want: set[yang.gdata.SubscriptionSpec]):
+        self._driver.declare_subscriptions(owner_id, cb, want)
+
+    def remove_subscriptions(self, owner_id: str):
+        self._driver.remove_subscriptions(owner_id)
 
     # TODO: try removing proc. at the time of writing this, it led to crash in CPS
     proc def get_mock_server(self) -> ?NetconfMockServer:
