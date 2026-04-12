@@ -43,6 +43,16 @@ def _current_datetime_filter() -> yang.gdata.FNode:
         ])
     ])
 
+def _boot_datetime_filter() -> yang.gdata.FNode:
+    """Filter matching only system-state/clock/boot-datetime."""
+    return yang.gdata.FNode(None, None, [
+        yang.gdata.FNode(_q("system-state"), children=[
+            yang.gdata.FNode(_q("clock"), children=[
+                yang.gdata.FNode(_q("boot-datetime"))
+            ])
+        ])
+    ])
+
 def _current_datetime_from_tree(n: ?yang.gdata.Node) -> ?str:
     if n is not None and isinstance(n, yang.gdata.Container):
         sys_state = n.get_opt_cnt(_q("system-state"))
@@ -157,7 +167,7 @@ actor _test_subscribe_periodic(t: testing.EnvT):
     2. Seed the mock server oper datastore with system-state/clock (both datetimes).
     3. Start a periodic subtree subscription that selects only system-state/clock/current-datetime.
     4. On the first update, validate current-datetime (and absence of boot-datetime), then mutate the mock oper datastore once.
-    5. On the second update, validate the new current-datetime and cancel the subscription.
+    5. On the second update, validate the new current-datetime and remove the owner declaration.
     6. Fail fast via a short timeout if updates never arrive.
     """
     mock_current_datetime_1 = "2026-02-21T10:11:12Z"
@@ -166,7 +176,6 @@ actor _test_subscribe_periodic(t: testing.EnvT):
 
     var updates = 0
     var done = False
-    var handle: ?yang.gdata.SubscriptionHandle = None
     var mock_server: ?orchestron.device.NetconfMockServer = None
 
     def noop_on_reconf(name: str):
@@ -213,8 +222,7 @@ actor _test_subscribe_periodic(t: testing.EnvT):
             if dt != mock_current_datetime_2:
                 fail("Unexpected second datetime: {dt}")
                 return
-            if handle is not None:
-                handle.cancel()
+            dev.remove_subscriptions("test-subscribe-periodic")
             succeed()
         else:
             fail("Unexpected extra subscription update: {updates}")
@@ -225,8 +233,8 @@ actor _test_subscribe_periodic(t: testing.EnvT):
             mock_server = adapter.get_mock_server()
             if mock_server is not None:
                 mock_server.set_oper_ds(_mock_oper_ds(mock_current_datetime_1, mock_boot_datetime))
-                opts = yang.gdata.SubscriptionOpts(yang.gdata.SUB_PERIODIC, period=u64(50000000))
-                handle = dev.subscribe(on_update, _current_datetime_filter(), opts)
+                want = set([yang.gdata.SubscriptionSpec(_current_datetime_filter(), period=0.05)])
+                dev.declare_subscriptions("test-subscribe-periodic", on_update, want)
             else:
                 fail("Expected NetconfMockServer from NetconfAdapter")
                 return
@@ -236,3 +244,169 @@ actor _test_subscribe_periodic(t: testing.EnvT):
     start()
 
     after 0.5: fail("Timed out waiting for periodic subscription updates")
+
+
+actor _test_subscription_manager_declare(t: testing.EnvT):
+    """Declarative subscription manager over NETCONF mock subscriptions."""
+    mock_current_datetime_1 = "2026-02-21T10:11:12Z"
+    mock_current_datetime_2 = "2026-02-21T10:11:13Z"
+    mock_boot_datetime = "2025-12-31T00:00:00Z"
+
+    var done = False
+    var phase = 0
+    var mock_server: ?orchestron.device.NetconfMockServer = None
+    var subs: ?yang.gdata.SubscriptionManager = None
+
+    def noop_on_reconf(name: str):
+        pass
+    dev = new_netconf_mock_device_mgr(t, "dev-subs", noop_on_reconf)
+
+    def close_subs():
+        if subs is not None:
+            subs.close()
+
+    def fail(msg: str):
+        if done:
+            return
+        done = True
+        close_subs()
+        t.failure(ValueError(msg))
+
+    def succeed():
+        if done:
+            return
+        done = True
+        close_subs()
+        t.success()
+
+    def declare_both():
+        want = set([
+            yang.gdata.SubscriptionSpec(_current_datetime_filter(), period=0.05),
+            yang.gdata.SubscriptionSpec(_boot_datetime_filter(), period=0.05)
+        ])
+        yang.gdata.expect(subs, "subscription manager").declare(want)
+
+    def declare_current_only():
+        want = set([yang.gdata.SubscriptionSpec(_current_datetime_filter(), period=0.05)])
+        yang.gdata.expect(subs, "subscription manager").declare(want)
+
+    def on_update(n: ?yang.gdata.Node, err: ?Exception):
+        if done:
+            return
+        if err is not None:
+            fail("Subscription manager update error: {err}")
+            return
+
+        dt = _current_datetime_from_tree(n)
+        has_boot = _has_boot_datetime(n)
+
+        if phase == 0 and dt == mock_current_datetime_1 and has_boot:
+            phase = 1
+            declare_current_only()
+            return
+
+        if phase == 1 and dt == mock_current_datetime_1 and not has_boot:
+            phase = 2
+            yang.gdata.expect(mock_server, "mock server").set_oper_ds(_mock_oper_ds(mock_current_datetime_2, mock_boot_datetime))
+            return
+
+        if phase == 2 and dt == mock_current_datetime_2 and not has_boot:
+            succeed()
+            return
+
+    def start():
+        adapter = dev.get_adapter()
+        if isinstance(adapter, orchestron.device.NetconfAdapter):
+            ms0 = adapter.get_mock_server()
+            if ms0 is None:
+                fail("Expected NetconfMockServer from NetconfAdapter")
+                return
+            ms = yang.gdata.expect(ms0, "mock server")
+            mock_server = ms
+            ms.set_oper_ds(_mock_oper_ds(mock_current_datetime_1, mock_boot_datetime))
+            subs = yang.gdata.SubscriptionManager(dev.tree_provider(), "test-subscription-manager", on_update)
+            declare_both()
+        else:
+            fail("Expected NetconfAdapter from DeviceMgr")
+
+    start()
+
+    after 0.5: fail("Timed out waiting for declarative subscription manager updates")
+
+
+actor _test_subscription_manager_idempotent(t: testing.EnvT):
+    """Redeclaring the same subscriptions is a no-op."""
+    mock_current_datetime = "2026-02-21T10:11:12Z"
+    mock_boot_datetime = "2025-12-31T00:00:00Z"
+
+    var done = False
+    var updates = 0
+    var subs: ?yang.gdata.SubscriptionManager = None
+
+    def noop_on_reconf(name: str):
+        pass
+    dev = new_netconf_mock_device_mgr(t, "dev-subs-idempotent", noop_on_reconf)
+
+    def close_subs():
+        if subs is not None:
+            subs.close()
+
+    def fail(msg: str):
+        if done:
+            return
+        done = True
+        close_subs()
+        t.failure(ValueError(msg))
+
+    def succeed():
+        if done:
+            return
+        done = True
+        close_subs()
+        t.success()
+
+    def declare_current_only():
+        want = set([yang.gdata.SubscriptionSpec(_current_datetime_filter(), period=0.05)])
+        yang.gdata.expect(subs, "subscription manager").declare(want)
+
+    def on_update(n: ?yang.gdata.Node, err: ?Exception):
+        if done:
+            return
+        if err is not None:
+            fail("Subscription manager update error: {err}")
+            return
+
+        updates += 1
+        if updates > 1:
+            fail("Unexpected extra subscription update: {updates}")
+            return
+
+        dt = _current_datetime_from_tree(n)
+        has_boot = _has_boot_datetime(n)
+        if dt != mock_current_datetime:
+            fail("Unexpected current datetime: {dt}")
+            return
+        if has_boot:
+            fail("Unexpected boot datetime in filtered update")
+            return
+
+        declare_current_only()
+        after 0.15: succeed()
+
+    def start():
+        adapter = dev.get_adapter()
+        if isinstance(adapter, orchestron.device.NetconfAdapter):
+            ms0 = adapter.get_mock_server()
+            if ms0 is None:
+                fail("Expected NetconfMockServer from NetconfAdapter")
+                return
+            ms = yang.gdata.expect(ms0, "mock server")
+            ms.set_oper_ds(_mock_oper_ds(mock_current_datetime, mock_boot_datetime))
+            subs = yang.gdata.SubscriptionManager(dev.tree_provider(), "test-subscription-manager-idempotent", on_update)
+            declare_current_only()
+        else:
+            fail("Expected NetconfAdapter from DeviceMgr")
+
+    start()
+
+    after 0.5: fail("Timed out waiting for idempotent subscription manager test")
