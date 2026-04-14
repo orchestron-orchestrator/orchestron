@@ -10,6 +10,9 @@ def expect[T](t: ?T, errmsg: str) -> T:
         return t
     raise ValueError(errmsg)
 
+def unwrap[T](t: ?T) -> T:
+    return expect(t, "unwrap called on None")
+
 
 NS_stratoweave_device = "http://stratoweave.org/yang/stratoweave-device.yang"
 
@@ -113,6 +116,10 @@ class Path():
         self.ns = ""
         self.parent = None
 
+    def __str__(self):
+        parts = _format_path(self)
+        return "/" + "/".join(parts) if parts else "/"
+
 class PathElem(Path):
     def __init__(self, i: gdata.Id, parent: ?Path):
         self.name = i.name
@@ -128,8 +135,9 @@ class PathKey(Path):
 def _format_path(path: ?Path):
     if path is not None:
         par = path.parent
-        r = _format_path(par)
-        r.append("{path.name}#{path.ns}" if path.ns and par is not None and path.ns != par.ns else path.name)
+        r1 = _format_path(par)
+        r2 = "{path.name}#{path.ns}" if path.ns and par is not None and path.ns != par.ns else path.name
+        r = r1 + [r2]
         return r
     else:
         return []
@@ -1275,7 +1283,8 @@ class _TransformTransactionBase(_Transaction):
             return gdata.Container()
 
 class TransformActorParams:
-    def __init__(self, update_dynstate: proc(?gdata.Node) -> None, dev: ?odev.DeviceMgr):
+    def __init__(self, path: Path, update_dynstate: proc(?gdata.Node) -> None, dev: ?odev.DeviceMgr):
+        self.path = path
         self.update_dynstate = update_dynstate
         self.dev = dev
 
@@ -1356,7 +1365,7 @@ class _TransformTransaction(_TransformTransactionBase):
 
     proc def init_dynstate(self, node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate):
         self.node = node
-        self.function.init_dynstate(act, update_dynstate)
+        self.function.init_dynstate(act, update_dynstate, unwrap(self.path))
 
     proc def update_dynstate(self, dynstate):
         self.dynstate = dynstate
@@ -1386,8 +1395,8 @@ class TransformFunction(object):
     def transform_xml(self, cfg, memory, dynstate):
         return gdata.Container(), None
 
-    proc def init_dynstate(self, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?gdata.Node)->None):
-        self._on_conf = act(TransformActorParams(update_dynstate, None))
+    proc def init_dynstate(self, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?gdata.Node)->None, path: Path):
+        self._on_conf = act(TransformActorParams(path, update_dynstate, None))
 
     proc def on_conf(self, conf: gdata.Node, memory: ?gdata.Node):
         _on_conf = self._on_conf
@@ -1519,7 +1528,7 @@ class _RFSTransaction(_TransformTransactionBase):
 
     proc def init_dynstate(self, node, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate):
         self.node = node
-        self.function.init_dynstate(act, update_dynstate, self.dev)
+        self.function.init_dynstate(act, update_dynstate, unwrap(self.path), self.dev)
 
     proc def update_dynstate(self, dynstate):
         self.dynstate = dynstate
@@ -1560,8 +1569,8 @@ class RFSFunction(object):
     def transform_xml(self, cfg, di, memory, dynstate):
         return (gdata.Container(), None)
 
-    proc def init_dynstate(self, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?gdata.Node)->None, dev: odev.DeviceMgr):
-        self._on_conf = act(TransformActorParams(update_dynstate, dev))
+    proc def init_dynstate(self, act: proc(TransformActorParams) -> ?proc(gdata.Node, ?gdata.Node) -> None, update_dynstate: proc(?gdata.Node)->None, path: Path, dev: odev.DeviceMgr):
+        self._on_conf = act(TransformActorParams(path, update_dynstate, dev))
 
     proc def on_conf(self, conf: gdata.Node, memory: ?gdata.Node):
         _on_conf = self._on_conf

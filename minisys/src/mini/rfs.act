@@ -38,7 +38,7 @@ class BaseConfig(base.BaseConfig):
 
         raise UnsupportedDevice()
 
-actor BaseConfigTransform(update_dynstate: proc(?BaseConfigDynstate)->None, dev: odev.DeviceMgr):
+actor BaseConfigTransform(path, update_dynstate: proc(?BaseConfigDynstate)->None, dev: odev.DeviceMgr):
     var dynstate = base.BaseConfig.dynstate_type()()
 
     def on_state(t: ?yang.gdata.Node, err: ?Exception):
@@ -49,7 +49,7 @@ actor BaseConfigTransform(update_dynstate: proc(?BaseConfigDynstate)->None, dev:
         dynstate.current_datetime = root?.system_state?.clock?.current_datetime
         update_dynstate(dynstate)
 
-    var subs = gdata.SubscriptionManager(dev.tree_provider(), "base-config", on_state)
+    var subs = gdata.SubscriptionManager(dev.tree_provider(), str(path), on_state)
 
     def on_conf(conf: y1.stratoweave_rfs__rfs__base_config):
         want = set()
