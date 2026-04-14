@@ -567,7 +567,7 @@ actor HttpServer(
     http_router_root.get("/config-queue", _router_handle_config_queue)
     http_router_root.get("/device", _router_handle_device_list)
     http_router_root.route("/device/{{name}}", _router_build_device_routes)
-    http_router_root.route("/restconf", _router_build_restconf_routes)
+    http_router_root.route("/restconf/data", _router_build_restconf_routes)
     http_router_root.get("/layer/{{idx}}", _router_handle_layer_get)
 
     var tmf_http = None
