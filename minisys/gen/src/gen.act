@@ -24,5 +24,6 @@ actor main(env):
         compiled_spec.gen_app(fc, "../src/")
     except Exception as exc:
         print(exc)
-
-    env.exit(0)
+        env.exit(1)
+    else:
+        env.exit(0)
