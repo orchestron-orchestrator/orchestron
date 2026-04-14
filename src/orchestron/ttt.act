@@ -784,7 +784,6 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
     var active = {}
     var provisional = set()
     var key_leaves = {}
-    var staged_key_leaves = {}
     var db = None
 
     def bind_db(db1: ?lmdb.Db) -> None:
@@ -792,26 +791,22 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
         for node in elems.values():
             node.bind_db(db1)
 
-    def acquire(tid: str, keys: ?set[str], key_leaves_by_key: ?dict[str, dict[gdata.Id, gdata.Leaf]]) -> dict[str, Node]:
+    def acquire(tid: str, keys: ?dict[str, dict[gdata.Id, gdata.Leaf]]) -> dict[str, Node]:
         if keys is not None:
-            keys1 = keys
+            keys1 = set(keys.keys())
             new = keys1 - set(elems.keys())
             for k in new:
-                keyvals = key_leaves_by_key.get_def(k, {}) if key_leaves_by_key is not None else {}
-                elems[k] = template(PathKey(k, keyvals, path), lower)
-                elems[k].bind_db(db)
+                node = template(PathKey(k, {}, path), lower)
+                node.bind_db(db)
+                if isinstance(node.pub_impl, _Container):
+                    key_leaves[k] = keys[k]
+                elems[k] = node
             provisional |= new
             #print('====', tid, path, 'acquire keys:', keys, 'new:', new, 'provisional:', provisional, actorid(), err=True)
         else:
             keys1 = set(elems.keys())
             #print('====', tid, path, 'acquire all keys:', keys1, actorid(), err=True)
         active[tid] = keys1
-        if key_leaves_by_key is not None:
-            for k in keys1:
-                node = elems[k]
-                if isinstance(node.pub_impl, _Container):
-                    staged_key_leaves[tid] = key_leaves_by_key
-                break
 
         return {k: elems[k] for k in keys1}
 
@@ -820,15 +815,10 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
         if ok:
             provisional -= active[tid]
             provisional |= deletes
-            if tid in staged_key_leaves:
-                for k, leaves in staged_key_leaves[tid].items():
-                    key_leaves[k] = leaves
             for k in deletes:
                 if k in key_leaves:
                     del key_leaves[k]
         del active[tid]
-        if tid in staged_key_leaves:
-            del staged_key_leaves[tid]
         if not active:
             #print('====', tid, path, 'deleting:', provisional, err=True)
             for k in provisional:
@@ -853,15 +843,11 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
         for key, leaves in key_leaves.items():
             if key not in deletes:
                 projected_key_leaves[key] = leaves
-        if tid in staged_key_leaves:
-            for key, leaves in staged_key_leaves[tid].items():
-                if key not in deletes:
-                    projected_key_leaves[key] = leaves
 
         return {k: (elems[k], projected_key_leaves.get(k)) for k in projected_keys}
 
     def is_empty() -> bool:
-        return len(elems) == 0 and len(active) == 0 and len(provisional) == 0 and len(key_leaves) == 0 and len(staged_key_leaves) == 0
+        return len(elems) == 0 and len(active) == 0 and len(provisional) == 0 and len(key_leaves) == 0
 
     def restore_element(key: str) -> Node:
         if key not in elems:
@@ -903,17 +889,19 @@ class _ListTransaction(_Transaction):
             self.reset = False
         diff_by_key = transpose_list(diff)
         if len(diff_by_key) == 0 and force:
-            for key,node in self.liststate.acquire(tid, None, None).items():
+            for key,node in self.liststate.acquire(tid, None).items():
                 diff_by_key[key] = {}
-                self.elems[key] = node.newtrans()
+                if key not in self.elems:
+                    self.elems[key] = node.newtrans()
         elif WILDKEY in diff_by_key:
             wildconf = diff_by_key[WILDKEY]
-            for key,node in self.liststate.acquire(tid, None, None).items():
+            for key,node in self.liststate.acquire(tid, None).items():
                 if key in diff_by_key:
                     diff_by_key[key].update(wildconf.items())
                 else:
                     diff_by_key[key] = wildconf
-                self.elems[key] = node.newtrans()
+                if key not in self.elems:
+                    self.elems[key] = node.newtrans()
             del diff_by_key[WILDKEY]
         else:
             key_leaves_by_key = {}
@@ -921,8 +909,9 @@ class _ListTransaction(_Transaction):
                 for node in subdiff.values():
                     kc = node.key_children(self.key_names)
                     key_leaves_by_key[key] = kc
-            for key,node in self.liststate.acquire(tid, set(diff_by_key.keys()), key_leaves_by_key).items():
-                self.elems[key] = node.newtrans()
+            for key,node in self.liststate.acquire(tid, key_leaves_by_key).items():
+                if key not in self.elems:
+                    self.elems[key] = node.newtrans()
         msgs = {}
         for key,subdiff in diff_by_key.items():
             #print('   #', tid, '(List)', _format_path(self.path), 'CONFIGURE ELEMENT', key, err=True)
