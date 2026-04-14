@@ -3,8 +3,8 @@ fingerprint = 0xe602cd36fdb33ec8
 dependencies = {
     "actmf": (
         repo_url="https://github.com/orchestron-orchestrator/actmf",
-        url="https://github.com/orchestron-orchestrator/actmf/archive/3acd385e70463680dda1193f53a9226256ab1a10.zip",
-        hash="N-V-__8AAILmBAAkJozY3tgd8H2mtwnDX5utPg2PeEd1DLz5"
+        url="https://github.com/orchestron-orchestrator/actmf/archive/19fa7bd4a7fb2b82e8b0a65c6eb2df24341fc12a.zip",
+        hash="N-V-__8AAAB0BQAV7G6vazi2S7pafugUct0Ddk5y_DPiz1mN"
     ),
     "http_router": (
         repo_url="https://github.com/orchestron-orchestrator/http-router.git",
@@ -23,8 +23,8 @@ dependencies = {
     ),
     "yang": (
         repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
-        url="https://github.com/orchestron-orchestrator/acton-yang/archive/cb25e786ac31afa2520d1f52ab8e52ee9f98e2da.zip",
-        hash="N-V-__8AAMDuIgBOq_U5TMaEqanFuY57a_Va1OhydoclDkCK"
+        url="https://github.com/orchestron-orchestrator/acton-yang/archive/0ea2f82dbf384bd9dcf9205b0cf9efb478a93605.zip",
+        hash="N-V-__8AAFf4IgCCq5xYtctpIslV06JUC3t88itr64QUTkfP"
     )
 }
 zig_dependencies = {}
