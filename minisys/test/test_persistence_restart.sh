@@ -84,7 +84,7 @@ start_mini
     --max-time 5 \
     -H "Content-Type: application/yang-data+json" \
     --data-binary "$CONFIG_JSON" \
-    "http://127.0.0.1:${PORT}/restconf" >/dev/null
+    "http://127.0.0.1:${PORT}/restconf/data" >/dev/null
 
 before_restart_json="$(layer0_json)"
 [[ "$(compact_json "$before_restart_json")" == *'"name":"rtr1"'* ]] || fail "layer 0 JSON did not contain expected router config before restart"
