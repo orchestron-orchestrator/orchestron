@@ -1823,3 +1823,7 @@ class root(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return root.from_gdata(self.to_gdata())
 
+
+actor rpc_root(tp: yang.gdata.TreeProvider):
+    pass
+
