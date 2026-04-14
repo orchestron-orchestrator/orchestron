@@ -120,11 +120,10 @@ class PathElem(Path):
         self.parent = parent
 
 class PathKey(Path):
-    def __init__(self, keystr: str, keyvals: dict[gdata.Id, gdata.Node], parent: ?Path):
+    def __init__(self, keystr: str, parent: ?Path):
         self.name = keystr
         self.ns = parent.ns if parent is not None else ""
         self.parent = parent
-        self.keyvals = keyvals
 
 def _format_path(path: ?Path):
     if path is not None:
@@ -551,8 +550,8 @@ class _Container(_Node):
         #print('####', '(Container)', _format_path(self.path), actorid(), 'NODE GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
         path = self.path
-        if isinstance(path, PathKey):
-            res.update(path.keyvals.items())
+#        if isinstance(path, PathKey):
+#            res.update(path.keyvals.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
     def bind_db(self, db: ?lmdb.Db) -> None:
@@ -722,8 +721,8 @@ class _ContainerTransaction(_Transaction):
         #print('####', '(Container)', _format_path(self.path), actorid(), 'GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
         path = self.path
-        if isinstance(path, PathKey):
-            res.update(path.keyvals.items())
+#        if isinstance(path, PathKey):
+#            res.update(path.keyvals.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
 
@@ -796,7 +795,7 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
             keys1 = set(keys.keys())
             new = keys1 - set(elems.keys())
             for k in new:
-                node = template(PathKey(k, {}, path), lower)
+                node = template(PathKey(k, path), lower)
                 node.bind_db(db)
                 if isinstance(node.pub_impl, _Container):
                     key_leaves[k] = keys[k]
@@ -851,7 +850,7 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
 
     def restore_element(key: str) -> Node:
         if key not in elems:
-            elems[key] = template(PathKey(key, key_leaves.get_def(key, {}), path), lower)
+            elems[key] = template(PathKey(key, path), lower)
             elems[key].bind_db(db)
         return elems[key]
 
