@@ -1,5 +1,6 @@
 import file
 import re
+import time
 import yang
 import yang.schema
 import orchestron.ttt_gen as ttt_gen
@@ -35,8 +36,23 @@ class SysSpec(object):
         return self.compile(allow_failure).gen_app(fc, output_dir)
 
     def compile(self, allow_failure: ?list[str]):
-        compiled_layers = [CompiledLayer(yang.compile(l.models, allow_failure=allow_failure), l.models, l.name) for l in self.layers]
-        compiled_dev_types = [CompiledDeviceType(yang.compile(dev_type.models, allow_failure=allow_failure), dev_type.models, dev_type.name) for dev_type in self.device_types]
+        num_layers = len(self.layers)
+        def _compile_layer(l: Layer, idx: int) -> CompiledLayer:
+            lname = l.name if l.name is not None else str(idx)
+            print("Compiling layer {lname} ({idx+1}/{num_layers})...", end='', flush=True)
+            sw = time.Stopwatch()
+            r = CompiledLayer(yang.compile(l.models, allow_failure=allow_failure), l.models, l.name)
+            print(" {sw.elapsed().to_float():.3f}s")
+            return r
+        num_dev_types = len(self.device_types)
+        def _compile_dev_type(dev_type: DeviceType, idx: int) -> CompiledDeviceType:
+            print("Compiling device type {dev_type.name} ({idx+1}/{num_dev_types})...", end='', flush=True)
+            sw = time.Stopwatch()
+            r = CompiledDeviceType(yang.compile(dev_type.models, allow_failure=allow_failure), dev_type.models, dev_type.name)
+            print(" {sw.elapsed().to_float():.3f}s")
+            return r
+        compiled_layers = [_compile_layer(l, idx) for (idx, l) in enumerate(self.layers)]
+        compiled_dev_types = [_compile_dev_type(dt, idx) for (idx, dt) in enumerate(self.device_types)]
         return CompiledSysSpec(self.name, compiled_layers, compiled_dev_types)
 
 class CompiledSysSpec(object):
@@ -226,7 +242,12 @@ class Layer(object):
         """
         rfc = file.ReadFileCap(fc)
         fs = file.FS(fc)
-        models = [file.ReadFile(rfc, "{dir}/{f}").read().decode() for f in fs.listdir(dir) if f.endswith(".yang")]
+        yang_files = [f for f in fs.listdir(dir) if f.endswith(".yang")]
+        lname = name if name is not None else dir
+        print("Loading layer {lname}: {len(yang_files)} YANG models from {dir}...", end='', flush=True)
+        sw = time.Stopwatch()
+        models = [file.ReadFile(rfc, "{dir}/{f}").read().decode() for f in yang_files]
+        print(" {sw.elapsed().to_float():.3f}s")
         return Layer(models, name)
 
 class CompiledLayerBase(object):
@@ -300,5 +321,9 @@ class DeviceType(object):
         """
         rfc = file.ReadFileCap(fc)
         fs = file.FS(fc)
-        models = [file.ReadFile(rfc, "{dir}/{f}").read().decode() for f in fs.listdir(dir) if f.endswith(".yang")]
+        yang_files = [f for f in fs.listdir(dir) if f.endswith(".yang")]
+        print("Loading device type {name}: {len(yang_files)} YANG models from {dir}...", end='', flush=True)
+        sw = time.Stopwatch()
+        models = [file.ReadFile(rfc, "{dir}/{f}").read().decode() for f in yang_files]
+        print(" {sw.elapsed().to_float():.3f}s")
         return DeviceType(name, models)
