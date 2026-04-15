@@ -512,7 +512,7 @@ actor _test_netconf_adapter_resync(t: testing.EnvT):
     This test requires a running crpd instance
     Run with:
 
-    docker run -d --name crpd --privileged -p 2222:22 -p 42830:830 ghcr.io/orchestron-orchestrator/respnet/crpd:24.4R1.9
+    docker run -d --name crpd --privileged -p 2222:22 -p 42830:830 ghcr.io/stratoweave/respnet/crpd:24.4R1.9
 
     Then configure
     docker exec -it crpd cli

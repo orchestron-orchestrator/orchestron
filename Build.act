@@ -2,13 +2,13 @@ name = "orchestron"
 fingerprint = 0xe602cd36fdb33ec8
 dependencies = {
     "actmf": (
-        repo_url="https://github.com/orchestron-orchestrator/actmf",
-        url="https://github.com/orchestron-orchestrator/actmf/archive/19fa7bd4a7fb2b82e8b0a65c6eb2df24341fc12a.zip",
-        hash="N-V-__8AAAB0BQAV7G6vazi2S7pafugUct0Ddk5y_DPiz1mN"
+        repo_url="https://github.com/stratoweave/actmf",
+        url="https://github.com/stratoweave/actmf/archive/837db6a1299d45d79ebf5956a2a3cbdcb2e83ef6.zip",
+        hash="N-V-__8AANBzBQDlWPuy9fHz0q53hyALPI7LA8S3e7_HTMPO"
     ),
     "http_router": (
-        repo_url="https://github.com/orchestron-orchestrator/http-router.git",
-        url="https://github.com/orchestron-orchestrator/http-router/archive/45dc24a88b0849289b1653abacbd066982548372.zip",
+        repo_url="https://github.com/stratoweave/http-router.git",
+        url="https://github.com/stratoweave/http-router/archive/45dc24a88b0849289b1653abacbd066982548372.zip",
         hash="N-V-__8AAI2FAAA27_BvAysIDu88hX9mPSgZkbdwcIqDWJje"
     ),
     "lmdb": (
@@ -17,14 +17,14 @@ dependencies = {
         hash="N-V-__8AAD_KAAAydUe3cxl7tGRnJW61GFWuemkPi0s3NsxI"
     ),
     "netconf": (
-        repo_url="https://github.com/orchestron-orchestrator/netconf.git",
-        url="https://github.com/orchestron-orchestrator/netconf/archive/7a9cc03fc5752cc5f73a64905efadb8b4161e6c6.zip",
-        hash="N-V-__8AAAi5AgBtmYeIx9ntJCBcelsCzsQ_OQUYv1wCXY8_"
+        repo_url="https://github.com/stratoweave/netconf.git",
+        url="https://github.com/stratoweave/netconf/archive/cc9c3f26471d1df9ffd606aa4e7a49cd41b2cadb.zip",
+        hash="N-V-__8AAPC4AgAXL041cKnR0ecR2USXi6E7yxWTfvhm5ZDc"
     ),
     "yang": (
-        repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
-        url="https://github.com/orchestron-orchestrator/acton-yang/archive/0ea2f82dbf384bd9dcf9205b0cf9efb478a93605.zip",
-        hash="N-V-__8AAFf4IgCCq5xYtctpIslV06JUC3t88itr64QUTkfP"
+        repo_url="https://github.com/stratoweave/acton-yang.git",
+        url="https://github.com/stratoweave/acton-yang/archive/c22b2ee50df1319131facd1dc8d65aba55350ceb.zip",
+        hash="N-V-__8AADP4IgAxw_PtFSYYZqueDc6sTeXBLjWdEF-RkJnE"
     )
 }
 zig_dependencies = {}
