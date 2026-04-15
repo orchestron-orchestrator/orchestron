@@ -125,7 +125,7 @@ class CompiledSysSpec(object):
             syssrc_schema_for_layer += "    if layer == {idx}:\n"
             if idx == len(self.layers) - 1:
                 syssrc_schema_for_layer += """        # Layer {idx} is a bit special, in that there is more than one schema:
-        # 1. The device manager, defined in orchestron-device.yang
+        # 1. The device manager, defined in stratoweave-device.yang
         # 2. The device configuration, defined in the devices own YANG models
         # and selected with the chosen device type.
         # The contents of layer {idx} (gdata) is a combination of both, here we

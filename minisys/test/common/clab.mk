@@ -1,6 +1,6 @@
 PROJECT_DIR:=$(realpath $(dir $(lastword $(MAKEFILE_LIST)))/../../)
 # Set this env var to empty string if you have local cRPD, XRd container images
-export IMAGE_PATH?=ghcr.io/orchestron-orchestrator/
+export IMAGE_PATH?=ghcr.io/stratoweave/
 
 ifeq (true,$(REMOTE_CONTAINERS))
 CLAB_BIN:=containerlab

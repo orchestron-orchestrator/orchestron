@@ -35,7 +35,7 @@ def get_layers(dev_registry: odev.DeviceRegistry, log_handler: ?logging.Handler=
 def schema_for_layer(layer):
     if layer == 2:
         # Layer 2 is a bit special, in that there is more than one schema:
-        # 1. The device manager, defined in orchestron-device.yang
+        # 1. The device manager, defined in stratoweave-device.yang
         # 2. The device configuration, defined in the devices own YANG models
         # and selected with the chosen device type.
         # The contents of layer 2 (gdata) is a combination of both, here we

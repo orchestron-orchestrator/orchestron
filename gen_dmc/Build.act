@@ -2,9 +2,9 @@ name = "orchestron_gen_dmc"
 fingerprint = 0x056275683c869ace
 dependencies = {
     "yang": (
-        repo_url="https://github.com/orchestron-orchestrator/acton-yang.git",
-        url="https://github.com/orchestron-orchestrator/acton-yang/archive/0ea2f82dbf384bd9dcf9205b0cf9efb478a93605.zip",
-        hash="N-V-__8AAFf4IgCCq5xYtctpIslV06JUC3t88itr64QUTkfP"
+        repo_url="https://github.com/stratoweave/acton-yang.git",
+        url="https://github.com/stratoweave/acton-yang/archive/c22b2ee50df1319131facd1dc8d65aba55350ceb.zip",
+        hash="N-V-__8AADP4IgAxw_PtFSYYZqueDc6sTeXBLjWdEF-RkJnE"
     )
 }
 zig_dependencies = {}
