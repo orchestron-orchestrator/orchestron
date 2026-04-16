@@ -75,22 +75,19 @@ def _path_elements_to_fnode(path_elements: list[yang.data.PathElement]) -> yang.
     return inner if inner is not None else yang.gdata.FNode()
 
 
-def _node_with_module_if_missing(node: yang.gdata.Node, module: str) -> yang.gdata.Node:
-    # `gdata.Node` is a `value`, so we cannot mutate `node.module` in place.
-    # RESTCONF JSON serialization still needs the module on the selected
-    # top-level node for RFC 7951 name qualification, so rebuild just the node
-    # shapes this GET path can return.
-    if node.module is not None:
-        return node
+def _node_with_ns(node: yang.gdata.Node, snode: yang.schema.DNode) -> yang.gdata.Node:
+    # `gdata.Node` is a `value`, so we cannot mutate fields in place.
+    # Rebuild the node with namespace and module from the schema node so that
+    # ns qualifiers are always presnet and included when serializing
     if isinstance(node, yang.gdata.Container):
-        return yang.gdata.Container(node.children, presence=node.presence, ns=node.ns, module=module, txid=node.txid)
+        return yang.gdata.Container(node.children, presence=node.presence, ns=snode.namespace, module=snode.module, txid=node.txid)
     if isinstance(node, yang.gdata.List):
-        return yang.gdata.List(node.keys, node.elements, user_order=node.user_order, ns=node.ns, module=module, txid=node.txid)
+        return yang.gdata.List(node.keys, node.elements, user_order=node.user_order, ns=snode.namespace, module=snode.module, txid=node.txid)
     if isinstance(node, yang.gdata.Leaf):
-        return yang.gdata.Leaf(node.val, ns=node.ns, module=module, txid=node.txid)
+        return yang.gdata.Leaf(node.val, ns=snode.namespace, module=snode.module, txid=node.txid)
     if isinstance(node, yang.gdata.LeafList):
-        return yang.gdata.LeafList(node.entries, user_order=node.user_order, ns=node.ns, module=module, txid=node.txid)
-    raise ValueError("Unexpected gdata node type for RESTCONF GET serialization: {type(node)}")
+        return yang.gdata.LeafList(node.entries, user_order=node.user_order, ns=snode.namespace, module=snode.module, txid=node.txid)
+    raise ValueError("Unexpected node type for RESTCONF GET serialization: {type(node)}")
 
 
 class _DeviceMgrWrapper(object):
@@ -458,6 +455,11 @@ actor HttpServer(
         respond(200, {}, content)
 
     def _router_handle_restconf_get(ctx: http_router.Context, respond: proc(int, dict[str, str], str) -> None):
+        accept = ctx.request.headers.get("accept")
+        if accept is not None and accept not in {"application/yang-data+json", "application/yang-data+xml"}:
+            respond(406, {}, "Not Acceptable")
+            return
+
         path_segments = _split_restconf_path(ctx.param("rest_path"))
 
         try:
@@ -470,7 +472,10 @@ actor HttpServer(
             cfs_config = session.get()
 
             if len(path_elements) <= 1:
-                respond(200, {"Content-Type": "application/yang-data+json"}, cfs_config.to_yang_jsonstr())
+                if accept == "application/yang-data+xml":
+                    respond(200, {"Content-Type": "application/yang-data+xml"}, cfs_config.to_xmlstr())
+                else:
+                    respond(200, {"Content-Type": "application/yang-data+json"}, cfs_config.to_yang_jsonstr())
                 return
 
             # Build FNode filter from resolved path and apply it
@@ -496,12 +501,14 @@ actor HttpServer(
                         respond(404, {}, "No data at path")
                         return
 
-                # Ensure top-level node in the target subtree has namespace qualifiers, required for RFC 7951 serialization
+                # Ensure top-level node gdata node in the filtered subtree always has namespace qualifiers
                 target_snode = path_elements[-1].node
                 target_id = yang.gdata.Id(target_snode.namespace, target_snode.name)
-                qualified_target = _node_with_module_if_missing(node, target_snode.module)
-                result = yang.gdata.Container({target_id: qualified_target})
-                respond(200, {"Content-Type": "application/yang-data+json"}, result.to_yang_jsonstr())
+                result = yang.gdata.Container({target_id: _node_with_ns(node, target_snode)})
+                if accept == "application/yang-data+xml":
+                    respond(200, {"Content-Type": "application/yang-data+xml"}, result.to_xmlstr())
+                else:
+                    respond(200, {"Content-Type": "application/yang-data+json"}, result.to_yang_jsonstr())
             else:
                 respond(404, {}, "No data at path")
 
