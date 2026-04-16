@@ -8720,7 +8720,7 @@ NS_ietf_system = 'urn:ietf:params:xml:ns:yang:ietf-system'
 NS_ietf_yang_types = 'urn:ietf:params:xml:ns:yang:ietf-yang-types'
 
 
-_breaker = 1
+_breaker1 = None
 class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
     name: str
     user_name: list[str]
@@ -8735,7 +8735,6 @@ class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
             return self.name
         if name == 'user_name':
             return self.user_name
-        raise ValueError('Attribute {name} not found in ietf_netconf_acm__nacm__groups__group')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'groups', 'group'])
@@ -8748,7 +8747,7 @@ class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_netconf_acm__nacm__groups__group_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker2 = None
 class ietf_netconf_acm__nacm__groups__group(yang.adata.MNode):
     elements: list[ietf_netconf_acm__nacm__groups__group_entry]
     mut def __init__(self, elements=[]):
@@ -8789,7 +8788,7 @@ extension ietf_netconf_acm__nacm__groups__group(Iterable[ietf_netconf_acm__nacm_
     def __iter__(self) -> Iterator[ietf_netconf_acm__nacm__groups__group_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker3 = None
 class ietf_netconf_acm__nacm__groups(yang.adata.MNode):
     group: ietf_netconf_acm__nacm__groups__group
 
@@ -8800,7 +8799,6 @@ class ietf_netconf_acm__nacm__groups(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'group':
             return iter(self.group)
-        raise ValueError('Attribute {name} not found in ietf_netconf_acm__nacm__groups')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'groups'])
@@ -8816,7 +8814,7 @@ class ietf_netconf_acm__nacm__groups(yang.adata.MNode):
         return ietf_netconf_acm__nacm__groups.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker4 = None
 class ietf_netconf_acm__nacm__rule_list__rule_entry(yang.adata.MNode):
     name: str
     module_name: ?str
@@ -8855,7 +8853,6 @@ class ietf_netconf_acm__nacm__rule_list__rule_entry(yang.adata.MNode):
             return self.action_
         if name == 'comment':
             return self.comment
-        raise ValueError('Attribute {name} not found in ietf_netconf_acm__nacm__rule_list__rule')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'rule-list', 'rule'])
@@ -8868,7 +8865,7 @@ class ietf_netconf_acm__nacm__rule_list__rule_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_netconf_acm__nacm__rule_list__rule_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker5 = None
 class ietf_netconf_acm__nacm__rule_list__rule(yang.adata.MNode):
     elements: list[ietf_netconf_acm__nacm__rule_list__rule_entry]
     mut def __init__(self, elements=[]):
@@ -8923,7 +8920,7 @@ extension ietf_netconf_acm__nacm__rule_list__rule(Iterable[ietf_netconf_acm__nac
     def __iter__(self) -> Iterator[ietf_netconf_acm__nacm__rule_list__rule_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker6 = None
 class ietf_netconf_acm__nacm__rule_list_entry(yang.adata.MNode):
     name: str
     group: list[str]
@@ -8942,7 +8939,6 @@ class ietf_netconf_acm__nacm__rule_list_entry(yang.adata.MNode):
             return self.group
         if name == 'rule':
             return iter(self.rule)
-        raise ValueError('Attribute {name} not found in ietf_netconf_acm__nacm__rule_list')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm', 'rule-list'])
@@ -8955,7 +8951,7 @@ class ietf_netconf_acm__nacm__rule_list_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_netconf_acm__nacm__rule_list_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker7 = None
 class ietf_netconf_acm__nacm__rule_list(yang.adata.MNode):
     elements: list[ietf_netconf_acm__nacm__rule_list_entry]
     mut def __init__(self, elements=[]):
@@ -8996,7 +8992,7 @@ extension ietf_netconf_acm__nacm__rule_list(Iterable[ietf_netconf_acm__nacm__rul
     def __iter__(self) -> Iterator[ietf_netconf_acm__nacm__rule_list_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker8 = None
 class ietf_netconf_acm__nacm(yang.adata.MNode):
     enable_nacm: ?bool
     read_default: ?str
@@ -9043,7 +9039,6 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
             return self.groups
         if name == 'rule_list':
             return iter(self.rule_list)
-        raise ValueError('Attribute {name} not found in ietf_netconf_acm__nacm')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-netconf-acm:nacm'])
@@ -9059,7 +9054,7 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
         return ietf_netconf_acm__nacm.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker9 = None
 class ietf_system__system__clock(yang.adata.MNode):
     timezone_name: ?str
     timezone_utc_offset: ?int
@@ -9074,7 +9069,6 @@ class ietf_system__system__clock(yang.adata.MNode):
             return self.timezone_name
         if name == 'timezone_utc_offset':
             return self.timezone_utc_offset
-        raise ValueError('Attribute {name} not found in ietf_system__system__clock')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'clock'])
@@ -9090,7 +9084,7 @@ class ietf_system__system__clock(yang.adata.MNode):
         return ietf_system__system__clock.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker10 = None
 class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     address: ?str
     port: ?u64
@@ -9105,7 +9099,6 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
             return self.address
         if name == 'port':
             return self.port
-        raise ValueError('Attribute {name} not found in ietf_system__system__ntp__server__udp')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'ntp', 'server', 'udp'])
@@ -9121,7 +9114,7 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
         return ietf_system__system__ntp__server__udp.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker11 = None
 class ietf_system__system__ntp__server_entry(yang.adata.MNode):
     name: str
     udp: ietf_system__system__ntp__server__udp
@@ -9148,7 +9141,6 @@ class ietf_system__system__ntp__server_entry(yang.adata.MNode):
             return self.iburst
         if name == 'prefer':
             return self.prefer
-        raise ValueError('Attribute {name} not found in ietf_system__system__ntp__server')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'ntp', 'server'])
@@ -9161,7 +9153,7 @@ class ietf_system__system__ntp__server_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_system__system__ntp__server_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker12 = None
 class ietf_system__system__ntp__server(yang.adata.MNode):
     elements: list[ietf_system__system__ntp__server_entry]
     mut def __init__(self, elements=[]):
@@ -9208,7 +9200,7 @@ extension ietf_system__system__ntp__server(Iterable[ietf_system__system__ntp__se
     def __iter__(self) -> Iterator[ietf_system__system__ntp__server_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker13 = None
 class ietf_system__system__ntp(yang.adata.MNode):
     enabled: ?bool
     server: ietf_system__system__ntp__server
@@ -9223,7 +9215,6 @@ class ietf_system__system__ntp(yang.adata.MNode):
             return self.enabled
         if name == 'server':
             return iter(self.server)
-        raise ValueError('Attribute {name} not found in ietf_system__system__ntp')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'ntp'])
@@ -9242,7 +9233,7 @@ class ietf_system__system__ntp(yang.adata.MNode):
         raise Exception('Unreachable in ietf_system__system__ntp.copy()')
 
 
-_breaker = 1
+_breaker14 = None
 class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     address: ?str
     port: ?u64
@@ -9257,7 +9248,6 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
             return self.address
         if name == 'port':
             return self.port
-        raise ValueError('Attribute {name} not found in ietf_system__system__dns_resolver__server__udp_and_tcp')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'server', 'udp-and-tcp'])
@@ -9273,7 +9263,7 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
         return ietf_system__system__dns_resolver__server__udp_and_tcp.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker15 = None
 class ietf_system__system__dns_resolver__server_entry(yang.adata.MNode):
     name: str
     udp_and_tcp: ietf_system__system__dns_resolver__server__udp_and_tcp
@@ -9288,7 +9278,6 @@ class ietf_system__system__dns_resolver__server_entry(yang.adata.MNode):
             return self.name
         if name == 'udp_and_tcp':
             return self.udp_and_tcp
-        raise ValueError('Attribute {name} not found in ietf_system__system__dns_resolver__server')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'server'])
@@ -9301,7 +9290,7 @@ class ietf_system__system__dns_resolver__server_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_system__system__dns_resolver__server_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker16 = None
 class ietf_system__system__dns_resolver__server(yang.adata.MNode):
     elements: list[ietf_system__system__dns_resolver__server_entry]
     mut def __init__(self, elements=[]):
@@ -9342,7 +9331,7 @@ extension ietf_system__system__dns_resolver__server(Iterable[ietf_system__system
     def __iter__(self) -> Iterator[ietf_system__system__dns_resolver__server_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker17 = None
 class ietf_system__system__dns_resolver__options(yang.adata.MNode):
     timeout: ?u64
     attempts: ?u64
@@ -9357,7 +9346,6 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
             return self.timeout
         if name == 'attempts':
             return self.attempts
-        raise ValueError('Attribute {name} not found in ietf_system__system__dns_resolver__options')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver', 'options'])
@@ -9373,7 +9361,7 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
         return ietf_system__system__dns_resolver__options.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker18 = None
 class ietf_system__system__dns_resolver(yang.adata.MNode):
     search: list[str]
     server: ietf_system__system__dns_resolver__server
@@ -9392,7 +9380,6 @@ class ietf_system__system__dns_resolver(yang.adata.MNode):
             return iter(self.server)
         if name == 'options':
             return self.options
-        raise ValueError('Attribute {name} not found in ietf_system__system__dns_resolver')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'dns-resolver'])
@@ -9408,7 +9395,7 @@ class ietf_system__system__dns_resolver(yang.adata.MNode):
         return ietf_system__system__dns_resolver.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker19 = None
 class ietf_system__system__radius__server__udp(yang.adata.MNode):
     address: ?str
     authentication_port: ?u64
@@ -9427,7 +9414,6 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
             return self.authentication_port
         if name == 'shared_secret':
             return self.shared_secret
-        raise ValueError('Attribute {name} not found in ietf_system__system__radius__server__udp')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius', 'server', 'udp'])
@@ -9443,7 +9429,7 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
         return ietf_system__system__radius__server__udp.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker20 = None
 class ietf_system__system__radius__server_entry(yang.adata.MNode):
     name: str
     udp: ietf_system__system__radius__server__udp
@@ -9462,7 +9448,6 @@ class ietf_system__system__radius__server_entry(yang.adata.MNode):
             return self.udp
         if name == 'authentication_type':
             return self.authentication_type
-        raise ValueError('Attribute {name} not found in ietf_system__system__radius__server')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius', 'server'])
@@ -9475,7 +9460,7 @@ class ietf_system__system__radius__server_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_system__system__radius__server_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker21 = None
 class ietf_system__system__radius__server(yang.adata.MNode):
     elements: list[ietf_system__system__radius__server_entry]
     mut def __init__(self, elements=[]):
@@ -9518,7 +9503,7 @@ extension ietf_system__system__radius__server(Iterable[ietf_system__system__radi
     def __iter__(self) -> Iterator[ietf_system__system__radius__server_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker22 = None
 class ietf_system__system__radius__options(yang.adata.MNode):
     timeout: ?u64
     attempts: ?u64
@@ -9533,7 +9518,6 @@ class ietf_system__system__radius__options(yang.adata.MNode):
             return self.timeout
         if name == 'attempts':
             return self.attempts
-        raise ValueError('Attribute {name} not found in ietf_system__system__radius__options')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius', 'options'])
@@ -9549,7 +9533,7 @@ class ietf_system__system__radius__options(yang.adata.MNode):
         return ietf_system__system__radius__options.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker23 = None
 class ietf_system__system__radius(yang.adata.MNode):
     server: ietf_system__system__radius__server
     options: ietf_system__system__radius__options
@@ -9564,7 +9548,6 @@ class ietf_system__system__radius(yang.adata.MNode):
             return iter(self.server)
         if name == 'options':
             return self.options
-        raise ValueError('Attribute {name} not found in ietf_system__system__radius')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'radius'])
@@ -9580,7 +9563,7 @@ class ietf_system__system__radius(yang.adata.MNode):
         return ietf_system__system__radius.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker24 = None
 class ietf_system__system__authentication__user__authorized_key_entry(yang.adata.MNode):
     name: str
     algorithm: ?str
@@ -9599,7 +9582,6 @@ class ietf_system__system__authentication__user__authorized_key_entry(yang.adata
             return self.algorithm
         if name == 'key_data':
             return self.key_data
-        raise ValueError('Attribute {name} not found in ietf_system__system__authentication__user__authorized_key')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'authentication', 'user', 'authorized-key'])
@@ -9612,7 +9594,7 @@ class ietf_system__system__authentication__user__authorized_key_entry(yang.adata
         """Create a deep copy of this adata object"""
         return ietf_system__system__authentication__user__authorized_key_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker25 = None
 class ietf_system__system__authentication__user__authorized_key(yang.adata.MNode):
     elements: list[ietf_system__system__authentication__user__authorized_key_entry]
     mut def __init__(self, elements=[]):
@@ -9657,7 +9639,7 @@ extension ietf_system__system__authentication__user__authorized_key(Iterable[iet
     def __iter__(self) -> Iterator[ietf_system__system__authentication__user__authorized_key_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker26 = None
 class ietf_system__system__authentication__user_entry(yang.adata.MNode):
     name: str
     password: ?str
@@ -9676,7 +9658,6 @@ class ietf_system__system__authentication__user_entry(yang.adata.MNode):
             return self.password
         if name == 'authorized_key':
             return iter(self.authorized_key)
-        raise ValueError('Attribute {name} not found in ietf_system__system__authentication__user')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'authentication', 'user'])
@@ -9689,7 +9670,7 @@ class ietf_system__system__authentication__user_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_system__system__authentication__user_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker27 = None
 class ietf_system__system__authentication__user(yang.adata.MNode):
     elements: list[ietf_system__system__authentication__user_entry]
     mut def __init__(self, elements=[]):
@@ -9732,7 +9713,7 @@ extension ietf_system__system__authentication__user(Iterable[ietf_system__system
     def __iter__(self) -> Iterator[ietf_system__system__authentication__user_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker28 = None
 class ietf_system__system__authentication(yang.adata.MNode):
     user_authentication_order: list[Identityref]
     user: ietf_system__system__authentication__user
@@ -9747,7 +9728,6 @@ class ietf_system__system__authentication(yang.adata.MNode):
             return self.user_authentication_order
         if name == 'user':
             return iter(self.user)
-        raise ValueError('Attribute {name} not found in ietf_system__system__authentication')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system', 'authentication'])
@@ -9763,7 +9743,7 @@ class ietf_system__system__authentication(yang.adata.MNode):
         return ietf_system__system__authentication.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker29 = None
 class ietf_system__system(yang.adata.MNode):
     contact: ?str
     hostname: ?str
@@ -9812,7 +9792,6 @@ class ietf_system__system(yang.adata.MNode):
             return self.radius
         if name == 'authentication':
             return self.authentication
-        raise ValueError('Attribute {name} not found in ietf_system__system')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system'])
@@ -9828,7 +9807,7 @@ class ietf_system__system(yang.adata.MNode):
         return ietf_system__system.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker30 = None
 class ietf_system__system_state__platform(yang.adata.MNode):
     os_name: ?str
     os_release: ?str
@@ -9851,7 +9830,6 @@ class ietf_system__system_state__platform(yang.adata.MNode):
             return self.os_version
         if name == 'machine':
             return self.machine
-        raise ValueError('Attribute {name} not found in ietf_system__system_state__platform')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system-state', 'platform'])
@@ -9867,7 +9845,7 @@ class ietf_system__system_state__platform(yang.adata.MNode):
         return ietf_system__system_state__platform.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker31 = None
 class ietf_system__system_state__clock(yang.adata.MNode):
     current_datetime: ?str
     boot_datetime: ?str
@@ -9882,7 +9860,6 @@ class ietf_system__system_state__clock(yang.adata.MNode):
             return self.current_datetime
         if name == 'boot_datetime':
             return self.boot_datetime
-        raise ValueError('Attribute {name} not found in ietf_system__system_state__clock')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system-state', 'clock'])
@@ -9898,7 +9875,7 @@ class ietf_system__system_state__clock(yang.adata.MNode):
         return ietf_system__system_state__clock.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker32 = None
 class ietf_system__system_state(yang.adata.MNode):
     platform: ietf_system__system_state__platform
     clock: ietf_system__system_state__clock
@@ -9913,7 +9890,6 @@ class ietf_system__system_state(yang.adata.MNode):
             return self.platform
         if name == 'clock':
             return self.clock
-        raise ValueError('Attribute {name} not found in ietf_system__system_state')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:system-state'])
@@ -9929,7 +9905,7 @@ class ietf_system__system_state(yang.adata.MNode):
         return ietf_system__system_state.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker33 = None
 class ietf_interfaces__interfaces__interface__statistics(yang.adata.MNode):
     discontinuity_time: ?str
     in_octets: ?u64
@@ -9992,7 +9968,6 @@ class ietf_interfaces__interfaces__interface__statistics(yang.adata.MNode):
             return self.out_discards
         if name == 'out_errors':
             return self.out_errors
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces__interface__statistics')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces', 'interface', 'statistics'])
@@ -10008,7 +9983,7 @@ class ietf_interfaces__interfaces__interface__statistics(yang.adata.MNode):
         return ietf_interfaces__interfaces__interface__statistics.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker34 = None
 class ietf_interfaces__interfaces__interface__ipv4__address_entry(yang.adata.MNode):
     ip: str
     prefix_length: ?u64
@@ -10031,7 +10006,6 @@ class ietf_interfaces__interfaces__interface__ipv4__address_entry(yang.adata.MNo
             return self.netmask
         if name == 'origin':
             return self.origin
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces__interface__ipv4__address')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces', 'interface', 'ietf-ip:ipv4', 'address'])
@@ -10044,7 +10018,7 @@ class ietf_interfaces__interfaces__interface__ipv4__address_entry(yang.adata.MNo
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces__interface__ipv4__address_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker35 = None
 class ietf_interfaces__interfaces__interface__ipv4__address(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces__interface__ipv4__address_entry]
     mut def __init__(self, elements=[]):
@@ -10091,7 +10065,7 @@ extension ietf_interfaces__interfaces__interface__ipv4__address(Iterable[ietf_in
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces__interface__ipv4__address_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker36 = None
 class ietf_interfaces__interfaces__interface__ipv4__neighbor_entry(yang.adata.MNode):
     ip: str
     link_layer_address: ?str
@@ -10110,7 +10084,6 @@ class ietf_interfaces__interfaces__interface__ipv4__neighbor_entry(yang.adata.MN
             return self.link_layer_address
         if name == 'origin':
             return self.origin
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces__interface__ipv4__neighbor')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces', 'interface', 'ietf-ip:ipv4', 'neighbor'])
@@ -10123,7 +10096,7 @@ class ietf_interfaces__interfaces__interface__ipv4__neighbor_entry(yang.adata.MN
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces__interface__ipv4__neighbor_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker37 = None
 class ietf_interfaces__interfaces__interface__ipv4__neighbor(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces__interface__ipv4__neighbor_entry]
     mut def __init__(self, elements=[]):
@@ -10168,7 +10141,7 @@ extension ietf_interfaces__interfaces__interface__ipv4__neighbor(Iterable[ietf_i
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces__interface__ipv4__neighbor_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker38 = None
 class ietf_interfaces__interfaces__interface__ipv4(yang.adata.MNode):
     enabled: ?bool
     forwarding: ?bool
@@ -10195,7 +10168,6 @@ class ietf_interfaces__interfaces__interface__ipv4(yang.adata.MNode):
             return iter(self.address)
         if name == 'neighbor':
             return iter(self.neighbor)
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces__interface__ipv4')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces', 'interface', 'ietf-ip:ipv4'])
@@ -10214,7 +10186,7 @@ class ietf_interfaces__interfaces__interface__ipv4(yang.adata.MNode):
         raise Exception('Unreachable in ietf_interfaces__interfaces__interface__ipv4.copy()')
 
 
-_breaker = 1
+_breaker39 = None
 class ietf_interfaces__interfaces__interface__ipv6__address_entry(yang.adata.MNode):
     ip: str
     prefix_length: ?u64
@@ -10237,7 +10209,6 @@ class ietf_interfaces__interfaces__interface__ipv6__address_entry(yang.adata.MNo
             return self.origin
         if name == 'status':
             return self.status
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces__interface__ipv6__address')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces', 'interface', 'ietf-ip:ipv6', 'address'])
@@ -10250,7 +10221,7 @@ class ietf_interfaces__interfaces__interface__ipv6__address_entry(yang.adata.MNo
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces__interface__ipv6__address_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker40 = None
 class ietf_interfaces__interfaces__interface__ipv6__address(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces__interface__ipv6__address_entry]
     mut def __init__(self, elements=[]):
@@ -10297,7 +10268,7 @@ extension ietf_interfaces__interfaces__interface__ipv6__address(Iterable[ietf_in
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces__interface__ipv6__address_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker41 = None
 class ietf_interfaces__interfaces__interface__ipv6__neighbor_entry(yang.adata.MNode):
     ip: str
     link_layer_address: ?str
@@ -10324,7 +10295,6 @@ class ietf_interfaces__interfaces__interface__ipv6__neighbor_entry(yang.adata.MN
             return self.is_router
         if name == 'state':
             return self.state
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces__interface__ipv6__neighbor')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces', 'interface', 'ietf-ip:ipv6', 'neighbor'])
@@ -10337,7 +10307,7 @@ class ietf_interfaces__interfaces__interface__ipv6__neighbor_entry(yang.adata.MN
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces__interface__ipv6__neighbor_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker42 = None
 class ietf_interfaces__interfaces__interface__ipv6__neighbor(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces__interface__ipv6__neighbor_entry]
     mut def __init__(self, elements=[]):
@@ -10386,7 +10356,7 @@ extension ietf_interfaces__interfaces__interface__ipv6__neighbor(Iterable[ietf_i
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces__interface__ipv6__neighbor_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker43 = None
 class ietf_interfaces__interfaces__interface__ipv6__autoconf(yang.adata.MNode):
     create_global_addresses: ?bool
     create_temporary_addresses: ?bool
@@ -10409,7 +10379,6 @@ class ietf_interfaces__interfaces__interface__ipv6__autoconf(yang.adata.MNode):
             return self.temporary_valid_lifetime
         if name == 'temporary_preferred_lifetime':
             return self.temporary_preferred_lifetime
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces__interface__ipv6__autoconf')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces', 'interface', 'ietf-ip:ipv6', 'autoconf'])
@@ -10425,7 +10394,7 @@ class ietf_interfaces__interfaces__interface__ipv6__autoconf(yang.adata.MNode):
         return ietf_interfaces__interfaces__interface__ipv6__autoconf.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker44 = None
 class ietf_interfaces__interfaces__interface__ipv6(yang.adata.MNode):
     enabled: ?bool
     forwarding: ?bool
@@ -10460,7 +10429,6 @@ class ietf_interfaces__interfaces__interface__ipv6(yang.adata.MNode):
             return self.dup_addr_detect_transmits
         if name == 'autoconf':
             return self.autoconf
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces__interface__ipv6')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces', 'interface', 'ietf-ip:ipv6'])
@@ -10479,7 +10447,7 @@ class ietf_interfaces__interfaces__interface__ipv6(yang.adata.MNode):
         raise Exception('Unreachable in ietf_interfaces__interfaces__interface__ipv6.copy()')
 
 
-_breaker = 1
+_breaker45 = None
 class ietf_interfaces__interfaces__interface_entry(yang.adata.MNode):
     name: str
     description: ?str
@@ -10580,7 +10548,6 @@ class ietf_interfaces__interfaces__interface_entry(yang.adata.MNode):
             return self.ipv4
         if name == 'ipv6':
             return self.ipv6
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces__interface')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces', 'interface'])
@@ -10593,7 +10560,7 @@ class ietf_interfaces__interfaces__interface_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces__interface_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker46 = None
 class ietf_interfaces__interfaces__interface(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces__interface_entry]
     mut def __init__(self, elements=[]):
@@ -10654,7 +10621,7 @@ extension ietf_interfaces__interfaces__interface(Iterable[ietf_interfaces__inter
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces__interface_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker47 = None
 class ietf_interfaces__interfaces(yang.adata.MNode):
     interface: ietf_interfaces__interfaces__interface
 
@@ -10665,7 +10632,6 @@ class ietf_interfaces__interfaces(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'interface':
             return iter(self.interface)
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces'])
@@ -10681,7 +10647,7 @@ class ietf_interfaces__interfaces(yang.adata.MNode):
         return ietf_interfaces__interfaces.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker48 = None
 class ietf_interfaces__interfaces_state__interface__statistics(yang.adata.MNode):
     discontinuity_time: ?str
     in_octets: ?u64
@@ -10744,7 +10710,6 @@ class ietf_interfaces__interfaces_state__interface__statistics(yang.adata.MNode)
             return self.out_discards
         if name == 'out_errors':
             return self.out_errors
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces_state__interface__statistics')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces-state', 'interface', 'statistics'])
@@ -10760,7 +10725,7 @@ class ietf_interfaces__interfaces_state__interface__statistics(yang.adata.MNode)
         return ietf_interfaces__interfaces_state__interface__statistics.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker49 = None
 class ietf_interfaces__interfaces_state__interface__ipv4__address_entry(yang.adata.MNode):
     ip: str
     prefix_length: ?u64
@@ -10783,7 +10748,6 @@ class ietf_interfaces__interfaces_state__interface__ipv4__address_entry(yang.ada
             return self.netmask
         if name == 'origin':
             return self.origin
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces_state__interface__ipv4__address')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces-state', 'interface', 'ietf-ip:ipv4', 'address'])
@@ -10796,7 +10760,7 @@ class ietf_interfaces__interfaces_state__interface__ipv4__address_entry(yang.ada
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces_state__interface__ipv4__address_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker50 = None
 class ietf_interfaces__interfaces_state__interface__ipv4__address(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces_state__interface__ipv4__address_entry]
     mut def __init__(self, elements=[]):
@@ -10843,7 +10807,7 @@ extension ietf_interfaces__interfaces_state__interface__ipv4__address(Iterable[i
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces_state__interface__ipv4__address_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker51 = None
 class ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry(yang.adata.MNode):
     ip: str
     link_layer_address: ?str
@@ -10862,7 +10826,6 @@ class ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry(yang.ad
             return self.link_layer_address
         if name == 'origin':
             return self.origin
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces_state__interface__ipv4__neighbor')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces-state', 'interface', 'ietf-ip:ipv4', 'neighbor'])
@@ -10875,7 +10838,7 @@ class ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry(yang.ad
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker52 = None
 class ietf_interfaces__interfaces_state__interface__ipv4__neighbor(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry]
     mut def __init__(self, elements=[]):
@@ -10920,7 +10883,7 @@ extension ietf_interfaces__interfaces_state__interface__ipv4__neighbor(Iterable[
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker53 = None
 class ietf_interfaces__interfaces_state__interface__ipv4(yang.adata.MNode):
     forwarding: ?bool
     mtu: ?u64
@@ -10943,7 +10906,6 @@ class ietf_interfaces__interfaces_state__interface__ipv4(yang.adata.MNode):
             return iter(self.address)
         if name == 'neighbor':
             return iter(self.neighbor)
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces_state__interface__ipv4')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces-state', 'interface', 'ietf-ip:ipv4'])
@@ -10962,7 +10924,7 @@ class ietf_interfaces__interfaces_state__interface__ipv4(yang.adata.MNode):
         raise Exception('Unreachable in ietf_interfaces__interfaces_state__interface__ipv4.copy()')
 
 
-_breaker = 1
+_breaker54 = None
 class ietf_interfaces__interfaces_state__interface__ipv6__address_entry(yang.adata.MNode):
     ip: str
     prefix_length: ?u64
@@ -10985,7 +10947,6 @@ class ietf_interfaces__interfaces_state__interface__ipv6__address_entry(yang.ada
             return self.origin
         if name == 'status':
             return self.status
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces_state__interface__ipv6__address')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces-state', 'interface', 'ietf-ip:ipv6', 'address'])
@@ -10998,7 +10959,7 @@ class ietf_interfaces__interfaces_state__interface__ipv6__address_entry(yang.ada
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces_state__interface__ipv6__address_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker55 = None
 class ietf_interfaces__interfaces_state__interface__ipv6__address(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces_state__interface__ipv6__address_entry]
     mut def __init__(self, elements=[]):
@@ -11045,7 +11006,7 @@ extension ietf_interfaces__interfaces_state__interface__ipv6__address(Iterable[i
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces_state__interface__ipv6__address_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker56 = None
 class ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry(yang.adata.MNode):
     ip: str
     link_layer_address: ?str
@@ -11072,7 +11033,6 @@ class ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry(yang.ad
             return self.is_router
         if name == 'state':
             return self.state
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces_state__interface__ipv6__neighbor')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces-state', 'interface', 'ietf-ip:ipv6', 'neighbor'])
@@ -11085,7 +11045,7 @@ class ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry(yang.ad
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker57 = None
 class ietf_interfaces__interfaces_state__interface__ipv6__neighbor(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry]
     mut def __init__(self, elements=[]):
@@ -11134,7 +11094,7 @@ extension ietf_interfaces__interfaces_state__interface__ipv6__neighbor(Iterable[
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker58 = None
 class ietf_interfaces__interfaces_state__interface__ipv6(yang.adata.MNode):
     forwarding: ?bool
     mtu: ?u64
@@ -11157,7 +11117,6 @@ class ietf_interfaces__interfaces_state__interface__ipv6(yang.adata.MNode):
             return iter(self.address)
         if name == 'neighbor':
             return iter(self.neighbor)
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces_state__interface__ipv6')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces-state', 'interface', 'ietf-ip:ipv6'])
@@ -11176,7 +11135,7 @@ class ietf_interfaces__interfaces_state__interface__ipv6(yang.adata.MNode):
         raise Exception('Unreachable in ietf_interfaces__interfaces_state__interface__ipv6.copy()')
 
 
-_breaker = 1
+_breaker59 = None
 class ietf_interfaces__interfaces_state__interface_entry(yang.adata.MNode):
     name: str
     type: ?Identityref
@@ -11259,7 +11218,6 @@ class ietf_interfaces__interfaces_state__interface_entry(yang.adata.MNode):
             return self.ipv4
         if name == 'ipv6':
             return self.ipv6
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces_state__interface')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces-state', 'interface'])
@@ -11272,7 +11230,7 @@ class ietf_interfaces__interfaces_state__interface_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces_state__interface_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker60 = None
 class ietf_interfaces__interfaces_state__interface(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces_state__interface_entry]
     mut def __init__(self, elements=[]):
@@ -11327,7 +11285,7 @@ extension ietf_interfaces__interfaces_state__interface(Iterable[ietf_interfaces_
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces_state__interface_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker61 = None
 class ietf_interfaces__interfaces_state(yang.adata.MNode):
     interface: ietf_interfaces__interfaces_state__interface
 
@@ -11338,7 +11296,6 @@ class ietf_interfaces__interfaces_state(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'interface':
             return iter(self.interface)
-        raise ValueError('Attribute {name} not found in ietf_interfaces__interfaces_state')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-interfaces:interfaces-state'])
@@ -11354,7 +11311,7 @@ class ietf_interfaces__interfaces_state(yang.adata.MNode):
         return ietf_interfaces__interfaces_state.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker62 = None
 class root(yang.adata.MNode):
     nacm: ietf_netconf_acm__nacm
     system: ietf_system__system
@@ -11381,7 +11338,6 @@ class root(yang.adata.MNode):
             return self.interfaces
         if name == 'interfaces_state':
             return self.interfaces_state
-        raise ValueError('Attribute {name} not found in root')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True)
@@ -11397,7 +11353,7 @@ class root(yang.adata.MNode):
         return root.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker63 = None
 class ietf_system__set_current_datetime__input(yang.adata.MNode):
     current_datetime: ?str
 
@@ -11408,7 +11364,6 @@ class ietf_system__set_current_datetime__input(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'current_datetime':
             return self.current_datetime
-        raise ValueError('Attribute {name} not found in ietf_system__set_current_datetime__input')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['ietf-system:set-current-datetime', 'input'])

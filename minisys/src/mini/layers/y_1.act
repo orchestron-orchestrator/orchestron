@@ -908,7 +908,7 @@ NS_stratoweave = 'http://stratoweave.org/yang/stratoweave.yang'
 NS_ietf_inet_types = 'urn:ietf:params:xml:ns:yang:ietf-inet-types'
 
 
-_breaker = 1
+_breaker1 = None
 class stratoweave_rfs__device__address__initial_credentials_entry(yang.adata.MNode):
     username: str
     password: str
@@ -927,7 +927,6 @@ class stratoweave_rfs__device__address__initial_credentials_entry(yang.adata.MNo
             return self.password
         if name == 'key':
             return self.key
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__address__initial_credentials')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:device', 'address', 'initial-credentials'])
@@ -940,7 +939,7 @@ class stratoweave_rfs__device__address__initial_credentials_entry(yang.adata.MNo
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device__address__initial_credentials_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker2 = None
 class stratoweave_rfs__device__address__initial_credentials(yang.adata.MNode):
     elements: list[stratoweave_rfs__device__address__initial_credentials_entry]
     mut def __init__(self, elements=[]):
@@ -987,7 +986,7 @@ extension stratoweave_rfs__device__address__initial_credentials(Iterable[stratow
     def __iter__(self) -> Iterator[stratoweave_rfs__device__address__initial_credentials_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker3 = None
 class stratoweave_rfs__device__address_entry(yang.adata.MNode):
     name: str
     address: str
@@ -1010,7 +1009,6 @@ class stratoweave_rfs__device__address_entry(yang.adata.MNode):
             return self.port
         if name == 'initial_credentials':
             return iter(self.initial_credentials)
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__address')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:device', 'address'])
@@ -1023,7 +1021,7 @@ class stratoweave_rfs__device__address_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device__address_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker4 = None
 class stratoweave_rfs__device__address(yang.adata.MNode):
     elements: list[stratoweave_rfs__device__address_entry]
     mut def __init__(self, elements=[]):
@@ -1067,7 +1065,7 @@ extension stratoweave_rfs__device__address(Iterable[stratoweave_rfs__device__add
     def __iter__(self) -> Iterator[stratoweave_rfs__device__address_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker5 = None
 class stratoweave_rfs__device__credentials__key_entry(yang.adata.MNode):
     key: str
     private_key: ?str
@@ -1082,7 +1080,6 @@ class stratoweave_rfs__device__credentials__key_entry(yang.adata.MNode):
             return self.key
         if name == 'private_key':
             return self.private_key
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__credentials__key')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:device', 'credentials', 'key'])
@@ -1095,7 +1092,7 @@ class stratoweave_rfs__device__credentials__key_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device__credentials__key_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker6 = None
 class stratoweave_rfs__device__credentials__key(yang.adata.MNode):
     elements: list[stratoweave_rfs__device__credentials__key_entry]
     mut def __init__(self, elements=[]):
@@ -1138,7 +1135,7 @@ extension stratoweave_rfs__device__credentials__key(Iterable[stratoweave_rfs__de
     def __iter__(self) -> Iterator[stratoweave_rfs__device__credentials__key_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker7 = None
 class stratoweave_rfs__device__credentials(yang.adata.MNode):
     username: str
     password: ?str
@@ -1157,7 +1154,6 @@ class stratoweave_rfs__device__credentials(yang.adata.MNode):
             return self.password
         if name == 'key':
             return iter(self.key)
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__credentials')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:device', 'credentials'])
@@ -1173,7 +1169,7 @@ class stratoweave_rfs__device__credentials(yang.adata.MNode):
         return stratoweave_rfs__device__credentials.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker8 = None
 class stratoweave_rfs__device__initial_credentials_entry(yang.adata.MNode):
     username: str
     password: str
@@ -1192,7 +1188,6 @@ class stratoweave_rfs__device__initial_credentials_entry(yang.adata.MNode):
             return self.password
         if name == 'key':
             return self.key
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__initial_credentials')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:device', 'initial-credentials'])
@@ -1205,7 +1200,7 @@ class stratoweave_rfs__device__initial_credentials_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device__initial_credentials_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker9 = None
 class stratoweave_rfs__device__initial_credentials(yang.adata.MNode):
     elements: list[stratoweave_rfs__device__initial_credentials_entry]
     mut def __init__(self, elements=[]):
@@ -1252,7 +1247,7 @@ extension stratoweave_rfs__device__initial_credentials(Iterable[stratoweave_rfs_
     def __iter__(self) -> Iterator[stratoweave_rfs__device__initial_credentials_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker10 = None
 class stratoweave_rfs__device__mock__module_entry(yang.adata.MNode):
     name: str
     namespace: str
@@ -1275,7 +1270,6 @@ class stratoweave_rfs__device__mock__module_entry(yang.adata.MNode):
             return self.revision
         if name == 'feature':
             return self.feature
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__mock__module')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:device', 'mock', 'module'])
@@ -1288,7 +1282,7 @@ class stratoweave_rfs__device__mock__module_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device__mock__module_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker11 = None
 class stratoweave_rfs__device__mock__module(yang.adata.MNode):
     elements: list[stratoweave_rfs__device__mock__module_entry]
     mut def __init__(self, elements=[]):
@@ -1332,7 +1326,7 @@ extension stratoweave_rfs__device__mock__module(Iterable[stratoweave_rfs__device
     def __iter__(self) -> Iterator[stratoweave_rfs__device__mock__module_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker12 = None
 class stratoweave_rfs__device__mock(yang.adata.MNode):
     enabled: bool
     preset: list[str]
@@ -1351,7 +1345,6 @@ class stratoweave_rfs__device__mock(yang.adata.MNode):
             return self.preset
         if name == 'module':
             return iter(self.module)
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__mock')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:device', 'mock'])
@@ -1367,7 +1360,7 @@ class stratoweave_rfs__device__mock(yang.adata.MNode):
         return stratoweave_rfs__device__mock.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker13 = None
 class stratoweave_rfs__device__debug(yang.adata.MNode):
     connection: bool
 
@@ -1378,7 +1371,6 @@ class stratoweave_rfs__device__debug(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'connection':
             return self.connection
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__debug')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:device', 'debug'])
@@ -1394,7 +1386,7 @@ class stratoweave_rfs__device__debug(yang.adata.MNode):
         return stratoweave_rfs__device__debug.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker14 = None
 class stratoweave_rfs__device__feature_flags(yang.adata.MNode):
     runtime_schema_fetch: bool
 
@@ -1405,7 +1397,6 @@ class stratoweave_rfs__device__feature_flags(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'runtime_schema_fetch':
             return self.runtime_schema_fetch
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__device__feature_flags')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:device', 'feature-flags'])
@@ -1421,7 +1412,7 @@ class stratoweave_rfs__device__feature_flags(yang.adata.MNode):
         return stratoweave_rfs__device__feature_flags.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker15 = None
 class stratoweave_rfs__device_entry(yang.adata.MNode):
     name: str
     description: ?str
@@ -1468,7 +1459,6 @@ class stratoweave_rfs__device_entry(yang.adata.MNode):
             return self.debug
         if name == 'feature_flags':
             return self.feature_flags
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__device')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:device'])
@@ -1481,7 +1471,7 @@ class stratoweave_rfs__device_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker16 = None
 class stratoweave_rfs__device(yang.adata.MNode):
     elements: list[stratoweave_rfs__device_entry]
     mut def __init__(self, elements=[]):
@@ -1529,7 +1519,7 @@ extension stratoweave_rfs__device(Iterable[stratoweave_rfs__device_entry]):
     def __iter__(self) -> Iterator[stratoweave_rfs__device_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker17 = None
 class stratoweave_rfs__rfs__base_config__dynstate(yang.adata.MNode):
     current_datetime: ?str
 
@@ -1540,7 +1530,6 @@ class stratoweave_rfs__rfs__base_config__dynstate(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'current_datetime':
             return self.current_datetime
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__base_config__dynstate')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:rfs', 'mini-rfs:base-config', 'dynstate'])
@@ -1556,26 +1545,21 @@ class stratoweave_rfs__rfs__base_config__dynstate(yang.adata.MNode):
         return stratoweave_rfs__rfs__base_config__dynstate.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker18 = None
 class stratoweave_rfs__rfs__base_config(yang.adata.MNode):
     name: str
     ipv4_address: str
-    dynstate: stratoweave_rfs__rfs__base_config__dynstate
 
-    mut def __init__(self, name: str, ipv4_address: str, dynstate: ?stratoweave_rfs__rfs__base_config__dynstate=None):
+    mut def __init__(self, name: str, ipv4_address: str):
         self._ns = 'http://example.com/mini-rfs'
         self.name = name
         self.ipv4_address = ipv4_address
-        self.dynstate = dynstate if dynstate is not None else stratoweave_rfs__rfs__base_config__dynstate()
 
     def _get_attr(self, name: str) -> ?value:
         if name == 'name':
             return self.name
         if name == 'ipv4_address':
             return self.ipv4_address
-        if name == 'dynstate':
-            return self.dynstate
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__base_config')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:rfs', 'mini-rfs:base-config'])
@@ -1583,7 +1567,7 @@ class stratoweave_rfs__rfs__base_config(yang.adata.MNode):
     @staticmethod
     mut def from_gdata(n: ?yang.gdata.Node) -> stratoweave_rfs__rfs__base_config:
         if n is not None:
-            return stratoweave_rfs__rfs__base_config(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')), ipv4_address=n.get_str(yang.gdata.Id(NS_mini_rfs, 'ipv4-address')), dynstate=stratoweave_rfs__rfs__base_config__dynstate.from_gdata(n.get_opt_cnt(yang.gdata.Id(NS_mini_rfs, 'dynstate'))))
+            return stratoweave_rfs__rfs__base_config(name=n.get_str(yang.gdata.Id(NS_mini_rfs, 'name')), ipv4_address=n.get_str(yang.gdata.Id(NS_mini_rfs, 'ipv4-address')))
         raise ValueError('Missing required subtree stratoweave_rfs__rfs__base_config')
 
     def copy(self):
@@ -1591,7 +1575,7 @@ class stratoweave_rfs__rfs__base_config(yang.adata.MNode):
         return stratoweave_rfs__rfs__base_config.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker19 = None
 class stratoweave_rfs__rfs__l3vpn_endpoint_entry(yang.adata.MNode):
     interface_name: str
     vpn_name: str
@@ -1650,7 +1634,6 @@ class stratoweave_rfs__rfs__l3vpn_endpoint_entry(yang.adata.MNode):
             return self.site_code
         if name == 'description':
             return self.description
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs__l3vpn_endpoint')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:rfs', 'mini-rfs:l3vpn-endpoint'])
@@ -1663,7 +1646,7 @@ class stratoweave_rfs__rfs__l3vpn_endpoint_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__rfs__l3vpn_endpoint_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker20 = None
 class stratoweave_rfs__rfs__l3vpn_endpoint(yang.adata.MNode):
     elements: list[stratoweave_rfs__rfs__l3vpn_endpoint_entry]
     mut def __init__(self, elements=[]):
@@ -1719,7 +1702,7 @@ extension stratoweave_rfs__rfs__l3vpn_endpoint(Iterable[stratoweave_rfs__rfs__l3
     def __iter__(self) -> Iterator[stratoweave_rfs__rfs__l3vpn_endpoint_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker21 = None
 class stratoweave_rfs__rfs_entry(yang.adata.MNode):
     name: str
     base_config: stratoweave_rfs__rfs__base_config
@@ -1738,7 +1721,6 @@ class stratoweave_rfs__rfs_entry(yang.adata.MNode):
             return self.base_config
         if name == 'l3vpn_endpoint':
             return iter(self.l3vpn_endpoint)
-        raise ValueError('Attribute {name} not found in stratoweave_rfs__rfs')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False, root_path=['stratoweave-rfs:rfs'])
@@ -1751,7 +1733,7 @@ class stratoweave_rfs__rfs_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__rfs_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker22 = None
 class stratoweave_rfs__rfs(yang.adata.MNode):
     elements: list[stratoweave_rfs__rfs_entry]
     mut def __init__(self, elements=[]):
@@ -1793,7 +1775,7 @@ extension stratoweave_rfs__rfs(Iterable[stratoweave_rfs__rfs_entry]):
     def __iter__(self) -> Iterator[stratoweave_rfs__rfs_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker23 = None
 class root(yang.adata.MNode):
     device: stratoweave_rfs__device
     rfs: stratoweave_rfs__rfs
@@ -1808,7 +1790,6 @@ class root(yang.adata.MNode):
             return iter(self.device)
         if name == 'rfs':
             return iter(self.rfs)
-        raise ValueError('Attribute {name} not found in root')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=False)
