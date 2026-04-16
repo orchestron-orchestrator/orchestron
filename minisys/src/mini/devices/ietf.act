@@ -8720,7 +8720,7 @@ NS_ietf_system = 'urn:ietf:params:xml:ns:yang:ietf-system'
 NS_ietf_yang_types = 'urn:ietf:params:xml:ns:yang:ietf-yang-types'
 
 
-_breaker = 1
+_breaker1 = None
 class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
     name: str
     user_name: list[str]
@@ -8748,7 +8748,7 @@ class ietf_netconf_acm__nacm__groups__group_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_netconf_acm__nacm__groups__group_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker2 = None
 class ietf_netconf_acm__nacm__groups__group(yang.adata.MNode):
     elements: list[ietf_netconf_acm__nacm__groups__group_entry]
     mut def __init__(self, elements=[]):
@@ -8789,7 +8789,7 @@ extension ietf_netconf_acm__nacm__groups__group(Iterable[ietf_netconf_acm__nacm_
     def __iter__(self) -> Iterator[ietf_netconf_acm__nacm__groups__group_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker3 = None
 class ietf_netconf_acm__nacm__groups(yang.adata.MNode):
     group: ietf_netconf_acm__nacm__groups__group
 
@@ -8816,7 +8816,7 @@ class ietf_netconf_acm__nacm__groups(yang.adata.MNode):
         return ietf_netconf_acm__nacm__groups.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker4 = None
 class ietf_netconf_acm__nacm__rule_list__rule_entry(yang.adata.MNode):
     name: str
     module_name: ?str
@@ -8868,7 +8868,7 @@ class ietf_netconf_acm__nacm__rule_list__rule_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_netconf_acm__nacm__rule_list__rule_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker5 = None
 class ietf_netconf_acm__nacm__rule_list__rule(yang.adata.MNode):
     elements: list[ietf_netconf_acm__nacm__rule_list__rule_entry]
     mut def __init__(self, elements=[]):
@@ -8923,7 +8923,7 @@ extension ietf_netconf_acm__nacm__rule_list__rule(Iterable[ietf_netconf_acm__nac
     def __iter__(self) -> Iterator[ietf_netconf_acm__nacm__rule_list__rule_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker6 = None
 class ietf_netconf_acm__nacm__rule_list_entry(yang.adata.MNode):
     name: str
     group: list[str]
@@ -8955,7 +8955,7 @@ class ietf_netconf_acm__nacm__rule_list_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_netconf_acm__nacm__rule_list_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker7 = None
 class ietf_netconf_acm__nacm__rule_list(yang.adata.MNode):
     elements: list[ietf_netconf_acm__nacm__rule_list_entry]
     mut def __init__(self, elements=[]):
@@ -8996,7 +8996,7 @@ extension ietf_netconf_acm__nacm__rule_list(Iterable[ietf_netconf_acm__nacm__rul
     def __iter__(self) -> Iterator[ietf_netconf_acm__nacm__rule_list_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker8 = None
 class ietf_netconf_acm__nacm(yang.adata.MNode):
     enable_nacm: ?bool
     read_default: ?str
@@ -9059,7 +9059,7 @@ class ietf_netconf_acm__nacm(yang.adata.MNode):
         return ietf_netconf_acm__nacm.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker9 = None
 class ietf_system__system__clock(yang.adata.MNode):
     timezone_name: ?str
     timezone_utc_offset: ?int
@@ -9090,7 +9090,7 @@ class ietf_system__system__clock(yang.adata.MNode):
         return ietf_system__system__clock.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker10 = None
 class ietf_system__system__ntp__server__udp(yang.adata.MNode):
     address: ?str
     port: ?u64
@@ -9121,7 +9121,7 @@ class ietf_system__system__ntp__server__udp(yang.adata.MNode):
         return ietf_system__system__ntp__server__udp.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker11 = None
 class ietf_system__system__ntp__server_entry(yang.adata.MNode):
     name: str
     udp: ietf_system__system__ntp__server__udp
@@ -9161,7 +9161,7 @@ class ietf_system__system__ntp__server_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_system__system__ntp__server_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker12 = None
 class ietf_system__system__ntp__server(yang.adata.MNode):
     elements: list[ietf_system__system__ntp__server_entry]
     mut def __init__(self, elements=[]):
@@ -9208,7 +9208,7 @@ extension ietf_system__system__ntp__server(Iterable[ietf_system__system__ntp__se
     def __iter__(self) -> Iterator[ietf_system__system__ntp__server_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker13 = None
 class ietf_system__system__ntp(yang.adata.MNode):
     enabled: ?bool
     server: ietf_system__system__ntp__server
@@ -9242,7 +9242,7 @@ class ietf_system__system__ntp(yang.adata.MNode):
         raise Exception('Unreachable in ietf_system__system__ntp.copy()')
 
 
-_breaker = 1
+_breaker14 = None
 class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
     address: ?str
     port: ?u64
@@ -9273,7 +9273,7 @@ class ietf_system__system__dns_resolver__server__udp_and_tcp(yang.adata.MNode):
         return ietf_system__system__dns_resolver__server__udp_and_tcp.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker15 = None
 class ietf_system__system__dns_resolver__server_entry(yang.adata.MNode):
     name: str
     udp_and_tcp: ietf_system__system__dns_resolver__server__udp_and_tcp
@@ -9301,7 +9301,7 @@ class ietf_system__system__dns_resolver__server_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_system__system__dns_resolver__server_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker16 = None
 class ietf_system__system__dns_resolver__server(yang.adata.MNode):
     elements: list[ietf_system__system__dns_resolver__server_entry]
     mut def __init__(self, elements=[]):
@@ -9342,7 +9342,7 @@ extension ietf_system__system__dns_resolver__server(Iterable[ietf_system__system
     def __iter__(self) -> Iterator[ietf_system__system__dns_resolver__server_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker17 = None
 class ietf_system__system__dns_resolver__options(yang.adata.MNode):
     timeout: ?u64
     attempts: ?u64
@@ -9373,7 +9373,7 @@ class ietf_system__system__dns_resolver__options(yang.adata.MNode):
         return ietf_system__system__dns_resolver__options.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker18 = None
 class ietf_system__system__dns_resolver(yang.adata.MNode):
     search: list[str]
     server: ietf_system__system__dns_resolver__server
@@ -9408,7 +9408,7 @@ class ietf_system__system__dns_resolver(yang.adata.MNode):
         return ietf_system__system__dns_resolver.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker19 = None
 class ietf_system__system__radius__server__udp(yang.adata.MNode):
     address: ?str
     authentication_port: ?u64
@@ -9443,7 +9443,7 @@ class ietf_system__system__radius__server__udp(yang.adata.MNode):
         return ietf_system__system__radius__server__udp.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker20 = None
 class ietf_system__system__radius__server_entry(yang.adata.MNode):
     name: str
     udp: ietf_system__system__radius__server__udp
@@ -9475,7 +9475,7 @@ class ietf_system__system__radius__server_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_system__system__radius__server_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker21 = None
 class ietf_system__system__radius__server(yang.adata.MNode):
     elements: list[ietf_system__system__radius__server_entry]
     mut def __init__(self, elements=[]):
@@ -9518,7 +9518,7 @@ extension ietf_system__system__radius__server(Iterable[ietf_system__system__radi
     def __iter__(self) -> Iterator[ietf_system__system__radius__server_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker22 = None
 class ietf_system__system__radius__options(yang.adata.MNode):
     timeout: ?u64
     attempts: ?u64
@@ -9549,7 +9549,7 @@ class ietf_system__system__radius__options(yang.adata.MNode):
         return ietf_system__system__radius__options.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker23 = None
 class ietf_system__system__radius(yang.adata.MNode):
     server: ietf_system__system__radius__server
     options: ietf_system__system__radius__options
@@ -9580,7 +9580,7 @@ class ietf_system__system__radius(yang.adata.MNode):
         return ietf_system__system__radius.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker24 = None
 class ietf_system__system__authentication__user__authorized_key_entry(yang.adata.MNode):
     name: str
     algorithm: ?str
@@ -9612,7 +9612,7 @@ class ietf_system__system__authentication__user__authorized_key_entry(yang.adata
         """Create a deep copy of this adata object"""
         return ietf_system__system__authentication__user__authorized_key_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker25 = None
 class ietf_system__system__authentication__user__authorized_key(yang.adata.MNode):
     elements: list[ietf_system__system__authentication__user__authorized_key_entry]
     mut def __init__(self, elements=[]):
@@ -9657,7 +9657,7 @@ extension ietf_system__system__authentication__user__authorized_key(Iterable[iet
     def __iter__(self) -> Iterator[ietf_system__system__authentication__user__authorized_key_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker26 = None
 class ietf_system__system__authentication__user_entry(yang.adata.MNode):
     name: str
     password: ?str
@@ -9689,7 +9689,7 @@ class ietf_system__system__authentication__user_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_system__system__authentication__user_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker27 = None
 class ietf_system__system__authentication__user(yang.adata.MNode):
     elements: list[ietf_system__system__authentication__user_entry]
     mut def __init__(self, elements=[]):
@@ -9732,7 +9732,7 @@ extension ietf_system__system__authentication__user(Iterable[ietf_system__system
     def __iter__(self) -> Iterator[ietf_system__system__authentication__user_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker28 = None
 class ietf_system__system__authentication(yang.adata.MNode):
     user_authentication_order: list[Identityref]
     user: ietf_system__system__authentication__user
@@ -9763,7 +9763,7 @@ class ietf_system__system__authentication(yang.adata.MNode):
         return ietf_system__system__authentication.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker29 = None
 class ietf_system__system(yang.adata.MNode):
     contact: ?str
     hostname: ?str
@@ -9828,7 +9828,7 @@ class ietf_system__system(yang.adata.MNode):
         return ietf_system__system.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker30 = None
 class ietf_system__system_state__platform(yang.adata.MNode):
     os_name: ?str
     os_release: ?str
@@ -9867,7 +9867,7 @@ class ietf_system__system_state__platform(yang.adata.MNode):
         return ietf_system__system_state__platform.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker31 = None
 class ietf_system__system_state__clock(yang.adata.MNode):
     current_datetime: ?str
     boot_datetime: ?str
@@ -9898,7 +9898,7 @@ class ietf_system__system_state__clock(yang.adata.MNode):
         return ietf_system__system_state__clock.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker32 = None
 class ietf_system__system_state(yang.adata.MNode):
     platform: ietf_system__system_state__platform
     clock: ietf_system__system_state__clock
@@ -9929,7 +9929,7 @@ class ietf_system__system_state(yang.adata.MNode):
         return ietf_system__system_state.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker33 = None
 class ietf_interfaces__interfaces__interface__statistics(yang.adata.MNode):
     discontinuity_time: ?str
     in_octets: ?u64
@@ -10008,7 +10008,7 @@ class ietf_interfaces__interfaces__interface__statistics(yang.adata.MNode):
         return ietf_interfaces__interfaces__interface__statistics.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker34 = None
 class ietf_interfaces__interfaces__interface__ipv4__address_entry(yang.adata.MNode):
     ip: str
     prefix_length: ?u64
@@ -10044,7 +10044,7 @@ class ietf_interfaces__interfaces__interface__ipv4__address_entry(yang.adata.MNo
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces__interface__ipv4__address_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker35 = None
 class ietf_interfaces__interfaces__interface__ipv4__address(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces__interface__ipv4__address_entry]
     mut def __init__(self, elements=[]):
@@ -10091,7 +10091,7 @@ extension ietf_interfaces__interfaces__interface__ipv4__address(Iterable[ietf_in
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces__interface__ipv4__address_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker36 = None
 class ietf_interfaces__interfaces__interface__ipv4__neighbor_entry(yang.adata.MNode):
     ip: str
     link_layer_address: ?str
@@ -10123,7 +10123,7 @@ class ietf_interfaces__interfaces__interface__ipv4__neighbor_entry(yang.adata.MN
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces__interface__ipv4__neighbor_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker37 = None
 class ietf_interfaces__interfaces__interface__ipv4__neighbor(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces__interface__ipv4__neighbor_entry]
     mut def __init__(self, elements=[]):
@@ -10168,7 +10168,7 @@ extension ietf_interfaces__interfaces__interface__ipv4__neighbor(Iterable[ietf_i
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces__interface__ipv4__neighbor_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker38 = None
 class ietf_interfaces__interfaces__interface__ipv4(yang.adata.MNode):
     enabled: ?bool
     forwarding: ?bool
@@ -10214,7 +10214,7 @@ class ietf_interfaces__interfaces__interface__ipv4(yang.adata.MNode):
         raise Exception('Unreachable in ietf_interfaces__interfaces__interface__ipv4.copy()')
 
 
-_breaker = 1
+_breaker39 = None
 class ietf_interfaces__interfaces__interface__ipv6__address_entry(yang.adata.MNode):
     ip: str
     prefix_length: ?u64
@@ -10250,7 +10250,7 @@ class ietf_interfaces__interfaces__interface__ipv6__address_entry(yang.adata.MNo
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces__interface__ipv6__address_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker40 = None
 class ietf_interfaces__interfaces__interface__ipv6__address(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces__interface__ipv6__address_entry]
     mut def __init__(self, elements=[]):
@@ -10297,7 +10297,7 @@ extension ietf_interfaces__interfaces__interface__ipv6__address(Iterable[ietf_in
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces__interface__ipv6__address_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker41 = None
 class ietf_interfaces__interfaces__interface__ipv6__neighbor_entry(yang.adata.MNode):
     ip: str
     link_layer_address: ?str
@@ -10337,7 +10337,7 @@ class ietf_interfaces__interfaces__interface__ipv6__neighbor_entry(yang.adata.MN
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces__interface__ipv6__neighbor_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker42 = None
 class ietf_interfaces__interfaces__interface__ipv6__neighbor(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces__interface__ipv6__neighbor_entry]
     mut def __init__(self, elements=[]):
@@ -10386,7 +10386,7 @@ extension ietf_interfaces__interfaces__interface__ipv6__neighbor(Iterable[ietf_i
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces__interface__ipv6__neighbor_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker43 = None
 class ietf_interfaces__interfaces__interface__ipv6__autoconf(yang.adata.MNode):
     create_global_addresses: ?bool
     create_temporary_addresses: ?bool
@@ -10425,7 +10425,7 @@ class ietf_interfaces__interfaces__interface__ipv6__autoconf(yang.adata.MNode):
         return ietf_interfaces__interfaces__interface__ipv6__autoconf.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker44 = None
 class ietf_interfaces__interfaces__interface__ipv6(yang.adata.MNode):
     enabled: ?bool
     forwarding: ?bool
@@ -10479,7 +10479,7 @@ class ietf_interfaces__interfaces__interface__ipv6(yang.adata.MNode):
         raise Exception('Unreachable in ietf_interfaces__interfaces__interface__ipv6.copy()')
 
 
-_breaker = 1
+_breaker45 = None
 class ietf_interfaces__interfaces__interface_entry(yang.adata.MNode):
     name: str
     description: ?str
@@ -10593,7 +10593,7 @@ class ietf_interfaces__interfaces__interface_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces__interface_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker46 = None
 class ietf_interfaces__interfaces__interface(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces__interface_entry]
     mut def __init__(self, elements=[]):
@@ -10654,7 +10654,7 @@ extension ietf_interfaces__interfaces__interface(Iterable[ietf_interfaces__inter
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces__interface_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker47 = None
 class ietf_interfaces__interfaces(yang.adata.MNode):
     interface: ietf_interfaces__interfaces__interface
 
@@ -10681,7 +10681,7 @@ class ietf_interfaces__interfaces(yang.adata.MNode):
         return ietf_interfaces__interfaces.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker48 = None
 class ietf_interfaces__interfaces_state__interface__statistics(yang.adata.MNode):
     discontinuity_time: ?str
     in_octets: ?u64
@@ -10760,7 +10760,7 @@ class ietf_interfaces__interfaces_state__interface__statistics(yang.adata.MNode)
         return ietf_interfaces__interfaces_state__interface__statistics.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker49 = None
 class ietf_interfaces__interfaces_state__interface__ipv4__address_entry(yang.adata.MNode):
     ip: str
     prefix_length: ?u64
@@ -10796,7 +10796,7 @@ class ietf_interfaces__interfaces_state__interface__ipv4__address_entry(yang.ada
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces_state__interface__ipv4__address_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker50 = None
 class ietf_interfaces__interfaces_state__interface__ipv4__address(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces_state__interface__ipv4__address_entry]
     mut def __init__(self, elements=[]):
@@ -10843,7 +10843,7 @@ extension ietf_interfaces__interfaces_state__interface__ipv4__address(Iterable[i
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces_state__interface__ipv4__address_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker51 = None
 class ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry(yang.adata.MNode):
     ip: str
     link_layer_address: ?str
@@ -10875,7 +10875,7 @@ class ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry(yang.ad
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker52 = None
 class ietf_interfaces__interfaces_state__interface__ipv4__neighbor(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry]
     mut def __init__(self, elements=[]):
@@ -10920,7 +10920,7 @@ extension ietf_interfaces__interfaces_state__interface__ipv4__neighbor(Iterable[
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces_state__interface__ipv4__neighbor_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker53 = None
 class ietf_interfaces__interfaces_state__interface__ipv4(yang.adata.MNode):
     forwarding: ?bool
     mtu: ?u64
@@ -10962,7 +10962,7 @@ class ietf_interfaces__interfaces_state__interface__ipv4(yang.adata.MNode):
         raise Exception('Unreachable in ietf_interfaces__interfaces_state__interface__ipv4.copy()')
 
 
-_breaker = 1
+_breaker54 = None
 class ietf_interfaces__interfaces_state__interface__ipv6__address_entry(yang.adata.MNode):
     ip: str
     prefix_length: ?u64
@@ -10998,7 +10998,7 @@ class ietf_interfaces__interfaces_state__interface__ipv6__address_entry(yang.ada
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces_state__interface__ipv6__address_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker55 = None
 class ietf_interfaces__interfaces_state__interface__ipv6__address(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces_state__interface__ipv6__address_entry]
     mut def __init__(self, elements=[]):
@@ -11045,7 +11045,7 @@ extension ietf_interfaces__interfaces_state__interface__ipv6__address(Iterable[i
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces_state__interface__ipv6__address_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker56 = None
 class ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry(yang.adata.MNode):
     ip: str
     link_layer_address: ?str
@@ -11085,7 +11085,7 @@ class ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry(yang.ad
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker57 = None
 class ietf_interfaces__interfaces_state__interface__ipv6__neighbor(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry]
     mut def __init__(self, elements=[]):
@@ -11134,7 +11134,7 @@ extension ietf_interfaces__interfaces_state__interface__ipv6__neighbor(Iterable[
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces_state__interface__ipv6__neighbor_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker58 = None
 class ietf_interfaces__interfaces_state__interface__ipv6(yang.adata.MNode):
     forwarding: ?bool
     mtu: ?u64
@@ -11176,7 +11176,7 @@ class ietf_interfaces__interfaces_state__interface__ipv6(yang.adata.MNode):
         raise Exception('Unreachable in ietf_interfaces__interfaces_state__interface__ipv6.copy()')
 
 
-_breaker = 1
+_breaker59 = None
 class ietf_interfaces__interfaces_state__interface_entry(yang.adata.MNode):
     name: str
     type: ?Identityref
@@ -11272,7 +11272,7 @@ class ietf_interfaces__interfaces_state__interface_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return ietf_interfaces__interfaces_state__interface_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker60 = None
 class ietf_interfaces__interfaces_state__interface(yang.adata.MNode):
     elements: list[ietf_interfaces__interfaces_state__interface_entry]
     mut def __init__(self, elements=[]):
@@ -11327,7 +11327,7 @@ extension ietf_interfaces__interfaces_state__interface(Iterable[ietf_interfaces_
     def __iter__(self) -> Iterator[ietf_interfaces__interfaces_state__interface_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker61 = None
 class ietf_interfaces__interfaces_state(yang.adata.MNode):
     interface: ietf_interfaces__interfaces_state__interface
 
@@ -11354,7 +11354,7 @@ class ietf_interfaces__interfaces_state(yang.adata.MNode):
         return ietf_interfaces__interfaces_state.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker62 = None
 class root(yang.adata.MNode):
     nacm: ietf_netconf_acm__nacm
     system: ietf_system__system
@@ -11397,7 +11397,7 @@ class root(yang.adata.MNode):
         return root.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker63 = None
 class ietf_system__set_current_datetime__input(yang.adata.MNode):
     current_datetime: ?str
 

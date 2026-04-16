@@ -908,7 +908,7 @@ NS_stratoweave = 'http://stratoweave.org/yang/stratoweave.yang'
 NS_ietf_inet_types = 'urn:ietf:params:xml:ns:yang:ietf-inet-types'
 
 
-_breaker = 1
+_breaker1 = None
 class stratoweave_rfs__device__address__initial_credentials_entry(yang.adata.MNode):
     username: str
     password: str
@@ -940,7 +940,7 @@ class stratoweave_rfs__device__address__initial_credentials_entry(yang.adata.MNo
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device__address__initial_credentials_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker2 = None
 class stratoweave_rfs__device__address__initial_credentials(yang.adata.MNode):
     elements: list[stratoweave_rfs__device__address__initial_credentials_entry]
     mut def __init__(self, elements=[]):
@@ -987,7 +987,7 @@ extension stratoweave_rfs__device__address__initial_credentials(Iterable[stratow
     def __iter__(self) -> Iterator[stratoweave_rfs__device__address__initial_credentials_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker3 = None
 class stratoweave_rfs__device__address_entry(yang.adata.MNode):
     name: str
     address: ?str
@@ -1023,7 +1023,7 @@ class stratoweave_rfs__device__address_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device__address_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker4 = None
 class stratoweave_rfs__device__address(yang.adata.MNode):
     elements: list[stratoweave_rfs__device__address_entry]
     mut def __init__(self, elements=[]):
@@ -1068,7 +1068,7 @@ extension stratoweave_rfs__device__address(Iterable[stratoweave_rfs__device__add
     def __iter__(self) -> Iterator[stratoweave_rfs__device__address_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker5 = None
 class stratoweave_rfs__device__credentials__key_entry(yang.adata.MNode):
     key: str
     private_key: ?str
@@ -1096,7 +1096,7 @@ class stratoweave_rfs__device__credentials__key_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device__credentials__key_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker6 = None
 class stratoweave_rfs__device__credentials__key(yang.adata.MNode):
     elements: list[stratoweave_rfs__device__credentials__key_entry]
     mut def __init__(self, elements=[]):
@@ -1139,7 +1139,7 @@ extension stratoweave_rfs__device__credentials__key(Iterable[stratoweave_rfs__de
     def __iter__(self) -> Iterator[stratoweave_rfs__device__credentials__key_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker7 = None
 class stratoweave_rfs__device__credentials(yang.adata.MNode):
     username: ?str
     password: ?str
@@ -1174,7 +1174,7 @@ class stratoweave_rfs__device__credentials(yang.adata.MNode):
         return stratoweave_rfs__device__credentials.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker8 = None
 class stratoweave_rfs__device__initial_credentials_entry(yang.adata.MNode):
     username: str
     password: str
@@ -1206,7 +1206,7 @@ class stratoweave_rfs__device__initial_credentials_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device__initial_credentials_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker9 = None
 class stratoweave_rfs__device__initial_credentials(yang.adata.MNode):
     elements: list[stratoweave_rfs__device__initial_credentials_entry]
     mut def __init__(self, elements=[]):
@@ -1253,7 +1253,7 @@ extension stratoweave_rfs__device__initial_credentials(Iterable[stratoweave_rfs_
     def __iter__(self) -> Iterator[stratoweave_rfs__device__initial_credentials_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker10 = None
 class stratoweave_rfs__device__mock__module_entry(yang.adata.MNode):
     name: str
     namespace: ?str
@@ -1289,7 +1289,7 @@ class stratoweave_rfs__device__mock__module_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device__mock__module_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker11 = None
 class stratoweave_rfs__device__mock__module(yang.adata.MNode):
     elements: list[stratoweave_rfs__device__mock__module_entry]
     mut def __init__(self, elements=[]):
@@ -1334,7 +1334,7 @@ extension stratoweave_rfs__device__mock__module(Iterable[stratoweave_rfs__device
     def __iter__(self) -> Iterator[stratoweave_rfs__device__mock__module_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker12 = None
 class stratoweave_rfs__device__mock(yang.adata.MNode):
     enabled: ?bool
     preset: list[str]
@@ -1369,7 +1369,7 @@ class stratoweave_rfs__device__mock(yang.adata.MNode):
         return stratoweave_rfs__device__mock.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker13 = None
 class stratoweave_rfs__device__debug(yang.adata.MNode):
     connection: ?bool
 
@@ -1396,7 +1396,7 @@ class stratoweave_rfs__device__debug(yang.adata.MNode):
         return stratoweave_rfs__device__debug.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker14 = None
 class stratoweave_rfs__device__feature_flags(yang.adata.MNode):
     runtime_schema_fetch: ?bool
 
@@ -1423,7 +1423,7 @@ class stratoweave_rfs__device__feature_flags(yang.adata.MNode):
         return stratoweave_rfs__device__feature_flags.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker15 = None
 class stratoweave_rfs__device_entry(yang.adata.MNode):
     name: str
     description: ?str
@@ -1483,7 +1483,7 @@ class stratoweave_rfs__device_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__device_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker16 = None
 class stratoweave_rfs__device(yang.adata.MNode):
     elements: list[stratoweave_rfs__device_entry]
     mut def __init__(self, elements=[]):
@@ -1530,7 +1530,7 @@ extension stratoweave_rfs__device(Iterable[stratoweave_rfs__device_entry]):
     def __iter__(self) -> Iterator[stratoweave_rfs__device_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker17 = None
 class stratoweave_rfs__rfs__base_config__dynstate(yang.adata.MNode):
     current_datetime: ?str
 
@@ -1557,7 +1557,7 @@ class stratoweave_rfs__rfs__base_config__dynstate(yang.adata.MNode):
         return stratoweave_rfs__rfs__base_config__dynstate.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker18 = None
 class stratoweave_rfs__rfs__base_config(yang.adata.MNode):
     name: ?str
     ipv4_address: ?str
@@ -1592,7 +1592,7 @@ class stratoweave_rfs__rfs__base_config(yang.adata.MNode):
         return stratoweave_rfs__rfs__base_config.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker19 = None
 class stratoweave_rfs__rfs__l3vpn_endpoint_entry(yang.adata.MNode):
     interface_name: str
     vpn_name: ?str
@@ -1664,7 +1664,7 @@ class stratoweave_rfs__rfs__l3vpn_endpoint_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__rfs__l3vpn_endpoint_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker20 = None
 class stratoweave_rfs__rfs__l3vpn_endpoint(yang.adata.MNode):
     elements: list[stratoweave_rfs__rfs__l3vpn_endpoint_entry]
     mut def __init__(self, elements=[]):
@@ -1729,7 +1729,7 @@ extension stratoweave_rfs__rfs__l3vpn_endpoint(Iterable[stratoweave_rfs__rfs__l3
     def __iter__(self) -> Iterator[stratoweave_rfs__rfs__l3vpn_endpoint_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker21 = None
 class stratoweave_rfs__rfs_entry(yang.adata.MNode):
     name: str
     base_config: stratoweave_rfs__rfs__base_config
@@ -1761,7 +1761,7 @@ class stratoweave_rfs__rfs_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_rfs__rfs_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker22 = None
 class stratoweave_rfs__rfs(yang.adata.MNode):
     elements: list[stratoweave_rfs__rfs_entry]
     mut def __init__(self, elements=[]):
@@ -1802,7 +1802,7 @@ extension stratoweave_rfs__rfs(Iterable[stratoweave_rfs__rfs_entry]):
     def __iter__(self) -> Iterator[stratoweave_rfs__rfs_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker23 = None
 class root(yang.adata.MNode):
     device: stratoweave_rfs__device
     rfs: stratoweave_rfs__rfs

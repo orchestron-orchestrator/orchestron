@@ -719,7 +719,7 @@ NS_stratoweave = 'http://stratoweave.org/yang/stratoweave.yang'
 NS_ietf_inet_types = 'urn:ietf:params:xml:ns:yang:ietf-inet-types'
 
 
-_breaker = 1
+_breaker1 = None
 class netinfra__netinfra__router_entry(yang.adata.MNode):
     name: str
     id: u64
@@ -755,7 +755,7 @@ class netinfra__netinfra__router_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return netinfra__netinfra__router_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker2 = None
 class netinfra__netinfra__router(yang.adata.MNode):
     elements: list[netinfra__netinfra__router_entry]
     mut def __init__(self, elements=[]):
@@ -800,7 +800,7 @@ extension netinfra__netinfra__router(Iterable[netinfra__netinfra__router_entry])
     def __iter__(self) -> Iterator[netinfra__netinfra__router_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker3 = None
 class netinfra__netinfra(yang.adata.MNode):
     router: netinfra__netinfra__router
 
@@ -827,7 +827,7 @@ class netinfra__netinfra(yang.adata.MNode):
         return netinfra__netinfra.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker4 = None
 class l3vpn__l3vpn__endpoint_entry(yang.adata.MNode):
     device: str
     interface_name: str
@@ -883,7 +883,7 @@ class l3vpn__l3vpn__endpoint_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return l3vpn__l3vpn__endpoint_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker5 = None
 class l3vpn__l3vpn__endpoint(yang.adata.MNode):
     elements: list[l3vpn__l3vpn__endpoint_entry]
     mut def __init__(self, elements=[]):
@@ -939,7 +939,7 @@ extension l3vpn__l3vpn__endpoint(Iterable[l3vpn__l3vpn__endpoint_entry]):
     def __iter__(self) -> Iterator[l3vpn__l3vpn__endpoint_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker6 = None
 class l3vpn__l3vpn_entry(yang.adata.MNode):
     name: str
     customer_name: str
@@ -987,7 +987,7 @@ class l3vpn__l3vpn_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return l3vpn__l3vpn_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker7 = None
 class l3vpn__l3vpn(yang.adata.MNode):
     elements: list[l3vpn__l3vpn_entry]
     mut def __init__(self, elements=[]):
@@ -1036,7 +1036,7 @@ extension l3vpn__l3vpn(Iterable[l3vpn__l3vpn_entry]):
     def __iter__(self) -> Iterator[l3vpn__l3vpn_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker8 = None
 class root(yang.adata.MNode):
     netinfra: netinfra__netinfra
     l3vpn: l3vpn__l3vpn
