@@ -8,6 +8,8 @@ import orchestron.yang as oyang
 import transform_unions
 import yang.parser
 
+_SW_NS = "http://stratoweave.org/yang/stratoweave.yang"
+_SW_EXCLUDE_EXT = [("dynstate", _SW_NS), ("memory", _SW_NS)]
 
 def _maybe_write_file(fc: file.FileCap, name: str, content: str) -> bool:
     """Write new content to a file if the content is different from existing content"""
@@ -92,7 +94,7 @@ class CompiledSysSpec(object):
             y_name = "{output_dir}/{self.name}/layers/y_{lname}.act"
             modname = "{self.name}.layers.y_{lname}"
 
-            if _maybe_write_file(fc, y_name, layer.print()):
+            if _maybe_write_file(fc, y_name, layer.print(exclude_ext=_SW_EXCLUDE_EXT)):
                 print("+ Layer {idx} adata changed")
             else:
                 print("+ Layer {idx} adata unchanged")
@@ -135,7 +137,7 @@ class CompiledSysSpec(object):
             syssrc_schema_for_layer += "        return {self.name}.layers.y_{idx}.SRC_DNODE\n"
 
             loose_name = "{output_dir}/{self.name}/layers/y_{idx}_loose.act"
-            if _maybe_write_file(fc, loose_name, layer.print(loose=True)):
+            if _maybe_write_file(fc, loose_name, layer.print(loose=True, exclude_ext=_SW_EXCLUDE_EXT)):
                 print("+ Layer {idx} loose adata changed")
             else:
                 print("+ Layer {idx} loose adata unchanged")
@@ -254,7 +256,7 @@ class CompiledLayerBase(object):
     root: yang.schema.DRoot
     src: list[str]
 
-    def print(self, loose=False, gen_json=True, include_state=False):
+    def print(self, loose=False, gen_json=True, include_state=False, exclude_ext: list[(name: str, namespace: str)]=[]):
         """Print the Acton (adata) classes for the layer
 
         This prints the entire contents of the Acton module representing a
@@ -262,7 +264,7 @@ class CompiledLayerBase(object):
         classes, XML and JSON deserializers and the schema info. The schema is
         used by the XML and JSON schema-driven deserializers.
         """
-        return self.root.prdaclass(schema_yang=self.src, loose=loose, include_state=include_state)
+        return self.root.prdaclass(schema_yang=self.src, loose=loose, include_state=include_state, exclude_ext=exclude_ext)
 
 class CompiledLayer(CompiledLayerBase):
     def __init__(self, root: yang.schema.DRoot, src: list[str], name: ?str=None):
