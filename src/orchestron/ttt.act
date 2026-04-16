@@ -1368,6 +1368,8 @@ class _TransformTransaction(_TransformTransactionBase):
         self.function.init_dynstate(act, update_dynstate, unwrap(self.path))
 
     proc def update_dynstate(self, dynstate):
+        if self.dynstate == dynstate:
+            return
         self.dynstate = dynstate
         _node = self.node
         if _node is not None:
@@ -1531,6 +1533,8 @@ class _RFSTransaction(_TransformTransactionBase):
         self.function.init_dynstate(act, update_dynstate, unwrap(self.path), self.dev)
 
     proc def update_dynstate(self, dynstate):
+        if self.dynstate == dynstate:
+            return
         self.dynstate = dynstate
         _node = self.node
         if _node is not None:
