@@ -106,6 +106,7 @@ actor HttpServer(
     schema_for_layer: proc(int) -> yang.schema.DRoot,
     install_extra_routes: ?proc(http_router.Router) -> None = None,
     enable_tmf_api: bool = False,
+    restconf_root: str = "/restconf",
     address: str = "::",
     port: int = 80
 ):
@@ -561,6 +562,10 @@ actor HttpServer(
         g.get("/q/{{id}}", _router_handle_device_queue_get)
         g.post("/q/{{id}}/set_approval", _router_handle_device_queue_set_approval)
 
+    def _router_handle_host_meta(ctx: http_router.Context, respond: proc(int, dict[str, str], str) -> None):
+        # RESTCONF root resource discovery
+        respond(200, {"Content-Type": "application/xrd+xml"}, '<XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">\n  <Link rel="restconf" href="{restconf_root}"/>\n</XRD>')
+
     def _router_build_restconf_routes(g: http_router.RouteGroup):
         g.get("/*rest_path", _router_handle_restconf_get)
         g.post("/*rest_path", _router_handle_restconf_write)
@@ -571,10 +576,11 @@ actor HttpServer(
     http_router_root.use(http_router.access_log_middleware(http_log))
     http_router_root.use(http_router.recoverer_middleware(http_log))
 
+    http_router_root.get("/.well-known/host-meta", _router_handle_host_meta)
     http_router_root.get("/config-queue", _router_handle_config_queue)
     http_router_root.get("/device", _router_handle_device_list)
     http_router_root.route("/device/{{name}}", _router_build_device_routes)
-    http_router_root.route("/restconf/data", _router_build_restconf_routes)
+    http_router_root.route("{restconf_root}/data", _router_build_restconf_routes)
     http_router_root.get("/layer/{{idx}}", _router_handle_layer_get)
 
     var tmf_http = None
