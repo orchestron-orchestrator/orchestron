@@ -123,7 +123,7 @@ NS_stratoweave_device = 'http://stratoweave.org/yang/stratoweave-device.yang'
 NS_stratoweave = 'http://stratoweave.org/yang/stratoweave.yang'
 
 
-_breaker = 1
+_breaker1 = None
 class stratoweave_device__devices__device_entry(yang.adata.MNode):
     name: str
     modset_id: ?str
@@ -138,7 +138,6 @@ class stratoweave_device__devices__device_entry(yang.adata.MNode):
             return self.name
         if name == 'modset_id':
             return self.modset_id
-        raise ValueError('Attribute {name} not found in stratoweave_device__devices__device')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-device:devices', 'device'])
@@ -151,7 +150,7 @@ class stratoweave_device__devices__device_entry(yang.adata.MNode):
         """Create a deep copy of this adata object"""
         return stratoweave_device__devices__device_entry.from_gdata(self.to_gdata())
 
-_breaker = 1
+_breaker2 = None
 class stratoweave_device__devices__device(yang.adata.MNode):
     elements: list[stratoweave_device__devices__device_entry]
     mut def __init__(self, elements=[]):
@@ -194,7 +193,7 @@ extension stratoweave_device__devices__device(Iterable[stratoweave_device__devic
     def __iter__(self) -> Iterator[stratoweave_device__devices__device_entry]:
         return self.elements.__iter__()
 
-_breaker = 1
+_breaker3 = None
 class stratoweave_device__devices(yang.adata.MNode):
     device: stratoweave_device__devices__device
 
@@ -205,7 +204,6 @@ class stratoweave_device__devices(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'device':
             return iter(self.device)
-        raise ValueError('Attribute {name} not found in stratoweave_device__devices')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True, root_path=['stratoweave-device:devices'])
@@ -221,7 +219,7 @@ class stratoweave_device__devices(yang.adata.MNode):
         return stratoweave_device__devices.from_gdata(self.to_gdata())
 
 
-_breaker = 1
+_breaker4 = None
 class root(yang.adata.MNode):
     devices: stratoweave_device__devices
 
@@ -232,7 +230,6 @@ class root(yang.adata.MNode):
     def _get_attr(self, name: str) -> ?value:
         if name == 'devices':
             return self.devices
-        raise ValueError('Attribute {name} not found in root')
 
     mut def to_gdata(self) -> yang.gdata.Node:
         return yang.adata.from_adata(SRC_DNODE, self, loose=True)
