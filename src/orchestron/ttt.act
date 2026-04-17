@@ -921,7 +921,7 @@ class _ListTransaction(_Transaction):
             else:
                 return swdb.del_op(path, swdb.ATTR_KEYS)
 
-        return [ op(key,res) for key, res in self.accum.items() ]
+        return [ op(key,res) for key, res in self.accum.items() ] if key_leaves_by_key else []
 
     def _analyze(self, results: dict[str,CfgResult]):
         self.accum.update(results.items())
