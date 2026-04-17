@@ -15,7 +15,10 @@ ESCAPED_ESCAPE = b"e"
 ESCAPED_PATH_SEPARATOR = b"p"
 ESCAPED_ATTRIBUTE_SEPARATOR = b"a"
 ESCAPED_QUALIFIER_SEPARATOR = b"q"
-ATTR_KEYS = "keys"
+
+# We need ATTR_KEYS to appear before all other attributes of a path when the
+# db iterates over its keys. Prefix with '#' (ASCII 35) to ensure this.
+ATTR_KEYS = "#keys"
 ATTR_DYNSTATE = "dynstate"
 ATTR_MEMORY = "memory"
 ATTR_OUTPUT = "output"
