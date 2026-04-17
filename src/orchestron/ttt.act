@@ -871,7 +871,7 @@ class _ListTransaction(_Transaction):
             self.accum = {}
             self.reset = False
         diff_by_key = transpose_list(diff)
-        key_leaves_by_key = {}
+        leaves_by_key = {}
         if len(diff_by_key) == 0 and force:
             for key,node in self.liststate.acquire(tid, None).items():
                 diff_by_key[key] = {}
@@ -891,8 +891,8 @@ class _ListTransaction(_Transaction):
             for key,subdiff in diff_by_key.items():
                 for node in subdiff.values():
                     kc = node.key_children(self.key_names)
-                    key_leaves_by_key[key] = kc
-            for key,node in self.liststate.acquire(tid, key_leaves_by_key).items():
+                    leaves_by_key[key] = kc
+            for key,node in self.liststate.acquire(tid, leaves_by_key).items():
                 if key not in self.elems:
                     self.elems[key] = node.newtrans()
         msgs = {}
@@ -909,19 +909,19 @@ class _ListTransaction(_Transaction):
             #print('   #', tid, '(List)', _format_path(self.path), 'RESULT ELEMENT', key, ':', v, err=True)
         res = self._analyze(results)
         if dbuf is not None:
-            dbuf.replace(swdb.slot_key(_db_path(self.path), "list"), self.db_ops(key_leaves_by_key))
+            dbuf.replace(swdb.slot_key(_db_path(self.path), "list"), self.db_ops(leaves_by_key))
         return res
 
-    def db_ops(self, key_leaves_by_key) -> list[swdb.BufferOp]:
+    def db_ops(self, leaves_by_key) -> list[swdb.BufferOp]:
 
         def op(key, res):
             path = _db_path(self.path) + [key]
-            if isinstance(res, CfgOk) and not res.empty:
-                return swdb.put_op(path, swdb.ATTR_KEYS, gdata.Container(key_leaves_by_key[key]))
+            if isinstance(res, CfgOk) and not res.empty and key in leaves_by_key:
+                return swdb.put_op(path, swdb.ATTR_KEYS, gdata.Container(leaves_by_key[key]))
             else:
                 return swdb.del_op(path, swdb.ATTR_KEYS)
 
-        return [ op(key,res) for key, res in self.accum.items() ] if key_leaves_by_key else []
+        return [ op(key,res) for key, res in self.accum.items() ]
 
     def _analyze(self, results: dict[str,CfgResult]):
         self.accum.update(results.items())
