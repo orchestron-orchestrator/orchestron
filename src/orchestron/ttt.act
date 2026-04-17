@@ -127,10 +127,11 @@ class PathElem(Path):
         self.parent = parent
 
 class PathKey(Path):
-    def __init__(self, keystr: str, parent: ?Path):
+    def __init__(self, keystr: str, parent: ?Path, keyvals: dict[gdata.Id, gdata.Node], ):
         self.name = keystr
         self.ns = parent.ns if parent is not None else ""
         self.parent = parent
+        self.keyvals = keyvals
 
 def _format_path(path: ?Path):
     if path is not None:
@@ -558,6 +559,8 @@ class _Container(_Node):
         #print('####', '(Container)', _format_path(self.path), actorid(), 'NODE GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
         path = self.path
+        if isinstance(path, PathKey):
+            res.update(path.keyvals.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
     def bind_db(self, db: ?lmdb.Db) -> None:
@@ -727,6 +730,8 @@ class _ContainerTransaction(_Transaction):
         #print('####', '(Container)', _format_path(self.path), actorid(), 'GET', err=True)
         res = {tag: node.get() for tag, node in self.elems.items()}
         path = self.path
+        if isinstance(path, PathKey):
+            res.update(path.keyvals.items())
         return gdata.Container(res, ns=self.ns, module=self.module)
 
 
@@ -753,30 +758,29 @@ class _List(_Node):
     def get(self):
         #print('####', '(List)', _format_path(self.path), 'NODE GET', err=True)
         res = []
-        for key, (node, key_leaves1) in self.liststate.all().items():
+        for key, node in self.liststate.all().items():
             r = node.get()
-            if key_leaves1 is not None and isinstance(r, gdata.Container):
-                r.children.update(key_leaves1.items())
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
     def bind_db(self, db: ?lmdb.Db) -> None:
         self.liststate.bind_db(db)
 
-    def restore(self, path_segments: list[str], attr: str, qualifier: ?str, raw: bytes) -> None:
+    def restore(self, path_segments: list[str], attr: str, qualifier: ?str, raw: bytes):
         if len(path_segments) == 0:
             raise ValueError("Unexpected persisted list attribute {attr} at {_format_path(self.path)}")
-
-        key_str = path_segments[0]
+        key = path_segments[0]
         if len(path_segments) == 1 and attr == swdb.ATTR_KEYS:
-            decoded = swdb.decode_node_bytes(raw)
-            if isinstance(decoded, gdata.Container):
-                self.liststate.restore_key_leaves(key_str, decoded)
-                return
-            raise ValueError("Persisted list key leaves must decode to Container at {_format_path(self.path)}[{key_str}]")
-
-        elem = self.liststate.restore_element(key_str)
-        elem.restore(path_segments[1:], attr, qualifier, raw)
+            # Because of the lexicographic ordering among the different swdb.ATTR_*, liststate.recreate(key)
+            # is bound to be called before liststate.restore(key) for every key; thereby ensuring that
+            # element 'key' exists in liststate before its restoration is requested.
+            leaves = swdb.decode_node_bytes(raw)
+            if isinstance(leaves, gdata.Container):
+                self.liststate.recreate(key, leaves.children)
+            else:
+                raise ValueError("Persisted list key leaves must decode to Container at {_format_path(self.path)}[{key}]")
+        else:
+            self.liststate.restore(key, path_segments[1:], attr, qualifier, raw)
 
     def is_empty(self) -> bool:
         return self.liststate.is_empty()
@@ -786,7 +790,6 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
     var elems = {}
     var active = {}
     var provisional = set()
-    var key_leaves = {}
     var db = None
 
     def bind_db(db1: ?lmdb.Db) -> None:
@@ -799,10 +802,8 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
             keys1 = set(keys.keys())
             new = keys1 - set(elems.keys())
             for k in new:
-                node = template(PathKey(k, path), lower)
+                node = template(PathKey(k, path, keys[k]), lower)
                 node.bind_db(db)
-                if isinstance(node.pub_impl, _Container):
-                    key_leaves[k] = keys[k]
                 elems[k] = node
             provisional |= new
             #print('====', tid, path, 'acquire keys:', keys, 'new:', new, 'provisional:', provisional, actorid(), err=True)
@@ -818,49 +819,28 @@ actor ListState(path, template: proc(?Path, ?Layer) -> Node, ns: ?str, module: ?
         if ok:
             provisional -= active[tid]
             provisional |= deletes
-            for k in deletes:
-                if k in key_leaves:
-                    del key_leaves[k]
         del active[tid]
         if not active:
             #print('====', tid, path, 'deleting:', provisional, err=True)
             for k in provisional:
                 del elems[k]
-                if k in key_leaves:
-                    del key_leaves[k]
             provisional = set()
 
     def all():
         #print('====', 'all:', elems.keys(), 'provosional:', provisional, "active:", active)
         if provisional:
-            return {k: (elems[k], key_leaves.get(k)) for k in elems if k not in provisional}
+            return {k: elems[k] for k in elems if k not in provisional}
         else:
-            return {k: (node, key_leaves.get(k)) for k, node in elems.items()}
-
-    def projected(tid: str, deletes: set[str]):
-        committed_keys = {k for k in elems if k not in provisional}
-        active_keys = active.get_def(tid, set())
-        projected_keys = (committed_keys | active_keys) - deletes
-
-        projected_key_leaves = {}
-        for key, leaves in key_leaves.items():
-            if key not in deletes:
-                projected_key_leaves[key] = leaves
-
-        return {k: (elems[k], projected_key_leaves.get(k)) for k in projected_keys}
+            return {k: node for k, node in elems.items()}
 
     def is_empty() -> bool:
-        return len(elems) == 0 and len(active) == 0 and len(provisional) == 0 and len(key_leaves) == 0
+        return len(elems) == 0 and len(active) == 0 and len(provisional) == 0
 
-    def restore_element(key: str) -> Node:
-        if key not in elems:
-            elems[key] = template(PathKey(key, path), lower)
-            elems[key].bind_db(db)
-        return elems[key]
+    def recreate(key, leaves):
+        elems[key] = template(PathKey(key, path, leaves), lower)
 
-    def restore_key_leaves(key: str, leaves: gdata.Container) -> None:
-        restore_element(key)
-        key_leaves[key] = leaves.children
+    def restore(key, path_segments, attr, qualifier, raw):
+        elems[key].restore(path_segments, attr, qualifier, raw)
 
 
 class _ListTransaction(_Transaction):
@@ -891,6 +871,7 @@ class _ListTransaction(_Transaction):
             self.accum = {}
             self.reset = False
         diff_by_key = transpose_list(diff)
+        leaves_by_key = {}
         if len(diff_by_key) == 0 and force:
             for key,node in self.liststate.acquire(tid, None).items():
                 diff_by_key[key] = {}
@@ -907,12 +888,11 @@ class _ListTransaction(_Transaction):
                     self.elems[key] = node.newtrans()
             del diff_by_key[WILDKEY]
         else:
-            key_leaves_by_key = {}
             for key,subdiff in diff_by_key.items():
                 for node in subdiff.values():
                     kc = node.key_children(self.key_names)
-                    key_leaves_by_key[key] = kc
-            for key,node in self.liststate.acquire(tid, key_leaves_by_key).items():
+                    leaves_by_key[key] = kc
+            for key,node in self.liststate.acquire(tid, leaves_by_key).items():
                 if key not in self.elems:
                     self.elems[key] = node.newtrans()
         msgs = {}
@@ -929,25 +909,19 @@ class _ListTransaction(_Transaction):
             #print('   #', tid, '(List)', _format_path(self.path), 'RESULT ELEMENT', key, ':', v, err=True)
         res = self._analyze(results)
         if dbuf is not None:
-            dbuf.replace(swdb.slot_key(_db_path(self.path), "list"), self.db_ops(tid))
+            dbuf.replace(swdb.slot_key(_db_path(self.path), "list"), self.db_ops(leaves_by_key))
         return res
 
-    def db_ops(self, tid: str) -> list[swdb.BufferOp]:
-        deletes = set()
-        for key, res in self.accum.items():
-            if isinstance(res, CfgOk) and res.empty:
-                deletes.add(key)
-        # TODO: switch list DB staging to deltas instead of rebuilding the
-        # full projected key set for each transaction.
-        return [
-            swdb.put_op(_db_path(self.path) + [key], swdb.ATTR_KEYS, gdata.Container(key_leaves))
-            if key_leaves is not None else
-            swdb.del_op(_db_path(self.path) + [key], swdb.ATTR_KEYS)
-            for key, (_node, key_leaves) in self.liststate.projected(tid, deletes).items()
-        ] + [
-            swdb.del_op(_db_path(self.path) + [key], swdb.ATTR_KEYS)
-            for key in deletes
-        ]
+    def db_ops(self, leaves_by_key) -> list[swdb.BufferOp]:
+
+        def op(key, res):
+            path = _db_path(self.path) + [key]
+            if isinstance(res, CfgOk) and not res.empty and key in leaves_by_key:
+                return swdb.put_op(path, swdb.ATTR_KEYS, gdata.Container(leaves_by_key[key]))
+            else:
+                return swdb.del_op(path, swdb.ATTR_KEYS)
+
+        return [ op(key,res) for key, res in self.accum.items() ]
 
     def _analyze(self, results: dict[str,CfgResult]):
         self.accum.update(results.items())
@@ -1043,13 +1017,11 @@ class _ListTransaction(_Transaction):
     def get(self):
         #print('####', '(List)', _format_path(self.path), 'GET', err=True)
         res = []
-        for key, (node, key_leaves1) in self.liststate.all().items():
+        for key, node in self.liststate.all().items():
             if key in self.elems:
                 r = self.elems[key].get()
             else:
                 r = node.get()
-            if key_leaves1 is not None and isinstance(r, gdata.Container):
-                r.children.update(key_leaves1.items())
             res.append(r)
         return gdata.List(self.key_names, res, ns=self.ns, module=self.module)
 
